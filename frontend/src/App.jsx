@@ -181,7 +181,7 @@ function App() {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-slate-50 text-slate-800 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
+    <div className="h-dvh w-screen flex flex-col overflow-hidden bg-slate-50 text-slate-800 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
       
       {/* Header component */}
       <Header 
@@ -189,6 +189,9 @@ function App() {
         onLogout={handleLogout} 
         onToggleSidebar={handleToggleSidebar}
       />
+
+      {/* Spacer to prevent fixed header from overlapping content */}
+      <div className="h-20 md:h-16 shrink-0" />
 
       {/* Grid container with sidebar and content */}
       <div className="flex flex-1 overflow-hidden relative">

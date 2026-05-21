@@ -12,6 +12,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+const API = import.meta.env.VITE_API_BASE_URL;
+
 export default function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +33,7 @@ export default function Login({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const res = await fetch(`${API}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,7 +80,7 @@ export default function Login({ onLoginSuccess }) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] flex items-center justify-center p-4 sm:p-6 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
+    <div className="min-h-screen min-h-[100dvh] bg-[#f4f6fb] flex items-center justify-center p-4 sm:p-6 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
 
       {/* Centered card wrapper */}
       <div className="w-full max-w-[1120px] bg-white rounded-[24px] md:rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.06)] border border-slate-200 grid md:grid-cols-2">
@@ -169,7 +171,7 @@ export default function Login({ onLoginSuccess }) {
                 </p>
               </div>
 
-              <div>
+              <div className="text-center md:text-left">
                 <h2 className="text-2xl font-bold text-slate-800">
                   Welcome Back
                 </h2>

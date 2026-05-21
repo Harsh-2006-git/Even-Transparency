@@ -45,18 +45,14 @@ const seedDefaultAdmin = async () => {
   try {
     const userCount = await User.count();
     if (userCount === 0) {
-      console.log('[Seeder] No users found. Seeding default administrator...');
       const adminPassword = crypto.createHash('sha256').update('adminpassword').digest('hex');
       await User.create({
-        username: 'admin',
+        username: 'Even Cargo',
         email: 'admin@evencargo.in',
         password: adminPassword,
         phone: '+91 99999 99999',
         userType: 'Admin'
       });
-      console.log('[Seeder] Default administrator successfully seeded!');
-      console.log('  -> Username: admin (or email: admin@evencargo.in)');
-      console.log('  -> Password: adminpassword');
     }
   } catch (err) {
     console.error('[Seeder] Failed to seed default admin:', err.message);
@@ -66,16 +62,13 @@ const seedDefaultAdmin = async () => {
 // Synchronize database models and start listening
 const startServer = async () => {
   try {
-    console.log('[Sequelize] Verifying database connection...');
     const health = await testConnection();
 
     if (health.success) {
-      console.log('[Sequelize] Connection established. Syncing database');
-      // Sync tables
+      // Sync tables silently
       await sequelize.sync({ alter: true });
-      console.log('[Sequelize] All tables successfully synchronized.');
 
-      // Run seed check
+      // Run seed check silently
       await seedDefaultAdmin();
       await seedQuestions();
 
@@ -102,7 +95,6 @@ const startServer = async () => {
               });
             }
           }
-          console.log('[Backfill] Recruiter details backfilled successfully.');
         }
       } catch (backfillErr) {
         console.error('[Backfill] Error during candidate recruiter backfill:', backfillErr.message);
@@ -121,18 +113,20 @@ const startServer = async () => {
           for (const candidate of candidatesToBackfillStatus) {
             await candidate.update({ status: 'pending' });
           }
-          console.log('[Backfill] Candidate statuses backfilled successfully.');
         }
       } catch (statusBackfillErr) {
         console.error('[Backfill] Error during candidate status backfill:', statusBackfillErr.message);
       }
-    } else {
-      console.warn('[Sequelize] Sync skipped: Database is unreachable.');
     }
 
     // Start Express Web Server
     app.listen(PORT, () => {
-      console.log(`[Express] Backend server  running on port ${PORT}`);
+      if (health.success) {
+        console.log(`[Server] running on port ${PORT} (Database Connected & Synced)`);
+      } else {
+        console.warn('[Database] Warning: Sync skipped (Database is unreachable).');
+        console.log(`[Server] running on port ${PORT} (Database Offline)`);
+      }
     });
   } catch (error) {
     console.error('[Express] Server failed to start:', error.message);

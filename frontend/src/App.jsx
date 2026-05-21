@@ -4,6 +4,9 @@ import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CandidateManagement from './pages/CandidateManagement';
+import StaffManagement from './pages/StaffManagement';
+
+const API = import.meta.env.VITE_API_BASE_URL;
 
 function App() {
   // Session State
@@ -15,7 +18,27 @@ function App() {
   // Layout navigation states
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState('overview');
+  
+  // Parse initial section from URL hash or default to 'overview'
+  const [activeSection, setActiveSection] = useState(() => {
+    const hash = window.location.hash;
+    return hash.startsWith('#/') ? hash.slice(2) : 'overview';
+  });
+
+  const getSectionsForRole = (role) => {
+    switch (role) {
+      case 'Admin':
+        return ['overview', 'candidate-management', 'register-staff', 'domain-weights', 'database-schema', 'access-privileges'];
+      case 'Mobiliser':
+        return ['overview', 'candidate-management', 'register-candidate', 'scoring-checksheet', 'mobilized-candidates'];
+      case 'City Manager':
+        return ['overview', 'performance-hub', 'regional-distribution', 'pipeline-records'];
+      case 'Operations':
+        return ['overview', 'calibration-metrics', 'recalibration-controls', 'database-export'];
+      default:
+        return ['overview'];
+    }
+  };
 
   const handleToggleSidebar = () => {
     if (window.innerWidth < 768) {
@@ -26,16 +49,48 @@ function App() {
   };
 
   const handleSectionChange = (sectionId) => {
-    setActiveSection(sectionId);
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    window.location.hash = '/' + sectionId;
   };
+
+  // Sync state with URL hash
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      const section = hash.startsWith('#/') ? hash.slice(2) : 'overview';
+      
+      const role = user?.userType || 'Mobiliser';
+      const allowedSections = getSectionsForRole(role);
+      const targetSection = allowedSections.includes(section) ? section : 'overview';
+      
+      setActiveSection(targetSection);
+
+      setTimeout(() => {
+        const element = document.getElementById(targetSection);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    };
+
+    if (user) {
+      handleHashChange();
+      window.addEventListener('hashchange', handleHashChange);
+      
+      if (!window.location.hash) {
+        window.location.hash = '/overview';
+      }
+    }
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [user]);
 
   // Reset navigation when user switches roles
   useEffect(() => {
-    setActiveSection('overview');
+    if (user) {
+      window.location.hash = '/overview';
+    }
     const contentBox = document.getElementById('main-content-scroll');
     if (contentBox) {
       contentBox.scrollTop = 0;
@@ -55,7 +110,7 @@ function App() {
     try {
       setBackendStatus('checking');
       setDbStatus('checking');
-      const res = await fetch('http://localhost:5000/api/health');
+      const res = await fetch(`${API}/health`);
       if (!res.ok) throw new Error('API offline');
       const data = await res.json();
       setBackendStatus('connected');
@@ -77,7 +132,7 @@ function App() {
   // Fetch candidate list from DB
   const fetchCandidates = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/candidates');
+      const res = await fetch(`${API}/candidates`);
       if (!res.ok) throw new Error('Failed to load candidate list.');
       const data = await res.json();
       setCandidates(data || []);
@@ -109,6 +164,7 @@ function App() {
     setUser(null);
     setCandidates([]);
     localStorage.removeItem('evencargo_session');
+    window.location.hash = '';
   };
 
   const handleCandidateAdded = (newCandidate) => {
@@ -161,12 +217,16 @@ function App() {
               </div>
             )}
 
-            {/* Conditionally render Candidate Directory CRUD or Dashboard */}
+            {/* Conditionally render Candidate Directory CRUD, Staff Management, or Dashboard */}
             {activeSection === 'candidate-management' ? (
               <CandidateManagement 
                 user={user}
                 candidates={candidates}
                 fetchCandidates={fetchCandidates}
+              />
+            ) : activeSection === 'register-staff' ? (
+              <StaffManagement 
+                user={user}
               />
             ) : (
               <Dashboard 

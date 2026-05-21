@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Sliders, Database, Users, UserPlus, CheckCircle, AlertTriangle, BookOpen, UserX, UserCheck } from 'lucide-react';
 
+const API = import.meta.env.VITE_API_BASE_URL;
+
 const ASSESSMENT_WEIGHTS = [
   { id: 'driving', title: 'Driving & Road Awareness', weight: 30, questions: 8 },
   { id: 'navigation', title: 'Logistics & Tech Literacy', weight: 25, questions: 7 },
@@ -31,7 +33,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
+      const res = await fetch(`${API}/auth/register`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

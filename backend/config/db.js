@@ -1,5 +1,7 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
+import net from 'net';
+import dns from 'dns/promises';
 
 dotenv.config();
 
@@ -9,6 +11,38 @@ if (!databaseUrl) {
   console.error('DATABASE_URL environment variable is not defined.');
 }
 
+class CustomSocket extends net.Socket {
+  connect(port, host, connectionListener) {
+    const customLookup = (hostname, options, callback) => {
+      if (typeof options === 'function') {
+        callback = options;
+        options = {};
+      }
+      const r = new dns.Resolver();
+      r.setServers(['8.8.8.8', '1.1.1.1']);
+      r.resolve4(hostname)
+        .then(ips => {
+          if (options.all) {
+            callback(null, ips.map(ip => ({ address: ip, family: 4 })));
+          } else {
+            callback(null, ips[0], 4);
+          }
+        })
+        .catch(err => {
+          callback(err);
+        });
+    };
+
+    if (typeof port === 'object') {
+      return super.connect({ lookup: customLookup, ...port }, host || connectionListener);
+    } else if (typeof host === 'string') {
+      return super.connect({ port, host, lookup: customLookup }, connectionListener);
+    } else {
+      return super.connect(port, host, connectionListener);
+    }
+  }
+}
+
 const sequelize = new Sequelize(databaseUrl, {
   dialect: 'postgres',
   logging: false, // Turn on console.log if you want to see detailed SQL queries in the logs
@@ -16,7 +50,9 @@ const sequelize = new Sequelize(databaseUrl, {
     // Enable SSL if connecting to a non-local database (e.g. Supabase, Render, Heroku)
     ssl: databaseUrl && !databaseUrl.includes('localhost') && !databaseUrl.includes('127.0.0.1')
       ? { rejectUnauthorized: false }
-      : false
+      : false,
+    // Custom socket stream to override DNS lookup for resolving Neon DB hostname
+    stream: () => new CustomSocket()
   }
 });
 

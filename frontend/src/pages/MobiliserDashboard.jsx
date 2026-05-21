@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { User as UserIcon, HelpCircle, UserCheck, Plus, Check, MapPin, AlertTriangle, Users, BookOpen, UserX } from 'lucide-react';
 
+const API = import.meta.env.VITE_API_BASE_URL;
+
 const ASSESSMENT_DOMAINS = [
   {
     id: 'driving',
@@ -141,7 +143,7 @@ export default function MobiliserDashboard({ dbStatus, candidates, onCandidateAd
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/candidates', {
+      const res = await fetch(`${API}/candidates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(candidateData)

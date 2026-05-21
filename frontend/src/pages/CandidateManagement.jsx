@@ -4,6 +4,8 @@ import {
   MapPin, Phone, Mail, FileText, Check, ChevronDown, RefreshCw, AlertCircle, PhoneCall
 } from 'lucide-react';
 
+const API = import.meta.env.VITE_API_BASE_URL;
+
 const FALLBACK_QUESTIONS = [
   { qNumber: 'Q1', domain: 'A', domainName: 'Economic Pressure & Financial Urgency', domainWeight: 0.22, questionText: 'Monthly household income from all sources', questionWeight: 5, inputType: 'Radio', options: [{ text: 'Under 8,000₹', score: 5 }, { text: '8,000–15,000₹', score: 10 }, { text: '15,000–25,000₹', score: 7 }, { text: '25,000–40,000₹', score: 3 }, { text: 'Above 40,000₹', score: 1 }] },
   { qNumber: 'Q2', domain: 'A', domainName: 'Economic Pressure & Financial Urgency', domainWeight: 0.22, questionText: 'Does any household member have an outstanding debt/loan?', questionWeight: 4, inputType: 'Radio', options: [{ text: 'Yes – formal (bank/MFI)', score: 8 }, { text: 'Yes – informal (moneylender/family)', score: 10 }, { text: 'No', score: 2 }] },
@@ -41,7 +43,7 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
   // State for Lists & Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [cityFilter, setCityFilter] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [outcomeFilter, setOutcomeFilter] = useState('All');
 
   // WCP Questions fetched state
@@ -70,6 +72,7 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
 
   // Checksheet State inside Modal (answers mapped by qNumber)
   const [selectedQuestions, setSelectedQuestions] = useState({});
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
 
   // Feedback Messages
   const [loading, setLoading] = useState(false);
@@ -81,7 +84,7 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
     const fetchWCPQuestions = async () => {
       setQuestionsLoading(true);
       try {
-        const res = await fetch('http://localhost:5000/api/questions');
+        const res = await fetch(`${API}/questions`);
         if (!res.ok) throw new Error('API failure');
         const data = await res.json();
         if (active) {
@@ -119,7 +122,7 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
 
     const matchesCity = cityFilter === 'All' || c.city.toLowerCase() === cityFilter.toLowerCase();
 
-    const cStatus = c.status || 'pending';
+    const cStatus = c.status || 'All';
     const matchesStatus = statusFilter === 'All' || cStatus === statusFilter;
 
     const matchesOutcome = outcomeFilter === 'All' || c.outcome === outcomeFilter;
@@ -292,6 +295,7 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
     setOutcome(candidate.outcome || 'Pending');
     setSelectedQuestions(candidate.wcpAnswers || {});
     setNotes(candidate.notes || ''); // Remarks during the call
+    setActiveQuestionIndex(0);
     setApiMessage(null);
     setModalType('interview');
   };
@@ -326,11 +330,11 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
     };
 
     try {
-      let url = 'http://localhost:5000/api/candidates';
+      let url = `${API}/candidates`;
       let method = 'POST';
 
       if (modalType === 'edit') {
-        url = `http://localhost:5000/api/candidates/${editingCandidate.id}`;
+        url = `${API}/candidates/${editingCandidate.id}`;
         method = 'PUT';
       }
 
@@ -387,7 +391,7 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
     };
 
     try {
-      const url = `http://localhost:5000/api/candidates/${editingCandidate.id}`;
+      const url = `${API}/candidates/${editingCandidate.id}`;
       const res = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -427,7 +431,7 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
     if (!candidateToDelete) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/candidates/${candidateToDelete.id}`, {
+      const res = await fetch(`${API}/candidates/${candidateToDelete.id}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -635,14 +639,13 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
 
                       {/* Status */}
                       <td className="py-4 px-6">
-                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold border capitalize ${
-                          cStatus === 'pending'
+                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold border capitalize ${cStatus === 'pending'
                             ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : cStatus === 'converted'
-                            ? 'bg-emerald-50 text-emerald-750 border-emerald-250'
-                            : cStatus === 'training started'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                              ? 'bg-emerald-50 text-emerald-750 border-emerald-250'
+                              : cStatus === 'training started'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-rose-50 text-rose-700 border-rose-200'
                           }`}>
                           {cStatus}
                         </span>
@@ -914,242 +917,439 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
       )}
 
       {/* ------------------- DEDICATED LIVE CALL INTERVIEW MODAL ------------------- */}
-      {modalType && modalType === 'interview' && editingCandidate && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in text-xs">
-          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+      {modalType && modalType === 'interview' && editingCandidate && (() => {
+        const activeQuestion = listToGroup[activeQuestionIndex] || listToGroup[0];
+        const domainsList = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+        const domainNumberMap = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7 };
+        const currentDomainNum = domainNumberMap[activeQuestion?.domain] || 1;
 
-            {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <div>
-                <h3 className="font-black text-slate-800 text-base flex items-center">
-                  <PhoneCall className="w-5 h-5 text-indigo-600 mr-2" /> Live Call Assessment: {fullName}
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Complete the 28-question operational calculator on a live call with the candidate.
-                </p>
+        const isDomainCompleted = (domainKey) => {
+          const domainQuestionsList = listToGroup.filter(q => q.domain === domainKey);
+          return domainQuestionsList.every(q => {
+            const ans = selectedQuestions[q.qNumber];
+            return ans !== undefined && ans !== null && ans !== '';
+          });
+        };
+
+        const answeredCount = listToGroup.filter(q => {
+          const ans = selectedQuestions[q.qNumber];
+          return ans !== undefined && ans !== null && ans !== '';
+        }).length;
+        const totalCount = listToGroup.length;
+        const progressPercent = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
+        const activeDomainQuestions = listToGroup.filter(q => q.domain === activeQuestion?.domain);
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in text-xs">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+
+              {/* Modal Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                <div>
+                  <h3 className="font-black text-slate-800 text-base flex items-center">
+                    <PhoneCall className="w-5 h-5 text-indigo-650 mr-2" /> Live Call Assessment: {fullName}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Complete the 28-question operational calculator on a live call with the candidate.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setModalType(null)}
+                  className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer"
+                >
+                  <X className="w-4.5 h-4.5" />
+                </button>
               </div>
-              <button
-                onClick={() => setModalType(null)}
-                className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer"
-              >
-                <X className="w-4.5 h-4.5" />
-              </button>
-            </div>
 
-            {/* Modal Body: Two-Column Form */}
-            <form onSubmit={handleInterviewSubmit} className="p-6 flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Modal Body: Two-Column Form */}
+              <form onSubmit={handleInterviewSubmit} className="p-6 flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-              {/* Left Column: Scrollable Questions */}
-              <div className="lg:col-span-2 space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+                {/* Left Column: Quiz Question Container */}
+                <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col justify-between space-y-6 min-h-[500px]">
 
-                {Object.keys(groupedQuestions).sort().map(domainKey => {
-                  const domain = groupedQuestions[domainKey];
-                  return (
-                    <div key={domainKey} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4">
-
-                      {/* Domain Header */}
-                      <div className="border-b border-slate-200 pb-2 flex items-center justify-between">
-                        <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wide">
-                          Domain {domainKey}: {domain.name}
-                        </span>
-                        <span className="text-[10px] font-black text-indigo-650 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
-                          Weight: {Math.round(domain.weight * 100)}%
+                  {/* Quiz Header */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeQuestionIndex > 0) {
+                              setActiveQuestionIndex(prev => prev - 1);
+                            } else {
+                              setModalType(null);
+                            }
+                          }}
+                          className="p-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-full transition cursor-pointer shadow-xs font-bold text-xs"
+                          title="Back"
+                        >
+                          &larr;
+                        </button>
+                        <div>
+                          <h4 className="font-black text-slate-800 text-sm">Assessment Quiz</h4>
+                          <p className="text-[10px] text-slate-400">Answer one question at a time to check candidate fitment.</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
+                          Section {currentDomainNum} of 7
                         </span>
                       </div>
+                    </div>
 
-                      {/* Domain Questions */}
-                      <div className="space-y-4">
-                        {domain.questions.map((q, idx) => {
-                          const currentAnswer = selectedQuestions[q.qNumber];
+                    {/* Progress Indicator: Overall Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                        <span>Overall Progress</span>
+                        <span>{progressPercent}% ({answeredCount}/{totalCount} Answered)</span>
+                      </div>
+                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-indigo-600 h-full transition-all duration-350"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Progress Indicator: Domain-level dashes (7 dashes for A-G) */}
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Domains Completion</div>
+                      <div className="flex items-center space-x-1.5 w-full">
+                        {domainsList.map((domainKey) => {
+                          const isCompleted = isDomainCompleted(domainKey);
+                          const isActive = activeQuestion?.domain === domainKey;
                           return (
-                            <div key={q.qNumber} className="bg-white border border-slate-150 rounded-xl p-3.5 space-y-3">
-
-                              {/* Question Label */}
-                              <div className="font-bold text-slate-750 flex items-start">
-                                <span className="mr-1.5 text-indigo-600">{q.qNumber}.</span>
-                                <span>{q.questionText}</span>
-                              </div>
-
-                              {/* Question Inputs based on type */}
-                              {q.inputType === 'Radio' && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                                  {q.options && q.options.map(opt => {
-                                    const isSelected = currentAnswer === opt.text;
-                                    return (
-                                      <button
-                                        key={opt.text}
-                                        type="button"
-                                        onClick={() => handleQuestionAnswer(q.qNumber, opt.text)}
-                                        className={`px-3 py-2 text-left rounded-xl border text-xs transition duration-150 cursor-pointer ${isSelected
-                                          ? 'bg-indigo-50 border-indigo-300 text-indigo-900 font-bold shadow-xs'
-                                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
-                                          }`}
-                                      >
-                                        <div className="flex items-center space-x-2">
-                                          <span className={`w-3.5 h-3.5 rounded-full border shrink-0 flex items-center justify-center ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'border-slate-350'
-                                            }`}>
-                                            {isSelected && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
-                                          </span>
-                                          <span className="truncate">{opt.text}</span>
-                                        </div>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-
-                              {q.inputType === 'Dropdown' && (
-                                <select
-                                  value={currentAnswer || ''}
-                                  onChange={(e) => handleQuestionAnswer(q.qNumber, e.target.value)}
-                                  className="w-full bg-white border border-slate-250 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 transition"
-                                >
-                                  <option value="">Select option...</option>
-                                  {q.options && q.options.map(opt => (
-                                    <option key={opt.text} value={opt.text}>{opt.text}</option>
-                                  ))}
-                                </select>
-                              )}
-
-                              {q.inputType === 'Number' && (
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    max="1"
-                                    placeholder="e.g. 0.33"
-                                    value={currentAnswer !== undefined ? currentAnswer : ''}
-                                    onChange={(e) => {
-                                      const val = e.target.value === '' ? '' : parseFloat(e.target.value);
-                                      handleQuestionAnswer(q.qNumber, val);
-                                    }}
-                                    className="w-32 bg-white border border-slate-250 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 transition"
-                                  />
-                                  <span className="text-[10px] text-slate-400 font-medium">
-                                    Enter decimal ratio between 0.0 and 1.0 (earning members / household size)
-                                  </span>
-                                </div>
-                              )}
-
-                              {q.inputType === 'Text' && (
-                                <input
-                                  type="text"
-                                  placeholder="Type language..."
-                                  value={currentAnswer || ''}
-                                  onChange={(e) => handleQuestionAnswer(q.qNumber, e.target.value)}
-                                  className="w-full bg-white border border-slate-250 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-600 transition"
-                                />
-                              )}
-
-                            </div>
+                            <div
+                              key={domainKey}
+                              className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                                isActive
+                                  ? 'bg-slate-800 ring-2 ring-slate-800/20'
+                                  : isCompleted
+                                  ? 'bg-emerald-500'
+                                  : 'bg-slate-200'
+                              }`}
+                              title={`Domain ${domainKey}: ${isCompleted ? 'Completed' : isActive ? 'Active' : 'Pending'}`}
+                            />
                           );
                         })}
                       </div>
-
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Right Column: Sticky Summary & Remarks Panel */}
-              <div className="space-y-6">
-                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-5 sticky top-0 shadow-xs">
-
-                  <div>
-                    <h4 className="font-extrabold text-slate-800 text-xs uppercase tracking-wide border-b border-slate-200 pb-1.5">
-                      Interview Fitment Score
-                    </h4>
                   </div>
 
-                  {/* Circular Score Gauge */}
-                  <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="56" cy="56" r="40" stroke="#E2E8F0" strokeWidth="8" fill="transparent" />
-                      <circle
-                        cx="56"
-                        cy="56"
-                        r="40"
-                        stroke="#4F46E5"
-                        strokeWidth="8"
-                        fill="transparent"
-                        strokeDasharray="251.2"
-                        strokeDashoffset={251.2 - (251.2 * score) / 100}
-                        strokeLinecap="round"
-                        className="transition-all duration-500 ease-out"
-                      />
-                    </svg>
-                    <span className="absolute text-2xl font-black text-slate-850">{score}%</span>
-                  </div>
+                  {/* Question Section Card */}
+                  {activeQuestion && (
+                    <div className="flex-1 flex flex-col justify-center space-y-5 py-4">
 
-                  {/* Suitability Outcome Badge */}
-                  <div className="text-center">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                      Outcome Rating
-                    </span>
-                    <span className={`inline-block px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${outcome === 'Suitable'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-250 shadow-xs shadow-emerald-50'
-                      : outcome === 'Requires Training'
-                        ? 'bg-amber-50 text-amber-700 border-amber-250 shadow-xs shadow-amber-50'
-                        : outcome === 'Unsuitable'
-                          ? 'bg-rose-50 text-rose-700 border-rose-250 shadow-xs shadow-rose-50'
-                          : 'bg-slate-100 text-slate-500 border-slate-250'
-                      }`}>
-                      {outcome}
-                    </span>
-                  </div>
+                      {/* Domain Category Badge */}
+                      <div>
+                        <span className="inline-block px-3 py-1 bg-indigo-50 border border-indigo-150 rounded-full text-[10px] font-bold text-indigo-700">
+                          Section {activeQuestion.domain}: {activeQuestion.domainName}
+                        </span>
+                      </div>
 
-                  {/* Live Remarks Text Area */}
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      Live Interview Remarks
-                    </label>
-                    <textarea
-                      rows={5}
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Write evaluation comments, family details, vehicle interest..."
-                      className="w-full bg-white border border-slate-250 rounded-2xl p-3 text-xs text-slate-900 focus:outline-none focus:border-indigo-650 transition resize-none shadow-xs"
-                    />
-                  </div>
+                      {/* Question Text */}
+                      <h3 className="font-extrabold text-slate-850 text-sm leading-snug">
+                        <span className="text-indigo-650 mr-1">{activeQuestion.qNumber}.</span>
+                        {activeQuestion.questionText}
+                      </h3>
 
-                  {/* API Message */}
-                  {apiMessage && (
-                    <div className={`p-3.5 rounded-xl text-xs font-semibold border flex items-start space-x-2 ${apiMessage.type === 'success'
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-850'
-                      : 'bg-rose-50 border-rose-200 text-rose-850'
-                      }`}>
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span>{apiMessage.text}</span>
+                      {/* Inputs Area */}
+                      <div className="space-y-3">
+                        {(activeQuestion.inputType === 'Radio' || activeQuestion.inputType === 'Dropdown') && (
+                          <div className="grid grid-cols-1 gap-2.5">
+                            {activeQuestion.options && activeQuestion.options.map(opt => {
+                              const isSelected = selectedQuestions[activeQuestion.qNumber] === opt.text;
+                              return (
+                                <button
+                                  key={opt.text}
+                                  type="button"
+                                  onClick={() => handleQuestionAnswer(activeQuestion.qNumber, opt.text)}
+                                  className={`w-full px-4 py-3.5 text-left rounded-2xl border transition duration-150 cursor-pointer flex items-center space-x-3 ${
+                                    isSelected
+                                      ? 'bg-slate-800 border-slate-900 text-white font-bold shadow-md'
+                                      : 'bg-white border-slate-200 hover:border-slate-350 hover:bg-slate-50 text-slate-700'
+                                  }`}
+                                >
+                                  <span className={`w-5 h-5 rounded-full border shrink-0 flex items-center justify-center transition-colors ${
+                                    isSelected ? 'border-white bg-white text-slate-800' : 'border-slate-300 bg-white'
+                                  }`}>
+                                    {isSelected && <span className="w-2.5 h-2.5 bg-slate-800 rounded-full" />}
+                                  </span>
+                                  <span className="text-xs">{opt.text}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {activeQuestion.inputType === 'Number' && (
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm focus-within:border-indigo-600 transition">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="1"
+                                placeholder="e.g. 0.33"
+                                value={selectedQuestions[activeQuestion.qNumber] !== undefined ? selectedQuestions[activeQuestion.qNumber] : ''}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? '' : parseFloat(e.target.value);
+                                  handleQuestionAnswer(activeQuestion.qNumber, val);
+                                }}
+                                className="w-full text-sm font-bold text-slate-800 bg-transparent border-none outline-none focus:ring-0"
+                                autoFocus
+                              />
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-semibold leading-relaxed pl-1">
+                              Enter decimal ratio between 0.0 and 1.0 (earning members / household size)
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              {activeQuestion.options?.map(opt => {
+                                const ans = selectedQuestions[activeQuestion.qNumber];
+                                let isOptActive = false;
+                                if (typeof ans === 'number') {
+                                  if (opt.text.includes('≥ 0.5') && ans >= 0.5) isOptActive = true;
+                                  else if (opt.text.includes('0.3–0.49') && ans >= 0.3 && ans < 0.5) isOptActive = true;
+                                  else if (opt.text.includes('< 0.3') && ans < 0.3) isOptActive = true;
+                                }
+                                return (
+                                  <button
+                                    key={opt.text}
+                                    type="button"
+                                    onClick={() => {
+                                      let defaultVal = 0.5;
+                                      if (opt.text.includes('0.3–0.49')) defaultVal = 0.35;
+                                      if (opt.text.includes('< 0.3')) defaultVal = 0.2;
+                                      handleQuestionAnswer(activeQuestion.qNumber, defaultVal);
+                                    }}
+                                    className={`p-3 text-left border rounded-xl text-[10px] transition duration-150 cursor-pointer ${
+                                      isOptActive
+                                        ? 'bg-indigo-50 border-indigo-300 text-indigo-900 font-bold'
+                                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-650'
+                                    }`}
+                                  >
+                                    <div className="font-bold mb-0.5">{opt.text}</div>
+                                    <div className="text-[9px] text-slate-400">Set helper value</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {activeQuestion.inputType === 'Text' && (
+                          <div className="space-y-3">
+                            <div className="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm focus-within:border-indigo-600 transition">
+                              <input
+                                type="text"
+                                placeholder="Type language..."
+                                value={selectedQuestions[activeQuestion.qNumber] || ''}
+                                onChange={(e) => handleQuestionAnswer(activeQuestion.qNumber, e.target.value)}
+                                className="w-full text-sm font-bold text-slate-800 bg-transparent border-none outline-none focus:ring-0"
+                                autoFocus
+                              />
+                            </div>
+                            <p className="text-[10px] text-slate-400 font-semibold pl-1">
+                              Type language spoken at home.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
-                  {/* Save Button */}
-                  <div className="pt-2 flex flex-col space-y-3">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full flex items-center justify-center space-x-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md shadow-indigo-50 active:scale-95 disabled:opacity-50 cursor-pointer"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>{loading ? 'Saving Answers...' : 'Save & Complete Interview'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModalType(null)}
-                      className="w-full py-2.5 border border-slate-250 bg-white rounded-xl font-bold hover:bg-slate-50 text-slate-700 transition cursor-pointer text-center"
-                    >
-                      Cancel
-                    </button>
+                  {/* Sub-Question Level Indicators & Footer Actions */}
+                  <div className="border-t border-slate-200 pt-5 space-y-4">
+                    {/* Internal Questions progress dots */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-1.5 overflow-x-auto py-1">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Section Questions:</span>
+                        {activeDomainQuestions.map((q) => {
+                          const isAnswered = selectedQuestions[q.qNumber] !== undefined && selectedQuestions[q.qNumber] !== null && selectedQuestions[q.qNumber] !== '';
+                          const isActive = q.qNumber === activeQuestion?.qNumber;
+                          return (
+                            <button
+                              key={q.qNumber}
+                              type="button"
+                              onClick={() => {
+                                const globalIndex = listToGroup.findIndex(item => item.qNumber === q.qNumber);
+                                if (globalIndex !== -1) setActiveQuestionIndex(globalIndex);
+                              }}
+                              className={`h-2.5 rounded-full transition-all duration-200 cursor-pointer ${
+                                isActive
+                                  ? 'w-6 bg-slate-800'
+                                  : isAnswered
+                                  ? 'w-2.5 bg-emerald-500'
+                                  : 'w-2.5 bg-slate-200 hover:bg-slate-350'
+                              }`}
+                              title={`Question ${q.qNumber}: ${isAnswered ? 'Answered' : 'Unanswered'}`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-bold shrink-0">
+                        Q{activeQuestionIndex + 1} of {totalCount}
+                      </span>
+                    </div>
+
+                    {/* Navigation Buttons */}
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        disabled={activeQuestionIndex === 0}
+                        onClick={() => setActiveQuestionIndex(prev => prev - 1)}
+                        className="px-5 py-2.5 border border-slate-200 bg-white rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 shadow-xs text-xs"
+                      >
+                        <span>&larr; Back</span>
+                      </button>
+
+                      {activeQuestionIndex < totalCount - 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => setActiveQuestionIndex(prev => prev + 1)}
+                          className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition cursor-pointer flex items-center space-x-1.5 shadow-md active:scale-95 text-xs"
+                        >
+                          <span>Next &rarr;</span>
+                        </button>
+                      ) : (
+                        <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl">
+                          All questions viewed. Complete below.
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                 </div>
-              </div>
 
-            </form>
+                {/* Right Column: Sticky Summary & Remarks Panel */}
+                <div className="space-y-6">
+                  <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-5 sticky top-0 shadow-xs">
+
+                    <div>
+                      <h4 className="font-extrabold text-slate-800 text-xs uppercase tracking-wide border-b border-slate-200 pb-1.5">
+                        Interview Fitment Score
+                      </h4>
+                    </div>
+
+                    {/* Circular Score Gauge */}
+                    <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle cx="56" cy="56" r="40" stroke="#E2E8F0" strokeWidth="8" fill="transparent" />
+                        <circle
+                          cx="56"
+                          cy="56"
+                          r="40"
+                          stroke="#4F46E5"
+                          strokeWidth="8"
+                          fill="transparent"
+                          strokeDasharray="251.2"
+                          strokeDashoffset={251.2 - (251.2 * score) / 100}
+                          strokeLinecap="round"
+                          className="transition-all duration-500 ease-out"
+                        />
+                      </svg>
+                      <span className="absolute text-2xl font-black text-slate-850">{score}%</span>
+                    </div>
+
+                    {/* Suitability Outcome Badge */}
+                    <div className="text-center">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        Outcome Rating
+                      </span>
+                      <span className={`inline-block px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${outcome === 'Suitable'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-250 shadow-xs shadow-emerald-50'
+                        : outcome === 'Requires Training'
+                          ? 'bg-amber-50 text-amber-700 border-amber-250 shadow-xs shadow-amber-50'
+                          : outcome === 'Unsuitable'
+                            ? 'bg-rose-50 text-rose-700 border-rose-250 shadow-xs shadow-rose-50'
+                            : 'bg-slate-100 text-slate-500 border-slate-250'
+                        }`}>
+                        {outcome}
+                      </span>
+                    </div>
+
+                    {/* Interactive Question Jump List */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+                      <h5 className="font-extrabold text-[10px] text-slate-400 uppercase tracking-wider">
+                        Question Navigator (1-28)
+                      </h5>
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {listToGroup.map((q, idx) => {
+                          const isAnswered = selectedQuestions[q.qNumber] !== undefined && selectedQuestions[q.qNumber] !== null && selectedQuestions[q.qNumber] !== '';
+                          const isActive = idx === activeQuestionIndex;
+                          return (
+                            <button
+                              key={q.qNumber}
+                              type="button"
+                              onClick={() => setActiveQuestionIndex(idx)}
+                              className={`aspect-square rounded-lg flex items-center justify-center font-bold text-[10px] transition cursor-pointer select-none ${
+                                isActive
+                                  ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-800/20'
+                                  : isAnswered
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-150 hover:bg-emerald-100'
+                                  : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
+                              }`}
+                              title={`Question ${q.qNumber}: ${isAnswered ? 'Answered' : 'Unanswered'}`}
+                            >
+                              {idx + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Live Remarks Text Area */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Live Interview Remarks
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Write evaluation comments, family details, vehicle interest..."
+                        className="w-full bg-white border border-slate-250 rounded-2xl p-3 text-xs text-slate-900 focus:outline-none focus:border-indigo-650 transition resize-none shadow-xs"
+                      />
+                    </div>
+
+                    {/* API Message */}
+                    {apiMessage && (
+                      <div className={`p-3.5 rounded-xl text-xs font-semibold border flex items-start space-x-2 ${apiMessage.type === 'success'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-850'
+                        : 'bg-rose-50 border-rose-200 text-rose-850'
+                        }`}>
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>{apiMessage.text}</span>
+                      </div>
+                    )}
+
+                    {/* Save Button */}
+                    <div className="pt-2 flex flex-col space-y-3">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full flex items-center justify-center space-x-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md shadow-indigo-50 active:scale-95 disabled:opacity-50 cursor-pointer"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>{loading ? 'Saving Answers...' : 'Save & Complete Interview'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModalType(null)}
+                        className="w-full py-2.5 border border-slate-250 bg-white rounded-xl font-bold hover:bg-slate-50 text-slate-700 transition cursor-pointer text-center"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ------------------- DELETE CONFIRMATION DIALOG ------------------- */}
       {showDeleteConfirm && candidateToDelete && (

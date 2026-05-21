@@ -6,9 +6,6 @@ export const seedQuestions = async () => {
     if (questionCount > 0) {
       return;
     }
-
-    console.log('[Seeder] Seeding WCP evaluation questions...');
-
     const questionsData = [
       // Domain A: Economic Pressure & Financial Urgency (22%)
       {
@@ -428,7 +425,6 @@ export const seedQuestions = async () => {
     ];
 
     await Question.bulkCreate(questionsData);
-    console.log('[Seeder] WCP evaluation questions successfully seeded!');
   } catch (err) {
     console.error('[Seeder] Failed to seed WCP questions:', err.message);
   }

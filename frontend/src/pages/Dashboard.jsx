@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { 
   Users, UserCheck, BookOpen, UserX, User as UserIcon, HelpCircle, 
   Plus, Check, MapPin, Search, Award, Download, Play, AlertTriangle, 
-  UserPlus, Sliders, Database, ChevronRight, Clock
+  Sliders, Database, ChevronRight, Clock
 } from 'lucide-react';
+
+const API = import.meta.env.VITE_API_BASE_URL;
 
 const ASSESSMENT_DOMAINS = [
   {
@@ -91,16 +93,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
   const [loadingCandidate, setLoadingCandidate] = useState(false);
   const [candidateMessage, setCandidateMessage] = useState(null);
 
-  // ----------------------------------------------------
-  // Admin Forms & States
-  // ----------------------------------------------------
-  const [username, setUsername] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [adminPhone, setAdminPhone] = useState('');
-  const [registerRoleType, setRegisterRoleType] = useState('Mobiliser');
-  const [loadingStaff, setLoadingStaff] = useState(false);
-  const [staffMessage, setStaffMessage] = useState(null);
+
 
   // ----------------------------------------------------
   // City Manager Filters & States
@@ -219,7 +212,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/candidates', {
+      const res = await fetch(`${API}/candidates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(candidateData)
@@ -254,55 +247,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
     }
   };
 
-  // ----------------------------------------------------
-  // Admin Staff Registration Handler
-  // ----------------------------------------------------
-  const handleRegisterStaff = async (e) => {
-    e.preventDefault();
-    setStaffMessage(null);
 
-    if (!username.trim() || !adminEmail.trim() || !password.trim()) {
-      setStaffMessage({ type: 'error', text: 'Username, Email, and Password are required.' });
-      return;
-    }
-
-    setLoadingStaff(true);
-
-    try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-admin-id': user.id
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          email: adminEmail.trim(),
-          password: password.trim(),
-          phone: adminPhone.trim() || null,
-          userType: registerRoleType
-        })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to register staff account.');
-      }
-
-      setStaffMessage({ type: 'success', text: `Staff account "${username}" (${registerRoleType}) created successfully!` });
-      
-      setUsername('');
-      setAdminEmail('');
-      setPassword('');
-      setAdminPhone('');
-      setRegisterRoleType('Mobiliser');
-    } catch (err) {
-      setStaffMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoadingStaff(false);
-    }
-  };
 
   // ----------------------------------------------------
   // Operations CSV Export & Retraining Handlers
@@ -876,100 +821,8 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
       {role === 'Admin' && (
         <>
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Register Staff Form */}
-            <div id="register-staff" className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-4">
-              <div>
-                <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 mb-4">
-                  <UserPlus className="w-4.5 h-4.5 text-indigo-600 shrink-0" strokeWidth={2} />
-                  <h3 className="font-bold text-slate-850 text-sm">Register Staff Member</h3>
-                </div>
-
-                <form onSubmit={handleRegisterStaff} className="space-y-3 text-xs">
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Username *</label>
-                    <input
-                      type="text"
-                      required
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="e.g. priya_mobiliser"
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Email Address *</label>
-                    <input
-                      type="email"
-                      required
-                      value={adminEmail}
-                      onChange={(e) => setAdminEmail(e.target.value)}
-                      placeholder="e.g. priya@evencargo.in"
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Password *</label>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Phone</label>
-                      <input
-                        type="text"
-                        value={adminPhone}
-                        onChange={(e) => setAdminPhone(e.target.value)}
-                        placeholder="+91 999..."
-                        className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Role Type</label>
-                      <select
-                        value={registerRoleType}
-                        onChange={(e) => setRegisterRoleType(e.target.value)}
-                        className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                      >
-                        <option value="Mobiliser">Mobiliser</option>
-                        <option value="City Manager">City Manager</option>
-                        <option value="Operations">Operations</option>
-                        <option value="Admin">Admin</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loadingStaff}
-                    className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition active:scale-95 shadow-xs mt-3 cursor-pointer"
-                  >
-                    {loadingStaff ? 'Creating Account...' : 'Create Staff Account'}
-                  </button>
-                </form>
-              </div>
-
-              {staffMessage && (
-                <div className={`p-3 rounded-lg text-xs font-semibold border flex items-start space-x-2 ${
-                  staffMessage.type === 'success'
-                    ? 'bg-emerald-50 border-emerald-250 text-emerald-800'
-                    : 'bg-rose-50 border-rose-250 text-rose-800'
-                }`}>
-                  <span>{staffMessage.text}</span>
-                </div>
-              )}
-            </div>
-
             {/* Weights criteria details */}
-            <div id="domain-weights" className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs lg:col-span-2 space-y-4">
+            <div id="domain-weights" className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs lg:col-span-3 space-y-4">
               <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
                 <Sliders className="w-4.5 h-4.5 text-indigo-650 shrink-0" strokeWidth={2} />
                 <h3 className="font-bold text-slate-850 text-sm">Interview Domain Weights</h3>

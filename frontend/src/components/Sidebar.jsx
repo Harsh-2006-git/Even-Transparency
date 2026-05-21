@@ -67,11 +67,10 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
         />
       )}
 
-      {/* Sidebar Container */}
       <aside className={`
-        fixed md:sticky top-16 left-0 bottom-0 z-45 
+        fixed md:sticky top-20 md:top-16 left-0 bottom-0 z-45 
         ${isCollapsed ? 'w-[260px] md:w-[72px]' : 'w-[260px]'} 
-        h-[calc(100vh-64px)] 
+        h-[calc(100dvh-80px)] md:h-[calc(100vh-64px)] 
         bg-white border-r border-slate-300 
         flex flex-col justify-between 
         transition-all duration-300 ease-in-out shrink-0

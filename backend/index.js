@@ -19,7 +19,11 @@ const PORT = process.env.PORT || 5000;
 
 // Enable CORS for frontend connectivity
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: [
+    'http://localhost:5173',
+    'https://even-cargo-hire.vercel.app',
+    'https://even-cargo-hire.vercel.app/'
+  ],
   credentials: true
 }));
 

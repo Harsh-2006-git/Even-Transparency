@@ -6,8 +6,7 @@ import {
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
-export default function StaffManagement({ user }) {
-  const [staffList, setStaffList] = useState([]);
+export default function StaffManagement({ user, staffList = [], setStaffList, fetchStaff }) {
   const [loading, setLoading] = useState(false);
   const [apiMessage, setApiMessage] = useState(null);
 
@@ -28,28 +27,7 @@ export default function StaffManagement({ user }) {
   const [password, setPassword] = useState('');
   const [roleType, setRoleType] = useState('Mobiliser');
 
-  const fetchStaff = async () => {
-    setLoading(true);
-    setApiMessage(null);
-    try {
-      const res = await fetch(`${API}/auth/staff`, {
-        headers: {
-          'x-admin-id': user.id
-        }
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to fetch staff.');
-      setStaffList(data || []);
-    } catch (err) {
-      setApiMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchStaff();
-  }, []);
 
   const handleOpenAddModal = () => {
     setUsername('');
@@ -75,79 +53,87 @@ export default function StaffManagement({ user }) {
   const handleAddStaff = async (e) => {
     e.preventDefault();
     if (!username.trim() || !email.trim() || !password.trim()) {
-      setApiMessage({ type: 'error', text: 'Username, email, and password are required.' });
+      alert('Username, email, and password are required.');
       return;
     }
 
-    setLoading(true);
-    setApiMessage(null);
-    try {
-      const res = await fetch(`${API}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-id': user.id
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          email: email.trim(),
-          password: password.trim(),
-          phone: phone.trim() || null,
-          userType: roleType
-        })
+    const payload = {
+      username: username.trim(),
+      email: email.trim(),
+      password: password.trim(),
+      phone: phone.trim() || null,
+      userType: roleType
+    };
+
+    const mockId = `temp-${Date.now()}`;
+    const optimisticStaff = {
+      ...payload,
+      id: mockId,
+      created_at: new Date().toISOString()
+    };
+
+    setStaffList(prev => [optimisticStaff, ...prev]);
+    setModalType(null);
+
+    fetch(`${API}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-id': user.id
+      },
+      body: JSON.stringify(payload)
+    })
+      .then(res => res.json().then(data => ({ res, data })))
+      .then(({ res, data }) => {
+        if (!res.ok) throw new Error(data.error || 'Failed to create staff member.');
+        fetchStaff();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to save staff: ' + err.message);
+        fetchStaff();
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create staff member.');
-      
-      setApiMessage({ type: 'success', text: `Staff member "${username}" created successfully.` });
-      setModalType(null);
-      fetchStaff();
-    } catch (err) {
-      setApiMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleEditStaff = async (e) => {
     e.preventDefault();
     if (!username.trim() || !email.trim()) {
-      setApiMessage({ type: 'error', text: 'Username and email are required.' });
+      alert('Username and email are required.');
       return;
     }
 
-    setLoading(true);
-    setApiMessage(null);
-    try {
-      const updatePayload = {
-        username: username.trim(),
-        email: email.trim(),
-        phone: phone.trim() || null,
-        userType: roleType
-      };
-      if (password.trim()) {
-        updatePayload.password = password.trim();
-      }
-
-      const res = await fetch(`${API}/auth/staff/${editingStaff.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-id': user.id
-        },
-        body: JSON.stringify(updatePayload)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update staff member.');
-      
-      setApiMessage({ type: 'success', text: `Staff member "${username}" updated successfully.` });
-      setModalType(null);
-      fetchStaff();
-    } catch (err) {
-      setApiMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
+    const updatePayload = {
+      username: username.trim(),
+      email: email.trim(),
+      phone: phone.trim() || null,
+      userType: roleType
+    };
+    if (password.trim()) {
+      updatePayload.password = password.trim();
     }
+
+    const optimisticStaff = { ...editingStaff, ...updatePayload };
+    setStaffList(prev => prev.map(s => s.id === editingStaff.id ? optimisticStaff : s));
+    setModalType(null);
+
+    fetch(`${API}/auth/staff/${editingStaff.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-id': user.id
+      },
+      body: JSON.stringify(updatePayload)
+    })
+      .then(res => res.json().then(data => ({ res, data })))
+      .then(({ res, data }) => {
+        if (!res.ok) throw new Error(data.error || 'Failed to update staff member.');
+        fetchStaff();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to update staff: ' + err.message);
+        fetchStaff();
+      });
   };
 
   const handleDeleteClick = (staff) => {
@@ -161,27 +147,28 @@ export default function StaffManagement({ user }) {
 
   const confirmDelete = async () => {
     if (!staffToDelete) return;
-    setLoading(true);
-    setApiMessage(null);
-    try {
-      const res = await fetch(`${API}/auth/staff/${staffToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'x-admin-id': user.id
-        }
+    
+    const idToDelete = staffToDelete.id;
+    setStaffList(prev => prev.filter(s => s.id !== idToDelete));
+    setShowDeleteConfirm(false);
+    setStaffToDelete(null);
+
+    fetch(`${API}/auth/staff/${idToDelete}`, {
+      method: 'DELETE',
+      headers: {
+        'x-admin-id': user.id
+      }
+    })
+      .then(res => res.json().then(data => ({ res, data })))
+      .then(({ res, data }) => {
+        if (!res.ok) throw new Error(data.error || 'Failed to delete staff member.');
+        fetchStaff();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to delete staff: ' + err.message);
+        fetchStaff();
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to delete staff member.');
-      
-      setApiMessage({ type: 'success', text: `Staff member deleted successfully.` });
-      setShowDeleteConfirm(false);
-      setStaffToDelete(null);
-      fetchStaff();
-    } catch (err) {
-      setApiMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Filtering Logic

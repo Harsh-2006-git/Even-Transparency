@@ -10,7 +10,8 @@ import {
   Activity, 
   MapPin, 
   ChevronRight,
-  UserCheck
+  UserCheck,
+  HelpCircle
 } from 'lucide-react';
 
 export default function Sidebar({ user, activeSection, onSectionChange, isOpen, toggleSidebar, isCollapsed }) {
@@ -22,9 +23,7 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
           { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
           { id: 'candidate-management', label: 'Manage Candidates', icon: Users },
           { id: 'register-staff', label: 'Register Staff', icon: UserPlus },
-          { id: 'domain-weights', label: 'Interview Weights', icon: Sliders },
-          { id: 'database-schema', label: 'Database Schema', icon: Database },
-          { id: 'access-privileges', label: 'Access Privileges', icon: ShieldAlert },
+          { id: 'question-management', label: 'Manage Questions', icon: HelpCircle },
         ];
       case 'Mobiliser':
         return [

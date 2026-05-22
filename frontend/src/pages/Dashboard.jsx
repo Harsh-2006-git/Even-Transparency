@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Users, UserCheck, BookOpen, UserX, User as UserIcon, HelpCircle, 
   Plus, Check, MapPin, Search, Award, Download, Play, AlertTriangle, 
-  Sliders, Database, ChevronRight, Clock
+  Sliders, Database, ChevronRight, Clock, UserPlus, CheckSquare, FileText, Activity
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
@@ -333,8 +333,8 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
       {/* ----------------------------------------------------
           Unified Stats Summary Cards (Renders for all dashboards)
          ---------------------------------------------------- */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
+      <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Total Candidates</span>
             <span className="text-2xl font-bold text-slate-800 mt-0.5 block">{totalCount}</span>
@@ -344,7 +344,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Pending</span>
             <span className="text-2xl font-bold text-amber-600 mt-0.5 block">{pendingCount}</span>
@@ -354,7 +354,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Converted</span>
             <span className="text-2xl font-bold text-emerald-600 mt-0.5 block">{convertedCount}</span>
@@ -364,7 +364,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Training Started</span>
             <span className="text-2xl font-bold text-blue-600 mt-0.5 block">{trainingStartedCount}</span>
@@ -374,7 +374,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Dropped</span>
             <span className="text-2xl font-bold text-rose-600 mt-0.5 block">{droppedCount}</span>
@@ -819,94 +819,104 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
 
       {/* 3. ADMIN PANEL */}
       {role === 'Admin' && (
-        <>
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Weights criteria details */}
-            <div id="domain-weights" className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs lg:col-span-3 space-y-4">
-              <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
-                <Sliders className="w-4.5 h-4.5 text-indigo-650 shrink-0" strokeWidth={2} />
-                <h3 className="font-bold text-slate-850 text-sm">Interview Domain Weights</h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {ASSESSMENT_WEIGHTS.map(domain => (
-                  <div key={domain.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 text-xs">
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{domain.id} config</span>
-                    
-                    <div>
-                      <h4 className="font-bold text-slate-700">{domain.title}</h4>
-                      <p className="text-[10px] text-slate-505 mt-0.5">{domain.questions} Questions</p>
-                    </div>
-
-                    <div className="flex items-baseline space-x-1 border-t border-slate-200/65 pt-2">
-                      <span className="text-xl font-black text-indigo-700">{domain.weight}%</span>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">weight</span>
-                    </div>
-
-                    <div>
-                      <input 
-                        type="range" 
-                        min="10" 
-                        max="50" 
-                        defaultValue={domain.weight}
-                        className="w-full accent-indigo-600 cursor-not-allowed" 
-                        disabled
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-start space-x-2.5 text-[11px] text-slate-500">
-                <Sliders className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" strokeWidth={2} />
-                <p>Weight criteria updates are restricted to active operational cycles to preserve recruitment integrity.</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Database metrics & Privileges */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div id="database-schema" className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 space-y-4 shadow-xs">
-              <div className="flex items-center space-x-2">
-                <Database className="w-4.5 h-4.5 text-indigo-600 shrink-0" strokeWidth={2} />
-                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Database schema metrics</h3>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2.5 text-xs font-mono text-slate-655">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <span>Target DB provider:</span>
-                  <span className="text-indigo-700 font-bold">PostgreSQL</span>
+        <section className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs">
+          <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider mb-5">Quick Links</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            <a 
+              href="#/candidate-management" 
+              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+            >
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="p-2 bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 group-hover:text-indigo-700 rounded-lg transition-colors">
+                  <UserPlus className="h-4.5 w-4.5" strokeWidth={2.5} />
                 </div>
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <span>Candidates table sync:</span>
-                  <span className="text-emerald-600 font-bold">Synchronized</span>
-                </div>
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <span>Users table sync:</span>
-                  <span className="text-emerald-600 font-bold">Synchronized</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Sequelize syncing:</span>
-                  <span className="text-slate-805 font-bold">alter: true</span>
-                </div>
+                <span className="font-bold text-slate-800 text-sm group-hover:text-indigo-900 transition-colors">Add Candidate</span>
               </div>
-            </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Register new candidates into the recruitment pipeline for assessment and tracking.
+              </p>
+            </a>
 
-            <div id="access-privileges" className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 space-y-4 shadow-xs">
-              <div className="flex items-center space-x-2">
-                <Users className="w-4.5 h-4.5 text-indigo-600 shrink-0" strokeWidth={2} />
-                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Access privileges</h3>
+            <a 
+              href="#/candidate-management" 
+              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+            >
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="p-2 bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 group-hover:text-emerald-700 rounded-lg transition-colors">
+                  <CheckSquare className="h-4.5 w-4.5" strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-slate-800 text-sm group-hover:text-emerald-900 transition-colors">Interview Candidate</span>
               </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Conduct assessments and evaluate candidates using the scoring checksheet.
+              </p>
+            </a>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-2.5 text-slate-600">
-                <p>• <strong>Mobiliser:</strong> Conduct assessments & update outcome states.</p>
-                <p>• <strong>City Manager:</strong> View all candidates & check analytics charts.</p>
-                <p>• <strong>Operations:</strong> Export tables & verify calibration criteria.</p>
-                <p>• <strong>Admin:</strong> Create user logins & calibrate weights.</p>
+            <a 
+              href="#/register-staff" 
+              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+            >
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="p-2 bg-blue-50 text-blue-600 group-hover:bg-blue-100 group-hover:text-blue-700 rounded-lg transition-colors">
+                  <Users className="h-4.5 w-4.5" strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-slate-800 text-sm group-hover:text-blue-900 transition-colors">Manage Staff</span>
               </div>
-            </div>
-          </section>
-        </>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Add or edit staff accounts, assign operational roles, and control platform access.
+              </p>
+            </a>
+
+            <a 
+              href="#/overview" 
+              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-amber-200 hover:bg-amber-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+              onClick={() => alert("Audit Logs feature coming soon!")}
+            >
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="p-2 bg-amber-50 text-amber-600 group-hover:bg-amber-100 group-hover:text-amber-700 rounded-lg transition-colors">
+                  <FileText className="h-4.5 w-4.5" strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-slate-800 text-sm group-hover:text-amber-900 transition-colors">Check Audit Logs</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Review system activity, track data changes, and monitor user actions across the platform.
+              </p>
+            </a>
+
+            <a 
+              href="#/question-management" 
+              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-violet-200 hover:bg-violet-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+            >
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="p-2 bg-violet-50 text-violet-600 group-hover:bg-violet-100 group-hover:text-violet-700 rounded-lg transition-colors">
+                  <HelpCircle className="h-4.5 w-4.5" strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-slate-800 text-sm group-hover:text-violet-900 transition-colors">Manage Questions</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Create, update, and manage the assessment questions and interview domain criteria.
+              </p>
+            </a>
+
+            <a 
+              href="#/overview" 
+              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-rose-200 hover:bg-rose-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+              onClick={() => alert("Analytics feature coming soon!")}
+            >
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="p-2 bg-rose-50 text-rose-600 group-hover:bg-rose-100 group-hover:text-rose-700 rounded-lg transition-colors">
+                  <Activity className="h-4.5 w-4.5" strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-slate-800 text-sm group-hover:text-rose-900 transition-colors">Check Analytics</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Visualize performance metrics, training outcomes, and operational data.
+              </p>
+            </a>
+
+          </div>
+        </section>
       )}
 
       {/* 4. OPERATIONS WORKSPACE */}

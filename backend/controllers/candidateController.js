@@ -49,15 +49,27 @@ export const createCandidate = async (req, res) => {
       }
     }
 
+    let computedOutcome = outcome || 'Pending';
+
     if (wcpAnswers && Object.keys(wcpAnswers).length > 0) {
       const questions = await Question.findAll();
       const calcResult = calculateWCPScore(wcpAnswers, questions);
       score = calcResult.finalScore;
       wcpScoreBreakdown = calcResult;
+      
+      if (calcResult.isCompleted) {
+        if (score >= 75) computedOutcome = 'Suitable';
+        else if (score >= 50) computedOutcome = 'Requires Training';
+        else computedOutcome = 'Unsuitable';
+      } else {
+        computedOutcome = 'Pending';
+      }
+    } else {
+      computedOutcome = 'Pending';
     }
 
     const candidate = await Candidate.create({
-      fullName, profilePhoto, phone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome, status, mobiliserId, recruiterName, recruiterPhone
+      fullName, profilePhoto, phone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
     res.status(201).json(candidate);
   } catch (error) {
@@ -83,6 +95,7 @@ export const updateCandidate = async (req, res) => {
 
     let score = candidate.score;
     let wcpScoreBreakdown = candidate.wcpScoreBreakdown;
+    let computedOutcome = outcome !== undefined ? outcome : candidate.outcome;
     let recruiterName = req.body.recruiterName !== undefined ? req.body.recruiterName : candidate.recruiterName;
     let recruiterPhone = req.body.recruiterPhone !== undefined ? req.body.recruiterPhone : candidate.recruiterPhone;
 
@@ -106,14 +119,23 @@ export const updateCandidate = async (req, res) => {
         const calcResult = calculateWCPScore(wcpAnswers, questions);
         score = calcResult.finalScore;
         wcpScoreBreakdown = calcResult;
+        
+        if (calcResult.isCompleted) {
+          if (score >= 75) computedOutcome = 'Suitable';
+          else if (score >= 50) computedOutcome = 'Requires Training';
+          else computedOutcome = 'Unsuitable';
+        } else {
+          computedOutcome = 'Pending';
+        }
       } else {
         score = null;
         wcpScoreBreakdown = null;
+        computedOutcome = 'Pending';
       }
     }
 
     await candidate.update({
-      fullName, profilePhoto, phone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome, status, mobiliserId, recruiterName, recruiterPhone
+      fullName, profilePhoto, phone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
 
     res.json(candidate);

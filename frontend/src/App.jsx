@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CandidateManagement from './pages/CandidateManagement';
 import StaffManagement from './pages/StaffManagement';
+import QuestionManagement from './pages/QuestionManagement';
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
@@ -28,7 +29,7 @@ function App() {
   const getSectionsForRole = (role) => {
     switch (role) {
       case 'Admin':
-        return ['overview', 'candidate-management', 'register-staff', 'domain-weights', 'database-schema', 'access-privileges'];
+        return ['overview', 'candidate-management', 'register-staff', 'domain-weights', 'database-schema', 'access-privileges', 'question-management'];
       case 'Mobiliser':
         return ['overview', 'candidate-management', 'register-candidate', 'scoring-checksheet', 'mobilized-candidates'];
       case 'City Manager':
@@ -137,7 +138,27 @@ function App() {
       const data = await res.json();
       setCandidates(data || []);
     } catch (err) {
-      console.error(err.message);
+      console.error(err);
+    }
+  };
+
+  // Staff DB pipelines
+  const [staffList, setStaffList] = useState([]);
+
+  // Fetch staff list from DB
+  const fetchStaff = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${API}/auth/staff`, {
+        headers: {
+          'x-admin-id': user.id
+        }
+      });
+      if (!res.ok) throw new Error('Failed to fetch staff.');
+      const data = await res.json();
+      setStaffList(data || []);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -146,10 +167,13 @@ function App() {
     checkHealth();
   }, []);
 
-  // Fetch candidates when user becomes authenticated
+  // Fetch initial data when user becomes authenticated
   useEffect(() => {
     if (user) {
       fetchCandidates();
+      if (user.userType === 'Admin') {
+        fetchStaff();
+      }
     }
   }, [user]);
 
@@ -163,6 +187,7 @@ function App() {
   const handleLogout = () => {
     setUser(null);
     setCandidates([]);
+    setStaffList([]);
     localStorage.removeItem('evencargo_session');
     window.location.hash = '';
   };
@@ -220,17 +245,23 @@ function App() {
               </div>
             )}
 
-            {/* Conditionally render Candidate Directory CRUD, Staff Management, or Dashboard */}
+            {/* Conditionally render pages based on active section */}
             {activeSection === 'candidate-management' ? (
               <CandidateManagement 
                 user={user}
                 candidates={candidates}
+                setCandidates={setCandidates}
                 fetchCandidates={fetchCandidates}
               />
             ) : activeSection === 'register-staff' ? (
               <StaffManagement 
                 user={user}
+                staffList={staffList}
+                setStaffList={setStaffList}
+                fetchStaff={fetchStaff}
               />
+            ) : activeSection === 'question-management' ? (
+              <QuestionManagement />
             ) : (
               <Dashboard 
                 user={user}

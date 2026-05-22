@@ -79,8 +79,8 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
       </div>
 
       {/* Stats Summary Grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
+      <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Total Candidates</span>
             <span className="text-2xl font-bold text-slate-800 mt-0.5 block">{candidates.length}</span>
@@ -90,7 +90,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Converted</span>
             <span className="text-2xl font-bold text-emerald-650 mt-0.5 block">
@@ -102,7 +102,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Training Started</span>
             <span className="text-2xl font-bold text-amber-650 mt-0.5 block">
@@ -114,7 +114,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Dropped</span>
             <span className="text-2xl font-bold text-rose-650 mt-0.5 block">

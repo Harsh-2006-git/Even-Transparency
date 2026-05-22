@@ -1,8 +1,11 @@
 import express from 'express';
-import { getQuestions } from '../controllers/questionController.js';
+import { getQuestions, createQuestion, updateQuestion, deleteQuestion } from '../controllers/questionController.js';
 
 const router = express.Router();
 
 router.get('/', getQuestions);
+router.post('/', createQuestion);
+router.put('/:id', updateQuestion);
+router.delete('/:id', deleteQuestion);
 
 export default router;

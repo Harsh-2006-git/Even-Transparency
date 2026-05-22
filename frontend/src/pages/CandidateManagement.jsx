@@ -31,13 +31,22 @@ const FALLBACK_QUESTIONS = [
   { qNumber: 'Q22', domain: 'F', domainName: 'Psychological Readiness & Agency', domainWeight: 0.10, questionText: 'If her family initially objects to joining, what will she do?', questionWeight: 4, inputType: 'Radio', options: [{ text: 'Would join anyway', score: 10 }, { text: 'Would try to persuade them', score: 7 }, { text: 'Has not thought about it', score: 3 }, { text: 'Would not join', score: 1 }] },
   { qNumber: 'Q23', domain: 'F', domainName: 'Psychological Readiness & Agency', domainWeight: 0.10, questionText: 'Has she made an independent financial decision before?', questionWeight: 3, inputType: 'Radio', options: [{ text: 'Yes', score: 10 }, { text: 'No', score: 3 }, { text: 'Does not know', score: 2 }] },
   { qNumber: 'Q24', domain: 'F', domainName: 'Psychological Readiness & Agency', domainWeight: 0.10, questionText: 'How does she respond to: "If you hit a roadblock/accident while driving, what will you do?"', questionWeight: 3, inputType: 'Radio', options: [{ text: '3 – Problem-solving orientation', score: 10 }, { text: '2 – Neutral', score: 5 }, { text: '1 – Withdrawal orientation', score: 1 }] },
-  { qNumber: 'Q25', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Primary language spoken at home [Optional]', questionWeight: 2, inputType: 'Text', options: [] },
+  { qNumber: 'Q25', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Primary language(s) spoken at home [Optional]', questionWeight: 2, inputType: 'MultiSelect', options: [
+    { text: 'Hindi', score: 5 },
+    { text: 'English', score: 5 },
+    { text: 'Marathi', score: 5 },
+    { text: 'Bengali', score: 5 },
+    { text: 'Telugu', score: 5 },
+    { text: 'Tamil', score: 5 },
+    { text: 'Urdu', score: 5 },
+    { text: 'Other', score: 5 }
+  ] },
   { qNumber: 'Q26', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Does the household celebrate festivals not on the main national calendar?', questionWeight: 2, inputType: 'Radio', options: [{ text: 'Yes', score: 8 }, { text: 'No', score: 4 }, { text: 'Prefer not to say', score: 0 }] },
   { qNumber: 'Q27', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Is the household a beneficiary of any government welfare schemes?', questionWeight: 3, inputType: 'Radio', options: [{ text: 'Yes', score: 10 }, { text: 'No', score: 4 }, { text: 'Does not know', score: 5 }] },
   { qNumber: 'Q28', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Neighbourhood/colony composition', questionWeight: 2, inputType: 'Dropdown', options: [{ text: 'High density low-income', score: 10 }, { text: 'Medium density middle-income', score: 5 }, { text: 'Low density high-income', score: 2 }] }
 ];
 
-export default function CandidateManagement({ user, candidates = [], fetchCandidates }) {
+export default function CandidateManagement({ user, candidates = [], setCandidates, fetchCandidates }) {
   const role = user?.userType || 'Mobiliser';
 
   // State for Lists & Filters
@@ -134,38 +143,54 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
   const calculateChecksheetScore = (questionsMap, questionsList) => {
     const listToUse = questionsList && questionsList.length > 0 ? questionsList : FALLBACK_QUESTIONS;
 
-    const domainWeights = {
-      A: 0.22,
-      B: 0.20,
-      C: 0.16,
-      D: 0.18,
-      E: 0.10,
-      F: 0.10,
-      G: 0.04
-    };
-
-    const domainQuestions = { A: [], B: [], C: [], D: [], E: [], F: [], G: [] };
+    const domainQuestions = {};
     listToUse.forEach(q => {
-      if (domainQuestions[q.domain]) {
-        domainQuestions[q.domain].push(q);
+      const domainCode = q.domain || 'UNKNOWN';
+      if (!domainQuestions[domainCode]) {
+        domainQuestions[domainCode] = [];
+      }
+      domainQuestions[domainCode].push(q);
+    });
+
+    // Count answered questions to determine completeness
+    const totalQuestionsCount = listToUse.length;
+    let answeredQuestionsCount = 0;
+    listToUse.forEach(q => {
+      const answer = questionsMap[q.qNumber];
+      if (answer !== undefined && answer !== null && answer !== '') {
+        if (q.inputType === 'Text') {
+          if (String(answer).trim().length > 0) {
+            answeredQuestionsCount++;
+          }
+        } else {
+          answeredQuestionsCount++;
+        }
       }
     });
+
+    const isCompleted = totalQuestionsCount > 0 && answeredQuestionsCount === totalQuestionsCount;
 
     let weightedCompositeScore = 0;
 
     Object.keys(domainQuestions).forEach(domain => {
       const qList = domainQuestions[domain];
       let domainWeightedSum = 0;
-      let domainWeightSum = 0;
+
+      // Get domain metadata from the first question in the group
+      const firstQ = qList[0];
+      const domainWeight = firstQ ? parseFloat(firstQ.domainWeight) : 0;
+
+      // Sum of ALL question weights in this domain
+      const totalPossibleWeight = qList.reduce((sum, q) => sum + (q.questionWeight || 0), 0);
 
       qList.forEach(q => {
         const qNum = q.qNumber;
         const answer = questionsMap[qNum];
 
-        if (answer !== undefined && answer !== null && answer !== '') {
-          let subScore = 0;
-          let isAnswerValid = false;
+        let subScore = 0;
+        let isAnswerValid = false;
 
+        if (answer !== undefined && answer !== null && answer !== '') {
           if (qNum === 'Q10') {
             if (typeof answer === 'number') {
               isAnswerValid = true;
@@ -188,6 +213,11 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
               subScore = 5;
               isAnswerValid = true;
             }
+          } else if (q.inputType === 'MultiSelect') {
+            if (Array.isArray(answer) && answer.length > 0) {
+              subScore = 5;
+              isAnswerValid = true;
+            }
           } else {
             const matchingOption = q.options?.find(opt => opt.text.trim() === String(answer).trim());
             if (matchingOption) {
@@ -195,30 +225,36 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
               isAnswerValid = true;
             }
           }
+        }
 
-          if (isAnswerValid) {
-            domainWeightedSum += subScore * q.questionWeight;
-            domainWeightSum += q.questionWeight;
-          }
+        if (isAnswerValid) {
+          domainWeightedSum += subScore * q.questionWeight;
+        } else {
+          // Unanswered questions MUST temporarily count as 0
+          domainWeightedSum += 0 * q.questionWeight;
         }
       });
 
-      const domainScore = domainWeightSum > 0 ? (domainWeightedSum / domainWeightSum) : 0;
-      const weight = domainWeights[domain];
-      const contribution = domainScore * 10 * weight;
+      const domainScore = totalPossibleWeight > 0 ? (domainWeightedSum / totalPossibleWeight) : 0;
+      
+      // Normalize weight: decimal to percentage (e.g. 0.22 -> 22)
+      const weightPct = domainWeight <= 1.0 ? domainWeight * 100 : domainWeight;
+      const contribution = (domainScore / 10) * weightPct;
 
       weightedCompositeScore += contribution;
     });
 
-    // Bonuses
+    // Bonuses - applied only after all questions are answered
     let bonusPoints = 0;
-    const q6Answer = questionsMap['Q6'];
-    if (q6Answer === 'Owns' || q6Answer === 'Regular family access') {
-      bonusPoints += 5;
-    }
-    const q15Answer = questionsMap['Q15'];
-    if (q15Answer === 'Yes, non-traditional work') {
-      bonusPoints += 5;
+    if (isCompleted) {
+      const q6Answer = questionsMap['Q6'];
+      if (q6Answer === 'Owns' || q6Answer === 'Regular family access') {
+        bonusPoints += 5;
+      }
+      const q15Answer = questionsMap['Q15'];
+      if (q15Answer === 'Yes, non-traditional work') {
+        bonusPoints += 5;
+      }
     }
 
     let finalScore = weightedCompositeScore + bonusPoints;
@@ -227,10 +263,34 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
     return Math.round(finalScore);
   };
 
-  const getOutcomeFromScore = (scoreVal, questionsMap) => {
-    if (!questionsMap || Object.keys(questionsMap).length === 0) {
+  const getOutcomeFromScore = (scoreVal, questionsMap, questionsList) => {
+    const listToUse = questionsList && questionsList.length > 0 ? questionsList : FALLBACK_QUESTIONS;
+    
+    // Check completeness
+    const totalQuestionsCount = listToUse.length;
+    let answeredQuestionsCount = 0;
+    listToUse.forEach(q => {
+      const answer = questionsMap[q.qNumber];
+      if (answer !== undefined && answer !== null && answer !== '') {
+        if (q.inputType === 'Text') {
+          if (String(answer).trim().length > 0) {
+            answeredQuestionsCount++;
+          }
+        } else if (q.inputType === 'MultiSelect') {
+          if (Array.isArray(answer) && answer.length > 0) {
+            answeredQuestionsCount++;
+          }
+        } else {
+          answeredQuestionsCount++;
+        }
+      }
+    });
+
+    const isCompleted = totalQuestionsCount > 0 && answeredQuestionsCount === totalQuestionsCount;
+    if (!isCompleted) {
       return 'Pending';
     }
+
     if (scoreVal >= 75) return 'Suitable';
     if (scoreVal >= 50) return 'Requires Training';
     return 'Unsuitable';
@@ -247,7 +307,7 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
     // Calculate and auto-populate score/outcome
     const computedScore = calculateChecksheetScore(updated, questions);
     setScore(computedScore);
-    setOutcome(getOutcomeFromScore(computedScore, updated));
+    setOutcome(getOutcomeFromScore(computedScore, updated, questions));
   };
 
   // Open Modal Helpers
@@ -267,6 +327,11 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
     setSelectedQuestions({});
     setApiMessage(null);
     setModalType('add');
+  };
+
+  const openViewModal = (candidate) => {
+    setEditingCandidate(candidate);
+    setModalType('view');
   };
 
   const openEditModal = (candidate) => {
@@ -304,14 +369,10 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!fullName.trim() || !phone.trim()) {
-      setApiMessage({ type: 'error', text: 'Full Name and Phone Number are required.' });
+      alert('Full Name and Phone Number are required.');
       return;
     }
 
-    setLoading(true);
-    setApiMessage(null);
-
-    // Create payload retaining score / answers from existing edits, or defaulting for additions
     const payload = {
       fullName: fullName.trim(),
       phone: phone.trim(),
@@ -329,49 +390,49 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
       mobiliserId: modalType === 'add' ? user.id : editingCandidate.mobiliserId
     };
 
-    try {
-      let url = `${API}/candidates`;
-      let method = 'POST';
+    let url = `${API}/candidates`;
+    let method = 'POST';
+    const mockId = modalType === 'add' ? `temp-${Date.now()}` : editingCandidate.id;
 
-      if (modalType === 'edit') {
-        url = `${API}/candidates/${editingCandidate.id}`;
-        method = 'PUT';
-      }
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save candidate records.');
-      }
-
-      setApiMessage({
-        type: 'success',
-        text: `Candidate "${fullName}" has been successfully ${modalType === 'add' ? 'registered' : 'updated'}.`
-      });
-
-      setTimeout(() => {
-        setModalType(null);
-        setEditingCandidate(null);
-        fetchCandidates();
-      }, 1000);
-
-    } catch (err) {
-      setApiMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
+    if (modalType === 'edit') {
+      url = `${API}/candidates/${editingCandidate.id}`;
+      method = 'PUT';
     }
+
+    const optimisticCandidate = {
+      ...payload,
+      id: mockId,
+      createdAt: modalType === 'add' ? new Date().toISOString() : editingCandidate.createdAt
+    };
+
+    setCandidates(prev => {
+      if (modalType === 'add') return [optimisticCandidate, ...prev];
+      return prev.map(c => c.id === mockId ? { ...c, ...payload } : c);
+    });
+
+    setModalType(null);
+    setEditingCandidate(null);
+
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(res => res.json().then(data => ({ res, data })))
+      .then(({ res, data }) => {
+        if (!res.ok) throw new Error(data.error);
+        fetchCandidates();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to save candidate: ' + err.message);
+        fetchCandidates();
+      });
   };
 
   // Handle Live Call Interview Form Submit
   const handleInterviewSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setApiMessage(null);
 
     const payload = {
       fullName: editingCandidate.fullName,
@@ -390,35 +451,28 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
       notes: notes.trim() || null
     };
 
-    try {
-      const url = `${API}/candidates/${editingCandidate.id}`;
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
+    const updatedCandidate = { ...editingCandidate, ...payload };
+    setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? updatedCandidate : c));
+    
+    setModalType(null);
+    setEditingCandidate(null);
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save interview details.');
-      }
-
-      setApiMessage({
-        type: 'success',
-        text: `Interview remarks and scoring for "${editingCandidate.fullName}" have been successfully saved.`
-      });
-
-      setTimeout(() => {
-        setModalType(null);
-        setEditingCandidate(null);
+    const url = `${API}/candidates/${editingCandidate.id}`;
+    fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(res => res.json().then(data => ({ res, data })))
+      .then(({ res, data }) => {
+        if (!res.ok) throw new Error(data.error);
         fetchCandidates();
-      }, 1000);
-
-    } catch (err) {
-      setApiMessage({ type: 'error', text: err.message });
-    } finally {
-      setLoading(false);
-    }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to save interview details: ' + err.message);
+        fetchCandidates();
+      });
   };
 
   // Confirm delete handler
@@ -429,25 +483,25 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
 
   const executeDelete = async () => {
     if (!candidateToDelete) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/candidates/${candidateToDelete.id}`, {
-        method: 'DELETE'
+    
+    const idToDelete = candidateToDelete.id;
+    setCandidates(prev => prev.filter(c => c.id !== idToDelete));
+    setShowDeleteConfirm(false);
+    setCandidateToDelete(null);
+
+    fetch(`${API}/candidates/${idToDelete}`, {
+      method: 'DELETE'
+    })
+      .then(res => res.json().then(data => ({ res, data })))
+      .then(({ res, data }) => {
+        if (!res.ok) throw new Error(data.error);
+        fetchCandidates();
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Failed to delete candidate: ' + err.message);
+        fetchCandidates();
       });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete candidate.');
-      }
-
-      setShowDeleteConfirm(false);
-      setCandidateToDelete(null);
-      fetchCandidates();
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Find unique cities for dropdown filter
@@ -565,11 +619,10 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 uppercase font-black tracking-wider">
                   <th className="py-4.5 px-6">Candidate Details</th>
-                  <th className="py-4.5 px-6">Contact Info</th>
-                  <th className="py-4.5 px-6">Fitment Score</th>
+                  <th className="py-4.5 px-6 text-center">Fitment Score</th>
                   <th className="py-4.5 px-6">Pipeline Status</th>
                   {role === 'Admin' && <th className="py-4.5 px-6">Recruiter Info</th>}
-                  <th className="py-4.5 px-6 text-center">Actions</th>
+                  <th className="py-4.5 px-6 text-center">Quick Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150 text-xs">
@@ -602,38 +655,24 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
                         </div>
                       </td>
 
-                      {/* Contact Info */}
-                      <td className="py-4 px-6">
-                        <div className="space-y-1 text-slate-650">
-                          <div className="flex items-center">
-                            <Phone className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
-                            <span className="font-bold">{c.phone}</span>
-                          </div>
-                          {c.email && (
-                            <div className="flex items-center text-slate-500">
-                              <Mail className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
-                              <span>{c.email}</span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
+
 
                       {/* Fitment Rating */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center space-x-3">
-                          <div className="text-left">
-                            <span className="font-extrabold text-sm text-indigo-700 block">{c.score}%</span>
-                            <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${c.outcome === 'Suitable'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-250'
-                              : c.outcome === 'Requires Training'
-                                ? 'bg-amber-50 text-amber-750 border-amber-200'
-                                : c.outcome === 'Unsuitable'
-                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                  : 'bg-slate-50 text-slate-500 border-slate-200'
-                              }`}>
-                              {c.outcome || 'Pending'}
-                            </span>
-                          </div>
+                      <td className="py-4 px-6 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1.5">
+                          <span className={`font-extrabold text-sm ${isInterviewed ? 'text-indigo-700' : 'text-slate-400'}`}>
+                            {isInterviewed ? `${c.score}%` : '—'}
+                          </span>
+                          <span className={`inline-block px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${c.outcome === 'Suitable'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-250'
+                            : c.outcome === 'Requires Training'
+                              ? 'bg-amber-50 text-amber-750 border-amber-200'
+                              : c.outcome === 'Unsuitable'
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : 'bg-slate-50 text-slate-500 border-slate-200'
+                            }`}>
+                            {c.outcome || 'Pending'}
+                          </span>
                         </div>
                       </td>
 
@@ -663,32 +702,29 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
                         </td>
                       )}
 
-                      {/* Actions */}
-                      <td className="py-4 px-6 text-center">
-                        <div className="flex items-center justify-center space-x-2">
+                      {/* Quick Actions */}
+                      <td className="py-4 px-6">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => openInterviewModal(c)}
-                            className={`p-1.5 rounded-lg border transition cursor-pointer relative ${isInterviewed
-                              ? 'text-emerald-600 bg-emerald-50/50 border-emerald-100 hover:bg-emerald-100/50 hover:text-emerald-700'
-                              : 'text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100 hover:text-amber-700 animate-pulse'
-                              }`}
-                            title={isInterviewed ? 'Review/Edit Assessment' : 'Start Live Call Interview'}
+                            className={`flex items-center justify-center gap-1.5 py-1.5 px-3 border text-[10px] font-bold rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer ${isInterviewed ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100' : 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 animate-pulse'}`}
                           >
-                            <PhoneCall className="h-4 w-4" />
+                            <PhoneCall className="w-3 h-3" />
+                            {isInterviewed ? 'Review Interview' : 'Start Interview'}
                           </button>
                           <button
-                            onClick={() => openEditModal(c)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-650 hover:bg-slate-100 border border-slate-200 rounded-lg transition cursor-pointer"
-                            title="Edit Demographics"
+                            onClick={() => openViewModal(c)}
+                            className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] font-bold rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer"
                           >
-                            <Edit className="h-4 w-4" />
+                            <UserCheck className="w-3 h-3" />
+                            See Full Profile
                           </button>
                           <button
                             onClick={() => triggerDelete(c)}
-                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-slate-100 border border-slate-200 rounded-lg transition cursor-pointer"
+                            className="flex items-center justify-center p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg transition cursor-pointer"
                             title="Delete Candidate"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -707,6 +743,143 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
           </div>
         )}
       </div>
+
+      {/* ------------------- VIEW MODAL ------------------- */}
+      {modalType === 'view' && editingCandidate && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="bg-slate-50 p-5 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white text-base shadow-sm">
+                  {editingCandidate.fullName ? editingCandidate.fullName.substring(0, 2).toUpperCase() : 'CA'}
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800 text-base leading-tight">
+                    {editingCandidate.fullName}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5 text-[10px] font-bold text-slate-500">
+                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {editingCandidate.city}, {editingCandidate.state}</span>
+                    <span>&bull;</span>
+                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {editingCandidate.phone}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setModalType(null)}
+                className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 flex-1 overflow-y-auto bg-white space-y-4">
+              {/* Details Compact Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs overflow-hidden">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email</p>
+                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5 truncate" title={editingCandidate.email}>
+                    <Mail className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    {editingCandidate.email || 'N/A'}
+                  </p>
+                </div>
+                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Birth</p>
+                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    {editingCandidate.dateOfBirth || 'N/A'}
+                  </p>
+                </div>
+                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Gender</p>
+                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    {editingCandidate.gender || 'Female'}
+                  </p>
+                </div>
+                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Marital Status</p>
+                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    {editingCandidate.maritalStatus || 'Single'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Status and Notes */}
+              <div className="flex flex-col gap-3.5">
+                <div className="flex bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-xl justify-between items-center">
+                  <div>
+                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-0.5">Pipeline Status</p>
+                    <span className={`inline-block px-2.5 py-0.5 border text-[10px] font-black rounded-md capitalize shadow-xs ${
+                      editingCandidate.status === 'pending'
+                        ? 'bg-amber-100 text-amber-800 border-amber-200'
+                        : editingCandidate.status === 'converted'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                          : editingCandidate.status === 'training started'
+                            ? 'bg-blue-100 text-blue-800 border-blue-200'
+                            : editingCandidate.status === 'rejected'
+                              ? 'bg-rose-100 text-rose-800 border-rose-200'
+                              : 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                    }`}>
+                      {editingCandidate.status || 'Pending'}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-0.5">Fitment</p>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span className="text-sm font-black text-indigo-700">{editingCandidate.score || 0}%</span>
+                      <span className={`inline-block px-2.5 py-0.5 border text-[10px] font-black rounded-md uppercase shadow-xs ${
+                        editingCandidate.outcome === 'Suitable' 
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                          : editingCandidate.outcome === 'Requires Training' 
+                            ? 'bg-amber-100 text-amber-800 border-amber-200' 
+                            : editingCandidate.outcome === 'Unsuitable' 
+                              ? 'bg-rose-100 text-rose-800 border-rose-200' 
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                      }`}>
+                        {editingCandidate.outcome || 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {editingCandidate.notes && (
+                  <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Internal Notes</p>
+                    <p className="text-[11px] font-medium text-slate-700 leading-relaxed">
+                      {editingCandidate.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setModalType(null)}
+                className="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition shadow-sm cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => openEditModal(editingCandidate)}
+                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-md cursor-pointer"
+              >
+                <Edit className="w-4 h-4" /> Edit Profile
+              </button>
+              <button
+                onClick={() => openInterviewModal(editingCandidate)}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-md cursor-pointer"
+              >
+                <PhoneCall className="w-4 h-4" /> Start Interview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ------------------- ADD / EDIT MODAL ------------------- */}
       {modalType && (modalType === 'add' || modalType === 'edit') && (
@@ -937,110 +1110,64 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
         }).length;
         const totalCount = listToGroup.length;
         const progressPercent = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
-        const activeDomainQuestions = listToGroup.filter(q => q.domain === activeQuestion?.domain);
 
         return (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in text-xs">
-            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in text-xs overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl h-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
 
               {/* Modal Header */}
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
-                <div>
-                  <h3 className="font-black text-slate-800 text-base flex items-center">
-                    <PhoneCall className="w-5 h-5 text-indigo-650 mr-2" /> Live Call Assessment: {fullName}
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white z-10 gap-4">
+                {/* Left: Title */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-black text-slate-800 text-sm flex items-center truncate">
+                    <PhoneCall className="w-4 h-4 text-indigo-600 mr-2 shrink-0" /> Live Assessment: {fullName}
                   </h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Complete the 28-question operational calculator on a live call with the candidate.
-                  </p>
+                  <p className="text-[9px] text-slate-400 mt-0.5">Complete 28 questions on a live call.</p>
                 </div>
+
+                {/* Center: Compact Progress Panel */}
+                <div className="flex-1 max-w-sm bg-slate-50 border border-slate-200 rounded-lg p-2 flex flex-col justify-center space-y-1.5 shadow-sm shrink-0">
+                  <div className="flex items-center justify-between text-[9px] font-bold text-slate-500">
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded uppercase tracking-wider">Sec {currentDomainNum}/7</span>
+                      <span>{progressPercent}% ({answeredCount}/{totalCount})</span>
+                    </span>
+                    <span className="uppercase tracking-wider">Domains</span>
+                  </div>
+                  <div className="flex items-center gap-0.5 w-full">
+                    {domainsList.map((domainKey) => {
+                      const isCompleted = isDomainCompleted(domainKey);
+                      const isActive = activeQuestion?.domain === domainKey;
+                      return (
+                        <div
+                          key={domainKey}
+                          className={`h-1 flex-1 rounded-full transition-all duration-300 ${isActive ? 'bg-indigo-600' : isCompleted ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                          title={`Domain ${domainKey}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Right: Close button */}
                 <button
                   onClick={() => setModalType(null)}
-                  className="p-2 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer"
+                  className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer shrink-0"
                 >
-                  <X className="w-4.5 h-4.5" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Modal Body: Two-Column Form */}
-              <form onSubmit={handleInterviewSubmit} className="p-6 flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <form onSubmit={handleInterviewSubmit} className="p-5 flex-1 min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-5">
 
                 {/* Left Column: Quiz Question Container */}
-                <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl p-6 flex flex-col justify-between space-y-6 min-h-[500px]">
+                <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col min-h-0 overflow-hidden">
 
-                  {/* Quiz Header */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (activeQuestionIndex > 0) {
-                              setActiveQuestionIndex(prev => prev - 1);
-                            } else {
-                              setModalType(null);
-                            }
-                          }}
-                          className="p-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-full transition cursor-pointer shadow-xs font-bold text-xs"
-                          title="Back"
-                        >
-                          &larr;
-                        </button>
-                        <div>
-                          <h4 className="font-black text-slate-800 text-sm">Assessment Quiz</h4>
-                          <p className="text-[10px] text-slate-400">Answer one question at a time to check candidate fitment.</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
-                          Section {currentDomainNum} of 7
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Progress Indicator: Overall Progress Bar */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
-                        <span>Overall Progress</span>
-                        <span>{progressPercent}% ({answeredCount}/{totalCount} Answered)</span>
-                      </div>
-                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className="bg-indigo-600 h-full transition-all duration-350"
-                          style={{ width: `${progressPercent}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Progress Indicator: Domain-level dashes (7 dashes for A-G) */}
-                    <div className="space-y-1">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Domains Completion</div>
-                      <div className="flex items-center space-x-1.5 w-full">
-                        {domainsList.map((domainKey) => {
-                          const isCompleted = isDomainCompleted(domainKey);
-                          const isActive = activeQuestion?.domain === domainKey;
-                          return (
-                            <div
-                              key={domainKey}
-                              className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                                isActive
-                                  ? 'bg-slate-800 ring-2 ring-slate-800/20'
-                                  : isCompleted
-                                  ? 'bg-emerald-500'
-                                  : 'bg-slate-200'
-                              }`}
-                              title={`Domain ${domainKey}: ${isCompleted ? 'Completed' : isActive ? 'Active' : 'Pending'}`}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Question Section Card */}
+                  {/* Scrollable Question Area */}
                   {activeQuestion && (
-                    <div className="flex-1 flex flex-col justify-center space-y-5 py-4">
-
-                      {/* Domain Category Badge */}
+                    <div className="flex-1 p-6 overflow-y-auto flex flex-col space-y-5">
+                      {/* Domain Badge */}
                       <div>
                         <span className="inline-block px-3 py-1 bg-indigo-50 border border-indigo-150 rounded-full text-[10px] font-bold text-indigo-700">
                           Section {activeQuestion.domain}: {activeQuestion.domainName}
@@ -1048,12 +1175,12 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
                       </div>
 
                       {/* Question Text */}
-                      <h3 className="font-extrabold text-slate-850 text-sm leading-snug">
-                        <span className="text-indigo-650 mr-1">{activeQuestion.qNumber}.</span>
+                      <h3 className="font-extrabold text-slate-800 text-base leading-snug">
+                        <span className="text-indigo-600 mr-1.5">{activeQuestion.qNumber}.</span>
                         {activeQuestion.questionText}
                       </h3>
 
-                      {/* Inputs Area */}
+                      {/* Inputs */}
                       <div className="space-y-3">
                         {(activeQuestion.inputType === 'Radio' || activeQuestion.inputType === 'Dropdown') && (
                           <div className="grid grid-cols-1 gap-2.5">
@@ -1064,16 +1191,49 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
                                   key={opt.text}
                                   type="button"
                                   onClick={() => handleQuestionAnswer(activeQuestion.qNumber, opt.text)}
-                                  className={`w-full px-4 py-3.5 text-left rounded-2xl border transition duration-150 cursor-pointer flex items-center space-x-3 ${
+                                  className={`w-full px-4 py-3 text-left rounded-2xl border-2 transition cursor-pointer flex items-center space-x-3 ${
                                     isSelected
-                                      ? 'bg-slate-800 border-slate-900 text-white font-bold shadow-md'
-                                      : 'bg-white border-slate-200 hover:border-slate-350 hover:bg-slate-50 text-slate-700'
+                                      ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold shadow-sm'
+                                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
                                   }`}
                                 >
-                                  <span className={`w-5 h-5 rounded-full border shrink-0 flex items-center justify-center transition-colors ${
-                                    isSelected ? 'border-white bg-white text-slate-800' : 'border-slate-300 bg-white'
+                                  <span className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                                    isSelected ? 'border-indigo-500 bg-white' : 'border-slate-300 bg-white'
                                   }`}>
-                                    {isSelected && <span className="w-2.5 h-2.5 bg-slate-800 rounded-full" />}
+                                    {isSelected && <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                                  </span>
+                                  <span className="text-xs">{opt.text}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {activeQuestion.inputType === 'MultiSelect' && (
+                          <div className="grid grid-cols-1 gap-2.5">
+                            {activeQuestion.options && activeQuestion.options.map(opt => {
+                              const currentSelection = Array.isArray(selectedQuestions[activeQuestion.qNumber]) ? selectedQuestions[activeQuestion.qNumber] : [];
+                              const isSelected = currentSelection.includes(opt.text);
+                              return (
+                                <button
+                                  key={opt.text}
+                                  type="button"
+                                  onClick={() => {
+                                    const newSel = isSelected
+                                      ? currentSelection.filter(i => i !== opt.text)
+                                      : [...currentSelection, opt.text];
+                                    handleQuestionAnswer(activeQuestion.qNumber, newSel);
+                                  }}
+                                  className={`w-full px-4 py-3 text-left rounded-2xl border-2 transition cursor-pointer flex items-center space-x-3 ${
+                                    isSelected
+                                      ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold shadow-sm'
+                                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
+                                  }`}
+                                >
+                                  <span className={`w-5 h-5 rounded border-2 shrink-0 flex items-center justify-center ${
+                                    isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-white'
+                                  }`}>
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" strokeWidth={3} />}
                                   </span>
                                   <span className="text-xs">{opt.text}</span>
                                 </button>
@@ -1083,57 +1243,69 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
                         )}
 
                         {activeQuestion.inputType === 'Number' && (
-                          <div className="space-y-4">
-                            <div className="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm focus-within:border-indigo-600 transition">
+                          <div className="space-y-3">
+                            {/* Number input */}
+                            <div className="flex items-center gap-3 bg-white border-2 border-slate-200 rounded-2xl px-4 py-3 shadow-sm focus-within:border-indigo-500 transition">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Ratio</span>
                               <input
                                 type="number"
                                 step="0.01"
                                 min="0"
                                 max="1"
-                                placeholder="e.g. 0.33"
+                                placeholder="0.00 – 1.00"
                                 value={selectedQuestions[activeQuestion.qNumber] !== undefined ? selectedQuestions[activeQuestion.qNumber] : ''}
                                 onChange={(e) => {
                                   const val = e.target.value === '' ? '' : parseFloat(e.target.value);
                                   handleQuestionAnswer(activeQuestion.qNumber, val);
                                 }}
-                                className="w-full text-sm font-bold text-slate-800 bg-transparent border-none outline-none focus:ring-0"
+                                className="flex-1 text-sm font-black text-slate-800 bg-transparent border-none outline-none focus:ring-0"
                                 autoFocus
                               />
+                              {selectedQuestions[activeQuestion.qNumber] !== undefined && selectedQuestions[activeQuestion.qNumber] !== '' && (
+                                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg shrink-0">
+                                  {Number(selectedQuestions[activeQuestion.qNumber]).toFixed(2)}
+                                </span>
+                              )}
                             </div>
-                            <p className="text-[10px] text-slate-400 font-semibold leading-relaxed pl-1">
-                              Enter decimal ratio between 0.0 and 1.0 (earning members / household size)
+                            <p className="text-[10px] text-slate-400 font-semibold pl-1">
+                              Earning members ÷ total household size (0.0 – 1.0)
                             </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                              {activeQuestion.options?.map(opt => {
-                                const ans = selectedQuestions[activeQuestion.qNumber];
-                                let isOptActive = false;
-                                if (typeof ans === 'number') {
-                                  if (opt.text.includes('≥ 0.5') && ans >= 0.5) isOptActive = true;
-                                  else if (opt.text.includes('0.3–0.49') && ans >= 0.3 && ans < 0.5) isOptActive = true;
-                                  else if (opt.text.includes('< 0.3') && ans < 0.3) isOptActive = true;
-                                }
-                                return (
-                                  <button
-                                    key={opt.text}
-                                    type="button"
-                                    onClick={() => {
-                                      let defaultVal = 0.5;
-                                      if (opt.text.includes('0.3–0.49')) defaultVal = 0.35;
-                                      if (opt.text.includes('< 0.3')) defaultVal = 0.2;
-                                      handleQuestionAnswer(activeQuestion.qNumber, defaultVal);
-                                    }}
-                                    className={`p-3 text-left border rounded-xl text-[10px] transition duration-150 cursor-pointer ${
-                                      isOptActive
-                                        ? 'bg-indigo-50 border-indigo-300 text-indigo-900 font-bold'
-                                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-650'
-                                    }`}
-                                  >
-                                    <div className="font-bold mb-0.5">{opt.text}</div>
-                                    <div className="text-[9px] text-slate-400">Set helper value</div>
-                                  </button>
-                                );
-                              })}
-                            </div>
+
+                            {/* Quick-pick range buttons from options */}
+                            {activeQuestion.options && activeQuestion.options.length > 0 && (
+                              <div className="grid grid-cols-3 gap-2">
+                                {activeQuestion.options.map(opt => {
+                                  const ans = selectedQuestions[activeQuestion.qNumber];
+                                  let isOptActive = false;
+                                  let presetVal = 0.5;
+                                  if (opt.text.includes('≥ 0.5') || opt.text.includes('>= 0.5')) {
+                                    presetVal = 0.5;
+                                    if (typeof ans === 'number' && ans >= 0.5) isOptActive = true;
+                                  } else if (opt.text.includes('0.3') && opt.text.includes('0.49')) {
+                                    presetVal = 0.35;
+                                    if (typeof ans === 'number' && ans >= 0.3 && ans < 0.5) isOptActive = true;
+                                  } else if (opt.text.includes('< 0.3') || opt.text.includes('0.3')) {
+                                    presetVal = 0.2;
+                                    if (typeof ans === 'number' && ans < 0.3) isOptActive = true;
+                                  }
+                                  return (
+                                    <button
+                                      key={opt.text}
+                                      type="button"
+                                      onClick={() => handleQuestionAnswer(activeQuestion.qNumber, presetVal)}
+                                      className={`p-2.5 text-left border-2 rounded-xl text-[9px] font-bold transition cursor-pointer leading-snug ${
+                                        isOptActive
+                                          ? 'bg-indigo-50 border-indigo-500 text-indigo-800'
+                                          : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600'
+                                      }`}
+                                    >
+                                      <div className="font-extrabold mb-0.5 text-[10px]">{opt.text}</div>
+                                      <div className={`text-[8px] ${isOptActive ? 'text-indigo-400' : 'text-slate-400'}`}>tap to set → {presetVal}</div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -1149,131 +1321,82 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
                                 autoFocus
                               />
                             </div>
-                            <p className="text-[10px] text-slate-400 font-semibold pl-1">
-                              Type language spoken at home.
-                            </p>
+                            <p className="text-[10px] text-slate-400 font-semibold pl-1">Type language spoken at home.</p>
                           </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* Sub-Question Level Indicators & Footer Actions */}
-                  <div className="border-t border-slate-200 pt-5 space-y-4">
-                    {/* Internal Questions progress dots */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-1.5 overflow-x-auto py-1">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Section Questions:</span>
-                        {activeDomainQuestions.map((q) => {
-                          const isAnswered = selectedQuestions[q.qNumber] !== undefined && selectedQuestions[q.qNumber] !== null && selectedQuestions[q.qNumber] !== '';
-                          const isActive = q.qNumber === activeQuestion?.qNumber;
-                          return (
-                            <button
-                              key={q.qNumber}
-                              type="button"
-                              onClick={() => {
-                                const globalIndex = listToGroup.findIndex(item => item.qNumber === q.qNumber);
-                                if (globalIndex !== -1) setActiveQuestionIndex(globalIndex);
-                              }}
-                              className={`h-2.5 rounded-full transition-all duration-200 cursor-pointer ${
-                                isActive
-                                  ? 'w-6 bg-slate-800'
-                                  : isAnswered
-                                  ? 'w-2.5 bg-emerald-500'
-                                  : 'w-2.5 bg-slate-200 hover:bg-slate-350'
-                              }`}
-                              title={`Question ${q.qNumber}: ${isAnswered ? 'Answered' : 'Unanswered'}`}
-                            />
-                          );
-                        })}
-                      </div>
-                      <span className="text-[10px] text-slate-400 font-bold shrink-0">
-                        Q{activeQuestionIndex + 1} of {totalCount}
-                      </span>
-                    </div>
-
-                    {/* Navigation Buttons */}
-                    <div className="flex items-center justify-between pt-1">
+                  {/* Sticky Nav Footer - Left */}
+                  <div className="bg-white border-t border-slate-200 px-5 py-4 flex items-center justify-between shrink-0">
+                    <button
+                      type="button"
+                      disabled={activeQuestionIndex === 0}
+                      onClick={() => setActiveQuestionIndex(prev => prev - 1)}
+                      className="px-5 py-2.5 border border-slate-200 bg-white rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs text-xs"
+                    >
+                      ← Back
+                    </button>
+                    <span className="text-[10px] text-slate-400 font-bold">Q{activeQuestionIndex + 1} of {totalCount}</span>
+                    {activeQuestionIndex < totalCount - 1 ? (
                       <button
                         type="button"
-                        disabled={activeQuestionIndex === 0}
-                        onClick={() => setActiveQuestionIndex(prev => prev - 1)}
-                        className="px-5 py-2.5 border border-slate-200 bg-white rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5 shadow-xs text-xs"
+                        onClick={() => setActiveQuestionIndex(prev => prev + 1)}
+                        className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 text-xs"
                       >
-                        <span>&larr; Back</span>
+                        Next →
                       </button>
-
-                      {activeQuestionIndex < totalCount - 1 ? (
-                        <button
-                          type="button"
-                          onClick={() => setActiveQuestionIndex(prev => prev + 1)}
-                          className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition cursor-pointer flex items-center space-x-1.5 shadow-md active:scale-95 text-xs"
-                        >
-                          <span>Next &rarr;</span>
-                        </button>
-                      ) : (
-                        <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-xl">
-                          All questions viewed. Complete below.
-                        </div>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-4 py-2.5 rounded-xl">
+                        ✓ All seen. Save on right.
+                      </div>
+                    )}
                   </div>
-
                 </div>
 
-                {/* Right Column: Sticky Summary & Remarks Panel */}
-                <div className="space-y-6">
-                  <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-5 sticky top-0 shadow-xs">
+                {/* Right Column: Summary & Remarks Panel */}
+                <div className="bg-slate-50 border border-slate-200 rounded-3xl flex flex-col justify-between overflow-hidden shadow-xs">
 
-                    <div>
-                      <h4 className="font-extrabold text-slate-800 text-xs uppercase tracking-wide border-b border-slate-200 pb-1.5">
-                        Interview Fitment Score
-                      </h4>
-                    </div>
-
-                    {/* Circular Score Gauge */}
-                    <div className="relative w-28 h-28 mx-auto flex items-center justify-center">
-                      <svg className="w-full h-full transform -rotate-90">
-                        <circle cx="56" cy="56" r="40" stroke="#E2E8F0" strokeWidth="8" fill="transparent" />
-                        <circle
-                          cx="56"
-                          cy="56"
-                          r="40"
-                          stroke="#4F46E5"
-                          strokeWidth="8"
-                          fill="transparent"
-                          strokeDasharray="251.2"
-                          strokeDashoffset={251.2 - (251.2 * score) / 100}
-                          strokeLinecap="round"
-                          className="transition-all duration-500 ease-out"
-                        />
-                      </svg>
-                      <span className="absolute text-2xl font-black text-slate-850">{score}%</span>
-                    </div>
-
-                    {/* Suitability Outcome Badge */}
-                    <div className="text-center">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                        Outcome Rating
-                      </span>
-                      <span className={`inline-block px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${outcome === 'Suitable'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-250 shadow-xs shadow-emerald-50'
-                        : outcome === 'Requires Training'
-                          ? 'bg-amber-50 text-amber-700 border-amber-250 shadow-xs shadow-amber-50'
-                          : outcome === 'Unsuitable'
-                            ? 'bg-rose-50 text-rose-700 border-rose-250 shadow-xs shadow-rose-50'
-                            : 'bg-slate-100 text-slate-500 border-slate-250'
+                  {/* Right Content - no scroll */}
+                  <div className="p-4 space-y-3">
+                    {/* Compact Score + Outcome Row */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-3">
+                      {/* Left: Outcome status */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Outcome</p>
+                        <span className={`inline-block px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide border ${
+                          outcome === 'Suitable' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : outcome === 'Requires Training' ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : outcome === 'Unsuitable' ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : 'bg-slate-100 text-slate-500 border-slate-200'
                         }`}>
-                        {outcome}
-                      </span>
+                          {outcome}
+                        </span>
+                      </div>
+                      {/* Right: Mini circular graph + % */}
+                      <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90">
+                          <circle cx="28" cy="28" r="22" stroke="#E2E8F0" strokeWidth="5" fill="transparent" />
+                          <circle
+                            cx="28" cy="28" r="22"
+                            stroke={outcome === 'Suitable' ? '#10B981' : outcome === 'Requires Training' ? '#F59E0B' : outcome === 'Unsuitable' ? '#EF4444' : '#4F46E5'}
+                            strokeWidth="5"
+                            fill="transparent"
+                            strokeDasharray="138.2"
+                            strokeDashoffset={138.2 - (138.2 * score) / 100}
+                            strokeLinecap="round"
+                            className="transition-all duration-500 ease-out"
+                          />
+                        </svg>
+                        <span className="absolute text-[11px] font-black text-slate-800">{score}%</span>
+                      </div>
                     </div>
 
-                    {/* Interactive Question Jump List */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
-                      <h5 className="font-extrabold text-[10px] text-slate-400 uppercase tracking-wider">
-                        Question Navigator (1-28)
-                      </h5>
-                      <div className="grid grid-cols-7 gap-1.5">
+                    {/* Question Navigator */}
+                    <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+                      <h5 className="font-extrabold text-[9px] text-slate-400 uppercase tracking-wider">Navigator (1–{totalCount})</h5>
+                      <div className="grid grid-cols-7 gap-1">
                         {listToGroup.map((q, idx) => {
                           const isAnswered = selectedQuestions[q.qNumber] !== undefined && selectedQuestions[q.qNumber] !== null && selectedQuestions[q.qNumber] !== '';
                           const isActive = idx === activeQuestionIndex;
@@ -1283,13 +1406,11 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
                               type="button"
                               onClick={() => setActiveQuestionIndex(idx)}
                               className={`aspect-square rounded-lg flex items-center justify-center font-bold text-[10px] transition cursor-pointer select-none ${
-                                isActive
-                                  ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-800/20'
-                                  : isAnswered
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-150 hover:bg-emerald-100'
-                                  : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
+                                isActive ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-800/20'
+                                : isAnswered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
                               }`}
-                              title={`Question ${q.qNumber}: ${isAnswered ? 'Answered' : 'Unanswered'}`}
+                              title={`Q${q.qNumber}: ${isAnswered ? 'Answered' : 'Unanswered'}`}
                             >
                               {idx + 1}
                             </button>
@@ -1298,53 +1419,49 @@ export default function CandidateManagement({ user, candidates = [], fetchCandid
                       </div>
                     </div>
 
-                    {/* Live Remarks Text Area */}
+                    {/* Remarks */}
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                        Live Interview Remarks
-                      </label>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Interview Remarks</label>
                       <textarea
-                        rows={3}
+                        rows={4}
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Write evaluation comments, family details, vehicle interest..."
-                        className="w-full bg-white border border-slate-250 rounded-2xl p-3 text-xs text-slate-900 focus:outline-none focus:border-indigo-650 transition resize-none shadow-xs"
+                        placeholder="Evaluation comments, family details, vehicle interest..."
+                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition resize-none shadow-xs"
                       />
                     </div>
 
                     {/* API Message */}
                     {apiMessage && (
-                      <div className={`p-3.5 rounded-xl text-xs font-semibold border flex items-start space-x-2 ${apiMessage.type === 'success'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-850'
-                        : 'bg-rose-50 border-rose-200 text-rose-850'
-                        }`}>
+                      <div className={`p-3.5 rounded-xl text-xs font-semibold border flex items-start space-x-2 ${
+                        apiMessage.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'
+                      }`}>
                         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                         <span>{apiMessage.text}</span>
                       </div>
                     )}
-
-                    {/* Save Button */}
-                    <div className="pt-2 flex flex-col space-y-3">
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full flex items-center justify-center space-x-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md shadow-indigo-50 active:scale-95 disabled:opacity-50 cursor-pointer"
-                      >
-                        <Check className="w-4 h-4" />
-                        <span>{loading ? 'Saving Answers...' : 'Save & Complete Interview'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setModalType(null)}
-                        className="w-full py-2.5 border border-slate-250 bg-white rounded-xl font-bold hover:bg-slate-50 text-slate-700 transition cursor-pointer text-center"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-
                   </div>
-                </div>
 
+                  {/* Footer Save Buttons - Right */}
+                  <div className="bg-white border-t border-slate-200 p-3 shrink-0 flex flex-col space-y-2">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full flex items-center justify-center space-x-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>{loading ? 'Saving...' : 'Save & Complete Interview'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalType(null)}
+                      className="w-full py-2 border border-slate-200 bg-white rounded-xl font-bold hover:bg-slate-50 text-slate-700 transition cursor-pointer text-center"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                </div>
               </form>
             </div>
           </div>

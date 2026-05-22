@@ -14,7 +14,7 @@ export const seedQuestions = async () => {
         domainName: 'Economic Pressure & Financial Urgency',
         domainWeight: 0.22,
         questionText: 'Monthly household income from all sources',
-        questionWeight: 5,
+        questionWeight: 7,
         inputType: 'Radio',
         options: [
           { text: 'Under 8,000₹', score: 5 },
@@ -30,7 +30,7 @@ export const seedQuestions = async () => {
         domainName: 'Economic Pressure & Financial Urgency',
         domainWeight: 0.22,
         questionText: 'Does any household member have an outstanding debt/loan?',
-        questionWeight: 4,
+        questionWeight: 6,
         inputType: 'Radio',
         options: [
           { text: 'Yes – formal (bank/MFI)', score: 8 },
@@ -44,7 +44,7 @@ export const seedQuestions = async () => {
         domainName: 'Economic Pressure & Financial Urgency',
         domainWeight: 0.22,
         questionText: 'Has anyone in the household taken a vehicle loan?',
-        questionWeight: 4,
+        questionWeight: 5,
         inputType: 'Radio',
         options: [
           { text: 'Yes', score: 10 },
@@ -58,7 +58,7 @@ export const seedQuestions = async () => {
         domainName: 'Economic Pressure & Financial Urgency',
         domainWeight: 0.22,
         questionText: 'Does the household own or rent their home?',
-        questionWeight: 2,
+        questionWeight: 4,
         inputType: 'Radio',
         options: [
           { text: 'Own', score: 4 },
@@ -74,7 +74,7 @@ export const seedQuestions = async () => {
         domainName: 'Mobility & Logistics Readiness',
         domainWeight: 0.20,
         questionText: 'Distance from home to nearest Even Cargo branch/hub',
-        questionWeight: 5,
+        questionWeight: 6,
         inputType: 'Radio',
         options: [
           { text: 'Under 3 km', score: 10 },
@@ -89,7 +89,7 @@ export const seedQuestions = async () => {
         domainName: 'Mobility & Logistics Readiness',
         domainWeight: 0.20,
         questionText: 'Does she own or have regular access to a two-wheeler?',
-        questionWeight: 5,
+        questionWeight: 6,
         inputType: 'Radio',
         options: [
           { text: 'Owns', score: 10 },
@@ -104,7 +104,7 @@ export const seedQuestions = async () => {
         domainName: 'Mobility & Logistics Readiness',
         domainWeight: 0.20,
         questionText: 'Does she currently travel independently within the city?',
-        questionWeight: 4,
+        questionWeight: 5,
         inputType: 'Radio',
         options: [
           { text: 'Yes, regularly', score: 10 },
@@ -163,7 +163,7 @@ export const seedQuestions = async () => {
         domainName: 'Family Structure & Household Dynamics',
         domainWeight: 0.16,
         questionText: 'Are there more adult males than adult females in the household?',
-        questionWeight: 4,
+        questionWeight: 3,
         inputType: 'Radio',
         options: [
           { text: 'Yes', score: 1 },
@@ -208,7 +208,7 @@ export const seedQuestions = async () => {
         domainName: 'Social Capital & Role Model Exposure',
         domainWeight: 0.18,
         questionText: 'Does she personally know a woman in delivery, driving, or non-traditional work?',
-        questionWeight: 5,
+        questionWeight: 6,
         inputType: 'Radio',
         options: [
           { text: 'Yes, close contact (family/friend)', score: 10 },
@@ -222,7 +222,7 @@ export const seedQuestions = async () => {
         domainName: 'Social Capital & Role Model Exposure',
         domainWeight: 0.18,
         questionText: 'Is there a woman in her household or neighborhood doing non-traditional or traditional work?',
-        questionWeight: 4,
+        questionWeight: 5,
         inputType: 'Radio',
         options: [
           { text: 'Yes, non-traditional work', score: 10 },
@@ -236,7 +236,7 @@ export const seedQuestions = async () => {
         domainName: 'Social Capital & Role Model Exposure',
         domainWeight: 0.18,
         questionText: 'Has she ever attended an SHG, NGO programme, or community training?',
-        questionWeight: 3,
+        questionWeight: 4,
         inputType: 'Radio',
         options: [
           { text: 'Currently active', score: 10 },
@@ -268,7 +268,7 @@ export const seedQuestions = async () => {
         domainName: 'Prior Work Experience & Aspiration',
         domainWeight: 0.10,
         questionText: 'Has she ever worked for income outside the home?',
-        questionWeight: 4,
+        questionWeight: 3,
         inputType: 'Radio',
         options: [
           { text: 'Yes, formal', score: 10 },
@@ -299,7 +299,7 @@ export const seedQuestions = async () => {
         domainName: 'Prior Work Experience & Aspiration',
         domainWeight: 0.10,
         questionText: 'Does she express a specific income target or goal?',
-        questionWeight: 3,
+        questionWeight: 2,
         inputType: 'Radio',
         options: [
           { text: 'Yes, specific and articulated', score: 10 },
@@ -374,10 +374,19 @@ export const seedQuestions = async () => {
         domain: 'G',
         domainName: 'Structural Marginalisation Proxies',
         domainWeight: 0.04,
-        questionText: 'Primary language spoken at home [Optional]',
-        questionWeight: 2,
-        inputType: 'Text',
-        options: []
+        questionText: 'Primary language(s) spoken at home [Optional]',
+        questionWeight: 1,
+        inputType: 'MultiSelect',
+        options: [
+          { text: 'Hindi', score: 5 },
+          { text: 'English', score: 5 },
+          { text: 'Marathi', score: 5 },
+          { text: 'Bengali', score: 5 },
+          { text: 'Telugu', score: 5 },
+          { text: 'Tamil', score: 5 },
+          { text: 'Urdu', score: 5 },
+          { text: 'Other', score: 5 }
+        ]
       },
       {
         qNumber: 'Q26',
@@ -385,7 +394,7 @@ export const seedQuestions = async () => {
         domainName: 'Structural Marginalisation Proxies',
         domainWeight: 0.04,
         questionText: 'Does the household celebrate festivals not on the main national calendar?',
-        questionWeight: 2,
+        questionWeight: 1,
         inputType: 'Radio',
         options: [
           { text: 'Yes', score: 8 },
@@ -400,7 +409,7 @@ export const seedQuestions = async () => {
         domainName: 'Structural Marginalisation Proxies',
         domainWeight: 0.04,
         questionText: 'Is the household a beneficiary of any government welfare schemes?',
-        questionWeight: 3,
+        questionWeight: 1,
         inputType: 'Radio',
         options: [
           { text: 'Yes', score: 10 },
@@ -414,7 +423,7 @@ export const seedQuestions = async () => {
         domainName: 'Structural Marginalisation Proxies',
         domainWeight: 0.04,
         questionText: 'Neighbourhood/colony composition',
-        questionWeight: 2,
+        questionWeight: 1,
         inputType: 'Dropdown',
         options: [
           { text: 'High density low-income', score: 10 },

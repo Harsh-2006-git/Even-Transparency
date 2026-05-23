@@ -34,7 +34,7 @@ const User = sequelize.define('User', {
     allowNull: false
   },
   userType: {
-    type: DataTypes.ENUM('Mobiliser', 'City Manager', 'Operations', 'Admin'),
+    type: DataTypes.ENUM('Mobiliser', 'Admin'),
     defaultValue: 'Mobiliser',
     field: 'user_type'
   }

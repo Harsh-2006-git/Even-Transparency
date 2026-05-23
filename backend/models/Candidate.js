@@ -20,7 +20,10 @@ const Candidate = sequelize.define('Candidate', {
   phone: {
     type: DataTypes.STRING(20),
     allowNull: false,
-    unique: true
+    unique: true,
+    validate: {
+      is: /^\d{10}$/
+    }
   },
   email: {
     type: DataTypes.STRING(150),

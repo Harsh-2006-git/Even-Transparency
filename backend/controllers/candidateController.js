@@ -3,6 +3,43 @@ import Question from '../models/Question.js';
 import User from '../models/User.js';
 import { calculateWCPScore } from '../utils/scoreCalculator.js';
 
+// ── In-memory question cache ─────────────────────────────────────────────────
+// Questions rarely change. We cache them for 5 minutes to avoid a DB round-trip
+// on every candidate create/update/sync call.
+let _questionCache = null;
+let _questionCacheTs = 0;
+const QUESTION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+const getQuestions = async () => {
+  const now = Date.now();
+  if (_questionCache && (now - _questionCacheTs) < QUESTION_CACHE_TTL_MS) {
+    return _questionCache;
+  }
+  _questionCache = await Question.findAll();
+  _questionCacheTs = now;
+  return _questionCache;
+};
+
+// Call this whenever questions are modified so the cache is immediately stale.
+export const invalidateQuestionCache = () => {
+  _questionCache = null;
+  _questionCacheTs = 0;
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
+const validateCandidateData = (data) => {
+  const phone = String(data.phone || '').trim().replace(/[\s-]/g, '');
+  if (!/^\d{10}$/.test(phone)) {
+    throw new Error('Phone Number must be exactly 10 digits.');
+  }
+  if (data.email && String(data.email).trim()) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.email).trim())) {
+      throw new Error('Email must be a valid email address format.');
+    }
+  }
+  return phone;
+};
+
 // Get all candidates
 export const getCandidates = async (req, res) => {
   try {
@@ -36,6 +73,7 @@ export const createCandidate = async (req, res) => {
   } = req.body;
   
   try {
+    const cleanPhone = validateCandidateData({ phone, email });
     let score = null;
     let wcpScoreBreakdown = null;
     let recruiterName = req.body.recruiterName || null;
@@ -52,7 +90,7 @@ export const createCandidate = async (req, res) => {
     let computedOutcome = outcome || 'Pending';
 
     if (wcpAnswers && Object.keys(wcpAnswers).length > 0) {
-      const questions = await Question.findAll();
+      const questions = await getQuestions();
       const calcResult = calculateWCPScore(wcpAnswers, questions);
       score = calcResult.finalScore;
       wcpScoreBreakdown = calcResult;
@@ -69,10 +107,13 @@ export const createCandidate = async (req, res) => {
     }
 
     const candidate = await Candidate.create({
-      fullName, profilePhoto, phone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
+      fullName, profilePhoto, phone: cleanPhone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
     res.status(201).json(candidate);
   } catch (error) {
+    if (error.message.includes('Phone Number') || error.message.includes('Email')) {
+      return res.status(400).json({ error: error.message });
+    }
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'Candidate with this phone number already registered.' });
     }
@@ -91,6 +132,14 @@ export const updateCandidate = async (req, res) => {
     const candidate = await Candidate.findByPk(id);
     if (!candidate) {
       return res.status(404).json({ error: 'Candidate not found.' });
+    }
+
+    let cleanPhone = candidate.phone;
+    if (phone !== undefined || email !== undefined) {
+      cleanPhone = validateCandidateData({
+        phone: phone !== undefined ? phone : candidate.phone,
+        email: email !== undefined ? email : candidate.email
+      });
     }
 
     let score = candidate.score;
@@ -115,7 +164,7 @@ export const updateCandidate = async (req, res) => {
 
     if (wcpAnswers) {
       if (Object.keys(wcpAnswers).length > 0) {
-        const questions = await Question.findAll();
+        const questions = await getQuestions();
         const calcResult = calculateWCPScore(wcpAnswers, questions);
         score = calcResult.finalScore;
         wcpScoreBreakdown = calcResult;
@@ -135,11 +184,14 @@ export const updateCandidate = async (req, res) => {
     }
 
     await candidate.update({
-      fullName, profilePhoto, phone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
+      fullName, profilePhoto, phone: cleanPhone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
 
     res.json(candidate);
   } catch (error) {
+    if (error.message.includes('Phone Number') || error.message.includes('Email')) {
+      return res.status(400).json({ error: error.message });
+    }
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'Phone number already in use by another candidate.' });
     }
@@ -159,5 +211,128 @@ export const deleteCandidate = async (req, res) => {
     res.json({ message: 'Candidate deleted successfully.' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete candidate record.', message: error.message });
+  }
+};
+
+// Bulk sync candidates
+export const bulkSyncCandidates = async (req, res) => {
+  const candidatesToSync = req.body;
+  if (!Array.isArray(candidatesToSync)) {
+    return res.status(400).json({ error: 'Expected an array of candidates.' });
+  }
+
+  try {
+    const questions = await getQuestions();
+    const results = [];
+
+    for (const data of candidatesToSync) {
+      try {
+        let score = data.score || null;
+        let wcpScoreBreakdown = null;
+        let computedOutcome = data.outcome || 'Pending';
+        let recruiterName = data.recruiterName || null;
+        let recruiterPhone = data.recruiterPhone || null;
+
+        if (data.mobiliserId && (!recruiterName || !recruiterPhone)) {
+          const recruiter = await User.findByPk(data.mobiliserId);
+          if (recruiter) {
+            recruiterName = recruiter.username;
+            recruiterPhone = recruiter.phone;
+          }
+        }
+
+        if (data.wcpAnswers && Object.keys(data.wcpAnswers).length > 0) {
+          const calcResult = calculateWCPScore(data.wcpAnswers, questions);
+          score = calcResult.finalScore;
+          wcpScoreBreakdown = calcResult;
+
+          if (calcResult.isCompleted) {
+            if (score >= 75) computedOutcome = 'Suitable';
+            else if (score >= 50) computedOutcome = 'Requires Training';
+            else computedOutcome = 'Unsuitable';
+          } else {
+            computedOutcome = 'Pending';
+          }
+        }
+
+        const cleanPhone = validateCandidateData({ phone: data.phone, email: data.email });
+
+        const payload = {
+          fullName: data.fullName,
+          profilePhoto: data.profilePhoto,
+          phone: cleanPhone,
+          email: data.email,
+          dateOfBirth: data.dateOfBirth,
+          gender: data.gender,
+          maritalStatus: data.maritalStatus,
+          city: data.city,
+          state: data.state,
+          score,
+          wcpAnswers: data.wcpAnswers,
+          wcpScoreBreakdown,
+          notes: data.notes,
+          outcome: computedOutcome,
+          status: data.status,
+          mobiliserId: data.mobiliserId,
+          recruiterName,
+          recruiterPhone,
+          created_at: data.createdAt || new Date()
+        };
+
+        // Check if phone number is already in use by a DIFFERENT candidate in Postgres
+        const checkId = data.tempId.startsWith('temp-') ? data.tempId.replace('temp-', '') : data.tempId;
+        const existingPhone = await Candidate.findOne({ where: { phone: cleanPhone } });
+        
+        if (existingPhone && existingPhone.id !== checkId) {
+          // Phone is already taken by a different candidate!
+          if (existingPhone.fullName && existingPhone.fullName.toLowerCase() === data.fullName.toLowerCase()) {
+            await existingPhone.update(payload);
+            results.push({ tempId: data.tempId, status: 'success' });
+            continue;
+          } else {
+            console.warn(`[Sync Warning] Candidate ${data.tempId} failed: Phone number ${cleanPhone} is already registered to "${existingPhone.fullName}".`);
+            results.push({ 
+              tempId: data.tempId, 
+              status: 'error', 
+              message: `Phone number ${cleanPhone} is already registered to candidate "${existingPhone.fullName}".` 
+            });
+            continue;
+          }
+        }
+
+        if (!data.tempId.startsWith('temp-')) {
+          // It's an update to an existing record
+          const candidate = await Candidate.findByPk(data.tempId);
+          if (candidate) {
+            await candidate.update(payload);
+          } else {
+            await Candidate.create({ id: data.tempId, ...payload });
+          }
+        } else {
+          // It's a new record created offline. Strip the 'temp-' prefix.
+          const realId = data.tempId.replace('temp-', '');
+          const candidate = await Candidate.findByPk(realId);
+          if (candidate) {
+            await candidate.update(payload);
+          } else {
+            await Candidate.create({ id: realId, ...payload });
+          }
+        }
+
+        results.push({ tempId: data.tempId, status: 'success' });
+      } catch (err) {
+        console.error(`Failed to sync candidate ${data.tempId}:`, err);
+        let errorMsg = err.message;
+        if (err.name === 'SequelizeUniqueConstraintError') {
+          errorMsg = 'Phone number is already in use by another candidate.';
+        }
+        results.push({ tempId: data.tempId, status: 'error', message: errorMsg });
+      }
+    }
+
+    res.json({ message: 'Sync process completed', results });
+  } catch (error) {
+    console.error('Sync error:', error);
+    res.status(500).json({ error: 'Bulk sync failed.', message: error.message });
   }
 };

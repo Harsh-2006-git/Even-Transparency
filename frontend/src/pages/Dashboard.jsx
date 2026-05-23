@@ -5,6 +5,8 @@ import {
   Sliders, Database, ChevronRight, Clock, UserPlus, CheckSquare, FileText, Activity
 } from 'lucide-react';
 
+import { getFitmentBand } from '../utils/fitmentMapper';
+
 const API = import.meta.env.VITE_API_BASE_URL;
 
 const ASSESSMENT_DOMAINS = [
@@ -73,7 +75,7 @@ const ASSESSMENT_WEIGHTS = [
   { id: 'ownership', title: 'Safety & Ownership Readiness', weight: 20, questions: 6 }
 ];
 
-export default function Dashboard({ user, candidates = [], fetchCandidates, onCandidateAdded, dbStatus }) {
+export default function Dashboard({ user, candidates = [], fetchCandidates, onCandidateAdded, dbStatus, showToast }) {
   const role = user?.userType || 'Mobiliser';
 
   // ----------------------------------------------------
@@ -303,38 +305,14 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
               <p className="text-xs text-slate-500 mt-1">Register new delivery candidates and evaluate their fitness criteria using the 28-question scoring sheet.</p>
             </>
           )}
-          {role === 'City Manager' && (
-            <>
-              <h2 className="text-xl font-bold text-slate-800">City Performance Hub</h2>
-              <p className="text-xs text-slate-500 mt-1">Monitor candidate suitability matrices, regional mobilization performance, and audit candidate details.</p>
-            </>
-          )}
-          {role === 'Operations' && (
-            <>
-              <h2 className="text-xl font-bold text-slate-800">Operations & Analytics Desk</h2>
-              <p className="text-xs text-slate-500 mt-1">Export full recruitment datasets, recalibrate assessment scoring logic, and review calibration audit logs.</p>
-            </>
-          )}
         </div>
-
-        {/* Action button header-level elements */}
-        {role === 'Operations' && (
-          <button
-            onClick={handleExportCSV}
-            disabled={candidates.length === 0}
-            className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-xl shadow-xs transition active:scale-95 shrink-0 cursor-pointer"
-          >
-            <Download className="h-4 w-4" strokeWidth={2.5} />
-            <span>Export Database to CSV</span>
-          </button>
-        )}
       </div>
 
       {/* ----------------------------------------------------
           Unified Stats Summary Cards (Renders for all dashboards)
          ---------------------------------------------------- */}
-      <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-5">
-        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
+      <section className="grid grid-cols-2 lg:grid-cols-6 xl:grid-cols-5 gap-3 lg:gap-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 lg:p-5 flex items-center justify-between shadow-xs col-span-2 lg:col-span-2 xl:col-span-1">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Total Candidates</span>
             <span className="text-2xl font-bold text-slate-800 mt-0.5 block">{totalCount}</span>
@@ -344,7 +322,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 lg:p-5 flex items-center justify-between shadow-xs lg:col-span-2 xl:col-span-1">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Pending</span>
             <span className="text-2xl font-bold text-amber-600 mt-0.5 block">{pendingCount}</span>
@@ -354,7 +332,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 lg:p-5 flex items-center justify-between shadow-xs lg:col-span-2 xl:col-span-1">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Converted</span>
             <span className="text-2xl font-bold text-emerald-600 mt-0.5 block">{convertedCount}</span>
@@ -364,9 +342,9 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 lg:p-5 flex items-center justify-between shadow-xs lg:col-span-3 xl:col-span-1">
           <div>
-            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Training Started</span>
+            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Training</span>
             <span className="text-2xl font-bold text-blue-600 mt-0.5 block">{trainingStartedCount}</span>
           </div>
           <span className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
@@ -374,7 +352,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 lg:p-5 flex items-center justify-between shadow-xs lg:col-span-3 xl:col-span-1">
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Dropped</span>
             <span className="text-2xl font-bold text-rose-600 mt-0.5 block">{droppedCount}</span>
@@ -491,7 +469,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
                   >
                     <option value="pending">Pending</option>
                     <option value="converted">Converted</option>
-                    <option value="training started">Training Started</option>
+                    <option value="training started">Training</option>
                     <option value="dropped">Dropped</option>
                   </select>
                 </div>
@@ -544,7 +522,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
               </div>
 
               {/* Submission Area */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-center mt-4">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 lg:grid-cols-3 gap-4 items-center mt-4">
                 <div>
                   <span className="text-[9px] font-black text-slate-450 uppercase tracking-wider">Live Fitment Score</span>
                   <div className="flex items-baseline space-x-1.5 mt-0.5">
@@ -561,7 +539,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
                   </div>
                 </div>
 
-                <div className="md:col-span-2 space-y-2 text-xs">
+                <div className="lg:col-span-2 space-y-2 text-xs">
                   <input
                     type="text"
                     value={candidateNotes}
@@ -609,55 +587,52 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
 
             {roleBaseCandidates.length > 0 ? (
               <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-150">
-                {roleBaseCandidates.map(c => (
-                  <div key={c.id} className="p-4 bg-white flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs hover:bg-slate-50/50 transition">
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-slate-800 text-sm">{c.fullName}</span>
-                        <span className="text-[10px] text-slate-450 font-mono">({c.age ? `${c.age} yrs` : 'dob not set'})</span>
-                        <span className="flex items-center text-[10px] text-slate-500 font-medium">
-                          <MapPin className="w-3 h-3 text-slate-400 mr-0.5 shrink-0" />
-                          {c.city}, {c.state}
+                {roleBaseCandidates.map(c => {
+                  const isInterviewed = c.wcpAnswers && Object.keys(c.wcpAnswers).length > 0;
+                  const bandInfo = getFitmentBand(isInterviewed ? c.score : null);
+                  return (
+                    <div key={c.id} className="p-4 bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-xs hover:bg-slate-50/50 transition">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-slate-800 text-sm">{c.fullName}</span>
+                          <span className="text-[10px] text-slate-450 font-mono">({c.age ? `${c.age} yrs` : 'dob not set'})</span>
+                          <span className="flex items-center text-[10px] text-slate-500 font-medium">
+                            <MapPin className="w-3 h-3 text-slate-400 mr-0.5 shrink-0" />
+                            {c.city}, {c.state}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-slate-500 flex items-center space-x-3">
+                          <span>Phone: <strong>{c.phone}</strong></span>
+                          {c.email && <span>Email: <strong>{c.email}</strong></span>}
+                        </div>
+                        {c.notes && (
+                          <p className="mt-1 text-slate-500 italic text-[11px]">Feedback: {c.notes}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between lg:justify-end w-full lg:w-auto space-x-3 self-end lg:self-auto">
+                        <div className="text-right">
+                          <span className="text-[9px] text-slate-450 uppercase tracking-wider block">Suitability Rating</span>
+                          <span className="font-extrabold text-sm text-indigo-700">{isInterviewed ? `${c.score}%` : '—'}</span>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold border capitalize ${
+                          c.status === 'pending' || !c.status
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : c.status === 'converted'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : c.status === 'training started'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                        }`}>
+                          {c.status || 'pending'}
+                        </span>
+                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold border ${bandInfo.badgeColor}`}>
+                          {isInterviewed ? `${bandInfo.band} Band` : 'Pending'}
                         </span>
                       </div>
-                      <div className="mt-1 text-slate-500 flex items-center space-x-3">
-                        <span>Phone: <strong>{c.phone}</strong></span>
-                        {c.email && <span>Email: <strong>{c.email}</strong></span>}
-                      </div>
-                      {c.notes && (
-                        <p className="mt-1 text-slate-500 italic text-[11px]">Feedback: {c.notes}</p>
-                      )}
                     </div>
-
-                    <div className="flex items-center space-x-3 self-end md:self-auto">
-                      <div className="text-right">
-                        <span className="text-[9px] text-slate-450 uppercase tracking-wider block">Suitability Rating</span>
-                        <span className="font-extrabold text-sm text-indigo-700">{c.score}%</span>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded text-[10px] font-bold border capitalize ${
-                        c.status === 'pending' || !c.status
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : c.status === 'converted'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : c.status === 'training started'
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : 'bg-rose-50 text-rose-700 border-rose-200'
-                      }`}>
-                        {c.status || 'pending'}
-                      </span>
-                      <span className={`px-2.5 py-1 rounded text-[10px] font-bold border ${
-                        c.outcome === 'Suitable'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : c.outcome === 'Requires Training'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-rose-50 text-rose-700 border-rose-200'
-                      }`}>
-                        {c.outcome}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  );
+                })}</div>
             ) : (
               <div className="p-8 text-center text-slate-400 text-xs border border-slate-200 border-dashed rounded-xl">
                 No candidates registered under your name. Fill out the form above to add a candidate.
@@ -667,330 +642,105 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
         </>
       )}
 
-      {/* 2. CITY MANAGER HUB */}
-      {role === 'City Manager' && (
-        <>
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Onboarding Ratios */}
-            <div id="performance-hub" className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs md:col-span-2 space-y-4">
-              <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Onboarding Pipeline Ratios</h3>
-              
-              <div className="space-y-4 bg-slate-50 border border-slate-150 p-5 rounded-2xl">
-                {['Suitable', 'Requires Training', 'Unsuitable'].map(outcome => {
-                  const count = activeCandidates.filter(c => c.outcome === outcome).length;
-                  const pct = totalCount > 0 ? (count / totalCount) * 100 : 0;
-                  return (
-                    <div key={outcome} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-slate-700">{outcome}</span>
-                        <span className="font-bold text-slate-655">{count} ({Math.round(pct)}%)</span>
-                      </div>
-                      <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            outcome === 'Suitable' 
-                              ? 'bg-emerald-500' 
-                              : outcome === 'Requires Training'
-                              ? 'bg-amber-500'
-                              : 'bg-rose-500'
-                          }`}
-                          style={{ width: `${pct}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Regional breakdown */}
-            <div id="regional-distribution" className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-              <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Regional Distribution</h3>
-              
-              <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-3.5 text-xs text-slate-600">
-                {uniqueCities.filter(c => c !== 'All').map(city => {
-                  const cityCount = candidates.filter(c => c.city.toLowerCase() === city.toLowerCase()).length;
-                  return (
-                    <div key={city} className="flex items-center justify-between font-medium">
-                      <span className="flex items-center space-x-1">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="capitalize">{city}</span>
-                      </span>
-                      <span className="font-bold text-slate-800">{cityCount} Candidates</span>
-                    </div>
-                  );
-                })}
-                {uniqueCities.length <= 1 && (
-                  <div className="text-center text-slate-400 italic">No candidates to group.</div>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* Spreadsheet list with filters */}
-          <div id="pipeline-records" className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 space-y-6 shadow-xs">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800">Search Pipeline Records</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Filter candidate profiles by typing their name or selecting cities.</p>
-              </div>
-
-              <div className="flex items-center space-x-3 text-xs">
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                    <Search className="h-3.5 w-3.5" />
-                  </span>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by candidate name..."
-                    className="pl-8 pr-4 py-2 border border-slate-300 bg-white rounded-lg text-slate-900 focus:outline-none focus:border-indigo-600"
-                  />
-                </div>
-
-                <select
-                  value={cityFilter}
-                  onChange={(e) => setCityFilter(e.target.value)}
-                  className="px-3 py-2 border border-slate-300 bg-white rounded-lg text-slate-900 focus:outline-none focus:border-indigo-600"
-                >
-                  {uniqueCities.map(city => (
-                    <option key={city} value={city}>{city === 'All' ? 'All Cities' : city}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {activeCandidates.length > 0 ? (
-              <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-150 text-xs">
-                {activeCandidates.map(c => (
-                  <div key={c.id} className="p-4 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition">
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-slate-800 text-sm">{c.fullName}</span>
-                        <span className="text-[10px] text-slate-450 font-mono">({c.age ? `${c.age} yrs` : 'No DOB'})</span>
-                        <span className="px-2 py-0.5 rounded bg-slate-50 border border-slate-200 text-[10px] text-slate-500 font-semibold">
-                          {c.city}, {c.state}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-slate-500">
-                        <span>Phone: {c.phone}</span>
-                        {c.notes && <span className="ml-4 italic text-slate-505">Feedback: "{c.notes}"</span>}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3 self-end sm:self-auto">
-                      <div className="text-right">
-                        <span className="text-[9px] text-slate-455 uppercase tracking-wider block">Fitment Rating</span>
-                        <span className="font-extrabold text-sm text-indigo-700">{c.score}%</span>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded text-[10px] font-bold border capitalize ${
-                        c.status === 'pending' || !c.status
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : c.status === 'converted'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : c.status === 'training started'
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : 'bg-rose-50 text-rose-700 border-rose-200'
-                      }`}>
-                        {c.status || 'pending'}
-                      </span>
-                      <span className={`px-2.5 py-1 rounded text-[10px] font-bold border ${
-                        c.outcome === 'Suitable'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : c.outcome === 'Requires Training'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-rose-50 text-rose-700 border-rose-200'
-                      }`}>
-                        {c.outcome}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 text-center text-slate-400 text-xs border border-slate-200 border-dashed rounded-xl">
-                No candidates matched search criteria.
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
       {/* 3. ADMIN PANEL */}
       {role === 'Admin' && (
-        <section className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs">
-          <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider mb-5">Quick Links</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <section className="lg:bg-white lg:border lg:border-slate-200 lg:rounded-3xl lg:p-8 lg:shadow-xs mt-2 lg:mt-0">
+          <h3 className="font-bold text-slate-800 text-xs lg:text-sm uppercase tracking-wider mb-3 lg:mb-5 ml-1 lg:ml-0">Quick Links</h3>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 lg:gap-4">
             
             <a 
               href="#/candidate-management" 
-              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+              className="flex flex-col p-3 lg:p-5 bg-white border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/30 hover:shadow-sm rounded-xl lg:rounded-2xl transition duration-200 text-left group"
             >
-              <div className="flex items-center gap-2.5 mb-2.5">
-                <div className="p-2 bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 group-hover:text-indigo-700 rounded-lg transition-colors">
-                  <UserPlus className="h-4.5 w-4.5" strokeWidth={2.5} />
+              <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2.5 mb-1.5 lg:mb-2.5">
+                <div className="p-1.5 lg:p-2 bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 group-hover:text-indigo-700 rounded-lg transition-colors w-fit">
+                  <UserPlus className="h-3.5 w-3.5 lg:h-4.5 lg:w-4.5" strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-slate-800 text-sm group-hover:text-indigo-900 transition-colors">Add Candidate</span>
+                <span className="font-bold text-slate-800 text-[11px] lg:text-sm group-hover:text-indigo-900 transition-colors leading-tight">Add Candidate</span>
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-[8px] sm:text-[9px] lg:text-xs text-slate-500 leading-tight lg:leading-relaxed mt-1 lg:mt-0 line-clamp-2 lg:line-clamp-none">
                 Register new candidates into the recruitment pipeline for assessment and tracking.
               </p>
             </a>
 
             <a 
               href="#/candidate-management" 
-              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+              className="flex flex-col p-3 lg:p-5 bg-white border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-sm rounded-xl lg:rounded-2xl transition duration-200 text-left group"
             >
-              <div className="flex items-center gap-2.5 mb-2.5">
-                <div className="p-2 bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 group-hover:text-emerald-700 rounded-lg transition-colors">
-                  <CheckSquare className="h-4.5 w-4.5" strokeWidth={2.5} />
+              <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2.5 mb-1.5 lg:mb-2.5">
+                <div className="p-1.5 lg:p-2 bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 group-hover:text-emerald-700 rounded-lg transition-colors w-fit">
+                  <CheckSquare className="h-3.5 w-3.5 lg:h-4.5 lg:w-4.5" strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-slate-800 text-sm group-hover:text-emerald-900 transition-colors">Interview Candidate</span>
+                <span className="font-bold text-slate-800 text-[11px] lg:text-sm group-hover:text-emerald-900 transition-colors leading-tight">Interview Candidate</span>
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-[8px] sm:text-[9px] lg:text-xs text-slate-500 leading-tight lg:leading-relaxed mt-1 lg:mt-0 line-clamp-2 lg:line-clamp-none">
                 Conduct assessments and evaluate candidates using the scoring checksheet.
               </p>
             </a>
 
             <a 
               href="#/register-staff" 
-              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+              className="flex flex-col p-3 lg:p-5 bg-white border border-slate-200 hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-sm rounded-xl lg:rounded-2xl transition duration-200 text-left group"
             >
-              <div className="flex items-center gap-2.5 mb-2.5">
-                <div className="p-2 bg-blue-50 text-blue-600 group-hover:bg-blue-100 group-hover:text-blue-700 rounded-lg transition-colors">
-                  <Users className="h-4.5 w-4.5" strokeWidth={2.5} />
+              <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2.5 mb-1.5 lg:mb-2.5">
+                <div className="p-1.5 lg:p-2 bg-blue-50 text-blue-600 group-hover:bg-blue-100 group-hover:text-blue-700 rounded-lg transition-colors w-fit">
+                  <Users className="h-3.5 w-3.5 lg:h-4.5 lg:w-4.5" strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-slate-800 text-sm group-hover:text-blue-900 transition-colors">Manage Staff</span>
+                <span className="font-bold text-slate-800 text-[11px] lg:text-sm group-hover:text-blue-900 transition-colors leading-tight">Manage Staff</span>
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-[8px] sm:text-[9px] lg:text-xs text-slate-500 leading-tight lg:leading-relaxed mt-1 lg:mt-0 line-clamp-2 lg:line-clamp-none">
                 Add or edit staff accounts, assign operational roles, and control platform access.
               </p>
             </a>
 
             <a 
               href="#/overview" 
-              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-amber-200 hover:bg-amber-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
-              onClick={() => alert("Audit Logs feature coming soon!")}
+              className="flex flex-col p-3 lg:p-5 bg-white border border-slate-200 hover:border-amber-200 hover:bg-amber-50/30 hover:shadow-sm rounded-xl lg:rounded-2xl transition duration-200 text-left group"
+              onClick={(e) => { e.preventDefault(); showToast("Audit Logs feature coming soon!", "info"); }}
             >
-              <div className="flex items-center gap-2.5 mb-2.5">
-                <div className="p-2 bg-amber-50 text-amber-600 group-hover:bg-amber-100 group-hover:text-amber-700 rounded-lg transition-colors">
-                  <FileText className="h-4.5 w-4.5" strokeWidth={2.5} />
+              <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2.5 mb-1.5 lg:mb-2.5">
+                <div className="p-1.5 lg:p-2 bg-amber-50 text-amber-600 group-hover:bg-amber-100 group-hover:text-amber-700 rounded-lg transition-colors w-fit">
+                  <FileText className="h-3.5 w-3.5 lg:h-4.5 lg:w-4.5" strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-slate-800 text-sm group-hover:text-amber-900 transition-colors">Check Audit Logs</span>
+                <span className="font-bold text-slate-800 text-[11px] lg:text-sm group-hover:text-amber-900 transition-colors leading-tight">Check Audit Logs</span>
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-[8px] sm:text-[9px] lg:text-xs text-slate-500 leading-tight lg:leading-relaxed mt-1 lg:mt-0 line-clamp-2 lg:line-clamp-none">
                 Review system activity, track data changes, and monitor user actions across the platform.
               </p>
             </a>
 
             <a 
               href="#/question-management" 
-              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-violet-200 hover:bg-violet-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
+              className="flex flex-col p-3 lg:p-5 bg-white border border-slate-200 hover:border-violet-200 hover:bg-violet-50/30 hover:shadow-sm rounded-xl lg:rounded-2xl transition duration-200 text-left group"
             >
-              <div className="flex items-center gap-2.5 mb-2.5">
-                <div className="p-2 bg-violet-50 text-violet-600 group-hover:bg-violet-100 group-hover:text-violet-700 rounded-lg transition-colors">
-                  <HelpCircle className="h-4.5 w-4.5" strokeWidth={2.5} />
+              <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2.5 mb-1.5 lg:mb-2.5">
+                <div className="p-1.5 lg:p-2 bg-violet-50 text-violet-600 group-hover:bg-violet-100 group-hover:text-violet-700 rounded-lg transition-colors w-fit">
+                  <HelpCircle className="h-3.5 w-3.5 lg:h-4.5 lg:w-4.5" strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-slate-800 text-sm group-hover:text-violet-900 transition-colors">Manage Questions</span>
+                <span className="font-bold text-slate-800 text-[11px] lg:text-sm group-hover:text-violet-900 transition-colors leading-tight">Manage Questions</span>
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-[8px] sm:text-[9px] lg:text-xs text-slate-500 leading-tight lg:leading-relaxed mt-1 lg:mt-0 line-clamp-2 lg:line-clamp-none">
                 Create, update, and manage the assessment questions and interview domain criteria.
               </p>
             </a>
 
             <a 
-              href="#/overview" 
-              className="flex flex-col p-5 bg-white border border-slate-200 hover:border-rose-200 hover:bg-rose-50/30 hover:shadow-sm rounded-2xl transition duration-200 text-left group"
-              onClick={() => alert("Analytics feature coming soon!")}
+              href="#/analytics" 
+              className="flex flex-col p-3 lg:p-5 bg-white border border-slate-200 hover:border-rose-200 hover:bg-rose-50/30 hover:shadow-sm rounded-xl lg:rounded-2xl transition duration-200 text-left group"
             >
-              <div className="flex items-center gap-2.5 mb-2.5">
-                <div className="p-2 bg-rose-50 text-rose-600 group-hover:bg-rose-100 group-hover:text-rose-700 rounded-lg transition-colors">
-                  <Activity className="h-4.5 w-4.5" strokeWidth={2.5} />
+              <div className="flex flex-col lg:flex-row lg:items-center gap-1.5 lg:gap-2.5 mb-1.5 lg:mb-2.5">
+                <div className="p-1.5 lg:p-2 bg-rose-50 text-rose-600 group-hover:bg-rose-100 group-hover:text-rose-700 rounded-lg transition-colors w-fit">
+                  <Activity className="h-3.5 w-3.5 lg:h-4.5 lg:w-4.5" strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-slate-800 text-sm group-hover:text-rose-900 transition-colors">Check Analytics</span>
+                <span className="font-bold text-slate-800 text-[11px] lg:text-sm group-hover:text-rose-900 transition-colors leading-tight">Check Analytics</span>
               </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-[8px] sm:text-[9px] lg:text-xs text-slate-500 leading-tight lg:leading-relaxed mt-1 lg:mt-0 line-clamp-2 lg:line-clamp-none">
                 Visualize performance metrics, training outcomes, and operational data.
               </p>
             </a>
 
           </div>
         </section>
-      )}
-
-      {/* 4. OPERATIONS WORKSPACE */}
-      {role === 'Operations' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Calibration metrics */}
-          <div id="calibration-metrics" className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 space-y-5 shadow-xs">
-            <div>
-              <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Calibration Metrics</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Parameters evaluating candidate training pipelines.</p>
-            </div>
-
-            <div className="space-y-3.5 text-xs">
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                <div>
-                  <h4 className="font-bold text-slate-700">Enrolled Training Candidates</h4>
-                  <p className="text-slate-500 text-[10px]">Active female logistics learners.</p>
-                </div>
-                <span className="text-base font-black text-slate-800">12 Candidates</span>
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                <div>
-                  <h4 className="font-bold text-slate-700">Onboarding Success Rate</h4>
-                  <p className="text-slate-505 text-[10px]">Ratio of candidates passing assessment and joining logistics teams.</p>
-                </div>
-                <span className="text-base font-black text-emerald-600">92.4%</span>
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                <div>
-                  <h4 className="font-bold text-slate-700">Audit Rule Verification</h4>
-                  <p className="text-slate-500 text-[10px]">Confidence metric of the suitability scoring algorithm.</p>
-                </div>
-                <span className="text-base font-black text-indigo-700">96.8%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Calibration Controls & logs */}
-          <div id="recalibration-controls" className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 space-y-5 shadow-xs flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Recalibration Controls</h3>
-                  <p className="text-[11px] text-slate-505 mt-0.5">Trigger evaluation optimizations on candidate inputs.</p>
-                </div>
-
-                <button
-                  onClick={handleTriggerRetrain}
-                  disabled={retrainProgress}
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition active:scale-95 cursor-pointer"
-                >
-                  <Play className="w-3 h-3 text-indigo-600" strokeWidth={2.5} />
-                  <span>{retrainProgress ? 'Processing...' : 'Recalibrate Scorer'}</span>
-                </button>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-[10px] font-mono text-slate-500 max-h-[160px] overflow-y-auto">
-                {logs.map((log, index) => (
-                  <p key={index} className="pb-1.5 border-b border-slate-150 last:border-b-0 last:pb-0">{log}</p>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3.5 flex items-start space-x-2.5 text-[11px] mt-4">
-              <AlertTriangle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" strokeWidth={2} />
-              <div>
-                <span className="font-bold block">Scoring calibration alert</span>
-                <p className="text-amber-700 mt-0.5">Adjusting scoring rules impacts metrics for all current batch interviews. Exercise caution.</p>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
 
     </div>

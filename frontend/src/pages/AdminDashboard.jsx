@@ -17,7 +17,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [userType, setUserType] = useState('Mobiliser');
-  
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -35,7 +35,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
     try {
       const res = await fetch(`${API}/auth/register`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'x-admin-id': adminUser.id // Pass the admin's database ID to authorize user registration
         },
@@ -55,7 +55,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
       }
 
       setMessage({ type: 'success', text: `Staff account "${username}" (${userType}) created successfully!` });
-      
+
       // Reset registration form
       setUsername('');
       setEmail('');
@@ -71,7 +71,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
 
   return (
     <div className="space-y-8">
-      
+
       {/* Title */}
       <div id="overview">
         <h2 className="text-xl font-bold text-slate-800">Admin Control Panel</h2>
@@ -104,7 +104,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
 
         <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-5 flex items-center justify-between shadow-xs">
           <div>
-            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Training Started</span>
+            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Training</span>
             <span className="text-2xl font-bold text-amber-650 mt-0.5 block">
               {candidates.filter(c => c.status === 'training started').length}
             </span>
@@ -129,7 +129,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
 
       {/* Staff Registration Panel & weights */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Register Staff Form */}
         <div id="register-staff" className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div>
@@ -194,8 +194,6 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
                     className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
                   >
                     <option value="Mobiliser">Mobiliser</option>
-                    <option value="City Manager">City Manager</option>
-                    <option value="Operations">Operations</option>
                     <option value="Admin">Admin</option>
                   </select>
                 </div>
@@ -212,11 +210,10 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
           </div>
 
           {message && (
-            <div className={`p-3 rounded-lg text-xs font-semibold border flex items-start space-x-2 ${
-              message.type === 'success'
-                ? 'bg-emerald-50 border-emerald-250 text-emerald-800'
-                : 'bg-rose-50 border-rose-250 text-rose-800'
-            }`}>
+            <div className={`p-3 rounded-lg text-xs font-semibold border flex items-start space-x-2 ${message.type === 'success'
+              ? 'bg-emerald-50 border-emerald-250 text-emerald-800'
+              : 'bg-rose-50 border-rose-250 text-rose-800'
+              }`}>
               <span>{message.text}</span>
             </div>
           )}
@@ -233,7 +230,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
             {ASSESSMENT_WEIGHTS.map(domain => (
               <div key={domain.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 text-xs">
                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">{domain.id} config</span>
-                
+
                 <div>
                   <h4 className="font-bold text-slate-700">{domain.title}</h4>
                   <p className="text-[10px] text-slate-500 mt-0.5">{domain.questions} Questions</p>
@@ -245,12 +242,12 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
                 </div>
 
                 <div>
-                  <input 
-                    type="range" 
-                    min="10" 
-                    max="50" 
+                  <input
+                    type="range"
+                    min="10"
+                    max="50"
                     defaultValue={domain.weight}
-                    className="w-full accent-indigo-650 cursor-not-allowed" 
+                    className="w-full accent-indigo-650 cursor-not-allowed"
                     disabled
                   />
                 </div>
@@ -268,7 +265,7 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
 
       {/* Database Schema stats */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
+
         <div id="database-schema" className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 space-y-4 shadow-sm">
           <div className="flex items-center space-x-2">
             <Database className="w-4.5 h-4.5 text-indigo-650 shrink-0" />
@@ -303,8 +300,6 @@ export default function AdminDashboard({ adminUser, candidates = [] }) {
 
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-2.5 text-slate-600">
             <p>• <strong>Mobiliser:</strong> Conduct assessments & update outcome states.</p>
-            <p>• <strong>City Manager:</strong> View all candidates & check analytics charts.</p>
-            <p>• <strong>Operations:</strong> Export tables & verify calibration criteria.</p>
             <p>• <strong>Admin:</strong> Create user logins & calibrate weights.</p>
           </div>
         </div>

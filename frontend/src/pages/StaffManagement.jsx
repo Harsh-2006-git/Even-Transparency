@@ -6,7 +6,7 @@ import {
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
-export default function StaffManagement({ user, staffList = [], setStaffList, fetchStaff }) {
+export default function StaffManagement({ user, staffList = [], setStaffList, fetchStaff, showToast }) {
   const [loading, setLoading] = useState(false);
   const [apiMessage, setApiMessage] = useState(null);
 
@@ -53,7 +53,7 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
   const handleAddStaff = async (e) => {
     e.preventDefault();
     if (!username.trim() || !email.trim() || !password.trim()) {
-      alert('Username, email, and password are required.');
+      showToast('Username, email, and password are required.', 'warning');
       return;
     }
 
@@ -86,11 +86,12 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
       .then(res => res.json().then(data => ({ res, data })))
       .then(({ res, data }) => {
         if (!res.ok) throw new Error(data.error || 'Failed to create staff member.');
+        showToast(`Staff member "${payload.username}" registered successfully!`, 'success');
         fetchStaff();
       })
       .catch(err => {
         console.error(err);
-        alert('Failed to save staff: ' + err.message);
+        showToast('Failed to save staff: ' + err.message, 'error');
         fetchStaff();
       });
   };
@@ -98,7 +99,7 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
   const handleEditStaff = async (e) => {
     e.preventDefault();
     if (!username.trim() || !email.trim()) {
-      alert('Username and email are required.');
+      showToast('Username and email are required.', 'warning');
       return;
     }
 
@@ -127,18 +128,19 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
       .then(res => res.json().then(data => ({ res, data })))
       .then(({ res, data }) => {
         if (!res.ok) throw new Error(data.error || 'Failed to update staff member.');
+        showToast(`Staff profile for "${updatePayload.username}" updated!`, 'success');
         fetchStaff();
       })
       .catch(err => {
         console.error(err);
-        alert('Failed to update staff: ' + err.message);
+        showToast('Failed to update staff: ' + err.message, 'error');
         fetchStaff();
       });
   };
 
   const handleDeleteClick = (staff) => {
     if (staff.id === user.id) {
-      alert("You cannot delete your own admin account.");
+      showToast("You cannot delete your own admin account.", 'warning');
       return;
     }
     setStaffToDelete(staff);
@@ -149,6 +151,7 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
     if (!staffToDelete) return;
     
     const idToDelete = staffToDelete.id;
+    const nameToDelete = staffToDelete.username;
     setStaffList(prev => prev.filter(s => s.id !== idToDelete));
     setShowDeleteConfirm(false);
     setStaffToDelete(null);
@@ -162,11 +165,12 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
       .then(res => res.json().then(data => ({ res, data })))
       .then(({ res, data }) => {
         if (!res.ok) throw new Error(data.error || 'Failed to delete staff member.');
+        showToast(`Staff account for "${nameToDelete}" deleted.`, 'info');
         fetchStaff();
       })
       .catch(err => {
         console.error(err);
-        alert('Failed to delete staff: ' + err.message);
+        showToast('Failed to delete staff: ' + err.message, 'error');
         fetchStaff();
       });
   };
@@ -190,10 +194,6 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
         return 'bg-purple-50 text-purple-700 border-purple-205';
       case 'Mobiliser':
         return 'bg-emerald-50 text-emerald-700 border-emerald-205';
-      case 'City Manager':
-        return 'bg-amber-50 text-amber-700 border-amber-205';
-      case 'Operations':
-        return 'bg-blue-50 text-blue-700 border-blue-205';
       default:
         return 'bg-slate-50 text-slate-700 border-slate-205';
     }
@@ -240,8 +240,6 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
             <option value="All">All Roles</option>
             <option value="Admin">Admin</option>
             <option value="Mobiliser">Mobiliser</option>
-            <option value="City Manager">City Manager</option>
-            <option value="Operations">Operations</option>
           </select>
 
           <button 
@@ -437,8 +435,6 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
                     className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-905 focus:outline-none focus:border-indigo-600 transition animate-none"
                   >
                     <option value="Mobiliser">Mobiliser</option>
-                    <option value="City Manager">City Manager</option>
-                    <option value="Operations">Operations</option>
                     <option value="Admin">Admin</option>
                   </select>
                 </div>

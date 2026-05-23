@@ -11,7 +11,8 @@ import {
   MapPin, 
   ChevronRight,
   UserCheck,
-  HelpCircle
+  HelpCircle,
+  BarChart2
 } from 'lucide-react';
 
 export default function Sidebar({ user, activeSection, onSectionChange, isOpen, toggleSidebar, isCollapsed }) {
@@ -24,6 +25,7 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
           { id: 'candidate-management', label: 'Manage Candidates', icon: Users },
           { id: 'register-staff', label: 'Register Staff', icon: UserPlus },
           { id: 'question-management', label: 'Manage Questions', icon: HelpCircle },
+          { id: 'analytics', label: 'Analytics', icon: BarChart2 },
         ];
       case 'Mobiliser':
         return [
@@ -32,20 +34,6 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
           { id: 'register-candidate', label: 'Register Candidate', icon: UserPlus },
           { id: 'scoring-checksheet', label: 'Assessment Checksheet', icon: CheckSquare },
           { id: 'mobilized-candidates', label: 'Mobilized Candidates', icon: UserCheck },
-        ];
-      case 'City Manager':
-        return [
-          { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-          { id: 'performance-hub', label: 'Performance Hub', icon: Activity },
-          { id: 'regional-distribution', label: 'Regional Distribution', icon: MapPin },
-          { id: 'pipeline-records', label: 'Candidate Spreadsheet', icon: Users },
-        ];
-      case 'Operations':
-        return [
-          { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-          { id: 'calibration-metrics', label: 'Calibration Metrics', icon: Activity },
-          { id: 'recalibration-controls', label: 'Recalibration Controls', icon: Sliders },
-          { id: 'database-export', label: 'Database Export', icon: Database },
         ];
       default:
         return [

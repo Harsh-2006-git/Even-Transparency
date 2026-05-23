@@ -6,6 +6,12 @@ import {
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
+// ── Module-level cache (survives navigation, clears on mutation) ──────────────
+let _cachedQuestions = null;
+let _cacheTs = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const invalidateCache = () => { _cachedQuestions = null; _cacheTs = 0; };
+
 const INPUT_TYPES = ['Radio', 'Dropdown', 'Number', 'Text', 'MultiSelect'];
 
 const DOMAIN_COLORS = {
@@ -29,7 +35,7 @@ const emptyQuestion = {
   options: [{ text: '', score: '' }],
 };
 
-export default function QuestionManagement() {
+export default function QuestionManagement({ showToast }) {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,17 +53,23 @@ export default function QuestionManagement() {
   // Expand/collapse domain groups
   const [expandedDomains, setExpandedDomains] = useState({});
 
-  // ── Fetch all questions ──────────────────────────────────────────────────
-  const fetchQuestions = async () => {
+  // ── Fetch all questions (with module-level cache) ────────────────────────
+  const fetchQuestions = async (forceRefresh = false) => {
+    // Serve from cache instantly if fresh
+    if (!forceRefresh && _cachedQuestions && (Date.now() - _cacheTs) < CACHE_TTL) {
+      setQuestions(_cachedQuestions);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${API}/questions`);
       if (!res.ok) throw new Error('Failed to load questions.');
       const data = await res.json();
+      _cachedQuestions = data;
+      _cacheTs = Date.now();
       setQuestions(data);
-      // Collapse all domains by default
-      setExpandedDomains({});
     } catch (err) {
       setError(err.message);
     } finally {
@@ -192,12 +204,22 @@ export default function QuestionManagement() {
       .then(res => res.json().then(data => ({ res, data })))
       .then(({ res, data }) => {
         if (!res.ok) throw new Error(data.error || 'Failed to save question.');
-        fetchQuestions();
+        // Patch state with real server record (replace the optimistic placeholder)
+        setQuestions(prev => {
+          const updated = editingQuestion
+            ? prev.map(q => q.id === editingQuestion.id ? data : q)
+            : prev.map(q => q.id === mockId ? data : q);
+          _cachedQuestions = updated;
+          _cacheTs = Date.now();
+          return updated;
+        });
+        showToast(`Question "${payload.qNumber}" saved successfully!`, 'success');
       })
       .catch(err => {
         console.error(err);
-        alert('Failed to save question: ' + err.message);
-        fetchQuestions();
+        showToast('Failed to save question: ' + err.message, 'error');
+        invalidateCache();
+        fetchQuestions(true); // force re-fetch on error to restore correct state
       });
   };
 
@@ -206,6 +228,7 @@ export default function QuestionManagement() {
     if (!deleteTarget) return;
 
     const idToDelete = deleteTarget.id;
+    const nameToDelete = deleteTarget.qNumber;
     setQuestions(prev => prev.filter(q => q.id !== idToDelete));
     setDeleteTarget(null);
 
@@ -213,12 +236,19 @@ export default function QuestionManagement() {
       .then(res => res.json().then(data => ({ res, data })))
       .then(({ res, data }) => {
         if (!res.ok) throw new Error(data.error || 'Failed to delete.');
-        fetchQuestions();
+        // State already patched optimistically above — just update cache
+        setQuestions(prev => {
+          _cachedQuestions = prev;
+          _cacheTs = Date.now();
+          return prev;
+        });
+        showToast(`Question "${nameToDelete}" deleted successfully.`, 'info');
       })
       .catch(err => {
         console.error(err);
-        alert('Failed to delete question: ' + err.message);
-        fetchQuestions();
+        showToast('Failed to delete question: ' + err.message, 'error');
+        invalidateCache();
+        fetchQuestions(true); // restore correct state on error
       });
   };
 
@@ -282,14 +312,32 @@ export default function QuestionManagement() {
         </div>
       </div>
 
-      {/* Error or Loading */}
+      {/* Error or Loading skeleton */}
       {loading && (
-        <div className="text-center py-12 text-slate-400 text-sm">Loading questions...</div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs animate-pulse">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-6 w-20 bg-slate-100 rounded-lg" />
+                  <div className="h-4 w-48 bg-slate-100 rounded-lg" />
+                </div>
+                <div className="h-4 w-4 bg-slate-100 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
       )}
       {error && (
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-xs text-rose-700 font-semibold flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           {error}
+          <button
+            onClick={() => fetchQuestions(true)}
+            className="ml-auto underline font-bold cursor-pointer hover:text-rose-900"
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -304,23 +352,37 @@ export default function QuestionManagement() {
             {/* Domain Header */}
             <button
               onClick={() => toggleDomain(domain)}
-              className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition cursor-pointer text-left"
+              className="w-full flex items-center justify-between gap-4 px-5 py-4 hover:bg-slate-50/70 transition cursor-pointer text-left group"
             >
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${colorClass}`}>
+              {/* LEFT: Domain badge + name */}
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`shrink-0 text-[11px] font-black px-2.5 py-1 rounded-lg border ${colorClass}`}>
                   Domain {domain}
                 </span>
-                <div>
-                  <span className="font-bold text-slate-800 text-sm">{meta.name}</span>
-                  <span className="ml-2 text-[10px] text-slate-400 font-semibold">
-                    {meta.count} questions · {meta.weight}% weight
-                  </span>
+                <span className="font-bold text-slate-800 text-sm truncate">
+                  {meta.name}
+                </span>
+              </div>
+
+              {/* RIGHT: Stats pills + chevron */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-bold rounded-lg">
+                  {meta.count} Qs
+                </span>
+                <span className={`hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg border text-[10px] font-bold ${colorClass}`}>
+                  {meta.weight}% weight
+                </span>
+                <span className="sm:hidden text-[10px] font-semibold text-slate-400">
+                  {meta.count}q · {meta.weight}%
+                </span>
+                <div className={`ml-1 p-1 rounded-lg transition-colors ${isExpanded ? 'bg-indigo-50 text-indigo-500' : 'text-slate-400 group-hover:text-slate-600'}`}>
+                  {isExpanded
+                    ? <ChevronUp className="h-4 w-4" />
+                    : <ChevronDown className="h-4 w-4" />}
                 </div>
               </div>
-              {isExpanded
-                ? <ChevronUp className="h-4 w-4 text-slate-400 shrink-0" />
-                : <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />}
             </button>
+
 
             {/* Questions list */}
             {isExpanded && (

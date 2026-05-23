@@ -70,7 +70,7 @@ export default function Login({ onLoginSuccess }) {
     {
       icon: <BarChart3 size={18} />,
       title: 'Role-based Access',
-      desc: 'Operation Team and Admin access for better oversight and control.',
+      desc: 'Mobiliser and Admin access for better oversight and control.',
     },
     {
       icon: <PieChart size={18} />,
@@ -83,10 +83,10 @@ export default function Login({ onLoginSuccess }) {
     <div className="min-h-screen min-h-[100dvh] bg-[#f4f6fb] flex items-center justify-center p-4 sm:p-6 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
 
       {/* Centered card wrapper */}
-      <div className="w-full max-w-[1120px] bg-white rounded-[24px] md:rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.06)] border border-slate-200 grid md:grid-cols-2">
+      <div className="w-full max-w-[1120px] bg-white rounded-[24px] lg:rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.06)] border border-slate-200 grid lg:grid-cols-2">
 
         {/* LEFT COLUMN: BRANDING & SPECIFIED REFERENCE DESIGN */}
-        <div className="relative bg-gradient-to-br from-[#dbeafe] via-[#eff6ff] to-[#c3dafe] p-12 flex flex-col justify-center overflow-hidden border-r border-slate-100 hidden md:flex">
+        <div className="relative bg-gradient-to-br from-[#dbeafe] via-[#eff6ff] to-[#c3dafe] p-12 flex flex-col justify-center overflow-hidden border-r border-slate-100 hidden lg:flex">
 
           {/* Background blurs */}
           <div className="absolute top-[-80px] right-[-80px] h-[280px] w-[280px] rounded-full bg-blue-300/30 blur-3xl animate-pulse"></div>
@@ -143,7 +143,7 @@ export default function Login({ onLoginSuccess }) {
         <div className="bg-white flex flex-col overflow-hidden">
           
           {/* Top Banner Image */}
-          <div className="w-full h-32 sm:h-36 md:h-40 overflow-hidden shrink-0 bg-white">
+          <div className="w-full h-32 sm:h-36 lg:h-40 overflow-hidden shrink-0 bg-white">
             <img
               src="/banner.png"
               alt="Portal Banner"
@@ -155,7 +155,7 @@ export default function Login({ onLoginSuccess }) {
             <div className="w-full max-w-[380px] space-y-6">
 
               {/* Mobile-only Header */}
-              <div className="flex flex-col items-center space-y-1.5 mb-4 md:hidden">
+              <div className="flex flex-col items-center space-y-1.5 mb-4 lg:hidden">
                 <img
                   src="/logo.png"
                   alt="Even Cargo Logo"
@@ -171,7 +171,7 @@ export default function Login({ onLoginSuccess }) {
                 </p>
               </div>
 
-              <div className="text-center md:text-left">
+              <div className="text-center lg:text-left">
                 <h2 className="text-2xl font-bold text-slate-800">
                   Welcome Back
                 </h2>

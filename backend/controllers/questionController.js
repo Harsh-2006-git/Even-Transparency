@@ -1,12 +1,11 @@
 import Question from '../models/Question.js';
+import { invalidateQuestionCache } from './candidateController.js';
 
-// Get all evaluation questions ordered by Q-number
+// Get all evaluation questions ordered by Q-number (sorted at DB level)
 export const getQuestions = async (req, res) => {
   try {
     const questions = await Question.findAll({
-      order: [
-        [Question.sequelize.cast(Question.sequelize.fn('REPLACE', Question.sequelize.col('q_number'), 'Q', ''), 'INTEGER'), 'ASC']
-      ]
+      order: [['q_number', 'ASC']]
     });
     res.json(questions);
   } catch (error) {
@@ -25,6 +24,7 @@ export const createQuestion = async (req, res) => {
       qNumber, domain, domainName, domainWeight, questionText, questionWeight, inputType,
       options: options || []
     });
+    invalidateQuestionCache();
     res.status(201).json(question);
   } catch (error) {
     if (error.name === 'SequelizeUniqueConstraintError') {
@@ -42,6 +42,7 @@ export const updateQuestion = async (req, res) => {
     if (!question) return res.status(404).json({ error: 'Question not found.' });
 
     await question.update(req.body);
+    invalidateQuestionCache();
     res.json(question);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update question.', message: error.message });
@@ -56,6 +57,7 @@ export const deleteQuestion = async (req, res) => {
     if (!question) return res.status(404).json({ error: 'Question not found.' });
 
     await question.destroy();
+    invalidateQuestionCache();
     res.json({ message: `Question ${question.qNumber} deleted successfully.` });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete question.', message: error.message });

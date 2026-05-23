@@ -3,6 +3,9 @@ import {
   Users, UserCheck, BookOpen, UserX, Search, Plus, Edit, Trash2, X,
   MapPin, Phone, Mail, FileText, Check, ChevronDown, RefreshCw, AlertCircle, PhoneCall
 } from 'lucide-react';
+import { db } from '../db/indexedDB';
+import { v4 as uuidv4 } from 'uuid';
+import { getFitmentBand } from '../utils/fitmentMapper';
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
@@ -46,7 +49,17 @@ const FALLBACK_QUESTIONS = [
   { qNumber: 'Q28', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Neighbourhood/colony composition', questionWeight: 2, inputType: 'Dropdown', options: [{ text: 'High density low-income', score: 10 }, { text: 'Medium density middle-income', score: 5 }, { text: 'Low density high-income', score: 2 }] }
 ];
 
-export default function CandidateManagement({ user, candidates = [], setCandidates, fetchCandidates }) {
+export default function CandidateManagement({
+  user,
+  candidates = [],
+  setCandidates,
+  fetchCandidates,
+  isOnline,
+  offlineEditCandidate,
+  setOfflineEditCandidate,
+  showToast,
+  showConfirm
+}) {
   const role = user?.userType || 'Mobiliser';
 
   // State for Lists & Filters
@@ -365,18 +378,41 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
     setModalType('interview');
   };
 
+  // Open edit modal for offline candidate if requested from header dropdown
+  useEffect(() => {
+    if (offlineEditCandidate) {
+      openEditModal(offlineEditCandidate);
+      setOfflineEditCandidate(null);
+    }
+  }, [offlineEditCandidate, setOfflineEditCandidate]);
+
   // Handle Form Submit (Demographics Create/Update)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!fullName.trim() || !phone.trim()) {
-      alert('Full Name and Phone Number are required.');
+      showToast('Full Name and Phone Number are required.', 'warning');
       return;
+    }
+
+    const cleanPhone = phone.trim().replace(/[\s-]/g, '');
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      showToast('Phone Number must be exactly 10 digits.', 'warning');
+      return;
+    }
+
+    if (email && email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        showToast('Please enter a valid email address.', 'warning');
+        return;
+      }
     }
 
     const payload = {
       fullName: fullName.trim(),
-      phone: phone.trim(),
-      email: email.trim() || null,
+      phone: cleanPhone,
+      email: email.trim() ? email.trim() : null,
       dateOfBirth: dateOfBirth || null,
       gender,
       maritalStatus,
@@ -387,17 +423,12 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
       score: modalType === 'add' ? 0 : editingCandidate.score || 0,
       outcome: modalType === 'add' ? 'Pending' : editingCandidate.outcome || 'Pending',
       wcpAnswers: modalType === 'add' ? null : editingCandidate.wcpAnswers || null,
-      mobiliserId: modalType === 'add' ? user.id : editingCandidate.mobiliserId
+      mobiliserId: modalType === 'add' ? user.id : editingCandidate.mobiliserId,
+      recruiterName: modalType === 'add' ? (user.username || user.name || 'System Admin') : (editingCandidate.recruiterName || user.username || 'System Admin'),
+      recruiterPhone: modalType === 'add' ? (user.phone || null) : (editingCandidate.recruiterPhone || user.phone || null)
     };
 
-    let url = `${API}/candidates`;
-    let method = 'POST';
-    const mockId = modalType === 'add' ? `temp-${Date.now()}` : editingCandidate.id;
-
-    if (modalType === 'edit') {
-      url = `${API}/candidates/${editingCandidate.id}`;
-      method = 'PUT';
-    }
+    const mockId = modalType === 'add' ? `temp-${uuidv4()}` : editingCandidate.id;
 
     const optimisticCandidate = {
       ...payload,
@@ -405,29 +436,102 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
       createdAt: modalType === 'add' ? new Date().toISOString() : editingCandidate.createdAt
     };
 
-    setCandidates(prev => {
-      if (modalType === 'add') return [optimisticCandidate, ...prev];
-      return prev.map(c => c.id === mockId ? { ...c, ...payload } : c);
-    });
+    // Save to IndexedDB (synced: 0 means false, syncError cleared)
+    const dbPayload = {
+      ...payload,
+      tempId: mockId,
+      synced: 0,
+      createdAt: optimisticCandidate.createdAt
+    };
 
-    setModalType(null);
-    setEditingCandidate(null);
+    if (!isOnline) {
+      // Offline mode: save locally, update state and close modal immediately
+      try {
+        await db.candidates.put(dbPayload);
+        setCandidates(prev => {
+          if (modalType === 'add') return [optimisticCandidate, ...prev];
+          return prev.map(c => c.id === mockId ? { ...c, ...payload } : c);
+        });
+        setModalType(null);
+        setEditingCandidate(null);
+        showConfirm(
+          'Saved Offline', 
+          `Candidate "${payload.fullName}" has been saved locally. Profile registration will sync once your internet connection is restored.`
+        );
+      } catch (dbErr) {
+        console.error('Failed to save candidate to IndexedDB:', dbErr);
+        showToast('Failed to save candidate locally to IndexedDB.', 'error');
+      }
+      return;
+    }
 
-    fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-      .then(res => res.json().then(data => ({ res, data })))
-      .then(({ res, data }) => {
-        if (!res.ok) throw new Error(data.error);
-        fetchCandidates();
-      })
-      .catch(err => {
-        console.error(err);
-        alert('Failed to save candidate: ' + err.message);
-        fetchCandidates();
+    // Online mode: try syncing with backend first
+    try {
+      setLoading(true);
+      setApiMessage(null);
+
+      let url = `${API}/candidates`;
+      let method = 'POST';
+      if (modalType === 'edit' && !editingCandidate.id.startsWith('temp-')) {
+        url = `${API}/candidates/${editingCandidate.id}`;
+        method = 'PUT';
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
+
+      const data = await res.json();
+      setLoading(false);
+
+      if (!res.ok) {
+        // Backend validation/constraint error: show message and keep modal open
+        setApiMessage({ type: 'error', text: data.error || 'Server validation failed.' });
+        showToast(data.error || 'Server validation failed.', 'error');
+        return;
+      }
+
+      // Succeeded: clean up IndexedDB if it was there
+      await db.candidates.where({ tempId: mockId }).delete();
+      
+      // Update local state and close modal
+      setCandidates(prev => {
+        if (modalType === 'add') return [data, ...prev];
+        return prev.map(c => c.id === mockId ? data : c);
+      });
+      setModalType(null);
+      setEditingCandidate(null);
+      showToast(
+        modalType === 'add' 
+          ? `Candidate "${payload.fullName}" registered successfully!` 
+          : `Candidate "${payload.fullName}" details updated successfully!`, 
+        'success'
+      );
+      fetchCandidates();
+    } catch (err) {
+      setLoading(false);
+      console.error('Network/server error during candidate save:', err);
+
+      // Save offline fallback: write to IndexedDB, update state, and close modal
+      try {
+        await db.candidates.put(dbPayload);
+        setCandidates(prev => {
+          if (modalType === 'add') return [optimisticCandidate, ...prev];
+          return prev.map(c => c.id === mockId ? { ...c, ...payload } : c);
+        });
+        setModalType(null);
+        setEditingCandidate(null);
+        showConfirm(
+          'Saved Offline', 
+          `Network unreachable. Candidate "${payload.fullName}" has been saved locally and will sync once internet returns.`
+        );
+      } catch (dbErr) {
+        console.error('Failed to save candidate locally on fallback:', dbErr);
+        showToast('Failed to save candidate locally.', 'error');
+      }
+    }
   };
 
   // Handle Live Call Interview Form Submit
@@ -445,34 +549,96 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
       state: editingCandidate.state,
       status: editingCandidate.status,
       mobiliserId: editingCandidate.mobiliserId,
+      recruiterName: editingCandidate.recruiterName || user.username || 'System Admin',
+      recruiterPhone: editingCandidate.recruiterPhone || user.phone || null,
       score: parseInt(score) || 0,
       outcome,
       wcpAnswers: Object.keys(selectedQuestions).length > 0 ? selectedQuestions : null,
       notes: notes.trim() || null
     };
 
-    const updatedCandidate = { ...editingCandidate, ...payload };
-    setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? updatedCandidate : c));
-    
-    setModalType(null);
-    setEditingCandidate(null);
+    const mockId = editingCandidate.id;
+    const dbPayload = {
+      ...payload,
+      tempId: mockId,
+      synced: 0,
+      createdAt: editingCandidate.createdAt || new Date().toISOString()
+    };
 
-    const url = `${API}/candidates/${editingCandidate.id}`;
-    fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-      .then(res => res.json().then(data => ({ res, data })))
-      .then(({ res, data }) => {
-        if (!res.ok) throw new Error(data.error);
-        fetchCandidates();
-      })
-      .catch(err => {
-        console.error(err);
-        alert('Failed to save interview details: ' + err.message);
-        fetchCandidates();
+    const updatedCandidate = { ...editingCandidate, ...payload };
+
+    if (!isOnline) {
+      // Offline mode: save locally, update state and close modal
+      try {
+        await db.candidates.put(dbPayload);
+        setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? updatedCandidate : c));
+        setModalType(null);
+        setEditingCandidate(null);
+        showConfirm(
+          'Saved Offline', 
+          `Interview for "${payload.fullName}" saved locally. Assessment answers will sync once online.`
+        );
+      } catch (dbErr) {
+        console.error('Failed to save assessment locally:', dbErr);
+        showToast('Failed to save assessment locally to IndexedDB.', 'error');
+      }
+      return;
+    }
+
+    // Online mode: try syncing with backend first
+    try {
+      setLoading(true);
+
+      let url = `${API}/candidates/${mockId}`;
+      let method = 'PUT';
+
+      if (mockId.startsWith('temp-')) {
+        url = `${API}/candidates`;
+        method = 'POST';
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
+      const data = await res.json();
+      setLoading(false);
+
+      if (!res.ok) {
+        // Backend validation/constraint error: show alert and keep modal open so they can correct details
+        showToast('Assessment Submission Failed: ' + (data.error || 'Server validation failed.'), 'error');
+        return;
+      }
+
+      // Succeeded: clean up IndexedDB if it was there
+      await db.candidates.where({ tempId: mockId }).delete();
+      
+      // Update local state and close modal
+      setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? data : c));
+      setModalType(null);
+      setEditingCandidate(null);
+      showToast(`Interview for "${payload.fullName}" saved successfully! Fitment outcome: ${payload.outcome}.`, 'success');
+      fetchCandidates();
+    } catch (err) {
+      setLoading(false);
+      console.error('Network/server error during assessment save:', err);
+
+      // Save offline fallback: write to IndexedDB, update state, and close modal
+      try {
+        await db.candidates.put(dbPayload);
+        setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? updatedCandidate : c));
+        setModalType(null);
+        setEditingCandidate(null);
+        showConfirm(
+          'Saved Offline', 
+          `Network error. Interview details for "${payload.fullName}" saved locally and will sync once internet returns.`
+        );
+      } catch (dbErr) {
+        console.error('Failed to save assessment locally on fallback:', dbErr);
+        showToast('Failed to save assessment locally.', 'error');
+      }
+    }
   };
 
   // Confirm delete handler
@@ -485,6 +651,7 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
     if (!candidateToDelete) return;
     
     const idToDelete = candidateToDelete.id;
+    const nameToDelete = candidateToDelete.fullName;
     setCandidates(prev => prev.filter(c => c.id !== idToDelete));
     setShowDeleteConfirm(false);
     setCandidateToDelete(null);
@@ -495,11 +662,12 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
       .then(res => res.json().then(data => ({ res, data })))
       .then(({ res, data }) => {
         if (!res.ok) throw new Error(data.error);
+        showToast(`Candidate "${nameToDelete}" deleted successfully!`, 'success');
         fetchCandidates();
       })
       .catch(err => {
         console.error(err);
-        alert('Failed to delete candidate: ' + err.message);
+        showToast('Failed to delete candidate: ' + err.message, 'error');
         fetchCandidates();
       });
   };
@@ -520,6 +688,9 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
     }
     groupedQuestions[q.domain].questions.push(q);
   });
+
+  const viewIsInterviewed = editingCandidate?.wcpAnswers && Object.keys(editingCandidate.wcpAnswers).length > 0;
+  const viewBandInfo = getFitmentBand(viewIsInterviewed ? editingCandidate.score : null);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -640,7 +811,14 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
                             {initials}
                           </div>
                           <div>
-                            <div className="font-extrabold text-slate-800 text-sm leading-tight">{c.fullName}</div>
+                            <div className="font-extrabold text-slate-800 text-sm leading-tight flex items-center gap-1.5 flex-wrap">
+                              {c.fullName}
+                              {c.syncError && (
+                                <span className="bg-rose-50 border border-rose-200 text-rose-700 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider flex items-center gap-0.5 animate-pulse">
+                                  <AlertCircle className="w-2.5 h-2.5 shrink-0" /> Sync Failed
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center text-[10px] text-slate-400 font-semibold mt-1 space-x-2">
                               <span className="flex items-center">
                                 <MapPin className="w-3 h-3 text-slate-400 mr-0.5" />
@@ -651,11 +829,15 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
                               <span>•</span>
                               <span>{c.gender}</span>
                             </div>
+                            {c.syncError && (
+                              <div className="text-[9px] text-rose-600 font-extrabold mt-1 max-w-xs break-words bg-rose-50/50 border border-rose-100 rounded-lg p-1.5 flex items-start gap-1">
+                                <AlertCircle className="w-3 h-3 text-rose-500 shrink-0 mt-0.5" />
+                                <span className="leading-snug">{c.syncError}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
-
-
 
                       {/* Fitment Rating */}
                       <td className="py-4 px-6 text-center">
@@ -663,16 +845,14 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
                           <span className={`font-extrabold text-sm ${isInterviewed ? 'text-indigo-700' : 'text-slate-400'}`}>
                             {isInterviewed ? `${c.score}%` : '—'}
                           </span>
-                          <span className={`inline-block px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${c.outcome === 'Suitable'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-250'
-                            : c.outcome === 'Requires Training'
-                              ? 'bg-amber-50 text-amber-750 border-amber-200'
-                              : c.outcome === 'Unsuitable'
-                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                : 'bg-slate-50 text-slate-500 border-slate-200'
-                            }`}>
-                            {c.outcome || 'Pending'}
-                          </span>
+                          {(() => {
+                            const bandInfo = getFitmentBand(isInterviewed ? c.score : null);
+                            return (
+                              <span className={`inline-block px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${bandInfo.color}`}>
+                                {isInterviewed ? `${bandInfo.band} Band` : 'Pending'}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </td>
 
@@ -829,21 +1009,43 @@ export default function CandidateManagement({ user, candidates = [], setCandidat
                   <div className="text-right">
                     <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-0.5">Fitment</p>
                     <div className="flex items-center justify-end gap-1.5">
-                      <span className="text-sm font-black text-indigo-700">{editingCandidate.score || 0}%</span>
-                      <span className={`inline-block px-2.5 py-0.5 border text-[10px] font-black rounded-md uppercase shadow-xs ${
-                        editingCandidate.outcome === 'Suitable' 
-                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
-                          : editingCandidate.outcome === 'Requires Training' 
-                            ? 'bg-amber-100 text-amber-800 border-amber-200' 
-                            : editingCandidate.outcome === 'Unsuitable' 
-                              ? 'bg-rose-100 text-rose-800 border-rose-200' 
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
-                      }`}>
-                        {editingCandidate.outcome || 'Pending'}
+                      <span className="text-sm font-black text-indigo-700">{viewIsInterviewed ? `${editingCandidate.score}%` : '—'}</span>
+                      <span className={`inline-block px-2.5 py-0.5 border text-[10px] font-black rounded-md uppercase shadow-xs ${viewBandInfo.badgeColor}`}>
+                        {viewIsInterviewed ? `${viewBandInfo.band} Band` : 'Pending'}
                       </span>
                     </div>
                   </div>
                 </div>
+
+                {/* Step 5 — Fitment Probability & Mobiliser Action Card */}
+                {viewIsInterviewed && (
+                  <div className={`border p-4 rounded-xl shadow-xs space-y-2.5 ${viewBandInfo.color}`}>
+                    <div className="flex justify-between items-center border-b pb-2 border-current/10">
+                      <div>
+                        <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">Fitment Probability Band</p>
+                        <h4 className="text-sm font-black flex items-center gap-1.5">
+                          <span className={`inline-block w-2.5 h-2.5 rounded-full ${
+                            viewBandInfo.band === 'High' ? 'bg-emerald-500' : 
+                            viewBandInfo.band === 'Moderate' ? 'bg-amber-500' : 
+                            viewBandInfo.band === 'Low' ? 'bg-rose-500' : 
+                            'bg-slate-500'
+                          }`}></span>
+                          {viewBandInfo.band} Band
+                        </h4>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">Conversion Likelihood</p>
+                        <p className="text-xs font-black">{viewBandInfo.likelihood}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-wider opacity-60 mb-0.5">Mobiliser Action</p>
+                      <p className="text-[11px] font-semibold leading-relaxed text-slate-700 bg-white/70 backdrop-blur-xs p-2 rounded-lg border border-current/10">
+                        {viewBandInfo.action}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {editingCandidate.notes && (
                   <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl">

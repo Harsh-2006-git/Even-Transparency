@@ -10,11 +10,12 @@ import {
   PieChart,
   ShieldCheck,
   Sparkles,
+  Download,
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
-export default function Login({ onLoginSuccess }) {
+export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -82,7 +83,18 @@ export default function Login({ onLoginSuccess }) {
   ];
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-[#f4f6fb] flex items-center justify-center p-4 sm:p-6 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
+    <div className="relative min-h-screen min-h-[100dvh] bg-[#f4f6fb] flex items-center justify-center p-4 sm:p-6 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
+      
+      {/* Top right Download App button */}
+      {deferredPrompt && (
+        <button
+          onClick={onInstall}
+          className="absolute top-4 right-4 md:top-6 md:right-6 z-50 flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-indigo-650 hover:text-indigo-800 border border-slate-250 rounded-xl text-xs font-extrabold shadow-sm transition duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+        >
+          <Download className="w-4 h-4 text-indigo-650" />
+          <span>Download App</span>
+        </button>
+      )}
 
       {/* Centered card wrapper */}
       <div className="w-full max-w-[1120px] bg-white rounded-[24px] lg:rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.06)] border border-slate-200 grid lg:grid-cols-2">

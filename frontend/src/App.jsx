@@ -22,6 +22,10 @@ function App() {
   // Connection and Sync states
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // PWA Install states
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
   // Layout navigation states
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
@@ -254,6 +258,41 @@ function App() {
     };
   }, []);
 
+  // Capture PWA installation prompts
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const dismissed = sessionStorage.getItem('evencargo_install_dismissed');
+      if (!dismissed) {
+        setShowInstallBanner(true);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null);
+      setShowInstallBanner(false);
+      showToast('Even Cargo App installed successfully!', 'success');
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User choice outcome: ${outcome}`);
+    setDeferredPrompt(null);
+    setShowInstallBanner(false);
+  };
+
   // Poll IndexedDB for unsynced candidates to keep the badge and dropdown reactive
   const fetchUnsyncedCandidates = async () => {
     try {
@@ -440,6 +479,8 @@ function App() {
     return (
       <Login
         onLoginSuccess={handleLoginSuccess}
+        deferredPrompt={deferredPrompt}
+        onInstall={handleInstallApp}
       />
     );
   }
@@ -460,6 +501,41 @@ function App() {
 
       {/* Spacer to prevent fixed header from overlapping content */}
       <div className="h-20 md:h-16 shrink-0" />
+
+      {/* PWA Install Banner */}
+      {showInstallBanner && deferredPrompt && (
+        <div className="bg-gradient-to-r from-indigo-650 to-blue-600 text-white px-4 py-3 shadow-md flex items-center justify-between gap-3 text-xs shrink-0 animate-slide-in-top">
+          <div className="flex items-center space-x-3 min-w-0">
+            {/* Logo */}
+            <div className="h-9 w-9 bg-white rounded-xl p-1 shrink-0 shadow-sm flex items-center justify-center">
+              <img src="/logo.png" alt="Even Cargo Logo" className="h-7 w-7 object-contain" />
+            </div>
+            <div className="min-w-0">
+              <h4 className="font-extrabold text-[12px] md:text-[13px] leading-tight">Install Even Cargo App</h4>
+              <p className="text-[9px] md:text-[10px] text-indigo-100 font-medium mt-0.5 leading-normal truncate">
+                Download the app on your device for offline candidate registration & zero-delay load times.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleInstallApp}
+              className="bg-white hover:bg-slate-100 text-indigo-750 font-extrabold px-3 py-1.5 rounded-xl transition duration-150 active:scale-95 cursor-pointer text-[10px] md:text-xs shadow-sm whitespace-nowrap"
+            >
+              Download App
+            </button>
+            <button
+              onClick={() => {
+                setShowInstallBanner(false);
+                sessionStorage.setItem('evencargo_install_dismissed', 'true');
+              }}
+              className="p-1 hover:bg-white/10 rounded-lg text-indigo-150 hover:text-white transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Grid container with sidebar and content */}
       <div className="flex flex-1 overflow-hidden relative">

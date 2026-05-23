@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Users, UserCheck, BookOpen, UserX, Search, Plus, Edit, Trash2, X,
-  MapPin, Phone, Mail, FileText, Check, ChevronDown, RefreshCw, AlertCircle, PhoneCall
+  MapPin, Phone, Mail, FileText, Check, ChevronDown, RefreshCw, AlertCircle, PhoneCall, Sliders
 } from 'lucide-react';
 import { db } from '../db/indexedDB';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,16 +34,18 @@ const FALLBACK_QUESTIONS = [
   { qNumber: 'Q22', domain: 'F', domainName: 'Psychological Readiness & Agency', domainWeight: 0.10, questionText: 'If her family initially objects to joining, what will she do?', questionWeight: 4, inputType: 'Radio', options: [{ text: 'Would join anyway', score: 10 }, { text: 'Would try to persuade them', score: 7 }, { text: 'Has not thought about it', score: 3 }, { text: 'Would not join', score: 1 }] },
   { qNumber: 'Q23', domain: 'F', domainName: 'Psychological Readiness & Agency', domainWeight: 0.10, questionText: 'Has she made an independent financial decision before?', questionWeight: 3, inputType: 'Radio', options: [{ text: 'Yes', score: 10 }, { text: 'No', score: 3 }, { text: 'Does not know', score: 2 }] },
   { qNumber: 'Q24', domain: 'F', domainName: 'Psychological Readiness & Agency', domainWeight: 0.10, questionText: 'How does she respond to: "If you hit a roadblock/accident while driving, what will you do?"', questionWeight: 3, inputType: 'Radio', options: [{ text: '3 – Problem-solving orientation', score: 10 }, { text: '2 – Neutral', score: 5 }, { text: '1 – Withdrawal orientation', score: 1 }] },
-  { qNumber: 'Q25', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Primary language(s) spoken at home [Optional]', questionWeight: 2, inputType: 'MultiSelect', options: [
-    { text: 'Hindi', score: 5 },
-    { text: 'English', score: 5 },
-    { text: 'Marathi', score: 5 },
-    { text: 'Bengali', score: 5 },
-    { text: 'Telugu', score: 5 },
-    { text: 'Tamil', score: 5 },
-    { text: 'Urdu', score: 5 },
-    { text: 'Other', score: 5 }
-  ] },
+  {
+    qNumber: 'Q25', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Primary language(s) spoken at home [Optional]', questionWeight: 2, inputType: 'MultiSelect', options: [
+      { text: 'Hindi', score: 5 },
+      { text: 'English', score: 5 },
+      { text: 'Marathi', score: 5 },
+      { text: 'Bengali', score: 5 },
+      { text: 'Telugu', score: 5 },
+      { text: 'Tamil', score: 5 },
+      { text: 'Urdu', score: 5 },
+      { text: 'Other', score: 5 }
+    ]
+  },
   { qNumber: 'Q26', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Does the household celebrate festivals not on the main national calendar?', questionWeight: 2, inputType: 'Radio', options: [{ text: 'Yes', score: 8 }, { text: 'No', score: 4 }, { text: 'Prefer not to say', score: 0 }] },
   { qNumber: 'Q27', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Is the household a beneficiary of any government welfare schemes?', questionWeight: 3, inputType: 'Radio', options: [{ text: 'Yes', score: 10 }, { text: 'No', score: 4 }, { text: 'Does not know', score: 5 }] },
   { qNumber: 'Q28', domain: 'G', domainName: 'Structural Marginalisation Proxies', domainWeight: 0.04, questionText: 'Neighbourhood/colony composition', questionWeight: 2, inputType: 'Dropdown', options: [{ text: 'High density low-income', score: 10 }, { text: 'Medium density middle-income', score: 5 }, { text: 'Low density high-income', score: 2 }] }
@@ -67,6 +69,7 @@ export default function CandidateManagement({
   const [cityFilter, setCityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [outcomeFilter, setOutcomeFilter] = useState('All');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // WCP Questions fetched state
   const [questions, setQuestions] = useState([]);
@@ -249,7 +252,7 @@ export default function CandidateManagement({
       });
 
       const domainScore = totalPossibleWeight > 0 ? (domainWeightedSum / totalPossibleWeight) : 0;
-      
+
       // Normalize weight: decimal to percentage (e.g. 0.22 -> 22)
       const weightPct = domainWeight <= 1.0 ? domainWeight * 100 : domainWeight;
       const contribution = (domainScore / 10) * weightPct;
@@ -278,7 +281,7 @@ export default function CandidateManagement({
 
   const getOutcomeFromScore = (scoreVal, questionsMap, questionsList) => {
     const listToUse = questionsList && questionsList.length > 0 ? questionsList : FALLBACK_QUESTIONS;
-    
+
     // Check completeness
     const totalQuestionsCount = listToUse.length;
     let answeredQuestionsCount = 0;
@@ -455,7 +458,7 @@ export default function CandidateManagement({
         setModalType(null);
         setEditingCandidate(null);
         showConfirm(
-          'Saved Offline', 
+          'Saved Offline',
           `Candidate "${payload.fullName}" has been saved locally. Profile registration will sync once your internet connection is restored.`
         );
       } catch (dbErr) {
@@ -495,7 +498,7 @@ export default function CandidateManagement({
 
       // Succeeded: clean up IndexedDB if it was there
       await db.candidates.where({ tempId: mockId }).delete();
-      
+
       // Update local state and close modal
       setCandidates(prev => {
         if (modalType === 'add') return [data, ...prev];
@@ -504,9 +507,9 @@ export default function CandidateManagement({
       setModalType(null);
       setEditingCandidate(null);
       showToast(
-        modalType === 'add' 
-          ? `Candidate "${payload.fullName}" registered successfully!` 
-          : `Candidate "${payload.fullName}" details updated successfully!`, 
+        modalType === 'add'
+          ? `Candidate "${payload.fullName}" registered successfully!`
+          : `Candidate "${payload.fullName}" details updated successfully!`,
         'success'
       );
       fetchCandidates();
@@ -524,7 +527,7 @@ export default function CandidateManagement({
         setModalType(null);
         setEditingCandidate(null);
         showConfirm(
-          'Saved Offline', 
+          'Saved Offline',
           `Network unreachable. Candidate "${payload.fullName}" has been saved locally and will sync once internet returns.`
         );
       } catch (dbErr) {
@@ -575,7 +578,7 @@ export default function CandidateManagement({
         setModalType(null);
         setEditingCandidate(null);
         showConfirm(
-          'Saved Offline', 
+          'Saved Offline',
           `Interview for "${payload.fullName}" saved locally. Assessment answers will sync once online.`
         );
       } catch (dbErr) {
@@ -613,7 +616,7 @@ export default function CandidateManagement({
 
       // Succeeded: clean up IndexedDB if it was there
       await db.candidates.where({ tempId: mockId }).delete();
-      
+
       // Update local state and close modal
       setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? data : c));
       setModalType(null);
@@ -631,7 +634,7 @@ export default function CandidateManagement({
         setModalType(null);
         setEditingCandidate(null);
         showConfirm(
-          'Saved Offline', 
+          'Saved Offline',
           `Network error. Interview details for "${payload.fullName}" saved locally and will sync once internet returns.`
         );
       } catch (dbErr) {
@@ -649,7 +652,7 @@ export default function CandidateManagement({
 
   const executeDelete = async () => {
     if (!candidateToDelete) return;
-    
+
     const idToDelete = candidateToDelete.id;
     const nameToDelete = candidateToDelete.fullName;
     setCandidates(prev => prev.filter(c => c.id !== idToDelete));
@@ -698,49 +701,58 @@ export default function CandidateManagement({
       {/* ------------------- HEADER ------------------- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Candidate Directory & Operations</h2>
+          <h2 className="text-xl font-bold text-slate-800">Candidate Directory</h2>
           <p className="text-xs text-slate-500 mt-1">
             Perform CRUD operations, search records, and configure candidate pipeline stages.
             {role === 'Mobiliser' ? ' (Showing your registered candidates only)' : ' (Showing all candidates globally)'}
           </p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-100 transition duration-200 active:scale-95 cursor-pointer shrink-0"
-        >
-          <Plus className="h-4.5 w-4.5" strokeWidth={2.5} />
-          <span>Add Candidate</span>
-        </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="min-[1000px]:hidden flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-xs transition active:scale-95 cursor-pointer"
+          >
+            <Sliders className="h-4 w-4" />
+            <span>Filters</span>
+          </button>
+          <button
+            onClick={openAddModal}
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-100 transition duration-200 active:scale-95 cursor-pointer shrink-0"
+          >
+            <Plus className="h-4.5 w-4.5" strokeWidth={2.5} />
+            <span>Add Candidate</span>
+          </button>
+        </div>
       </div>
 
       {/* ------------------- FILTERS SECTION ------------------- */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className={`bg-white border border-slate-200 rounded-2xl p-3 min-[1000px]:p-5 shadow-xs grid-cols-2 min-[1000px]:grid-cols-4 gap-2.5 min-[1000px]:gap-4 ${showMobileFilters ? 'grid' : 'hidden min-[1000px]:grid'}`}>
 
         {/* Search */}
         <div className="relative">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Search Candidate</label>
+          <label className="block text-[9px] min-[1000px]:text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 min-[1000px]:mb-1.5">Search</label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-              <Search className="h-4 w-4" />
+            <span className="absolute inset-y-0 left-0 pl-2.5 min-[1000px]:pl-3 flex items-center text-slate-400">
+              <Search className="h-3.5 w-3.5 min-[1000px]:h-4 min-[1000px]:w-4" />
             </span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, phone..."
-              className="w-full pl-9 pr-4 py-2 border border-slate-250 bg-white rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+              placeholder="Name, phone..."
+              className="w-full pl-8 pr-3 py-1.5 min-[1000px]:pl-9 min-[1000px]:pr-4 min-[1000px]:py-2 border border-slate-250 bg-white rounded-lg min-[1000px]:rounded-xl text-[10px] min-[1000px]:text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
             />
           </div>
         </div>
 
         {/* City Filter */}
         <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Filter by City</label>
+          <label className="block text-[9px] min-[1000px]:text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 min-[1000px]:mb-1.5">City</label>
           <select
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-250 bg-white rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+            className="w-full px-2 py-1.5 min-[1000px]:px-3 min-[1000px]:py-2 border border-slate-250 bg-white rounded-lg min-[1000px]:rounded-xl text-[10px] min-[1000px]:text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
           >
             {uniqueCities.map(city => (
               <option key={city} value={city}>{city === 'All' ? 'All Cities' : city}</option>
@@ -750,27 +762,27 @@ export default function CandidateManagement({
 
         {/* Status Filter */}
         <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pipeline Status</label>
+          <label className="block text-[9px] min-[1000px]:text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 min-[1000px]:mb-1.5">Status</label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-250 bg-white rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+            className="w-full px-2 py-1.5 min-[1000px]:px-3 min-[1000px]:py-2 border border-slate-250 bg-white rounded-lg min-[1000px]:rounded-xl text-[10px] min-[1000px]:text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
           >
             <option value="All">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="converted">Converted</option>
-            <option value="training started">Training Started</option>
+            <option value="training started">Training</option>
             <option value="dropped">Dropped</option>
           </select>
         </div>
 
         {/* Outcome Filter */}
         <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Fitment Rating</label>
+          <label className="block text-[9px] min-[1000px]:text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 min-[1000px]:mb-1.5">Rating</label>
           <select
             value={outcomeFilter}
             onChange={(e) => setOutcomeFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-250 bg-white rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+            className="w-full px-2 py-1.5 min-[1000px]:px-3 min-[1000px]:py-2 border border-slate-250 bg-white rounded-lg min-[1000px]:rounded-xl text-[10px] min-[1000px]:text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
           >
             <option value="All">All Ratings</option>
             <option value="Suitable">Suitable</option>
@@ -786,8 +798,8 @@ export default function CandidateManagement({
       <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
         {filteredCandidates.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
+            <table className="w-full text-left border-collapse block min-[1000px]:table min-[1000px]:min-w-[1100px]">
+              <thead className="hidden min-[1000px]:table-header-group">
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 uppercase font-black tracking-wider">
                   <th className="py-4.5 px-6">Candidate Details</th>
                   <th className="py-4.5 px-6 text-center">Fitment Score</th>
@@ -796,38 +808,38 @@ export default function CandidateManagement({
                   <th className="py-4.5 px-6 text-center">Quick Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-150 text-xs">
+              <tbody className="block min-[1000px]:table-row-group divide-y divide-slate-150 text-xs">
                 {filteredCandidates.map(c => {
                   const initials = c.fullName ? c.fullName.substring(0, 2).toUpperCase() : 'CA';
                   const cStatus = c.status || 'pending';
                   const isInterviewed = c.wcpAnswers && Object.keys(c.wcpAnswers).length > 0;
                   return (
-                    <tr key={c.id} className="hover:bg-slate-50/50 transition duration-150">
+                    <tr key={c.id} className="grid grid-cols-2 mb-1.5 min-[1000px]:mb-0 gap-1.5 p-2 min-[1000px]:gap-4 min-[1000px]:p-0 min-[1000px]:table-row hover:bg-slate-50/50 transition duration-150 relative">
 
                       {/* Name & Basic Info */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center space-x-3.5">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#4F7DCB] to-[#F39A42] flex items-center justify-center font-bold text-white text-[10px] select-none shrink-0 shadow-xs">
+                      <td className="col-span-2 min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 min-w-0">
+                        <div className="flex items-center space-x-2.5 min-[1000px]:space-x-3.5 min-w-0">
+                          <div className="w-7 h-7 min-[1000px]:w-9 min-[1000px]:h-9 rounded-full bg-gradient-to-tr from-[#4F7DCB] to-[#F39A42] flex items-center justify-center font-bold text-white text-[10px] select-none shrink-0 shadow-xs">
                             {initials}
                           </div>
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <div className="font-extrabold text-slate-800 text-sm leading-tight flex items-center gap-1.5 flex-wrap">
-                              {c.fullName}
+                              <span className="truncate max-w-[140px] sm:max-w-[200px] min-[1000px]:max-w-none">{c.fullName}</span>
                               {c.syncError && (
                                 <span className="bg-rose-50 border border-rose-200 text-rose-700 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider flex items-center gap-0.5 animate-pulse">
                                   <AlertCircle className="w-2.5 h-2.5 shrink-0" /> Sync Failed
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center text-[10px] text-slate-400 font-semibold mt-1 space-x-2">
-                              <span className="flex items-center">
-                                <MapPin className="w-3 h-3 text-slate-400 mr-0.5" />
-                                {c.city}, {c.state}
+                            <div className="flex items-center text-[9px] min-[1000px]:text-[10px] text-slate-400 font-semibold mt-0.5 min-[1000px]:mt-1 space-x-1.5 min-[1000px]:space-x-2 min-w-0">
+                              <span className="flex items-center min-w-0">
+                                <MapPin className="w-3 h-3 text-slate-400 mr-0.5 shrink-0" />
+                                <span className="truncate max-w-[80px] sm:max-w-[150px] min-[1000px]:max-w-none">{c.city}<span className="hidden min-[1000px]:inline">, {c.state}</span></span>
                               </span>
-                              <span>•</span>
-                              <span>{c.age ? `${c.age} yrs` : 'No DOB'}</span>
-                              <span>•</span>
-                              <span>{c.gender}</span>
+                              <span className="shrink-0">•</span>
+                              <span className="shrink-0">{c.age ? `${c.age} yrs` : 'No DOB'}</span>
+                              <span className="shrink-0">•</span>
+                              <span className="shrink-0 truncate max-w-[50px] min-[1000px]:max-w-none">{c.gender}</span>
                             </div>
                             {c.syncError && (
                               <div className="text-[9px] text-rose-600 font-extrabold mt-1 max-w-xs break-words bg-rose-50/50 border border-rose-100 rounded-lg p-1.5 flex items-start gap-1">
@@ -840,8 +852,9 @@ export default function CandidateManagement({
                       </td>
 
                       {/* Fitment Rating */}
-                      <td className="py-4 px-6 text-center">
-                        <div className="flex flex-col items-center justify-center gap-1.5">
+                      <td className="col-span-1 flex flex-col items-start justify-center min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 min-[1000px]:text-center">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0 min-[1000px]:hidden">Fitment</span>
+                        <div className="flex flex-row min-[1000px]:flex-col items-center justify-start min-[1000px]:justify-center gap-1.5">
                           <span className={`font-extrabold text-sm ${isInterviewed ? 'text-indigo-700' : 'text-slate-400'}`}>
                             {isInterviewed ? `${c.score}%` : '—'}
                           </span>
@@ -857,22 +870,23 @@ export default function CandidateManagement({
                       </td>
 
                       {/* Status */}
-                      <td className="py-4 px-6">
+                      <td className="col-span-1 flex flex-col items-end justify-center min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 min-[1000px]:text-left">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0 min-[1000px]:hidden">Status</span>
                         <span className={`px-2.5 py-1 rounded text-[10px] font-bold border capitalize ${cStatus === 'pending'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : cStatus === 'converted'
-                              ? 'bg-emerald-50 text-emerald-750 border-emerald-250'
-                              : cStatus === 'training started'
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                : 'bg-rose-50 text-rose-700 border-rose-200'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : cStatus === 'converted'
+                            ? 'bg-emerald-50 text-emerald-750 border-emerald-250'
+                            : cStatus === 'training started'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
                           }`}>
-                          {cStatus}
+                          {cStatus === 'training started' ? 'Training' : cStatus}
                         </span>
                       </td>
 
                       {/* Recruiter / Mobiliser Info (Admin only) */}
                       {role === 'Admin' && (
-                        <td className="py-4 px-6">
+                        <td className="hidden min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 min-[1000px]:bg-transparent min-[1000px]:p-0 min-[1000px]:border-none">
                           <div className="text-slate-700 font-medium">
                             <div className="font-bold text-xs capitalize text-slate-800">{c.recruiterName || 'System Admin'}</div>
                             {c.recruiterPhone && (
@@ -883,25 +897,25 @@ export default function CandidateManagement({
                       )}
 
                       {/* Quick Actions */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="col-span-2 min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 pt-2 border-t border-slate-100 min-[1000px]:border-none min-[1000px]:pt-0">
+                        <div className="flex items-center w-full min-[1000px]:justify-center gap-1.5 min-[1000px]:gap-2">
                           <button
                             onClick={() => openInterviewModal(c)}
-                            className={`flex items-center justify-center gap-1.5 py-1.5 px-3 border text-[10px] font-bold rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer ${isInterviewed ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100' : 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 animate-pulse'}`}
+                            className={`flex-1 min-[1000px]:flex-none flex items-center justify-center gap-1 min-[1000px]:gap-1.5 py-1.5 px-2 min-[1000px]:py-1.5 min-[1000px]:px-3 border text-[10px] font-bold rounded-md min-[1000px]:rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer ${isInterviewed ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100' : 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 animate-pulse'}`}
                           >
-                            <PhoneCall className="w-3 h-3" />
-                            {isInterviewed ? 'Review Interview' : 'Start Interview'}
+                            <PhoneCall className="w-3.5 h-3.5 min-[1000px]:w-3 min-[1000px]:h-3 shrink-0" />
+                            {isInterviewed ? 'Review' : 'Interview'}
                           </button>
                           <button
                             onClick={() => openViewModal(c)}
-                            className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] font-bold rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer"
+                            className="flex-1 min-[1000px]:flex-none flex items-center justify-center gap-1 min-[1000px]:gap-1.5 py-1.5 px-2 min-[1000px]:py-1.5 min-[1000px]:px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] font-bold rounded-md min-[1000px]:rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer"
                           >
-                            <UserCheck className="w-3 h-3" />
-                            See Full Profile
+                            <UserCheck className="w-3.5 h-3.5 min-[1000px]:w-3 min-[1000px]:h-3 shrink-0" />
+                            Profile
                           </button>
                           <button
                             onClick={() => triggerDelete(c)}
-                            className="flex items-center justify-center p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg transition cursor-pointer"
+                            className="shrink-0 flex items-center justify-center p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-md min-[1000px]:rounded-lg transition cursor-pointer"
                             title="Delete Candidate"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -992,8 +1006,7 @@ export default function CandidateManagement({
                 <div className="flex bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-xl justify-between items-center">
                   <div>
                     <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-0.5">Pipeline Status</p>
-                    <span className={`inline-block px-2.5 py-0.5 border text-[10px] font-black rounded-md capitalize shadow-xs ${
-                      editingCandidate.status === 'pending'
+                    <span className={`inline-block px-2.5 py-0.5 border text-[10px] font-black rounded-md capitalize shadow-xs ${editingCandidate.status === 'pending'
                         ? 'bg-amber-100 text-amber-800 border-amber-200'
                         : editingCandidate.status === 'converted'
                           ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
@@ -1002,7 +1015,7 @@ export default function CandidateManagement({
                             : editingCandidate.status === 'rejected'
                               ? 'bg-rose-100 text-rose-800 border-rose-200'
                               : 'bg-indigo-100 text-indigo-800 border-indigo-200'
-                    }`}>
+                      }`}>
                       {editingCandidate.status || 'Pending'}
                     </span>
                   </div>
@@ -1024,12 +1037,11 @@ export default function CandidateManagement({
                       <div>
                         <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">Fitment Probability Band</p>
                         <h4 className="text-sm font-black flex items-center gap-1.5">
-                          <span className={`inline-block w-2.5 h-2.5 rounded-full ${
-                            viewBandInfo.band === 'High' ? 'bg-emerald-500' : 
-                            viewBandInfo.band === 'Moderate' ? 'bg-amber-500' : 
-                            viewBandInfo.band === 'Low' ? 'bg-rose-500' : 
-                            'bg-slate-500'
-                          }`}></span>
+                          <span className={`inline-block w-2.5 h-2.5 rounded-full ${viewBandInfo.band === 'High' ? 'bg-emerald-500' :
+                              viewBandInfo.band === 'Moderate' ? 'bg-amber-500' :
+                                viewBandInfo.band === 'Low' ? 'bg-rose-500' :
+                                  'bg-slate-500'
+                            }`}></span>
                           {viewBandInfo.band} Band
                         </h4>
                       </div>
@@ -1222,7 +1234,7 @@ export default function CandidateManagement({
                     >
                       <option value="pending">Pending</option>
                       <option value="converted">Converted</option>
-                      <option value="training started">Training Started</option>
+                      <option value="training started">Training</option>
                       <option value="dropped">Dropped</option>
                     </select>
                   </div>
@@ -1393,15 +1405,13 @@ export default function CandidateManagement({
                                   key={opt.text}
                                   type="button"
                                   onClick={() => handleQuestionAnswer(activeQuestion.qNumber, opt.text)}
-                                  className={`w-full px-4 py-3 text-left rounded-2xl border-2 transition cursor-pointer flex items-center space-x-3 ${
-                                    isSelected
+                                  className={`w-full px-4 py-3 text-left rounded-2xl border-2 transition cursor-pointer flex items-center space-x-3 ${isSelected
                                       ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold shadow-sm'
                                       : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
-                                  }`}
+                                    }`}
                                 >
-                                  <span className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${
-                                    isSelected ? 'border-indigo-500 bg-white' : 'border-slate-300 bg-white'
-                                  }`}>
+                                  <span className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${isSelected ? 'border-indigo-500 bg-white' : 'border-slate-300 bg-white'
+                                    }`}>
                                     {isSelected && <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
                                   </span>
                                   <span className="text-xs">{opt.text}</span>
@@ -1426,15 +1436,13 @@ export default function CandidateManagement({
                                       : [...currentSelection, opt.text];
                                     handleQuestionAnswer(activeQuestion.qNumber, newSel);
                                   }}
-                                  className={`w-full px-4 py-3 text-left rounded-2xl border-2 transition cursor-pointer flex items-center space-x-3 ${
-                                    isSelected
+                                  className={`w-full px-4 py-3 text-left rounded-2xl border-2 transition cursor-pointer flex items-center space-x-3 ${isSelected
                                       ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold shadow-sm'
                                       : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
-                                  }`}
+                                    }`}
                                 >
-                                  <span className={`w-5 h-5 rounded border-2 shrink-0 flex items-center justify-center ${
-                                    isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-white'
-                                  }`}>
+                                  <span className={`w-5 h-5 rounded border-2 shrink-0 flex items-center justify-center ${isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-white'
+                                    }`}>
                                     {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" strokeWidth={3} />}
                                   </span>
                                   <span className="text-xs">{opt.text}</span>
@@ -1495,11 +1503,10 @@ export default function CandidateManagement({
                                       key={opt.text}
                                       type="button"
                                       onClick={() => handleQuestionAnswer(activeQuestion.qNumber, presetVal)}
-                                      className={`p-2.5 text-left border-2 rounded-xl text-[9px] font-bold transition cursor-pointer leading-snug ${
-                                        isOptActive
+                                      className={`p-2.5 text-left border-2 rounded-xl text-[9px] font-bold transition cursor-pointer leading-snug ${isOptActive
                                           ? 'bg-indigo-50 border-indigo-500 text-indigo-800'
                                           : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600'
-                                      }`}
+                                        }`}
                                     >
                                       <div className="font-extrabold mb-0.5 text-[10px]">{opt.text}</div>
                                       <div className={`text-[8px] ${isOptActive ? 'text-indigo-400' : 'text-slate-400'}`}>tap to set → {presetVal}</div>
@@ -1567,12 +1574,11 @@ export default function CandidateManagement({
                       {/* Left: Outcome status */}
                       <div className="flex-1 min-w-0">
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Outcome</p>
-                        <span className={`inline-block px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide border ${
-                          outcome === 'Suitable' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : outcome === 'Requires Training' ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : outcome === 'Unsuitable' ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : 'bg-slate-100 text-slate-500 border-slate-200'
-                        }`}>
+                        <span className={`inline-block px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide border ${outcome === 'Suitable' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : outcome === 'Requires Training' ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : outcome === 'Unsuitable' ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                          }`}>
                           {outcome}
                         </span>
                       </div>
@@ -1607,11 +1613,10 @@ export default function CandidateManagement({
                               key={q.qNumber}
                               type="button"
                               onClick={() => setActiveQuestionIndex(idx)}
-                              className={`aspect-square rounded-lg flex items-center justify-center font-bold text-[10px] transition cursor-pointer select-none ${
-                                isActive ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-800/20'
-                                : isAnswered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                                : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
-                              }`}
+                              className={`aspect-square rounded-lg flex items-center justify-center font-bold text-[10px] transition cursor-pointer select-none ${isActive ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-800/20'
+                                  : isAnswered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                    : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
+                                }`}
                               title={`Q${q.qNumber}: ${isAnswered ? 'Answered' : 'Unanswered'}`}
                             >
                               {idx + 1}
@@ -1635,9 +1640,8 @@ export default function CandidateManagement({
 
                     {/* API Message */}
                     {apiMessage && (
-                      <div className={`p-3.5 rounded-xl text-xs font-semibold border flex items-start space-x-2 ${
-                        apiMessage.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'
-                      }`}>
+                      <div className={`p-3.5 rounded-xl text-xs font-semibold border flex items-start space-x-2 ${apiMessage.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'
+                        }`}>
                         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                         <span>{apiMessage.text}</span>
                       </div>

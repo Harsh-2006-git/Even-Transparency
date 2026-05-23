@@ -98,26 +98,9 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
 
 
   // ----------------------------------------------------
-  // City Manager Filters & States
+  // Role-Based Candidate Filtering (To enforce rules)
   // ----------------------------------------------------
-  const [searchQuery, setSearchQuery] = useState('');
-  const [cityFilter, setCityFilter] = useState('All');
-
-  // ----------------------------------------------------
-  // Operations States
-  // ----------------------------------------------------
-  const [retrainProgress, setRetrainProgress] = useState(false);
-  const [logs, setLogs] = useState([
-    '[2026-05-20 09:30] - Evaluator updated scoring weights',
-    '[2026-05-19 14:15] - Retraining model batch 14 compiled (validation accuracy: 0.941)',
-    '[2026-05-18 11:00] - Synced 4 new mobiliser candidates from Delhi West regional team',
-    '[2026-05-17 16:45] - Scorer system migrated from raw SQL scoring logic to Sequelize ORM model structure'
-  ]);
-
-  // ----------------------------------------------------
-  // Role-Based Candidate Filtering (To remove duplicacy and enforce rules)
-  // ----------------------------------------------------
-  // 1. Mobiliser: sees ONLY candidates that he/her registered
+  // 1. Mobiliser: sees ONLY candidates that he/she registered
   // 2. Others: see all candidates globally
   const roleBaseCandidates = candidates.filter(c => {
     if (role === 'Mobiliser') {
@@ -126,16 +109,8 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
     return true;
   });
 
-  // 3. City Manager UI Filter: Applies search query & city filter on top of role candidates
-  const cityManagerFilteredCandidates = roleBaseCandidates.filter(c => {
-    const matchesSearch = c.fullName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          c.phone.includes(searchQuery);
-    const matchesCity = cityFilter === 'All' || c.city.toLowerCase() === cityFilter.toLowerCase();
-    return matchesSearch && matchesCity;
-  });
-
   // Active dataset for rendering & calculating metrics
-  const activeCandidates = role === 'City Manager' ? cityManagerFilteredCandidates : roleBaseCandidates;
+  const activeCandidates = roleBaseCandidates;
 
   // ----------------------------------------------------
   // Stats Metrics Calculations (Total, Pending, Converted, Training, Dropped)
@@ -251,39 +226,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
 
 
 
-  // ----------------------------------------------------
-  // Operations CSV Export & Retraining Handlers
-  // ----------------------------------------------------
-  const handleExportCSV = () => {
-    if (candidates.length === 0) return;
-    
-    const headers = 'ID,Name,Phone,Email,DOB,Age,City,State,Score,Outcome,Status,Notes,CreatedAt\n';
-    const rows = candidates.map(c => 
-      `"${c.id}","${c.fullName}","${c.phone}","${c.email || ''}","${c.dateOfBirth || ''}","${c.age || ''}","${c.city}","${c.state}","${c.score || ''}","${c.outcome}","${c.status || 'pending'}","${c.notes || ''}","${c.createdAt || ''}"`
-    ).join('\n');
-    
-    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `evencargo_candidates_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
-  const handleTriggerRetrain = () => {
-    setRetrainProgress(true);
-    const time = new Date().toLocaleTimeString();
-    
-    setTimeout(() => {
-      setRetrainProgress(false);
-      setLogs(prev => [
-        `[${new Date().toISOString().split('T')[0]} ${time}] - Suitability assessment models recalibrated successfully!`,
-        ...prev
-      ]);
-    }, 1500);
-  };
 
   return (
     <div className="space-y-8">

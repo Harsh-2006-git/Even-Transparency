@@ -213,7 +213,7 @@ export default function MobiliserDashboard({ dbStatus, candidates, onCandidateAd
 
         <div className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
           <div>
-            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Training Started</span>
+            <span className="text-[10px] text-slate-400 uppercase font-black tracking-wider block">Training</span>
             <span className="text-2xl font-bold text-amber-650 mt-0.5 block">
               {candidates.filter(c => c.status === 'training started').length}
             </span>
@@ -335,7 +335,7 @@ export default function MobiliserDashboard({ dbStatus, candidates, onCandidateAd
                 className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
               >
                 <option value="converted">Converted</option>
-                <option value="training started">Training Started</option>
+                <option value="training started">Training</option>
                 <option value="dropped">Dropped</option>
               </select>
             </div>

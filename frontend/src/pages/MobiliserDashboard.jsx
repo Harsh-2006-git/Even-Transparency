@@ -3,6 +3,45 @@ import { User as UserIcon, HelpCircle, UserCheck, Plus, Check, MapPin, AlertTria
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
+const INDIAN_STATES = [
+  "Delhi",
+  "Maharashtra",
+  "Karnataka",
+  "Tamil Nadu",
+  "Uttar Pradesh",
+  "Gujarat",
+  "West Bengal",
+  "Rajasthan",
+  "Haryana",
+  "Telangana",
+  "Andhra Pradesh",
+  "Madhya Pradesh",
+  "Punjab",
+  "Bihar",
+  "Kerala",
+  "Odisha",
+  "Assam",
+  "Chhattisgarh",
+  "Jharkhand",
+  "Uttarakhand",
+  "Himachal Pradesh",
+  "Goa",
+  "Tripura",
+  "Meghalaya",
+  "Manipur",
+  "Nagaland",
+  "Mizoram",
+  "Arunachal Pradesh",
+  "Sikkim",
+  "Jammu and Kashmir",
+  "Puducherry",
+  "Chandigarh",
+  "Ladakh",
+  "Andaman and Nicobar Islands",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Lakshadweep"
+];
+
 const ASSESSMENT_DOMAINS = [
   {
     id: 'driving',
@@ -318,12 +357,16 @@ export default function MobiliserDashboard({ dbStatus, candidates, onCandidateAd
               </div>
               <div>
                 <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">State</label>
-                <input
-                  type="text"
+                <select
                   value={state}
                   onChange={(e) => setState(e.target.value)}
                   className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                />
+                >
+                  <option value="">Select State</option>
+                  {INDIAN_STATES.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

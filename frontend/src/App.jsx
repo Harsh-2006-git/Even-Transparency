@@ -19,6 +19,9 @@ function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  // Connection and Sync states
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
   // Layout navigation states
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
@@ -55,6 +58,14 @@ function App() {
   // Sync state with URL hash changes (navigation via sidebar links)
   useEffect(() => {
     const handleHashChange = () => {
+      if (!isOnline) {
+        setActiveSection('candidate-management');
+        if (window.location.hash !== '#/candidate-management') {
+          window.location.hash = '/candidate-management';
+        }
+        return;
+      }
+
       const hash = window.location.hash;
       const section = hash.startsWith('#/') ? hash.slice(2) : 'overview';
 
@@ -66,8 +77,12 @@ function App() {
     };
 
     if (user) {
-      // If no hash at all, set it to current activeSection (avoids blank hash)
-      if (!window.location.hash) {
+      if (!isOnline) {
+        setActiveSection('candidate-management');
+        if (window.location.hash !== '#/candidate-management') {
+          window.location.hash = '/candidate-management';
+        }
+      } else if (!window.location.hash) {
         window.location.hash = '/' + activeSection;
       }
       window.addEventListener('hashchange', handleHashChange);
@@ -77,7 +92,7 @@ function App() {
       window.removeEventListener('hashchange', handleHashChange);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, isOnline]);
 
   // Scroll to top when navigating to a new section (but do NOT reset hash on load)
   useEffect(() => {
@@ -95,10 +110,7 @@ function App() {
   // Candidate DB pipelines
   const [candidates, setCandidates] = useState([]);
 
-  // Connection and Sync states (supports simulated offline mode)
-  const [realOnline, setRealOnline] = useState(navigator.onLine);
-  const [isSimulatedOffline, setIsSimulatedOffline] = useState(false);
-  const isOnline = realOnline && !isSimulatedOffline;
+
 
   const [unsyncedCandidates, setUnsyncedCandidates] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -147,52 +159,82 @@ function App() {
     }
   };
 
-  // Fetch candidate list from DB
+  // Fetch candidate list from DB (with background caching)
   const fetchCandidates = async () => {
     try {
-      let apiCandidates = [];
-      try {
-        const res = await fetch(`${API}/candidates`);
-        if (res.ok) {
-          apiCandidates = await res.json();
-        }
-      } catch (err) {
-        console.warn('API candidates fetch failed, offline or server down:', err);
-      }
-
-      // Fetch unsynced local candidates from IndexedDB
+      // 1. Fetch unsynced local candidates from IndexedDB
       let localCandidates = [];
       try {
         localCandidates = await db.candidates.toArray();
       } catch (dbErr) {
         console.error('Failed to retrieve candidates from IndexedDB:', dbErr);
       }
-
-      // Convert local database model key tempId -> id for consistency in the UI
       const mappedLocal = localCandidates.map(c => ({
         ...c,
         id: c.tempId
       }));
 
-      // Combine candidates: start with local unsynced candidates
-      const combined = [...mappedLocal];
+      // 2. Fetch cached server candidates from IndexedDB cache
+      let cachedCandidatesList = [];
+      try {
+        cachedCandidatesList = await db.candidatesCache.toArray();
+      } catch (dbErr) {
+        console.error('Failed to retrieve candidates cache from IndexedDB:', dbErr);
+      }
 
-      // Add API candidates if not already present in the combined array
-      apiCandidates.forEach(apiCand => {
-        const exists = combined.some(c => c.phone === apiCand.phone || c.id === apiCand.id);
+      // Combine local unsynced and cached candidates for immediate UI rendering (no delay!)
+      const combinedInitial = [...mappedLocal];
+      cachedCandidatesList.forEach(cachedCand => {
+        const exists = combinedInitial.some(c => c.phone === cachedCand.phone || c.id === cachedCand.id);
         if (!exists) {
-          combined.push(apiCand);
+          combinedInitial.push(cachedCand);
         }
       });
 
-      // Sort combined array by creation date descending
-      combined.sort((a, b) => {
+      combinedInitial.sort((a, b) => {
         const dateA = new Date(a.createdAt || a.created_at || 0);
         const dateB = new Date(b.createdAt || b.created_at || 0);
         return dateB - dateA;
       });
 
-      setCandidates(combined);
+      // Set initial UI state immediately
+      setCandidates(combinedInitial);
+
+      // 3. Perform background API call in parallel if online
+      if (isOnline) {
+        fetch(`${API}/candidates`)
+          .then(async (res) => {
+            if (res.ok) {
+              const apiCandidates = await res.json();
+
+              // Update IndexedDB cache in background
+              db.candidatesCache.clear()
+                .then(() => db.candidatesCache.bulkPut(apiCandidates))
+                .catch(err => console.error('Failed to update candidate cache:', err));
+
+              // Combine fresh API candidates with unsynced candidates
+              const combinedFresh = [...mappedLocal];
+              apiCandidates.forEach(apiCand => {
+                const exists = combinedFresh.some(c => c.phone === apiCand.phone || c.id === apiCand.id);
+                if (!exists) {
+                  combinedFresh.push(apiCand);
+                }
+              });
+
+              combinedFresh.sort((a, b) => {
+                const dateA = new Date(a.createdAt || a.created_at || 0);
+                const dateB = new Date(b.createdAt || b.created_at || 0);
+                return dateB - dateA;
+              });
+
+              // Set the final fresh state
+              setCandidates(combinedFresh);
+            }
+          })
+          .catch(err => {
+            console.warn('Background candidate sync fetch failed:', err);
+          });
+      }
     } catch (err) {
       console.error('Error combining candidate lists:', err);
     }
@@ -200,8 +242,8 @@ function App() {
 
   // Monitor real-time online status
   useEffect(() => {
-    const handleOnline = () => setRealOnline(true);
-    const handleOffline = () => setRealOnline(false);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -411,8 +453,6 @@ function App() {
         onLogout={handleLogout}
         onToggleSidebar={handleToggleSidebar}
         isOnline={isOnline}
-        isSimulatedOffline={isSimulatedOffline}
-        setIsSimulatedOffline={setIsSimulatedOffline}
         unsyncedCandidates={unsyncedCandidates}
         triggerSync={triggerSync}
         onEditCandidate={handleEditOfflineCandidate}
@@ -425,14 +465,16 @@ function App() {
       <div className="flex flex-1 overflow-hidden relative">
 
         {/* Left Sidebar */}
-        <Sidebar
-          user={user}
-          activeSection={activeSection}
-          onSectionChange={handleSectionChange}
-          isOpen={sidebarOpen}
-          toggleSidebar={setSidebarOpen}
-          isCollapsed={desktopCollapsed}
-        />
+        {isOnline && (
+          <Sidebar
+            user={user}
+            activeSection={activeSection}
+            onSectionChange={handleSectionChange}
+            isOpen={sidebarOpen}
+            toggleSidebar={setSidebarOpen}
+            isCollapsed={desktopCollapsed}
+          />
+        )}
 
         {/* Right workspace: Main Scrollable Panel + Fixed Footer */}
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">

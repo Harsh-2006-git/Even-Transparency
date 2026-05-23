@@ -10,6 +10,45 @@ import { getFitmentBand } from '../utils/fitmentMapper';
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
+const INDIAN_STATES = [
+  "Delhi",
+  "Maharashtra",
+  "Karnataka",
+  "Tamil Nadu",
+  "Uttar Pradesh",
+  "Gujarat",
+  "West Bengal",
+  "Rajasthan",
+  "Haryana",
+  "Telangana",
+  "Andhra Pradesh",
+  "Madhya Pradesh",
+  "Punjab",
+  "Bihar",
+  "Kerala",
+  "Odisha",
+  "Assam",
+  "Chhattisgarh",
+  "Jharkhand",
+  "Uttarakhand",
+  "Himachal Pradesh",
+  "Goa",
+  "Tripura",
+  "Meghalaya",
+  "Manipur",
+  "Nagaland",
+  "Mizoram",
+  "Arunachal Pradesh",
+  "Sikkim",
+  "Jammu and Kashmir",
+  "Puducherry",
+  "Chandigarh",
+  "Ladakh",
+  "Andaman and Nicobar Islands",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Lakshadweep"
+];
+
 const FALLBACK_QUESTIONS = [
   { qNumber: 'Q1', domain: 'A', domainName: 'Economic Pressure & Financial Urgency', domainWeight: 0.22, questionText: 'Monthly household income from all sources', questionWeight: 5, inputType: 'Radio', options: [{ text: 'Under 8,000₹', score: 5 }, { text: '8,000–15,000₹', score: 10 }, { text: '15,000–25,000₹', score: 7 }, { text: '25,000–40,000₹', score: 3 }, { text: 'Above 40,000₹', score: 1 }] },
   { qNumber: 'Q2', domain: 'A', domainName: 'Economic Pressure & Financial Urgency', domainWeight: 0.22, questionText: 'Does any household member have an outstanding debt/loan?', questionWeight: 4, inputType: 'Radio', options: [{ text: 'Yes – formal (bank/MFI)', score: 8 }, { text: 'Yes – informal (moneylender/family)', score: 10 }, { text: 'No', score: 2 }] },
@@ -81,6 +120,7 @@ export default function CandidateManagement({
   const [editingCandidate, setEditingCandidate] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [candidateToDelete, setCandidateToDelete] = useState(null);
+  const [showInterviewSidebar, setShowInterviewSidebar] = useState(false);
 
   // Form Fields
   const [fullName, setFullName] = useState('');
@@ -134,24 +174,30 @@ export default function CandidateManagement({
   // Filter candidates based on role permissions
   const permittedCandidates = candidates.filter(c => {
     if (role === 'Mobiliser') {
-      return c.mobiliserId === user.id;
+      return String(c.mobiliserId) === String(user.id);
     }
     return true;
   });
 
   // Apply Search and Multi-Select Filters
   const filteredCandidates = permittedCandidates.filter(c => {
+    const nameStr = c.fullName || '';
+    const phoneStr = c.phone || '';
+    const emailStr = c.email || '';
+    const cityStr = c.city || '';
+    const statusStr = c.status || 'pending';
+    const outcomeStr = c.outcome || 'Pending';
+
     const matchesSearch =
-      c.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery) ||
-      (c.email && c.email.toLowerCase().includes(searchQuery.toLowerCase()));
+      nameStr.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      phoneStr.includes(searchQuery) ||
+      emailStr.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesCity = cityFilter === 'All' || c.city.toLowerCase() === cityFilter.toLowerCase();
+    const matchesCity = cityFilter === 'All' || cityStr.toLowerCase() === cityFilter.toLowerCase();
 
-    const cStatus = c.status || 'All';
-    const matchesStatus = statusFilter === 'All' || cStatus === statusFilter;
+    const matchesStatus = statusFilter === 'All' || statusStr === statusFilter;
 
-    const matchesOutcome = outcomeFilter === 'All' || c.outcome === outcomeFilter;
+    const matchesOutcome = outcomeFilter === 'All' || outcomeStr === outcomeFilter;
 
     return matchesSearch && matchesCity && matchesStatus && matchesOutcome;
   });
@@ -380,6 +426,7 @@ export default function CandidateManagement({
     setActiveQuestionIndex(0);
     setApiMessage(null);
     setModalType('interview');
+    setShowInterviewSidebar(false);
   };
 
   // Open edit modal for offline candidate if requested from header dropdown
@@ -389,6 +436,16 @@ export default function CandidateManagement({
       setOfflineEditCandidate(null);
     }
   }, [offlineEditCandidate, setOfflineEditCandidate]);
+
+  // Auto-scroll question container to top when active question changes
+  useEffect(() => {
+    if (modalType === 'interview') {
+      const qEl = document.getElementById('interview-question-scroll-container');
+      if (qEl) {
+        qEl.scrollTop = 0;
+      }
+    }
+  }, [activeQuestionIndex, modalType]);
 
   // Handle Form Submit (Demographics Create/Update)
   const handleSubmit = async (e) => {
@@ -1243,12 +1300,16 @@ export default function CandidateManagement({
 
                     <div>
                       <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">State</label>
-                      <input
-                        type="text"
+                      <select
                         value={state}
                         onChange={(e) => setState(e.target.value)}
-                        className="w-full bg-white border border-slate-250 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                      />
+                        className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      >
+                        <option value="">Select State</option>
+                        {INDIAN_STATES.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -1359,10 +1420,10 @@ export default function CandidateManagement({
                 </div>
 
                 {/* Center: Compact Progress Panel */}
-                <div className="flex-1 max-w-[120px] sm:max-w-sm bg-slate-50 border border-slate-200 rounded-lg p-1.5 sm:p-2 flex flex-col justify-center space-y-1 sm:space-y-1.5 shadow-sm shrink-0">
+                <div className="hidden sm:flex flex-1 max-w-[120px] sm:max-w-sm bg-slate-50 border border-slate-200 rounded-lg p-1.5 sm:p-2 flex-col justify-center space-y-1 sm:space-y-1.5 shadow-sm shrink-0">
                   <div className="flex items-center justify-between text-[8px] sm:text-[9px] font-bold text-slate-500">
                     <span className="flex items-center gap-1 sm:gap-1.5">
-                      <span className="text-indigo-700 bg-indigo-105 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded text-[7px] sm:text-[8px] uppercase tracking-wider">Sec {currentDomainNum}/7</span>
+                      <span className="text-indigo-700 bg-indigo-100 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded text-[7px] sm:text-[8px] uppercase tracking-wider">Sec {currentDomainNum}/7</span>
                       <span className="hidden xs:inline">{progressPercent}% ({answeredCount}/{totalCount})</span>
                     </span>
                     <span className="uppercase tracking-wider hidden sm:inline">Domains</span>
@@ -1382,31 +1443,53 @@ export default function CandidateManagement({
                   </div>
                 </div>
 
-                {/* Right: Close button */}
-                <button
-                  onClick={() => setModalType(null)}
-                  className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer shrink-0"
-                >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
+                {/* Right: Toggle sidebar on mobile & Close button */}
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowInterviewSidebar(prev => !prev)}
+                    className="lg:hidden p-1.5 sm:p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl transition cursor-pointer flex items-center gap-1 text-[10px] sm:text-xs font-bold"
+                    title="Toggle Summary Sidebar"
+                  >
+                    <Sliders className="w-4 h-4" />
+                    <span className="hidden xs:inline">Summary</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModalType(null)}
+                    className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer"
+                  >
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Modal Body: Two-Column Form */}
               <form
                 id="interview-modal-container"
                 onSubmit={handleInterviewSubmit}
-                className="p-3 sm:p-5 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden lg:grid lg:grid-cols-3 gap-3 sm:gap-5"
+                className="p-3 sm:p-5 flex-1 min-h-0 relative overflow-hidden flex flex-col lg:grid lg:grid-cols-3 gap-3 sm:gap-5"
               >
+                {/* Backdrop overlay for mobile */}
+                <div
+                  onClick={() => setShowInterviewSidebar(false)}
+                  className={`lg:hidden absolute inset-0 bg-slate-900/30 backdrop-blur-xs z-35 transition-opacity duration-300 ${
+                    showInterviewSidebar ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                  }`}
+                />
 
                 {/* Left Column: Quiz Question Container */}
-                <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col shrink-0 lg:min-h-0 lg:overflow-hidden mb-3 lg:mb-0">
+                <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col flex-1 min-h-0 overflow-hidden lg:mb-0">
 
                   {/* Scrollable Question Area */}
                   {activeQuestion && (
-                    <div className="p-4 sm:p-6 flex-1 lg:overflow-y-auto flex flex-col space-y-4 sm:space-y-5">
+                    <div
+                      id="interview-question-scroll-container"
+                      className="p-4 sm:p-6 flex-1 overflow-y-auto flex flex-col space-y-4 sm:space-y-5"
+                    >
                       {/* Domain Badge */}
                       <div>
-                        <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 bg-indigo-50 border border-indigo-150 rounded-full text-[9px] sm:text-[10px] font-bold text-indigo-700">
+                        <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 bg-indigo-50 border border-indigo-100 rounded-full text-[9px] sm:text-[10px] font-bold text-indigo-700">
                           Section {activeQuestion.domain}: {activeQuestion.domainName}
                         </span>
                       </div>
@@ -1588,10 +1671,28 @@ export default function CandidateManagement({
                 </div>
 
                 {/* Right Column: Summary & Remarks Panel */}
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl lg:rounded-3xl flex flex-col justify-between overflow-hidden shadow-xs shrink-0 lg:min-h-0 lg:overflow-hidden">
+                <div className={`
+                  bg-slate-50 border-l border-slate-200 rounded-l-2xl lg:border lg:rounded-3xl flex flex-col justify-between overflow-hidden shadow-2xl lg:shadow-xs shrink-0
+                  lg:min-h-0 lg:overflow-hidden lg:col-span-1 lg:static lg:translate-x-0 lg:w-auto lg:h-full lg:z-auto
+                  absolute right-0 top-0 bottom-0 z-40 w-[280px] sm:w-[320px] max-w-[85vw] h-full
+                  transition-transform duration-300 ease-in-out
+                  ${showInterviewSidebar ? 'translate-x-0' : 'translate-x-full'}
+                `}>
+
+                  {/* Mobile Drawer Header */}
+                  <div className="lg:hidden p-3 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
+                    <h4 className="font-extrabold text-slate-800 text-[11px] uppercase tracking-wider">Assessment Summary</h4>
+                    <button
+                      type="button"
+                      onClick={() => setShowInterviewSidebar(false)}
+                      className="p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
 
                   {/* Right Content */}
-                  <div className="p-3 sm:p-4 space-y-3">
+                  <div className="p-3 sm:p-4 space-y-3 flex-1 overflow-y-auto lg:overflow-visible">
                     {/* Compact Score + Outcome Row */}
                     <div className="bg-white border border-slate-200 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-3 shadow-xs">
                       {/* Left: Outcome status */}
@@ -1635,13 +1736,7 @@ export default function CandidateManagement({
                             <button
                               key={q.qNumber}
                               type="button"
-                              onClick={() => {
-                                setActiveQuestionIndex(idx);
-                                const qEl = document.getElementById('interview-modal-container');
-                                if (qEl && window.innerWidth < 1024) {
-                                  qEl.scrollTop = 0;
-                                }
-                              }}
+                              onClick={() => setActiveQuestionIndex(idx)}
                               className={`aspect-square rounded-lg flex items-center justify-center font-bold text-[9px] sm:text-[10px] transition cursor-pointer select-none ${isActive ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-800/20'
                                 : isAnswered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                                   : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'

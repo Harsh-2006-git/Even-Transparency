@@ -20,6 +20,8 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+  const [bannerError, setBannerError] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -95,11 +97,18 @@ export default function Login({ onLoginSuccess }) {
           {/* Logo & Slogan Header */}
           <div className="relative z-10 space-y-5 mb-8">
             <div className="flex items-center gap-3">
-              <img
-                src="/logo.png"
-                alt="Even Cargo Logo"
-                className="h-16 w-16 object-contain"
-              />
+              {!logoError ? (
+                <img
+                  src="/logo.png"
+                  alt="Even Cargo Logo"
+                  onError={() => setLogoError(true)}
+                  className="h-16 w-16 object-contain"
+                />
+              ) : (
+                <div className="h-12 w-12 rounded-[14px] bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white text-base shrink-0 shadow-xs">
+                  EC
+                </div>
+              )}
               <h1 className="text-3xl font-bold tracking-tight flex items-baseline">
                 <span className="text-[#4F7DCB]">Eve</span>
                 <span className="text-[#F39A42]">n</span>
@@ -144,11 +153,18 @@ export default function Login({ onLoginSuccess }) {
           
           {/* Top Banner Image */}
           <div className="w-full h-32 sm:h-36 lg:h-40 overflow-hidden shrink-0 bg-white">
-            <img
-              src="/banner.png"
-              alt="Portal Banner"
-              className="w-full h-full object-cover object-top"
-            />
+            {!bannerError ? (
+              <img
+                src="/banner.png"
+                alt="Portal Banner"
+                onError={() => setBannerError(true)}
+                className="w-full h-full object-cover object-top"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+                <span className="text-white text-xs font-black tracking-widest uppercase opacity-75">Recruitment Portal</span>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 px-6 pb-6 pt-6 sm:px-10 sm:pb-10 sm:pt-8 md:px-12 md:pb-12 md:pt-10 lg:px-16 lg:pb-16 lg:pt-12 flex items-center justify-center">
@@ -156,11 +172,18 @@ export default function Login({ onLoginSuccess }) {
 
               {/* Mobile-only Header */}
               <div className="flex flex-col items-center space-y-1.5 mb-4 lg:hidden">
-                <img
-                  src="/logo.png"
-                  alt="Even Cargo Logo"
-                  className="h-18 w-18 object-contain"
-                />
+                {!logoError ? (
+                  <img
+                    src="/logo.png"
+                    alt="Even Cargo Logo"
+                    onError={() => setLogoError(true)}
+                    className="h-18 w-18 object-contain"
+                  />
+                ) : (
+                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white text-lg shrink-0 shadow-sm">
+                    EC
+                  </div>
+                )}
                 <h1 className="text-2xl font-bold tracking-tight flex items-baseline">
                   <span className="text-[#4F7DCB]">Eve</span>
                   <span className="text-[#F39A42]">n</span>

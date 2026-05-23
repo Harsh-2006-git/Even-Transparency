@@ -21,12 +21,12 @@ export default defineConfig({
         theme_color: '#4F7DCB',
         icons: [
           {
-            src: 'https://via.placeholder.com/192x192.png?text=EC',
+            src: '/logo.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'https://via.placeholder.com/512x512.png?text=EC',
+            src: '/logo.png',
             sizes: '512x512',
             type: 'image/png'
           }

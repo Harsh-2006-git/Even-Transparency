@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
   Users, UserCheck, BookOpen, UserX, Search, Plus, Edit, Trash2, X,
-  MapPin, Phone, Mail, FileText, Check, ChevronDown, RefreshCw, AlertCircle, PhoneCall, Sliders
+  MapPin, Phone, Mail, FileText, Check, ChevronDown, RefreshCw, AlertCircle, PhoneCall, Sliders,
+  Calendar
 } from 'lucide-react';
 import { db } from '../db/indexedDB';
 import { v4 as uuidv4 } from 'uuid';
@@ -711,16 +712,16 @@ export default function CandidateManagement({
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className="min-[1000px]:hidden flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-xs transition active:scale-95 cursor-pointer"
+            className="min-[1000px]:hidden flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl shadow-xs transition active:scale-95 cursor-pointer"
           >
-            <Sliders className="h-4 w-4" />
+            <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span>Filters</span>
           </button>
           <button
             onClick={openAddModal}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-100 transition duration-200 active:scale-95 cursor-pointer shrink-0"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl shadow-md shadow-indigo-100 transition duration-200 active:scale-95 cursor-pointer shrink-0"
           >
-            <Plus className="h-4.5 w-4.5" strokeWidth={2.5} />
+            <Plus className="h-3.5 w-3.5 sm:h-4.5 sm:w-4.5" strokeWidth={2.5} />
             <span>Add Candidate</span>
           </button>
         </div>
@@ -941,89 +942,114 @@ export default function CandidateManagement({
       {/* ------------------- VIEW MODAL ------------------- */}
       {modalType === 'view' && editingCandidate && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl max-h-[90vh] md:max-h-[85vh] shadow-2xl flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="bg-slate-50 p-5 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white text-base shadow-sm">
+            <div className="bg-slate-50 p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white text-base shadow-sm shrink-0">
                   {editingCandidate.fullName ? editingCandidate.fullName.substring(0, 2).toUpperCase() : 'CA'}
                 </div>
-                <div>
-                  <h3 className="font-black text-slate-800 text-base leading-tight">
+                <div className="min-w-0">
+                  <h3 className="font-black text-slate-800 text-base leading-tight truncate">
                     {editingCandidate.fullName}
                   </h3>
-                  <div className="flex items-center gap-2 mt-0.5 text-[10px] font-bold text-slate-500">
-                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {editingCandidate.city}, {editingCandidate.state}</span>
-                    <span>&bull;</span>
-                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {editingCandidate.phone}</span>
+                  <div className="flex items-center gap-2 mt-2 text-[9px] sm:text-[10px] font-bold flex-wrap">
+                    <span className="flex items-center gap-1 text-slate-500 mr-1">
+                      <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                      <span>{editingCandidate.city}, {editingCandidate.state}</span>
+                    </span>
+                    <span className="bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                      <Phone className="w-3 h-3 shrink-0 text-slate-500" />
+                      <span>{editingCandidate.phone}</span>
+                    </span>
+                    {editingCandidate.email && (
+                      <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                        <Mail className="w-3 h-3 shrink-0 text-indigo-500" />
+                        <span>{editingCandidate.email}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => setModalType(null)}
-                className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer"
+                className="p-1.5 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer shrink-0 ml-2"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-5 flex-1 overflow-y-auto bg-white space-y-4">
+            <div className="p-4 sm:p-5 flex-1 overflow-y-auto bg-white space-y-4">
               {/* Details Compact Grid */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs overflow-hidden">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email</p>
-                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5 truncate" title={editingCandidate.email}>
-                    <Mail className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    {editingCandidate.email || 'N/A'}
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Age</p>
+                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5 truncate">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span className="truncate">
+                      {(() => {
+                        if (editingCandidate.age) return `${editingCandidate.age} yrs`;
+                        if (!editingCandidate.dateOfBirth) return 'N/A';
+                        const birthDate = new Date(editingCandidate.dateOfBirth);
+                        if (isNaN(birthDate.getTime())) return 'N/A';
+                        const today = new Date();
+                        let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+                        const m = today.getMonth() - birthDate.getMonth();
+                        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                          calculatedAge--;
+                        }
+                        return `${calculatedAge} yrs`;
+                      })()}
+                    </span>
                   </p>
                 </div>
-                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs">
+                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs overflow-hidden">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Birth</p>
-                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5 truncate">
                     <UserCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    {editingCandidate.dateOfBirth || 'N/A'}
+                    <span className="truncate">{editingCandidate.dateOfBirth || 'N/A'}</span>
                   </p>
                 </div>
-                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs">
+                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs overflow-hidden">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Gender</p>
-                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5 truncate">
                     <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    {editingCandidate.gender || 'Female'}
+                    <span className="truncate">{editingCandidate.gender || 'Female'}</span>
                   </p>
                 </div>
-                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs">
+                <div className="bg-slate-50 border border-slate-150 p-3 rounded-xl shadow-xs overflow-hidden">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Marital Status</p>
-                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                  <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5 truncate">
                     <UserCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    {editingCandidate.maritalStatus || 'Single'}
+                    <span className="truncate">{editingCandidate.maritalStatus || 'Single'}</span>
                   </p>
                 </div>
               </div>
 
               {/* Status and Notes */}
               <div className="flex flex-col gap-3.5">
-                <div className="flex bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-xl justify-between items-center">
+                <div className="flex flex-row bg-indigo-50/50 border border-indigo-100 p-3 sm:p-3.5 rounded-xl justify-between items-center gap-2">
                   <div>
                     <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-0.5">Pipeline Status</p>
                     <span className={`inline-block px-2.5 py-0.5 border text-[10px] font-black rounded-md capitalize shadow-xs ${editingCandidate.status === 'pending'
-                        ? 'bg-amber-100 text-amber-800 border-amber-200'
-                        : editingCandidate.status === 'converted'
-                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                          : editingCandidate.status === 'training started'
-                            ? 'bg-blue-100 text-blue-800 border-blue-200'
-                            : editingCandidate.status === 'rejected'
-                              ? 'bg-rose-100 text-rose-800 border-rose-200'
-                              : 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                      ? 'bg-amber-100 text-amber-800 border-amber-200'
+                      : editingCandidate.status === 'converted'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : editingCandidate.status === 'training started'
+                          ? 'bg-blue-100 text-blue-800 border-blue-200'
+                          : editingCandidate.status === 'rejected'
+                            ? 'bg-rose-100 text-rose-800 border-rose-200'
+                            : 'bg-indigo-100 text-indigo-800 border-indigo-200'
                       }`}>
                       {editingCandidate.status || 'Pending'}
                     </span>
                   </div>
                   <div className="text-right">
                     <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider mb-0.5">Fitment</p>
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span className="text-sm font-black text-indigo-700">{viewIsInterviewed ? `${editingCandidate.score}%` : '—'}</span>
-                      <span className={`inline-block px-2.5 py-0.5 border text-[10px] font-black rounded-md uppercase shadow-xs ${viewBandInfo.badgeColor}`}>
+                    <div className="flex items-center justify-end gap-1 sm:gap-1.5">
+                      <span className="text-xs sm:text-sm font-black text-indigo-700">{viewIsInterviewed ? `${editingCandidate.score}%` : '—'}</span>
+                      <span className={`inline-block px-1.5 py-0.5 sm:px-2.5 sm:py-0.5 border text-[8px] sm:text-[10px] font-black rounded-md uppercase shadow-xs ${viewBandInfo.badgeColor} whitespace-nowrap`}>
                         {viewIsInterviewed ? `${viewBandInfo.band} Band` : 'Pending'}
                       </span>
                     </div>
@@ -1032,27 +1058,27 @@ export default function CandidateManagement({
 
                 {/* Step 5 — Fitment Probability & Mobiliser Action Card */}
                 {viewIsInterviewed && (
-                  <div className={`border p-4 rounded-xl shadow-xs space-y-2.5 ${viewBandInfo.color}`}>
-                    <div className="flex justify-between items-center border-b pb-2 border-current/10">
+                  <div className={`border p-3 sm:p-4 rounded-xl shadow-xs space-y-2 ${viewBandInfo.color}`}>
+                    <div className="flex flex-row justify-between items-center border-b pb-1.5 border-current/10 gap-2">
                       <div>
-                        <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">Fitment Probability Band</p>
-                        <h4 className="text-sm font-black flex items-center gap-1.5">
-                          <span className={`inline-block w-2.5 h-2.5 rounded-full ${viewBandInfo.band === 'High' ? 'bg-emerald-500' :
-                              viewBandInfo.band === 'Moderate' ? 'bg-amber-500' :
-                                viewBandInfo.band === 'Low' ? 'bg-rose-500' :
-                                  'bg-slate-500'
+                        <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider opacity-60">Fitment Band</p>
+                        <h4 className="text-xs sm:text-sm font-black flex items-center gap-1.5">
+                          <span className={`inline-block w-2 h-2 rounded-full ${viewBandInfo.band === 'High' ? 'bg-emerald-500' :
+                            viewBandInfo.band === 'Moderate' ? 'bg-amber-500' :
+                              viewBandInfo.band === 'Low' ? 'bg-rose-500' :
+                                'bg-slate-500'
                             }`}></span>
                           {viewBandInfo.band} Band
                         </h4>
                       </div>
                       <div className="text-right">
-                        <p className="text-[9px] font-bold uppercase tracking-wider opacity-60">Conversion Likelihood</p>
-                        <p className="text-xs font-black">{viewBandInfo.likelihood}</p>
+                        <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider opacity-60">Likelihood</p>
+                        <p className="text-[10px] sm:text-xs font-black">{viewBandInfo.likelihood}</p>
                       </div>
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold uppercase tracking-wider opacity-60 mb-0.5">Mobiliser Action</p>
-                      <p className="text-[11px] font-semibold leading-relaxed text-slate-700 bg-white/70 backdrop-blur-xs p-2 rounded-lg border border-current/10">
+                      <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider opacity-60 mb-0.5">Mobiliser Action</p>
+                      <p className="text-[10px] sm:text-[11px] font-semibold leading-relaxed text-slate-700 bg-white/70 backdrop-blur-xs p-1.5 sm:p-2 rounded-lg border border-current/10">
                         {viewBandInfo.action}
                       </p>
                     </div>
@@ -1071,24 +1097,24 @@ export default function CandidateManagement({
             </div>
 
             {/* Footer Actions */}
-            <div className="p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
+            <div className="p-3 sm:p-5 border-t border-slate-100 bg-slate-50 flex flex-row items-center justify-end gap-1.5 sm:gap-3 shrink-0">
               <button
                 onClick={() => setModalType(null)}
-                className="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl transition shadow-sm cursor-pointer"
+                className="flex-1 sm:flex-initial px-2 py-2 sm:px-5 sm:py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl transition shadow-sm cursor-pointer text-center whitespace-nowrap"
               >
                 Close
               </button>
               <button
                 onClick={() => openEditModal(editingCandidate)}
-                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-md cursor-pointer"
+                className="flex-1 sm:flex-initial px-2 py-2 sm:px-5 sm:py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl flex items-center justify-center gap-1 sm:gap-2 transition shadow-md cursor-pointer whitespace-nowrap"
               >
-                <Edit className="w-4 h-4" /> Edit Profile
+                <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> <span className="truncate">Edit Profile</span>
               </button>
               <button
                 onClick={() => openInterviewModal(editingCandidate)}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-md cursor-pointer"
+                className="flex-1 sm:flex-initial px-2 py-2 sm:px-5 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl flex items-center justify-center gap-1 sm:gap-2 transition shadow-md cursor-pointer whitespace-nowrap"
               >
-                <PhoneCall className="w-4 h-4" /> Start Interview
+                <PhoneCall className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> <span className="truncate">Interview</span>
               </button>
             </div>
           </div>
@@ -1098,10 +1124,10 @@ export default function CandidateManagement({
       {/* ------------------- ADD / EDIT MODAL ------------------- */}
       {modalType && (modalType === 'add' || modalType === 'edit') && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl max-h-[90vh] md:max-h-[85vh] shadow-2xl flex flex-col overflow-hidden">
 
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-bold text-slate-800 text-base">
                   {modalType === 'add' ? 'Register New Candidate' : `Edit Candidate: ${fullName}`}
@@ -1117,184 +1143,176 @@ export default function CandidateManagement({
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-5 flex-1 text-xs">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 text-xs">
+              {/* Scrollable Form Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
-              <div className="space-y-4">
-                <h4 className="font-extrabold text-slate-800 text-xs border-b border-slate-100 pb-1.5 uppercase tracking-wide flex items-center">
-                  <UserCheck className="w-4 h-4 text-indigo-650 mr-1.5" /> Demographics & Identity
-                </h4>
+                <div className="space-y-4">
+                  <h4 className="font-extrabold text-slate-800 text-xs border-b border-slate-100 pb-1.5 uppercase tracking-wide flex items-center">
+                    <UserCheck className="w-4 h-4 text-indigo-650 mr-1.5" /> Demographics & Identity
+                  </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Kiran Sharma"
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Phone Number *</label>
-                    <input
-                      type="text"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+91 98765 43210"
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="kiran@gmail.com"
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Date of Birth</label>
-                    <input
-                      type="date"
-                      value={dateOfBirth}
-                      onChange={(e) => setDateOfBirth(e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Gender</label>
-                    <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                    >
-                      <option value="Female">Female</option>
-                      <option value="Male">Male</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Marital Status</label>
-                    <select
-                      value={maritalStatus}
-                      onChange={(e) => setMaritalStatus(e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                    >
-                      <option value="Single">Single</option>
-                      <option value="Married">Married</option>
-                      <option value="Divorced">Divorced</option>
-                      <option value="Widowed">Widowed</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">City</label>
-                    <input
-                      type="text"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">State</label>
-                    <input
-                      type="text"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Pipeline Stage Status</label>
-                    <select
-                      value={candidateStatus}
-                      onChange={(e) => setCandidateStatus(e.target.value)}
-                      className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="converted">Converted</option>
-                      <option value="training started">Training</option>
-                      <option value="dropped">Dropped</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Display Current Fitment Info (Read-Only) */}
-                {modalType === 'edit' && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mt-3 flex items-center justify-between">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Live Assessment fitment</span>
-                      <span className="font-extrabold text-sm text-indigo-700">{score}% - {outcome}</span>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Kiran Sharma"
+                        className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-400 italic">
-                      Use "Interview" (PhoneCall) icon to update checksheet.
-                    </span>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Phone Number *</label>
+                      <input
+                        type="text"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+91 98765 43210"
+                        className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="kiran@gmail.com"
+                        className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Date of Birth</label>
+                      <input
+                        type="date"
+                        value={dateOfBirth}
+                        onChange={(e) => setDateOfBirth(e.target.value)}
+                        className="w-full bg-white border border-slate-250 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Gender</label>
+                      <select
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      >
+                        <option value="Female">Female</option>
+                        <option value="Male">Male</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Marital Status</label>
+                      <select
+                        value={maritalStatus}
+                        onChange={(e) => setMaritalStatus(e.target.value)}
+                        className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      >
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Divorced">Divorced</option>
+                        <option value="Widowed">Widowed</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">City</label>
+                      <input
+                        type="text"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        className="w-full bg-white border border-slate-250 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">State</label>
+                      <input
+                        type="text"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        className="w-full bg-white border border-slate-250 rounded-lg px-3 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Pipeline Stage Status</label>
+                      <select
+                        value={candidateStatus}
+                        onChange={(e) => setCandidateStatus(e.target.value)}
+                        className="w-full bg-white border border-slate-250 rounded-lg px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="converted">Converted</option>
+                        <option value="training started">Training</option>
+                        <option value="dropped">Dropped</option>
+                      </select>
+                    </div>
+                  </div>
+
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Feedback Notes / Remarks</label>
+                      <textarea
+                        rows={2}
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Enter demographic comments, verification notes..."
+                        className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition resize-none"
+                      />
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* API Status Messages */}
+                {apiMessage && (
+                  <div className={`p-4 rounded-xl text-xs font-semibold border flex items-center space-x-2 ${apiMessage.type === 'success'
+                    ? 'bg-emerald-50 border-emerald-250 text-emerald-800'
+                    : 'bg-rose-50 border-rose-250 text-rose-800'
+                    }`}>
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{apiMessage.text}</span>
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Feedback Notes / Remarks</label>
-                    <textarea
-                      rows={2}
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Enter demographic comments, verification notes..."
-                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition resize-none"
-                    />
-                  </div>
-                </div>
-
               </div>
 
-              {/* API Status Messages */}
-              {apiMessage && (
-                <div className={`p-4 rounded-xl text-xs font-semibold border flex items-center space-x-2 ${apiMessage.type === 'success'
-                  ? 'bg-emerald-50 border-emerald-250 text-emerald-800'
-                  : 'bg-rose-50 border-rose-250 text-rose-800'
-                  }`}>
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{apiMessage.text}</span>
-                </div>
-              )}
-
-              {/* Modal Footer Actions */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+              {/* Modal Footer Actions (Sticky/Fixed) */}
+              <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex flex-row items-center justify-end gap-3 shrink-0 rounded-b-3xl">
                 <button
                   type="button"
                   onClick={() => setModalType(null)}
-                  className="px-4 py-2 border border-slate-250 rounded-xl font-bold hover:bg-slate-50 text-slate-700 transition cursor-pointer"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 border border-slate-200 rounded-xl font-bold hover:bg-slate-100 text-slate-700 transition cursor-pointer text-center text-[10px] sm:text-xs whitespace-nowrap"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center space-x-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                  className="flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md active:scale-95 disabled:opacity-50 cursor-pointer text-[10px] sm:text-xs whitespace-nowrap"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>{loading ? 'Processing...' : modalType === 'add' ? 'Register Candidate' : 'Save Changes'}</span>
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>{loading ? 'Processing...' : modalType === 'add' ? 'Register' : 'Save Changes'}</span>
                 </button>
               </div>
 
@@ -1326,27 +1344,28 @@ export default function CandidateManagement({
         const progressPercent = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
 
         return (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in text-xs overflow-hidden">
-            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl h-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in text-xs overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-5xl h-full max-h-[95vh] sm:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
 
               {/* Modal Header */}
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white z-10 gap-4">
+              <div className="p-3 sm:p-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white z-10 gap-3">
                 {/* Left: Title */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-black text-slate-800 text-sm flex items-center truncate">
-                    <PhoneCall className="w-4 h-4 text-indigo-600 mr-2 shrink-0" /> Live Assessment: {fullName}
+                  <h3 className="font-black text-slate-800 text-xs sm:text-sm flex items-center truncate">
+                    <PhoneCall className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 mr-1.5 sm:mr-2 shrink-0" />
+                    <span className="truncate">Live Assessment: {fullName}</span>
                   </h3>
-                  <p className="text-[9px] text-slate-400 mt-0.5">Complete 28 questions on a live call.</p>
+                  <p className="text-[8px] sm:text-[9px] text-slate-400 mt-0.5">Complete 28 questions on a live call.</p>
                 </div>
 
                 {/* Center: Compact Progress Panel */}
-                <div className="flex-1 max-w-sm bg-slate-50 border border-slate-200 rounded-lg p-2 flex flex-col justify-center space-y-1.5 shadow-sm shrink-0">
-                  <div className="flex items-center justify-between text-[9px] font-bold text-slate-500">
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded uppercase tracking-wider">Sec {currentDomainNum}/7</span>
-                      <span>{progressPercent}% ({answeredCount}/{totalCount})</span>
+                <div className="flex-1 max-w-[120px] sm:max-w-sm bg-slate-50 border border-slate-200 rounded-lg p-1.5 sm:p-2 flex flex-col justify-center space-y-1 sm:space-y-1.5 shadow-sm shrink-0">
+                  <div className="flex items-center justify-between text-[8px] sm:text-[9px] font-bold text-slate-500">
+                    <span className="flex items-center gap-1 sm:gap-1.5">
+                      <span className="text-indigo-700 bg-indigo-105 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded text-[7px] sm:text-[8px] uppercase tracking-wider">Sec {currentDomainNum}/7</span>
+                      <span className="hidden xs:inline">{progressPercent}% ({answeredCount}/{totalCount})</span>
                     </span>
-                    <span className="uppercase tracking-wider">Domains</span>
+                    <span className="uppercase tracking-wider hidden sm:inline">Domains</span>
                   </div>
                   <div className="flex items-center gap-0.5 w-full">
                     {domainsList.map((domainKey) => {
@@ -1355,7 +1374,7 @@ export default function CandidateManagement({
                       return (
                         <div
                           key={domainKey}
-                          className={`h-1 flex-1 rounded-full transition-all duration-300 ${isActive ? 'bg-indigo-600' : isCompleted ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                          className={`h-0.5 sm:h-1 flex-1 rounded-full transition-all duration-300 ${isActive ? 'bg-indigo-600' : isCompleted ? 'bg-emerald-500' : 'bg-slate-200'}`}
                           title={`Domain ${domainKey}`}
                         />
                       );
@@ -1368,36 +1387,40 @@ export default function CandidateManagement({
                   onClick={() => setModalType(null)}
                   className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-full transition cursor-pointer shrink-0"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
 
               {/* Modal Body: Two-Column Form */}
-              <form onSubmit={handleInterviewSubmit} className="p-5 flex-1 min-h-0 overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <form
+                id="interview-modal-container"
+                onSubmit={handleInterviewSubmit}
+                className="p-3 sm:p-5 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden lg:grid lg:grid-cols-3 gap-3 sm:gap-5"
+              >
 
                 {/* Left Column: Quiz Question Container */}
-                <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col min-h-0 overflow-hidden">
+                <div className="lg:col-span-2 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col shrink-0 lg:min-h-0 lg:overflow-hidden mb-3 lg:mb-0">
 
                   {/* Scrollable Question Area */}
                   {activeQuestion && (
-                    <div className="flex-1 p-6 overflow-y-auto flex flex-col space-y-5">
+                    <div className="p-4 sm:p-6 flex-1 lg:overflow-y-auto flex flex-col space-y-4 sm:space-y-5">
                       {/* Domain Badge */}
                       <div>
-                        <span className="inline-block px-3 py-1 bg-indigo-50 border border-indigo-150 rounded-full text-[10px] font-bold text-indigo-700">
+                        <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 bg-indigo-50 border border-indigo-150 rounded-full text-[9px] sm:text-[10px] font-bold text-indigo-700">
                           Section {activeQuestion.domain}: {activeQuestion.domainName}
                         </span>
                       </div>
 
                       {/* Question Text */}
-                      <h3 className="font-extrabold text-slate-800 text-base leading-snug">
-                        <span className="text-indigo-600 mr-1.5">{activeQuestion.qNumber}.</span>
+                      <h3 className="font-extrabold text-slate-800 text-xs sm:text-sm md:text-base leading-snug">
+                        <span className="text-indigo-600 mr-1">{activeQuestion.qNumber}.</span>
                         {activeQuestion.questionText}
                       </h3>
 
                       {/* Inputs */}
                       <div className="space-y-3">
                         {(activeQuestion.inputType === 'Radio' || activeQuestion.inputType === 'Dropdown') && (
-                          <div className="grid grid-cols-1 gap-2.5">
+                          <div className="grid grid-cols-1 gap-2">
                             {activeQuestion.options && activeQuestion.options.map(opt => {
                               const isSelected = selectedQuestions[activeQuestion.qNumber] === opt.text;
                               return (
@@ -1405,16 +1428,16 @@ export default function CandidateManagement({
                                   key={opt.text}
                                   type="button"
                                   onClick={() => handleQuestionAnswer(activeQuestion.qNumber, opt.text)}
-                                  className={`w-full px-4 py-3 text-left rounded-2xl border-2 transition cursor-pointer flex items-center space-x-3 ${isSelected
-                                      ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold shadow-sm'
-                                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
+                                  className={`w-full px-3 py-2.5 sm:px-4 sm:py-3 text-left rounded-xl sm:rounded-2xl border-2 transition cursor-pointer flex items-center space-x-2.5 sm:space-x-3 ${isSelected
+                                    ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold shadow-sm'
+                                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
                                     }`}
                                 >
-                                  <span className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${isSelected ? 'border-indigo-500 bg-white' : 'border-slate-300 bg-white'
+                                  <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${isSelected ? 'border-indigo-500 bg-white' : 'border-slate-300 bg-white'
                                     }`}>
-                                    {isSelected && <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
+                                    {isSelected && <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-indigo-500 rounded-full" />}
                                   </span>
-                                  <span className="text-xs">{opt.text}</span>
+                                  <span className="text-[11px] sm:text-xs">{opt.text}</span>
                                 </button>
                               );
                             })}
@@ -1422,7 +1445,7 @@ export default function CandidateManagement({
                         )}
 
                         {activeQuestion.inputType === 'MultiSelect' && (
-                          <div className="grid grid-cols-1 gap-2.5">
+                          <div className="grid grid-cols-1 gap-2">
                             {activeQuestion.options && activeQuestion.options.map(opt => {
                               const currentSelection = Array.isArray(selectedQuestions[activeQuestion.qNumber]) ? selectedQuestions[activeQuestion.qNumber] : [];
                               const isSelected = currentSelection.includes(opt.text);
@@ -1436,16 +1459,16 @@ export default function CandidateManagement({
                                       : [...currentSelection, opt.text];
                                     handleQuestionAnswer(activeQuestion.qNumber, newSel);
                                   }}
-                                  className={`w-full px-4 py-3 text-left rounded-2xl border-2 transition cursor-pointer flex items-center space-x-3 ${isSelected
-                                      ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold shadow-sm'
-                                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
+                                  className={`w-full px-3 py-2.5 sm:px-4 sm:py-3 text-left rounded-xl sm:rounded-2xl border-2 transition cursor-pointer flex items-center space-x-2.5 sm:space-x-3 ${isSelected
+                                    ? 'bg-indigo-50 border-indigo-500 text-indigo-900 font-bold shadow-sm'
+                                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
                                     }`}
                                 >
-                                  <span className={`w-5 h-5 rounded border-2 shrink-0 flex items-center justify-center ${isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-white'
+                                  <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded border-2 shrink-0 flex items-center justify-center ${isSelected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-white'
                                     }`}>
-                                    {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" strokeWidth={3} />}
+                                    {isSelected && <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-650" strokeWidth={3} />}
                                   </span>
-                                  <span className="text-xs">{opt.text}</span>
+                                  <span className="text-[11px] sm:text-xs">{opt.text}</span>
                                 </button>
                               );
                             })}
@@ -1455,8 +1478,8 @@ export default function CandidateManagement({
                         {activeQuestion.inputType === 'Number' && (
                           <div className="space-y-3">
                             {/* Number input */}
-                            <div className="flex items-center gap-3 bg-white border-2 border-slate-200 rounded-2xl px-4 py-3 shadow-sm focus-within:border-indigo-500 transition">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Ratio</span>
+                            <div className="flex items-center gap-2.5 sm:gap-3 bg-white border-2 border-slate-200 rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-sm focus-within:border-indigo-500 transition">
+                              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Ratio</span>
                               <input
                                 type="number"
                                 step="0.01"
@@ -1468,22 +1491,22 @@ export default function CandidateManagement({
                                   const val = e.target.value === '' ? '' : parseFloat(e.target.value);
                                   handleQuestionAnswer(activeQuestion.qNumber, val);
                                 }}
-                                className="flex-1 text-sm font-black text-slate-800 bg-transparent border-none outline-none focus:ring-0"
+                                className="flex-1 text-[11px] sm:text-xs font-black text-slate-800 bg-transparent border-none outline-none focus:ring-0"
                                 autoFocus
                               />
                               {selectedQuestions[activeQuestion.qNumber] !== undefined && selectedQuestions[activeQuestion.qNumber] !== '' && (
-                                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg shrink-0">
+                                <span className="text-[9px] sm:text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-lg shrink-0">
                                   {Number(selectedQuestions[activeQuestion.qNumber]).toFixed(2)}
                                 </span>
                               )}
                             </div>
-                            <p className="text-[10px] text-slate-400 font-semibold pl-1">
+                            <p className="text-[9px] sm:text-[10px] text-slate-400 font-semibold pl-1">
                               Earning members ÷ total household size (0.0 – 1.0)
                             </p>
 
                             {/* Quick-pick range buttons from options */}
                             {activeQuestion.options && activeQuestion.options.length > 0 && (
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                                 {activeQuestion.options.map(opt => {
                                   const ans = selectedQuestions[activeQuestion.qNumber];
                                   let isOptActive = false;
@@ -1503,13 +1526,13 @@ export default function CandidateManagement({
                                       key={opt.text}
                                       type="button"
                                       onClick={() => handleQuestionAnswer(activeQuestion.qNumber, presetVal)}
-                                      className={`p-2.5 text-left border-2 rounded-xl text-[9px] font-bold transition cursor-pointer leading-snug ${isOptActive
-                                          ? 'bg-indigo-50 border-indigo-500 text-indigo-800'
-                                          : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600'
+                                      className={`p-1.5 sm:p-2.5 text-left border-2 rounded-xl text-[8px] sm:text-[9px] font-bold transition cursor-pointer leading-snug ${isOptActive
+                                        ? 'bg-indigo-50 border-indigo-500 text-indigo-800'
+                                        : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600'
                                         }`}
                                     >
-                                      <div className="font-extrabold mb-0.5 text-[10px]">{opt.text}</div>
-                                      <div className={`text-[8px] ${isOptActive ? 'text-indigo-400' : 'text-slate-400'}`}>tap to set → {presetVal}</div>
+                                      <div className="font-extrabold mb-0.5 text-[9px] sm:text-[10px] truncate">{opt.text}</div>
+                                      <div className={`text-[7px] sm:text-[8px] ${isOptActive ? 'text-indigo-400' : 'text-slate-400'} truncate`}>set → {presetVal}</div>
                                     </button>
                                   );
                                 })}
@@ -1520,17 +1543,17 @@ export default function CandidateManagement({
 
                         {activeQuestion.inputType === 'Text' && (
                           <div className="space-y-3">
-                            <div className="flex items-center space-x-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm focus-within:border-indigo-600 transition">
+                            <div className="flex items-center space-x-3 bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm focus-within:border-indigo-650 transition">
                               <input
                                 type="text"
                                 placeholder="Type language..."
                                 value={selectedQuestions[activeQuestion.qNumber] || ''}
                                 onChange={(e) => handleQuestionAnswer(activeQuestion.qNumber, e.target.value)}
-                                className="w-full text-sm font-bold text-slate-800 bg-transparent border-none outline-none focus:ring-0"
+                                className="w-full text-[11px] sm:text-xs font-bold text-slate-800 bg-transparent border-none outline-none focus:ring-0"
                                 autoFocus
                               />
                             </div>
-                            <p className="text-[10px] text-slate-400 font-semibold pl-1">Type language spoken at home.</p>
+                            <p className="text-[9px] sm:text-[10px] text-slate-400 font-semibold pl-1">Type language spoken at home.</p>
                           </div>
                         )}
                       </div>
@@ -1538,53 +1561,53 @@ export default function CandidateManagement({
                   )}
 
                   {/* Sticky Nav Footer - Left */}
-                  <div className="bg-white border-t border-slate-200 px-5 py-4 flex items-center justify-between shrink-0">
+                  <div className="bg-white border-t border-slate-200 px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between shrink-0">
                     <button
                       type="button"
                       disabled={activeQuestionIndex === 0}
                       onClick={() => setActiveQuestionIndex(prev => prev - 1)}
-                      className="px-5 py-2.5 border border-slate-200 bg-white rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs text-xs"
+                      className="px-4 py-2 sm:px-5 sm:py-2.5 border border-slate-200 bg-white rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs text-[11px] sm:text-xs"
                     >
                       ← Back
                     </button>
-                    <span className="text-[10px] text-slate-400 font-bold">Q{activeQuestionIndex + 1} of {totalCount}</span>
+                    <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold">Q{activeQuestionIndex + 1} of {totalCount}</span>
                     {activeQuestionIndex < totalCount - 1 ? (
                       <button
                         type="button"
                         onClick={() => setActiveQuestionIndex(prev => prev + 1)}
-                        className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 text-xs"
+                        className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 text-[11px] sm:text-xs"
                       >
                         Next →
                       </button>
                     ) : (
-                      <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-4 py-2.5 rounded-xl">
-                        ✓ All seen. Save on right.
+                      <div className="text-[9px] sm:text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl animate-pulse">
+                        ✓ Save on right
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Right Column: Summary & Remarks Panel */}
-                <div className="bg-slate-50 border border-slate-200 rounded-3xl flex flex-col justify-between overflow-hidden shadow-xs">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl lg:rounded-3xl flex flex-col justify-between overflow-hidden shadow-xs shrink-0 lg:min-h-0 lg:overflow-hidden">
 
-                  {/* Right Content - no scroll */}
-                  <div className="p-4 space-y-3">
+                  {/* Right Content */}
+                  <div className="p-3 sm:p-4 space-y-3">
                     {/* Compact Score + Outcome Row */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-3 flex items-center justify-between gap-3">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-3 shadow-xs">
                       {/* Left: Outcome status */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Outcome</p>
-                        <span className={`inline-block px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide border ${outcome === 'Suitable' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : outcome === 'Requires Training' ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : outcome === 'Unsuitable' ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                        <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Outcome</p>
+                        <span className={`inline-block px-2 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wide border ${outcome === 'Suitable' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : outcome === 'Requires Training' ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : outcome === 'Unsuitable' ? 'bg-rose-50 text-rose-700 border-rose-200'
+                              : 'bg-slate-100 text-slate-500 border-slate-200'
                           }`}>
                           {outcome}
                         </span>
                       </div>
                       {/* Right: Mini circular graph + % */}
                       <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
-                        <svg className="w-full h-full transform -rotate-90">
+                        <svg className="w-14 h-14 transform -rotate-90">
                           <circle cx="28" cy="28" r="22" stroke="#E2E8F0" strokeWidth="5" fill="transparent" />
                           <circle
                             cx="28" cy="28" r="22"
@@ -1602,8 +1625,8 @@ export default function CandidateManagement({
                     </div>
 
                     {/* Question Navigator */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
-                      <h5 className="font-extrabold text-[9px] text-slate-400 uppercase tracking-wider">Navigator (1–{totalCount})</h5>
+                    <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2 shadow-xs">
+                      <h5 className="font-extrabold text-[8px] sm:text-[9px] text-slate-400 uppercase tracking-wider">Navigator (1–{totalCount})</h5>
                       <div className="grid grid-cols-7 gap-1">
                         {listToGroup.map((q, idx) => {
                           const isAnswered = selectedQuestions[q.qNumber] !== undefined && selectedQuestions[q.qNumber] !== null && selectedQuestions[q.qNumber] !== '';
@@ -1612,10 +1635,16 @@ export default function CandidateManagement({
                             <button
                               key={q.qNumber}
                               type="button"
-                              onClick={() => setActiveQuestionIndex(idx)}
-                              className={`aspect-square rounded-lg flex items-center justify-center font-bold text-[10px] transition cursor-pointer select-none ${isActive ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-800/20'
-                                  : isAnswered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                                    : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
+                              onClick={() => {
+                                setActiveQuestionIndex(idx);
+                                const qEl = document.getElementById('interview-modal-container');
+                                if (qEl && window.innerWidth < 1024) {
+                                  qEl.scrollTop = 0;
+                                }
+                              }}
+                              className={`aspect-square rounded-lg flex items-center justify-center font-bold text-[9px] sm:text-[10px] transition cursor-pointer select-none ${isActive ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-800/20'
+                                : isAnswered ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                  : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
                                 }`}
                               title={`Q${q.qNumber}: ${isAnswered ? 'Answered' : 'Unanswered'}`}
                             >
@@ -1628,21 +1657,21 @@ export default function CandidateManagement({
 
                     {/* Remarks */}
                     <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Interview Remarks</label>
+                      <label className="block text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Remarks</label>
                       <textarea
-                        rows={4}
+                        rows={3}
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Evaluation comments, family details, vehicle interest..."
-                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition resize-none shadow-xs"
+                        placeholder="Evaluation comments, family details..."
+                        className="w-full bg-white border border-slate-200 rounded-xl p-2 sm:p-2.5 text-[11px] sm:text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition resize-none shadow-xs"
                       />
                     </div>
 
                     {/* API Message */}
                     {apiMessage && (
-                      <div className={`p-3.5 rounded-xl text-xs font-semibold border flex items-start space-x-2 ${apiMessage.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'
+                      <div className={`p-2.5 sm:p-3 rounded-xl text-[10px] sm:text-xs font-semibold border flex items-start space-x-2 ${apiMessage.type === 'success' ? 'bg-emerald-50 border-emerald-250 text-emerald-800' : 'bg-rose-50 border-rose-250 text-rose-800'
                         }`}>
-                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                         <span>{apiMessage.text}</span>
                       </div>
                     )}
@@ -1653,15 +1682,15 @@ export default function CandidateManagement({
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full flex items-center justify-center space-x-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                      className="w-full flex items-center justify-center space-x-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] sm:text-xs font-bold rounded-xl transition shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
-                      <Check className="w-4 h-4" />
-                      <span>{loading ? 'Saving...' : 'Save & Complete Interview'}</span>
+                      <Check className="w-4 h-4 shrink-0" />
+                      <span>{loading ? 'Saving...' : 'Save & Complete'}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setModalType(null)}
-                      className="w-full py-2 border border-slate-200 bg-white rounded-xl font-bold hover:bg-slate-50 text-slate-700 transition cursor-pointer text-center"
+                      className="w-full py-2 border border-slate-200 bg-white text-[11px] sm:text-xs font-bold hover:bg-slate-50 text-slate-700 rounded-xl transition cursor-pointer text-center"
                     >
                       Cancel
                     </button>

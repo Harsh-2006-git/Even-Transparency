@@ -267,7 +267,7 @@ export default function QuestionManagement({ showToast }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -281,10 +281,10 @@ export default function QuestionManagement({ showToast }) {
         </div>
         <button
           onClick={openAddForm}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition active:scale-95 cursor-pointer shrink-0"
+          className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl shadow-md shadow-indigo-100 transition duration-200 active:scale-95 cursor-pointer shrink-0"
         >
-          <PlusCircle className="h-4 w-4" strokeWidth={2.5} />
-          Add New Question
+          <PlusCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2.5} />
+          <span>Add New Question</span>
         </button>
       </div>
 
@@ -352,11 +352,11 @@ export default function QuestionManagement({ showToast }) {
             {/* Domain Header */}
             <button
               onClick={() => toggleDomain(domain)}
-              className="w-full flex items-center justify-between gap-4 px-5 py-4 hover:bg-slate-50/70 transition cursor-pointer text-left group"
+              className="w-full flex items-center justify-between gap-4 px-4 py-3 min-[600px]:px-5 min-[600px]:py-4 hover:bg-slate-50/70 transition cursor-pointer text-left group"
             >
               {/* LEFT: Domain badge + name */}
-              <div className="flex items-center gap-3 min-w-0">
-                <span className={`shrink-0 text-[11px] font-black px-2.5 py-1 rounded-lg border ${colorClass}`}>
+              <div className="flex items-center gap-2.5 min-[600px]:gap-3 min-w-0">
+                <span className={`shrink-0 text-[10px] min-[600px]:text-[11px] font-black px-2 py-0.5 min-[600px]:px-2.5 min-[600px]:py-1 rounded-md min-[600px]:rounded-lg border ${colorClass}`}>
                   Domain {domain}
                 </span>
                 <span className="font-bold text-slate-800 text-sm truncate">
@@ -389,7 +389,7 @@ export default function QuestionManagement({ showToast }) {
               <div className="divide-y divide-slate-100">
                 {qs.map(q => (
                   <div key={q.id} className="p-4 hover:bg-slate-50/60 transition">
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col min-[600px]:flex-row min-[600px]:items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         {/* Q-Number badge + Input type */}
                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
@@ -423,20 +423,20 @@ export default function QuestionManagement({ showToast }) {
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center w-full min-[600px]:w-auto gap-2 shrink-0 pt-2 min-[600px]:pt-0 border-t border-slate-100 min-[600px]:border-none mt-2 min-[600px]:mt-0">
                         <button
                           onClick={() => openEditForm(q)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-[11px] rounded-lg shadow-sm transition cursor-pointer"
+                          className="flex-1 min-[600px]:flex-none flex items-center justify-center gap-1 min-[600px]:gap-1.5 py-1.5 px-2 min-[600px]:py-1.5 min-[600px]:px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[10px] min-[600px]:text-[11px] rounded-md min-[600px]:rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer"
                         >
-                          <Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />
-                          Edit
+                          <Pencil className="w-3.5 h-3.5 min-[600px]:w-3 min-[600px]:h-3 shrink-0" strokeWidth={2.5} />
+                          <span>Edit</span>
                         </button>
                         <button
                           onClick={() => setDeleteTarget(q)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-rose-600 font-semibold text-[11px] rounded-lg shadow-sm transition cursor-pointer"
+                          className="flex-1 min-[600px]:flex-none flex items-center justify-center gap-1 min-[600px]:gap-1.5 py-1.5 px-2 min-[600px]:py-1.5 min-[600px]:px-3 bg-white border border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-rose-600 font-bold text-[10px] min-[600px]:text-[11px] rounded-md min-[600px]:rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer"
                         >
-                          <Trash2 className="h-3.5 w-3.5" strokeWidth={2.5} />
-                          Delete
+                          <Trash2 className="w-3.5 h-3.5 min-[600px]:w-3 min-[600px]:h-3 shrink-0" strokeWidth={2.5} />
+                          <span>Delete</span>
                         </button>
                       </div>
                     </div>
@@ -451,9 +451,9 @@ export default function QuestionManagement({ showToast }) {
       {/* ── ADD / EDIT MODAL ── */}
       {showForm && (
         <div className="fixed inset-0 z-[60] flex items-start justify-center bg-slate-900/50 backdrop-blur-sm overflow-y-auto py-6 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-200 my-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-slate-200 my-auto flex flex-col max-h-[90vh] md:max-h-[85vh]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2">
                 <HelpCircle className="h-4.5 w-4.5 text-indigo-600" strokeWidth={2.5} />
                 <h3 className="font-bold text-slate-800 text-sm">
@@ -466,161 +466,163 @@ export default function QuestionManagement({ showToast }) {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSave} className="p-5 space-y-4 text-xs">
+            <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0 text-xs">
+              {/* Scrollable Form Content */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {/* Row: Q-Number & Domain */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Q-Number *</label>
+                    <input
+                      type="text"
+                      required
+                      value={form.qNumber}
+                      onChange={e => setForm(p => ({ ...p, qNumber: e.target.value }))}
+                      placeholder="e.g. Q29"
+                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Domain Code *</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={3}
+                      value={form.domain}
+                      onChange={e => setForm(p => ({ ...p, domain: e.target.value }))}
+                      placeholder="e.g. A"
+                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition uppercase"
+                    />
+                  </div>
+                </div>
 
-              {/* Row: Q-Number & Domain */}
-              <div className="grid grid-cols-2 gap-3">
+                {/* Domain Name */}
                 <div>
-                  <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Q-Number *</label>
+                  <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Domain Name *</label>
                   <input
                     type="text"
                     required
-                    value={form.qNumber}
-                    onChange={e => setForm(p => ({ ...p, qNumber: e.target.value }))}
-                    placeholder="e.g. Q29"
+                    value={form.domainName}
+                    onChange={e => setForm(p => ({ ...p, domainName: e.target.value }))}
+                    placeholder="e.g. Economic Pressure & Financial Urgency"
                     className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
                   />
                 </div>
-                <div>
-                  <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Domain Code *</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={3}
-                    value={form.domain}
-                    onChange={e => setForm(p => ({ ...p, domain: e.target.value }))}
-                    placeholder="e.g. A"
-                    className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition uppercase"
-                  />
-                </div>
-              </div>
 
-              {/* Domain Name */}
-              <div>
-                <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Domain Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.domainName}
-                  onChange={e => setForm(p => ({ ...p, domainName: e.target.value }))}
-                  placeholder="e.g. Economic Pressure & Financial Urgency"
-                  className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
-                />
-              </div>
-
-              {/* Row: Domain Weight % & Q-Weight & Input Type */}
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Domain Weight %</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    max={100}
-                    step={1}
-                    value={form.domainWeight}
-                    onChange={e => setForm(p => ({ ...p, domainWeight: e.target.value }))}
-                    placeholder="e.g. 22"
-                    className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Q-Weight</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={form.questionWeight}
-                    onChange={e => setForm(p => ({ ...p, questionWeight: e.target.value }))}
-                    placeholder="e.g. 5"
-                    className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Input Type</label>
-                  <select
-                    value={form.inputType}
-                    onChange={e => setForm(p => ({ ...p, inputType: e.target.value }))}
-                    className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
-                  >
-                    {INPUT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Question Text */}
-              <div>
-                <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Question Text *</label>
-                <textarea
-                  required
-                  rows={3}
-                  value={form.questionText}
-                  onChange={e => setForm(p => ({ ...p, questionText: e.target.value }))}
-                  placeholder="Enter the full question text..."
-                  className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition resize-none"
-                />
-              </div>
-
-              {/* Options */}
-              {form.inputType !== 'Text' && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="font-bold text-slate-500 uppercase tracking-wider">Options &amp; Scores</label>
-                    <button
-                      type="button"
-                      onClick={addOption}
-                      className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-bold text-[11px] transition cursor-pointer"
+                {/* Row: Domain Weight % & Q-Weight & Input Type */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Domain Weight %</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      max={100}
+                      step={1}
+                      value={form.domainWeight}
+                      onChange={e => setForm(p => ({ ...p, domainWeight: e.target.value }))}
+                      placeholder="e.g. 22"
+                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Q-Weight</label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={form.questionWeight}
+                      onChange={e => setForm(p => ({ ...p, questionWeight: e.target.value }))}
+                      placeholder="e.g. 5"
+                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Input Type</label>
+                    <select
+                      value={form.inputType}
+                      onChange={e => setForm(p => ({ ...p, inputType: e.target.value }))}
+                      className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
                     >
-                      <Plus className="h-3 w-3" strokeWidth={3} />
-                      Add Option
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {form.options.map((opt, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={opt.text}
-                          onChange={e => updateOption(i, 'text', e.target.value)}
-                          placeholder={`Option ${i + 1} text`}
-                          className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition"
-                        />
-                        <input
-                          type="number"
-                          value={opt.score}
-                          onChange={e => updateOption(i, 'score', e.target.value)}
-                          placeholder="Score"
-                          className="w-20 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeOption(i)}
-                          className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer shrink-0"
-                        >
-                          <X className="h-3.5 w-3.5" strokeWidth={2.5} />
-                        </button>
-                      </div>
-                    ))}
+                      {INPUT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   </div>
                 </div>
-              )}
 
-              {/* Form feedback */}
-              {formError && (
-                <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 text-rose-700 font-semibold flex items-center gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  {formError}
+                {/* Question Text */}
+                <div>
+                  <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Question Text *</label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={form.questionText}
+                    onChange={e => setForm(p => ({ ...p, questionText: e.target.value }))}
+                    placeholder="Enter the full question text..."
+                    className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition resize-none"
+                  />
                 </div>
-              )}
-              {formSuccess && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-emerald-700 font-semibold">
-                  {formSuccess}
-                </div>
-              )}
 
-              {/* Form Actions */}
-              <div className="flex items-center gap-3 pt-1">
+                {/* Options */}
+                {form.inputType !== 'Text' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="font-bold text-slate-500 uppercase tracking-wider">Options &amp; Scores</label>
+                      <button
+                        type="button"
+                        onClick={addOption}
+                        className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-bold text-[11px] transition cursor-pointer"
+                      >
+                        <Plus className="h-3 w-3" strokeWidth={3} />
+                        Add Option
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {form.options.map((opt, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={opt.text}
+                            onChange={e => updateOption(i, 'text', e.target.value)}
+                            placeholder={`Option ${i + 1} text`}
+                            className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition"
+                          />
+                          <input
+                            type="number"
+                            value={opt.score}
+                            onChange={e => updateOption(i, 'score', e.target.value)}
+                            placeholder="Score"
+                            className="w-20 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeOption(i)}
+                            className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer shrink-0"
+                          >
+                            <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Form feedback */}
+                {formError && (
+                  <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 text-rose-700 font-semibold flex items-center gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    {formError}
+                  </div>
+                )}
+                {formSuccess && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-emerald-700 font-semibold">
+                    {formSuccess}
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky Form Actions */}
+              <div className="flex items-center gap-3 p-5 border-t border-slate-100 bg-slate-50 rounded-b-2xl shrink-0">
                 <button
                   type="submit"
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition active:scale-95 cursor-pointer"

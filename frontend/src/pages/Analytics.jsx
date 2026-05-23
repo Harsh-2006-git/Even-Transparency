@@ -62,22 +62,22 @@ const KPICard = ({ icon: Icon, label, value, subtitle, color, trend }) => {
   const c = colorMap[color] || colorMap.indigo;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow duration-200 flex flex-col gap-3">
+    <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-5 shadow-xs hover:shadow-md transition-shadow duration-200 flex flex-col gap-2 sm:gap-3">
       <div className="flex items-center justify-between">
-        <span className={`p-2.5 ${c.bg} ${c.text} rounded-xl border ${c.border}`}>
-          <Icon className="w-5 h-5" strokeWidth={2} />
+        <span className={`p-1.5 sm:p-2.5 ${c.bg} ${c.text} rounded-lg sm:rounded-xl border ${c.border}`}>
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} />
         </span>
         {trend !== undefined && (
-          <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${trend > 0 ? 'bg-emerald-50 text-emerald-600' : trend < 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-500'}`}>
-            {trend > 0 ? <ArrowUpRight className="w-3 h-3" /> : trend < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+          <span className={`flex items-center gap-0.5 sm:gap-1 text-[8px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full ${trend > 0 ? 'bg-emerald-50 text-emerald-600' : trend < 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-500'}`}>
+            {trend > 0 ? <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : trend < 0 ? <ArrowDownRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
             {Math.abs(trend)}%
           </span>
         )}
       </div>
       <div>
-        <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider">{label}</p>
-        <p className={`text-2xl font-black mt-0.5 ${c.val}`}>{value}</p>
-        {subtitle && <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{subtitle}</p>}
+        <p className="text-[8px] sm:text-[10px] text-slate-400 uppercase font-black tracking-wider leading-none">{label}</p>
+        <p className={`text-lg sm:text-2xl font-black mt-1 sm:mt-0.5 leading-tight ${c.val}`}>{value}</p>
+        {subtitle && <p className="text-[8px] sm:text-[10px] text-slate-500 font-semibold mt-0.5 leading-none">{subtitle}</p>}
       </div>
     </div>
   );
@@ -85,10 +85,10 @@ const KPICard = ({ icon: Icon, label, value, subtitle, color, trend }) => {
 
 // ── Chart Card wrapper ────────────────────────────────────────────────────────
 const ChartCard = ({ title, subtitle, children, className = '' }) => (
-  <div className={`bg-white border border-slate-200 rounded-2xl p-5 shadow-xs ${className}`}>
-    <div className="mb-4">
-      <h3 className="font-bold text-slate-800 text-sm">{title}</h3>
-      {subtitle && <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">{subtitle}</p>}
+  <div className={`bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs ${className}`}>
+    <div className="mb-2.5 sm:mb-4">
+      <h3 className="font-bold text-slate-800 text-xs sm:text-sm">{title}</h3>
+      {subtitle && <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 font-semibold">{subtitle}</p>}
     </div>
     {children}
   </div>
@@ -177,7 +177,7 @@ export default function Analytics({ user }) {
   const overview = data?.overview || {};
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* ── Page Header ─────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -189,7 +189,7 @@ export default function Analytics({ user }) {
             Real-time recruitment intelligence across candidates, mobilisers, and assessment performance.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           {lastUpdated && (
             <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
               <Calendar className="w-3 h-3" />
@@ -199,10 +199,10 @@ export default function Analytics({ user }) {
           <button
             onClick={fetchAnalytics}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition cursor-pointer disabled:opacity-50 shadow-sm"
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl shadow-md shadow-indigo-100 transition duration-200 active:scale-95 cursor-pointer shrink-0"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <span>Refresh</span>
           </button>
         </div>
       </div>
@@ -224,16 +224,16 @@ export default function Analytics({ user }) {
       </section>
 
       {/* ── Tab Navigation ───────────────────────────────────────────── */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit flex-wrap">
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl sm:rounded-2xl w-full sm:w-fit overflow-x-auto scrollbar-none whitespace-nowrap">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all duration-200 cursor-pointer shrink-0 ${
                 activeTab === tab.id
-                  ? 'bg-white text-indigo-700 shadow-sm'
+                  ? 'bg-white text-indigo-700 shadow-xs'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -258,7 +258,7 @@ export default function Analytics({ user }) {
               className="lg:col-span-2"
             >
               {loading ? <Skeleton className="h-56" /> : (
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={data?.monthlyTrend || []} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -308,7 +308,7 @@ export default function Analytics({ user }) {
             {/* Score Distribution */}
             <ChartCard title="WCP Score Distribution" subtitle="Candidate score spread across performance buckets">
               {loading ? <Skeleton className="h-56" /> : (
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={data?.scoreDistribution || []} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis dataKey="range" tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} axisLine={false} tickLine={false} />
@@ -333,13 +333,13 @@ export default function Analytics({ user }) {
          ──────────────────────────────────────────────────────────────── */}
       {activeTab === 'candidates' && (
         <div className="space-y-5">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
             {/* Status Donut */}
             <ChartCard title="Candidate Status" subtitle="Current pipeline stage breakdown">
               {loading ? <Skeleton className="h-64" /> : (
                 <div className="flex flex-col items-center">
-                  <ResponsiveContainer width="100%" height={200}>
+                  <ResponsiveContainer width="100%" height={180}>
                     <PieChart>
                       <Pie
                         data={data?.statusBreakdown || []}
@@ -347,8 +347,8 @@ export default function Analytics({ user }) {
                         nameKey="status"
                         cx="50%"
                         cy="50%"
-                        innerRadius={55}
-                        outerRadius={80}
+                        innerRadius={45}
+                        outerRadius={70}
                         paddingAngle={3}
                       >
                         {(data?.statusBreakdown || []).map((entry, i) => (
@@ -374,7 +374,7 @@ export default function Analytics({ user }) {
             <ChartCard title="Assessment Outcomes" subtitle="Suitability verdict distribution">
               {loading ? <Skeleton className="h-64" /> : (
                 <div className="flex flex-col items-center">
-                  <ResponsiveContainer width="100%" height={200}>
+                  <ResponsiveContainer width="100%" height={180}>
                     <PieChart>
                       <Pie
                         data={data?.outcomeBreakdown || []}
@@ -382,7 +382,8 @@ export default function Analytics({ user }) {
                         nameKey="outcome"
                         cx="50%"
                         cy="50%"
-                        outerRadius={80}
+                        innerRadius={45}
+                        outerRadius={70}
                         paddingAngle={3}
                       >
                         {(data?.outcomeBreakdown || []).map((entry, i) => (
@@ -408,7 +409,7 @@ export default function Analytics({ user }) {
             <ChartCard title="Gender Distribution" subtitle="Candidate gender composition">
               {loading ? <Skeleton className="h-64" /> : (
                 <div className="flex flex-col items-center">
-                  <ResponsiveContainer width="100%" height={200}>
+                  <ResponsiveContainer width="100%" height={180}>
                     <PieChart>
                       <Pie
                         data={data?.genderBreakdown || []}
@@ -416,10 +417,9 @@ export default function Analytics({ user }) {
                         nameKey="gender"
                         cx="50%"
                         cy="50%"
-                        outerRadius={80}
+                        innerRadius={45}
+                        outerRadius={70}
                         paddingAngle={3}
-                        label={({ gender, percent }) => `${gender} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
                       >
                         {(data?.genderBreakdown || []).map((entry, i) => (
                           <Cell key={i} fill={GENDER_COLORS[i % GENDER_COLORS.length]} />
@@ -444,7 +444,7 @@ export default function Analytics({ user }) {
           {/* Status vs Outcome Stacked Bar */}
           <ChartCard title="Candidate Status Overview" subtitle="Side-by-side comparison of status and outcome counts">
             {loading ? <Skeleton className="h-64" /> : (
-              <ResponsiveContainer width="100%" height={240}>
+              <ResponsiveContainer width="100%" height={200}>
                 <BarChart
                   data={[
                     { name: 'Pending', value: data?.statusBreakdown?.find(s => s.status === 'pending')?.count || 0, fill: '#f59e0b' },
@@ -488,7 +488,7 @@ export default function Analytics({ user }) {
                 {(data?.mobiliserLeaderboard || []).length === 0 ? (
                   <div className="py-12 text-center text-slate-400 text-xs">No mobiliser data available yet.</div>
                 ) : (
-                  <table className="w-full text-xs">
+                  <table className="w-full text-xs min-w-[700px]">
                     <thead>
                       <tr className="border-b border-slate-100">
                         <th className="text-left py-2.5 px-3 text-[10px] uppercase tracking-wider text-slate-400 font-black">#</th>
@@ -548,7 +548,7 @@ export default function Analytics({ user }) {
           {!loading && (data?.mobiliserLeaderboard || []).length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <ChartCard title="Candidates Per Mobiliser" subtitle="Total registered candidates by each recruiter">
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={240}>
                   <BarChart
                     data={(data?.mobiliserLeaderboard || []).slice(0, 8).map(m => ({ name: m.name.split(' ')[0], total: m.total, converted: m.converted }))}
                     layout="vertical"
@@ -566,7 +566,7 @@ export default function Analytics({ user }) {
               </ChartCard>
 
               <ChartCard title="Conversion Rate by Mobiliser" subtitle="Percentage of candidates converted per recruiter">
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={240}>
                   <BarChart
                     data={(data?.mobiliserLeaderboard || []).slice(0, 8).map(m => ({ name: m.name.split(' ')[0], rate: m.conversionRate, avgScore: m.avgScore }))}
                     margin={{ top: 5, right: 10, left: -20, bottom: 20 }}
@@ -596,7 +596,7 @@ export default function Analytics({ user }) {
             {/* Top Cities */}
             <ChartCard title="Top 10 Cities" subtitle="Candidate concentration by city">
               {loading ? <Skeleton className="h-72" /> : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={240}>
                   <BarChart
                     data={data?.topCities || []}
                     layout="vertical"
@@ -619,7 +619,7 @@ export default function Analytics({ user }) {
             {/* Top States */}
             <ChartCard title="State-wise Distribution" subtitle="Candidate distribution across states">
               {loading ? <Skeleton className="h-72" /> : (
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={240}>
                   <BarChart
                     data={data?.topStates || []}
                     layout="vertical"
@@ -644,7 +644,7 @@ export default function Analytics({ user }) {
           <ChartCard title="City Rankings" subtitle="Detailed view of candidate distribution by location">
             {loading ? <Skeleton className="h-48" /> : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs min-w-[500px]">
                   <thead>
                     <tr className="border-b border-slate-100">
                       <th className="text-left py-2 px-3 text-[10px] uppercase tracking-wider text-slate-400 font-black">Rank</th>
@@ -695,7 +695,7 @@ export default function Analytics({ user }) {
             <ChartCard title="Question Domain Breakdown" subtitle="Number of questions per assessment domain">
               {loading ? <Skeleton className="h-72" /> : (
                 <div>
-                  <ResponsiveContainer width="100%" height={220}>
+                  <ResponsiveContainer width="100%" height={200}>
                     <RadarChart data={data?.domainBreakdown || []}>
                       <PolarGrid stroke="#e2e8f0" />
                       <PolarAngleAxis dataKey="domainName" tick={{ fontSize: 9, fill: '#64748b', fontWeight: 700 }} />
@@ -761,7 +761,7 @@ export default function Analytics({ user }) {
           {/* Score Distribution detailed */}
           <ChartCard title="Score Bucket Analysis" subtitle="Deep dive into WCP score spread and candidate count per bucket">
             {loading ? <Skeleton className="h-64" /> : (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {(data?.scoreDistribution || []).map((bucket, i) => {
                   const total = data?.overview?.totalScoredCandidates || 1;
                   const pct = Math.round((bucket.count / total) * 100);

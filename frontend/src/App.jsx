@@ -490,7 +490,7 @@ function App() {
           </main>
 
           {/* Fixed Footer */}
-          <footer className="border-t border-slate-200 py-3.5 text-center text-[10px] text-slate-500 bg-white shrink-0 select-none shadow-xs">
+          <footer className="hidden lg:block border-t border-slate-200 py-3.5 text-center text-[10px] text-slate-500 bg-white shrink-0 select-none shadow-xs">
             <p className="hidden lg:block">&copy; {new Date().getFullYear()} Even Cargo Logistics Recruitment Platform. All Rights Reserved.</p>
           </footer>
 
@@ -633,34 +633,34 @@ function App() {
       )}
 
       {/* Toast Notification Container */}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+      <div className="fixed bottom-4 right-4 left-4 md:left-auto md:max-w-sm z-[9999] flex flex-col gap-2 pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`p-4 rounded-2xl border shadow-xl flex items-start gap-3 pointer-events-auto animate-slide-in-right transition-all duration-300 ${
+            className={`p-3 md:p-4 rounded-xl md:rounded-2xl border shadow-xl flex items-start gap-2.5 md:gap-3 pointer-events-auto animate-slide-in-right transition-all duration-300 ${
               toast.type === 'success'
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                ? 'bg-emerald-50 border-emerald-250 text-emerald-800'
                 : toast.type === 'error'
-                  ? 'bg-rose-50 border-rose-200 text-rose-800'
+                  ? 'bg-rose-50 border-rose-250 text-rose-800'
                   : toast.type === 'warning'
                     ? 'bg-amber-50 border-amber-200 text-amber-800'
                     : 'bg-indigo-50 border-indigo-200 text-indigo-800'
             }`}
           >
-            {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />}
-            {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />}
-            {toast.type === 'warning' && <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />}
-            {toast.type === 'info' && <AlertCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />}
+            {toast.type === 'success' && <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-emerald-600 shrink-0 mt-0.5" />}
+            {toast.type === 'error' && <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-rose-600 shrink-0 mt-0.5" />}
+            {toast.type === 'warning' && <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-amber-600 shrink-0 mt-0.5" />}
+            {toast.type === 'info' && <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-indigo-600 shrink-0 mt-0.5" />}
 
-            <div className="flex-1 text-xs font-semibold leading-normal">
+            <div className="flex-1 text-[11px] md:text-xs font-semibold leading-normal">
               {toast.message}
             </div>
 
             <button
               onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-              className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              className="text-slate-400 hover:text-slate-600 transition cursor-pointer shrink-0"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </button>
           </div>
         ))}

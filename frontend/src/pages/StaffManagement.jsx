@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   UserPlus, Edit, Trash2, Search, Mail, Phone, X,
-  Plus, Check, Users, RefreshCw
+  Plus, Check, Users, RefreshCw, Sliders
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
@@ -13,6 +13,7 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Modals
   const [modalType, setModalType] = useState(null); // 'add' | 'edit' | null
@@ -200,58 +201,77 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Title block */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Staff Management Directory</h2>
           <p className="text-xs text-slate-500 mt-1">Manage system users, define access levels, and audit system operations permissions.</p>
         </div>
-        <button
-          onClick={handleOpenAddModal}
-          className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition active:scale-95 shrink-0 cursor-pointer"
-        >
-          <UserPlus className="h-4 w-4" strokeWidth={2.5} />
-          <span>Add Staff Member</span>
-        </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className="min-[1000px]:hidden flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl shadow-xs transition active:scale-95 cursor-pointer"
+          >
+            <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span>Filters</span>
+          </button>
+          <button
+            onClick={handleOpenAddModal}
+            className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] sm:text-xs font-bold rounded-lg sm:rounded-xl shadow-md shadow-indigo-100 transition duration-200 active:scale-95 cursor-pointer shrink-0"
+          >
+            <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2.5} />
+            <span>Add Staff Member</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters block */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-        <div className="relative flex-1 max-w-md">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-            <Search className="h-4 w-4" />
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by username, email, phone..."
-            className="w-full pl-9 pr-4 py-2 border border-slate-250 bg-white rounded-lg text-xs text-slate-905 placeholder-slate-400 focus:outline-none focus:border-indigo-600"
-          />
+      <section className={`bg-white border border-slate-200 rounded-2xl p-3 min-[1000px]:p-5 shadow-xs grid grid-cols-2 min-[1000px]:grid-cols-3 gap-2.5 min-[1000px]:gap-4 ${showMobileFilters ? 'grid' : 'hidden min-[1000px]:grid'}`}>
+        {/* Search */}
+        <div className="col-span-2 min-[1000px]:col-span-1 relative">
+          <label className="block text-[9px] min-[1000px]:text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 min-[1000px]:mb-1.5">Search</label>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 pl-2.5 min-[1000px]:pl-3 flex items-center text-slate-400">
+              <Search className="h-3.5 w-3.5 min-[1000px]:h-4 min-[1000px]:w-4" />
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Username, email, phone..."
+              className="w-full pl-8 pr-3 py-1.5 min-[1000px]:pl-9 min-[1000px]:pr-4 min-[1000px]:py-2 border border-slate-250 bg-white rounded-lg min-[1000px]:rounded-xl text-[10px] min-[1000px]:text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
+            />
+          </div>
         </div>
 
-        <div className="flex items-center space-x-3 text-xs">
+        {/* Role Type Filter */}
+        <div className="col-span-1">
+          <label className="block text-[9px] min-[1000px]:text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 min-[1000px]:mb-1.5">Role Access</label>
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-255 bg-white rounded-lg text-slate-905 focus:outline-none focus:border-indigo-600"
+            className="w-full px-2 py-1.5 min-[1000px]:px-3 min-[1000px]:py-2 border border-slate-250 bg-white rounded-lg min-[1000px]:rounded-xl text-[10px] min-[1000px]:text-xs text-slate-900 focus:outline-none focus:border-indigo-600 transition"
           >
             <option value="All">All Roles</option>
             <option value="Admin">Admin</option>
             <option value="Mobiliser">Mobiliser</option>
           </select>
+        </div>
 
+        {/* Reload button */}
+        <div className="col-span-1 flex flex-col justify-end">
           <button 
             type="button"
             onClick={() => fetchStaff()}
-            className="p-2 border border-slate-250 bg-white hover:bg-slate-50 text-slate-500 rounded-lg transition"
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 min-[1000px]:py-2 px-3 border border-slate-250 bg-white hover:bg-slate-50 text-slate-650 text-[10px] min-[1000px]:text-xs font-bold rounded-lg min-[1000px]:rounded-xl transition shadow-xs cursor-pointer active:scale-95"
             title="Reload List"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Reload</span>
           </button>
         </div>
-      </div>
+      </section>
 
       {/* API status display */}
       {apiMessage && (
@@ -268,7 +288,7 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
       )}
 
       {/* Staff directory block */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs">
         {loading && staffList.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <RefreshCw className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
@@ -276,74 +296,80 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
           </div>
         ) : filteredStaff.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-450 uppercase font-black tracking-wider text-[10px]">
-                  <th className="py-3 px-4">Staff Member</th>
-                  <th className="py-3 px-4">Contact Info</th>
-                  <th className="py-3 px-4">Role Access</th>
-                  <th className="py-3 px-4">Date Joined</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+            <table className="w-full text-left border-collapse block min-[1000px]:table min-[1000px]:min-w-[1000px]">
+              <thead className="hidden min-[1000px]:table-header-group">
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-450 uppercase font-black tracking-wider text-[10px]">
+                  <th className="py-4.5 px-6">Staff Member</th>
+                  <th className="py-4.5 px-6">Contact Info</th>
+                  <th className="py-4.5 px-6">Role Access</th>
+                  <th className="py-4.5 px-6">Date Joined</th>
+                  <th className="py-4.5 px-6 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-150">
+              <tbody className="block min-[1000px]:table-row-group divide-y divide-slate-150 text-xs">
                 {filteredStaff.map((staff) => (
-                  <tr key={staff.id} className="hover:bg-slate-50/50 transition">
-                    <td className="py-4 px-4 font-bold text-slate-850">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-600 flex items-center justify-center font-extrabold text-white text-xs select-none shrink-0 shadow-xs">
+                  <tr key={staff.id} className="grid grid-cols-2 mb-1.5 min-[1000px]:mb-0 gap-1.5 p-2 min-[1000px]:gap-4 min-[1000px]:p-0 min-[1000px]:table-row hover:bg-slate-50/50 transition duration-150 relative">
+                    <td className="col-span-2 min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 min-w-0">
+                      <div className="flex items-center space-x-2.5 min-[1000px]:space-x-3.5 min-w-0">
+                        <div className="w-8 h-8 min-[1000px]:w-9 min-[1000px]:h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-600 flex items-center justify-center font-extrabold text-white text-[10px] min-[1000px]:text-xs select-none shrink-0 shadow-xs">
                           {staff.username.substring(0, 2).toUpperCase()}
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-800">{staff.username}</p>
-                          <p className="text-slate-400 text-[10px] font-mono mt-0.5">{staff.id}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-extrabold text-slate-800 text-sm leading-tight truncate">{staff.username}</p>
+                          <p className="text-slate-400 text-[9px] min-[1000px]:text-[10px] font-mono mt-0.5 truncate">{staff.id}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-slate-600 space-y-1">
-                      <div className="flex items-center space-x-1.5">
-                        <Mail className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{staff.email}</span>
-                      </div>
-                      {staff.phone && (
-                        <div className="flex items-center space-x-1.5">
-                          <Phone className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{staff.phone}</span>
+                    <td className="col-span-1 flex flex-col items-start justify-center min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 min-[1000px]:text-left min-w-0">
+                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1 min-[1000px]:hidden">Contact Info</span>
+                      <div className="text-slate-650 space-y-0.5 min-[1000px]:space-y-1 w-full min-w-0">
+                        <div className="flex items-center space-x-1.5 min-w-0">
+                          <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="truncate text-[10px] min-[1000px]:text-xs">{staff.email}</span>
                         </div>
-                      )}
+                        {staff.phone && (
+                          <div className="flex items-center space-x-1.5 min-w-0">
+                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate text-[10px] min-[1000px]:text-xs">{staff.phone}</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2.5 py-1 rounded text-[10px] font-bold border capitalize ${getRoleBadgeStyle(staff.userType)}`}>
+                    <td className="col-span-1 flex flex-col items-end justify-center min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 min-[1000px]:text-left">
+                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1 min-[1000px]:hidden font-black">Role Access</span>
+                      <span className={`px-2 py-0.5 min-[1000px]:px-2.5 min-[1000px]:py-1 rounded text-[9px] min-[1000px]:text-[10px] font-bold border capitalize ${getRoleBadgeStyle(staff.userType)}`}>
                         {staff.userType}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-slate-450 font-medium">
+                    <td className="hidden min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 text-slate-450 font-medium">
                       {new Date(staff.created_at || staff.createdAt).toLocaleDateString(undefined, {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric'
                       })}
                     </td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className="col-span-2 min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 pt-2 border-t border-slate-100 min-[1000px]:border-none min-[1000px]:pt-0">
+                      <div className="flex items-center w-full min-[1000px]:justify-center gap-1.5 min-[1000px]:gap-2">
                         <button
                           onClick={() => handleOpenEditModal(staff)}
-                          className="p-1.5 bg-slate-50 hover:bg-slate-105 text-slate-600 hover:text-slate-850 border border-slate-200 rounded-lg transition cursor-pointer"
+                          className="flex-1 min-[1000px]:flex-none flex items-center justify-center gap-1 min-[1000px]:gap-1.5 py-1.5 px-2 min-[1000px]:py-1.5 min-[1000px]:px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] font-bold rounded-md min-[1000px]:rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer"
                           title="Edit Profile"
                         >
-                          <Edit className="h-4.5 w-4.5" />
+                          <Edit className="w-3.5 h-3.5 min-[1000px]:w-3 min-[1000px]:h-3 shrink-0" />
+                          <span>Edit</span>
                         </button>
                         <button
                           onClick={() => handleDeleteClick(staff)}
                           disabled={staff.id === user.id}
-                          className={`p-1.5 border rounded-lg transition cursor-pointer ${
+                          className={`flex-1 min-[1000px]:flex-none flex items-center justify-center gap-1 min-[1000px]:gap-1.5 py-1.5 px-2 min-[1000px]:py-1.5 min-[1000px]:px-3 border text-[10px] font-bold rounded-md min-[1000px]:rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer ${
                             staff.id === user.id 
                               ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
-                              : 'bg-rose-50/50 hover:bg-rose-50 text-rose-550 hover:text-rose-700 border-rose-100 hover:border-rose-200'
+                              : 'bg-rose-50/50 hover:bg-rose-50 text-rose-600 hover:text-rose-700 border-rose-100 hover:border-rose-200'
                           }`}
                           title={staff.id === user.id ? "Cannot delete yourself" : "Delete Staff"}
                         >
-                          <Trash2 className="h-4.5 w-4.5" />
+                          <Trash2 className="w-3.5 h-3.5 min-[1000px]:w-3 min-[1000px]:h-3 shrink-0" />
+                          <span>Delete</span>
                         </button>
                       </div>
                     </td>

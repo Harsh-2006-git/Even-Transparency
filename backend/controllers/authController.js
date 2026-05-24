@@ -10,7 +10,7 @@ const hashPassword = (password) => {
 
 // Register User
 export const register = async (req, res) => {
-  const { username, email, password, phone, profilePhoto, userType } = req.body;
+  const { username, email, password, phone, profilePhoto, userType, location } = req.body;
   
   const trimmedUser = String(username || '').trim();
   const trimmedEmail = String(email || '').trim();
@@ -45,13 +45,14 @@ export const register = async (req, res) => {
       password: hashedPassword,
       phone: phone ? trimmedPhone : null,
       profilePhoto,
-      userType: userType || 'Mobiliser'
+      userType: userType || 'Mobiliser',
+      location: location ? String(location).trim() : null
     });
 
     const userResponse = newUser.toJSON();
     delete userResponse.password;
 
-    await createAuditLog({
+    createAuditLog({
       userId: req.headers['x-admin-id'] || null,
       action: 'CREATE',
       entity: 'Staff',
@@ -95,7 +96,7 @@ export const login = async (req, res) => {
     const userResponse = userInstance.toJSON();
     delete userResponse.password;
 
-    await createAuditLog({
+    createAuditLog({
       userId: userInstance.id,
       action: 'LOGIN',
       entity: 'User',
@@ -105,7 +106,7 @@ export const login = async (req, res) => {
 
     res.json(userResponse);
   } catch (error) {
-    res.status(505).json({ error: 'Login failed', message: error.message });
+    res.status(500).json({ error: 'Login failed', message: error.message });
   }
 };
 
@@ -124,7 +125,7 @@ export const getAllStaff = async (req, res) => {
 // Update Staff
 export const updateStaff = async (req, res) => {
   const { id } = req.params;
-  const { username, email, password, phone, profilePhoto, userType } = req.body;
+  const { username, email, password, phone, profilePhoto, userType, location } = req.body;
 
   try {
     const userInstance = await User.findByPk(id);
@@ -172,7 +173,8 @@ export const updateStaff = async (req, res) => {
       email: trimmedEmail !== undefined ? trimmedEmail : userInstance.email,
       phone: phone !== undefined ? (phone === null || phone === '' ? null : trimmedPhone) : userInstance.phone,
       profilePhoto: profilePhoto !== undefined ? profilePhoto : userInstance.profilePhoto,
-      userType: userType || userInstance.userType
+      userType: userType || userInstance.userType,
+      location: location !== undefined ? (location === null || location === '' ? null : String(location).trim()) : userInstance.location
     };
 
     if (trimmedPassword) {
@@ -184,7 +186,7 @@ export const updateStaff = async (req, res) => {
     const userResponse = userInstance.toJSON();
     delete userResponse.password;
 
-    await createAuditLog({
+    createAuditLog({
       userId: req.headers['x-admin-id'] || null,
       action: 'UPDATE',
       entity: 'Staff',
@@ -220,7 +222,7 @@ export const deleteStaff = async (req, res) => {
     const deletedUsername = userInstance.username;
     await userInstance.destroy();
 
-    await createAuditLog({
+    createAuditLog({
       userId: adminId || null,
       action: 'DELETE',
       entity: 'Staff',

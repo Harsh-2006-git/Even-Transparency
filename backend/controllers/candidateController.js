@@ -120,7 +120,7 @@ export const createCandidate = async (req, res) => {
       fullName, profilePhoto, phone: cleanPhone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
     
-    await createAuditLog({
+    createAuditLog({
       userId: mobiliserId || req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
       action: 'CREATE',
       entity: 'Candidate',
@@ -212,7 +212,7 @@ export const updateCandidate = async (req, res) => {
       fullName, profilePhoto, phone: cleanPhone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers: wcpAnswersToSave, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
 
-    await createAuditLog({
+    createAuditLog({
       userId: mobiliserId || req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
       action: isInterview ? 'INTERVIEW' : 'UPDATE',
       entity: 'Candidate',
@@ -243,7 +243,7 @@ export const deleteCandidate = async (req, res) => {
     const fullName = candidate.fullName;
     await candidate.destroy();
 
-    await createAuditLog({
+    createAuditLog({
       userId: req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
       action: 'DELETE',
       entity: 'Candidate',

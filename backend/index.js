@@ -89,6 +89,14 @@ const startServer = async () => {
       } catch (err) {
         console.error('Failed to run migration for expires_at column:', err.message);
       }
+
+      // Migration: add location column to users table if it doesn't exist
+      try {
+        await sequelize.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS location VARCHAR(150);');
+        console.log('[Migration] users.location column ready.');
+      } catch (err) {
+        console.error('[Migration] Failed to add location column to users:', err.message);
+      }
     }
 
     // Attach Socket.io to the HTTP server

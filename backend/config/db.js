@@ -11,6 +11,8 @@ if (!databaseUrl) {
   console.error('DATABASE_URL environment variable is not defined.');
 }
 
+const dnsCache = {};
+
 class CustomSocket extends net.Socket {
   connect(port, host, connectionListener) {
     const customLookup = (hostname, options, callback) => {
@@ -18,10 +20,29 @@ class CustomSocket extends net.Socket {
         callback = options;
         options = {};
       }
+
+      // Bypass DNS lookups for local endpoints
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return callback(null, hostname, 4);
+      }
+
+      // Return cached DNS lookup immediately if available
+      if (dnsCache[hostname]) {
+        const ips = dnsCache[hostname];
+        if (options.all) {
+          return callback(null, ips.map(ip => ({ address: ip, family: 4 })));
+        } else {
+          return callback(null, ips[0], 4);
+        }
+      }
+
       const r = new dns.Resolver();
       r.setServers(['8.8.8.8', '1.1.1.1']);
       r.resolve4(hostname)
         .then(ips => {
+          if (ips && ips.length > 0) {
+            dnsCache[hostname] = ips; // Cache the resolved IPs
+          }
           if (options.all) {
             callback(null, ips.map(ip => ({ address: ip, family: 4 })));
           } else {

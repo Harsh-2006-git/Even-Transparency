@@ -44,6 +44,10 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('Mobiliser', 'Admin'),
     defaultValue: 'Mobiliser',
     field: 'user_type'
+  },
+  location: {
+    type: DataTypes.STRING(150),
+    allowNull: true
   }
 }, {
   tableName: 'users',

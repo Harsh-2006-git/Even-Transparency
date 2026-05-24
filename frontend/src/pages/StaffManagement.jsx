@@ -27,6 +27,7 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [roleType, setRoleType] = useState('Mobiliser');
+  const [location, setLocation] = useState('');
 
 
 
@@ -36,6 +37,7 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
     setPhone('');
     setPassword('');
     setRoleType('Mobiliser');
+    setLocation('');
     setApiMessage(null);
     setModalType('add');
   };
@@ -47,6 +49,7 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
     setPhone(staff.phone || '');
     setPassword(''); // blank means no change
     setRoleType(staff.userType || 'Mobiliser');
+    setLocation(staff.location || '');
     setApiMessage(null);
     setModalType('edit');
   };
@@ -88,7 +91,8 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
       email: trimmedEmail,
       password: trimmedPassword,
       phone: phone.trim() ? cleanPhone : null,
-      userType: roleType
+      userType: roleType,
+      location: location.trim() ? location.trim() : null
     };
 
     const mockId = `temp-${Date.now()}`;
@@ -158,7 +162,8 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
       username: trimmedUser,
       email: trimmedEmail,
       phone: phone.trim() ? cleanPhone : null,
-      userType: roleType
+      userType: roleType,
+      location: location.trim() ? location.trim() : null
     };
     if (trimmedPassword) {
       updatePayload.password = trimmedPassword;
@@ -366,7 +371,14 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-extrabold text-slate-800 text-sm leading-tight truncate">{staff.username}</p>
-                          <p className="text-slate-400 text-[9px] min-[1000px]:text-[10px] font-mono mt-0.5 truncate">{staff.id}</p>
+                          {staff.location ? (
+                            <p className="text-slate-400 text-[9px] min-[1000px]:text-[10px] font-semibold mt-0.5 truncate flex items-center gap-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-2.5 h-2.5 shrink-0 text-slate-350" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                              {staff.location}
+                            </p>
+                          ) : (
+                            <p className="text-slate-300 text-[9px] min-[1000px]:text-[10px] font-medium mt-0.5 italic">No location set</p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -488,6 +500,17 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Office / Working Location</label>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="e.g. New Delhi, Okhla Branch"
                   className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
                 />
               </div>

@@ -109,7 +109,14 @@ const Candidate = sequelize.define('Candidate', {
   recruiterPhone: {
     type: DataTypes.STRING(20),
     allowNull: true,
-    field: 'recruiter_phone'
+    field: 'recruiter_phone',
+    validate: {
+      isTenDigits(value) {
+        if (value !== null && value !== undefined && value !== '' && !/^\d{10}$/.test(value)) {
+          throw new Error('Recruiter Phone Number must be exactly 10 digits.');
+        }
+      }
+    }
   },
   mobiliserId: {
     type: DataTypes.UUID,

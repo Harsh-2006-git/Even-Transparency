@@ -455,6 +455,16 @@ export default function CandidateManagement({
       return;
     }
 
+    if (fullName.trim().length < 3) {
+      showToast('Full Name must be at least 3 characters long.', 'warning');
+      return;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(fullName.trim())) {
+      showToast('Full Name must contain only alphabetic letters and spaces.', 'warning');
+      return;
+    }
+
     const cleanPhone = phone.trim().replace(/[\s-]/g, '');
     const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(cleanPhone)) {
@@ -1190,7 +1200,7 @@ export default function CandidateManagement({
                         type="text"
                         required
                         value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        onChange={(e) => setFullName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                         placeholder="Kiran Sharma"
                         className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
                       />
@@ -1202,8 +1212,8 @@ export default function CandidateManagement({
                         type="text"
                         required
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+91 98765 43210"
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        placeholder="10-digit number"
                         className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
                       />
                     </div>

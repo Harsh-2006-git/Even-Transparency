@@ -29,7 +29,16 @@ export const invalidateQuestionCache = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const validateCandidateData = (data) => {
-  const phone = String(data.phone || '').trim().replace(/[\s-]/g, '');
+  const fullName = String(data.fullName || '').trim();
+  if (fullName.length < 3) {
+    throw new Error('Full Name must be at least 3 characters long.');
+  }
+  if (!/^[a-zA-Z\s]+$/.test(fullName)) {
+    throw new Error('Full Name must contain only alphabetic letters and spaces.');
+  }
+
+  // Strip common country code prefixes and non-digit characters
+  const phone = String(data.phone || '').trim().replace(/^(\+91|91)/, '').replace(/[\s-()]/g, '');
   if (!/^\d{10}$/.test(phone)) {
     throw new Error('Phone Number must be exactly 10 digits.');
   }
@@ -74,7 +83,7 @@ export const createCandidate = async (req, res) => {
   } = req.body;
   
   try {
-    const cleanPhone = validateCandidateData({ phone, email });
+    const cleanPhone = validateCandidateData({ fullName, phone, email });
     let score = null;
     let wcpScoreBreakdown = null;
     let recruiterName = req.body.recruiterName || null;
@@ -145,8 +154,9 @@ export const updateCandidate = async (req, res) => {
     }
 
     let cleanPhone = candidate.phone;
-    if (phone !== undefined || email !== undefined) {
+    if (phone !== undefined || email !== undefined || fullName !== undefined) {
       cleanPhone = validateCandidateData({
+        fullName: fullName !== undefined ? fullName : candidate.fullName,
         phone: phone !== undefined ? phone : candidate.phone,
         email: email !== undefined ? email : candidate.email
       });
@@ -288,7 +298,7 @@ export const bulkSyncCandidates = async (req, res) => {
           }
         }
 
-        const cleanPhone = validateCandidateData({ phone: data.phone, email: data.email });
+        const cleanPhone = validateCandidateData({ fullName: data.fullName, phone: data.phone, email: data.email });
 
         const payload = {
           fullName: data.fullName,

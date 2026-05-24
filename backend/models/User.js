@@ -22,7 +22,14 @@ const User = sequelize.define('User', {
   },
   phone: {
     type: DataTypes.STRING(20),
-    allowNull: true
+    allowNull: true,
+    validate: {
+      isTenDigits(value) {
+        if (value !== null && value !== undefined && value !== '' && !/^\d{10}$/.test(value)) {
+          throw new Error('Phone Number must be exactly 10 digits.');
+        }
+      }
+    }
   },
   profilePhoto: {
     type: DataTypes.TEXT,

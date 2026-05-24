@@ -161,9 +161,34 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
 
   const handleCreateCandidate = async (e) => {
     e.preventDefault();
+    const cleanPhone = phone.trim().replace(/[\s-]/g, '');
+
     if (!fullName.trim() || !phone.trim()) {
       setCandidateMessage({ type: 'error', text: 'Full Name and Phone Number are required.' });
       return;
+    }
+
+    if (fullName.trim().length < 3) {
+      setCandidateMessage({ type: 'error', text: 'Full Name must be at least 3 characters long.' });
+      return;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(fullName.trim())) {
+      setCandidateMessage({ type: 'error', text: 'Full Name must contain only alphabetic letters and spaces.' });
+      return;
+    }
+
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      setCandidateMessage({ type: 'error', text: 'Phone Number must be exactly 10 digits.' });
+      return;
+    }
+
+    if (email && email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setCandidateMessage({ type: 'error', text: 'Please enter a valid email address.' });
+        return;
+      }
     }
 
     setLoadingCandidate(true);
@@ -174,7 +199,7 @@ export default function Dashboard({ user, candidates = [], fetchCandidates, onCa
 
     const candidateData = {
       fullName: fullName.trim(),
-      phone: phone.trim(),
+      phone: cleanPhone,
       email: email.trim() || null,
       dateOfBirth: dateOfBirth || null,
       gender,

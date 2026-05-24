@@ -53,16 +53,41 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
 
   const handleAddStaff = async (e) => {
     e.preventDefault();
-    if (!username.trim() || !email.trim() || !password.trim()) {
+    const trimmedUser = username.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    const cleanPhone = phone.trim().replace(/^(\+91|91)/, '').replace(/[\s-()]/g, '');
+
+    if (!trimmedUser || !trimmedEmail || !trimmedPassword) {
       showToast('Username, email, and password are required.', 'warning');
       return;
     }
 
+    if (trimmedUser.length < 3 || !/^[a-zA-Z0-9_]+$/.test(trimmedUser)) {
+      showToast('Username must be at least 3 characters and contain only letters, numbers, and underscores.', 'warning');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      showToast('Please enter a valid email address.', 'warning');
+      return;
+    }
+
+    if (trimmedPassword.length < 6) {
+      showToast('Password must be at least 6 characters long.', 'warning');
+      return;
+    }
+
+    if (phone.trim() && !/^\d{10}$/.test(cleanPhone)) {
+      showToast('Phone Number must be exactly 10 digits.', 'warning');
+      return;
+    }
+
     const payload = {
-      username: username.trim(),
-      email: email.trim(),
-      password: password.trim(),
-      phone: phone.trim() || null,
+      username: trimmedUser,
+      email: trimmedEmail,
+      password: trimmedPassword,
+      phone: phone.trim() ? cleanPhone : null,
       userType: roleType
     };
 
@@ -99,19 +124,44 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
 
   const handleEditStaff = async (e) => {
     e.preventDefault();
-    if (!username.trim() || !email.trim()) {
+    const trimmedUser = username.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    const cleanPhone = phone.trim().replace(/^(\+91|91)/, '').replace(/[\s-()]/g, '');
+
+    if (!trimmedUser || !trimmedEmail) {
       showToast('Username and email are required.', 'warning');
       return;
     }
 
+    if (trimmedUser.length < 3 || !/^[a-zA-Z0-9_]+$/.test(trimmedUser)) {
+      showToast('Username must be at least 3 characters and contain only letters, numbers, and underscores.', 'warning');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      showToast('Please enter a valid email address.', 'warning');
+      return;
+    }
+
+    if (trimmedPassword && trimmedPassword.length < 6) {
+      showToast('Password must be at least 6 characters long.', 'warning');
+      return;
+    }
+
+    if (phone.trim() && !/^\d{10}$/.test(cleanPhone)) {
+      showToast('Phone Number must be exactly 10 digits.', 'warning');
+      return;
+    }
+
     const updatePayload = {
-      username: username.trim(),
-      email: email.trim(),
-      phone: phone.trim() || null,
+      username: trimmedUser,
+      email: trimmedEmail,
+      phone: phone.trim() ? cleanPhone : null,
       userType: roleType
     };
-    if (password.trim()) {
-      updatePayload.password = password.trim();
+    if (trimmedPassword) {
+      updatePayload.password = trimmedPassword;
     }
 
     const optimisticStaff = { ...editingStaff, ...updatePayload };
@@ -410,7 +460,7 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
                   type="text"
                   required
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                   placeholder="e.g. priya_mobiliser"
                   className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
                 />
@@ -448,8 +498,8 @@ export default function StaffManagement({ user, staffList = [], setStaffList, fe
                   <input
                     type="text"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 999..."
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="10-digit number"
                     className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
                   />
                 </div>

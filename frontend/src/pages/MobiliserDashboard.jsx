@@ -155,9 +155,34 @@ export default function MobiliserDashboard({ dbStatus, candidates, onCandidateAd
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const cleanPhone = phone.trim().replace(/[\s-]/g, '');
+
     if (!fullName.trim() || !phone.trim()) {
       setMessage({ type: 'error', text: 'Full Name and Phone Number are required.' });
       return;
+    }
+
+    if (fullName.trim().length < 3) {
+      setMessage({ type: 'error', text: 'Full Name must be at least 3 characters long.' });
+      return;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(fullName.trim())) {
+      setMessage({ type: 'error', text: 'Full Name must contain only alphabetic letters and spaces.' });
+      return;
+    }
+
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      setMessage({ type: 'error', text: 'Phone Number must be exactly 10 digits.' });
+      return;
+    }
+
+    if (email && email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setMessage({ type: 'error', text: 'Please enter a valid email address.' });
+        return;
+      }
     }
 
     setLoading(true);
@@ -168,7 +193,7 @@ export default function MobiliserDashboard({ dbStatus, candidates, onCandidateAd
 
     const candidateData = {
       fullName: fullName.trim(),
-      phone: phone.trim(),
+      phone: cleanPhone,
       email: email.trim() || null,
       dateOfBirth: dateOfBirth || null,
       gender,
@@ -291,7 +316,7 @@ export default function MobiliserDashboard({ dbStatus, candidates, onCandidateAd
                 type="text"
                 required
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e) => setFullName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                 placeholder="e.g. Kiran Sharma"
                 className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
               />
@@ -303,8 +328,8 @@ export default function MobiliserDashboard({ dbStatus, candidates, onCandidateAd
                 type="text"
                 required
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. +91 98765 43210"
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                placeholder="10-digit number"
                 className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
               />
             </div>

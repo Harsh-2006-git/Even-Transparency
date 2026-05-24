@@ -32,6 +32,10 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
       setError('Please fill in all fields.');
       return;
     }
+    if (password.trim().length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
 
     setLoading(true);
 

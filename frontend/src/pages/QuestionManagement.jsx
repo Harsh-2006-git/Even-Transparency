@@ -152,6 +152,11 @@ export default function QuestionManagement({ showToast }) {
       return;
     }
 
+    if (!/^Q\d+$/i.test(form.qNumber.trim())) {
+      setFormError('Q-Number must start with a "Q" followed by digits (e.g. Q29).');
+      return;
+    }
+
     const domainWeightVal = parseFloat(form.domainWeight);
     const qWeightVal = parseInt(form.questionWeight);
 
@@ -162,6 +167,23 @@ export default function QuestionManagement({ showToast }) {
     if (isNaN(qWeightVal) || qWeightVal <= 0) {
       setFormError('Question Weight must be a positive number.');
       return;
+    }
+
+    const activeOptions = form.options.filter(o => o.text.trim() !== '');
+
+    if (form.inputType !== 'Text' && activeOptions.length < 2) {
+      setFormError('Please add at least 2 non-empty options for multiple-choice/dropdown questions.');
+      return;
+    }
+
+    // Verify option scores are valid numbers
+    if (form.inputType !== 'Text') {
+      for (const opt of activeOptions) {
+        if (opt.score === '' || isNaN(parseFloat(opt.score))) {
+          setFormError('All options must have a valid score value.');
+          return;
+        }
+      }
     }
 
     const payload = {
@@ -477,7 +499,7 @@ export default function QuestionManagement({ showToast }) {
                       type="text"
                       required
                       value={form.qNumber}
-                      onChange={e => setForm(p => ({ ...p, qNumber: e.target.value }))}
+                      onChange={e => setForm(p => ({ ...p, qNumber: e.target.value.replace(/[^qQ\d]/g, '') }))}
                       placeholder="e.g. Q29"
                       className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition"
                     />
@@ -489,7 +511,7 @@ export default function QuestionManagement({ showToast }) {
                       required
                       maxLength={3}
                       value={form.domain}
-                      onChange={e => setForm(p => ({ ...p, domain: e.target.value }))}
+                      onChange={e => setForm(p => ({ ...p, domain: e.target.value.replace(/[^a-zA-Z]/g, '') }))}
                       placeholder="e.g. A"
                       className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 transition uppercase"
                     />
@@ -514,13 +536,10 @@ export default function QuestionManagement({ showToast }) {
                   <div>
                     <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Domain Weight %</label>
                     <input
-                      type="number"
+                      type="text"
                       required
-                      min={1}
-                      max={100}
-                      step={1}
                       value={form.domainWeight}
-                      onChange={e => setForm(p => ({ ...p, domainWeight: e.target.value }))}
+                      onChange={e => setForm(p => ({ ...p, domainWeight: e.target.value.replace(/\D/g, '') }))}
                       placeholder="e.g. 22"
                       className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
                     />
@@ -528,11 +547,10 @@ export default function QuestionManagement({ showToast }) {
                   <div>
                     <label className="block font-bold text-slate-500 uppercase tracking-wider mb-1">Q-Weight</label>
                     <input
-                      type="number"
+                      type="text"
                       required
-                      min={1}
                       value={form.questionWeight}
-                      onChange={e => setForm(p => ({ ...p, questionWeight: e.target.value }))}
+                      onChange={e => setForm(p => ({ ...p, questionWeight: e.target.value.replace(/\D/g, '') }))}
                       placeholder="e.g. 5"
                       className="w-full bg-white border border-slate-250 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-indigo-600 transition"
                     />

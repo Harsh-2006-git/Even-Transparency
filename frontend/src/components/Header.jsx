@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { LogOut, Menu, Search, Bell, Database, X, CheckCircle2, RefreshCw, Edit, AlertCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { LogOut, Menu, Database, X, CheckCircle2, RefreshCw, Edit, AlertCircle, UserCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function Header({
   user,
@@ -11,7 +11,24 @@ export default function Header({
   onEditCandidate
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [logoError, setLogoError] = useState(false);
+
+  const offlineRef = useRef(null);
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (offlineRef.current && !offlineRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   return (
     <header className="border-b border-slate-300 bg-white fixed top-0 left-0 right-0 z-50 shadow-sm h-20 md:h-16 shrink-0">
       <div className="h-full px-4 md:px-6 flex items-center justify-between">
@@ -67,7 +84,8 @@ export default function Header({
         <div className="flex items-center space-x-1 md:space-x-3 shrink-0 flex-nowrap relative">
 
           {/* Real-time Online/Offline Indicator (Interactive Toggle Badge) */}
-          <button
+          <div ref={offlineRef} className="relative">
+            <button
             onClick={() => setShowDropdown(!showDropdown)}
             className={`flex items-center space-x-1.5 px-2 py-1 md:px-3 md:py-1.5 rounded-xl border text-[10px] font-extrabold uppercase tracking-wider transition-all duration-200 whitespace-nowrap shrink-0 cursor-pointer shadow-xs relative hover:-translate-y-0.5 active:scale-95 ${isOnline
                 ? 'bg-emerald-50/70 border-emerald-250/90 text-emerald-750 hover:bg-emerald-100/70'
@@ -205,40 +223,72 @@ export default function Header({
               </div>
             </div>
           )}
-
-          {/* Icon buttons: Search & Notification Bell - Hidden on Mobile */}
-          <div className="hidden md:flex items-center space-x-0.5 text-slate-500 shrink-0">
-            <button className="p-1.5 hover:bg-slate-50 hover:text-slate-800 rounded-full transition cursor-pointer" title="Search">
-              <Search className="h-4.5 w-4.5" strokeWidth={2.5} />
-            </button>
-
-            <button className="p-1.5 hover:bg-slate-50 hover:text-slate-800 rounded-full transition cursor-pointer relative" title="Notifications">
-              <Bell className="h-4.5 w-4.5" strokeWidth={2.5} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 border border-white rounded-full"></span>
-            </button>
           </div>
 
-          {/* Styled Logout Button */}
+
+
+          {/* Profile Dropdown */}
           {user && (
-            isOnline ? (
+            <div ref={profileRef} className="relative">
               <button
-                onClick={onLogout}
-                className="flex items-center space-x-1 px-2.5 py-1.5 bg-rose-50/50 hover:bg-rose-100/50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold transition duration-200 cursor-pointer active:scale-95 shadow-xs whitespace-nowrap shrink-0"
-                title="Logout"
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className="flex items-center gap-1 md:gap-2 p-1 pl-1.5 md:pl-3 md:pr-1 rounded-full border border-slate-200 bg-white hover:shadow-md transition duration-200 cursor-pointer active:scale-95"
+                title="Profile Menu"
               >
-                <LogOut className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
-                <span className="hidden sm:inline whitespace-nowrap">Logout</span>
+                <Menu className="hidden md:block w-4 h-4 text-slate-500" />
+                <span className="hidden md:block text-xs font-bold text-slate-700">
+                  {user.username ? user.username.split(' ')[0] : 'User'}
+                </span>
+                <div className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#4F7DCB] text-white font-extrabold text-xs shrink-0">
+                  {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="md:hidden text-slate-400 pr-1 -ml-0.5">
+                  {showProfileDropdown ? <ChevronUp className="w-3 h-3" strokeWidth={3} /> : <ChevronDown className="w-3 h-3" strokeWidth={3} />}
+                </div>
               </button>
-            ) : (
-              <button
-                disabled
-                className="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl text-xs font-bold shadow-xs whitespace-nowrap shrink-0 cursor-not-allowed opacity-50"
-                title="Logout disabled offline to prevent lockout"
-              >
-                <LogOut className="h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
-                <span className="hidden sm:inline whitespace-nowrap">Logout</span>
-              </button>
-            )
+
+              {showProfileDropdown && (
+                <div className="absolute right-0 top-12 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 animate-fade-in text-xs">
+                  {/* User Info Header */}
+                  <div className="px-3 py-2.5 border-b border-slate-100 flex items-center gap-2.5">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#4F7DCB] text-white font-bold text-sm shrink-0">
+                      {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div className="flex flex-col overflow-hidden leading-tight">
+                      <span className="font-bold text-slate-800 truncate">{user.username}</span>
+                      <span className="text-[10px] text-slate-500 truncate">{user.email}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Menu Items */}
+                  <div className="py-1 border-b border-slate-100">
+                    <div className="px-3 py-1.5 hover:bg-slate-50 cursor-default text-slate-700 flex items-center gap-2.5 transition">
+                      <UserCircle className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-semibold">Role: {user.userType}</span>
+                    </div>
+                  </div>
+
+                  {/* Logout Button */}
+                  <div className="py-1">
+                    <button
+                      disabled={!isOnline}
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        onLogout();
+                      }}
+                      className={`w-full px-3 py-1.5 flex items-center gap-2.5 transition ${
+                        isOnline 
+                          ? 'hover:bg-slate-50 text-rose-500 cursor-pointer' 
+                          : 'text-slate-400 cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span className="font-semibold">Logout {!isOnline && '(Offline)'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
         </div>

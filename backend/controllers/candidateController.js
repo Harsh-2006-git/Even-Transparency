@@ -1,6 +1,7 @@
 import Candidate from '../models/Candidate.js';
 import Question from '../models/Question.js';
 import User from '../models/User.js';
+import AuditLog from '../models/AuditLog.js';
 import { calculateWCPScore } from '../utils/scoreCalculator.js';
 
 // ── In-memory question cache ─────────────────────────────────────────────────
@@ -109,6 +110,17 @@ export const createCandidate = async (req, res) => {
     const candidate = await Candidate.create({
       fullName, profilePhoto, phone: cleanPhone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
+    
+    try {
+      await AuditLog.create({
+        userId: mobiliserId || req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
+        action: 'CREATE',
+        entity: 'Candidate',
+        entityId: candidate.id,
+        details: `Registered candidate: ${fullName}`
+      });
+    } catch (logErr) { console.error('Audit log failed:', logErr); }
+
     res.status(201).json(candidate);
   } catch (error) {
     if (error.message.includes('Phone Number') || error.message.includes('Email')) {
@@ -162,7 +174,9 @@ export const updateCandidate = async (req, res) => {
       }
     }
 
+    let isInterview = false;
     if (wcpAnswers) {
+      isInterview = true;
       if (Object.keys(wcpAnswers).length > 0) {
         const questions = await getQuestions();
         const calcResult = calculateWCPScore(wcpAnswers, questions);
@@ -187,6 +201,16 @@ export const updateCandidate = async (req, res) => {
       fullName, profilePhoto, phone: cleanPhone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
 
+    try {
+      await AuditLog.create({
+        userId: mobiliserId || req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
+        action: isInterview ? 'INTERVIEW' : 'UPDATE',
+        entity: 'Candidate',
+        entityId: candidate.id,
+        details: isInterview ? `Submitted interview assessment for: ${fullName || candidate.fullName}` : `Updated candidate: ${fullName || candidate.fullName}`
+      });
+    } catch (logErr) { console.error('Audit log failed:', logErr); }
+
     res.json(candidate);
   } catch (error) {
     if (error.message.includes('Phone Number') || error.message.includes('Email')) {
@@ -207,7 +231,19 @@ export const deleteCandidate = async (req, res) => {
     if (!candidate) {
       return res.status(404).json({ error: 'Candidate not found.' });
     }
+    const fullName = candidate.fullName;
     await candidate.destroy();
+
+    try {
+      await AuditLog.create({
+        userId: req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
+        action: 'DELETE',
+        entity: 'Candidate',
+        entityId: id,
+        details: `Deleted candidate: ${fullName}`
+      });
+    } catch (logErr) { console.error('Audit log failed:', logErr); }
+
     res.json({ message: 'Candidate deleted successfully.' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete candidate record.', message: error.message });

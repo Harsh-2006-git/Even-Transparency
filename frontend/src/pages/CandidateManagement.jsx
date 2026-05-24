@@ -526,73 +526,57 @@ export default function CandidateManagement({
       return;
     }
 
-    // Online mode: try syncing with backend first
-    try {
-      setLoading(true);
-      setApiMessage(null);
+    // Online mode: Use optimistic UI updates for instant feedback
+    setCandidates(prev => {
+      if (modalType === 'add') return [optimisticCandidate, ...prev];
+      return prev.map(c => c.id === mockId ? { ...c, ...payload } : c);
+    });
+    setModalType(null);
+    setEditingCandidate(null);
+    showToast(`Saving candidate "${payload.fullName}"...`, 'info');
 
-      let url = `${API}/candidates`;
-      let method = 'POST';
-      if (modalType === 'edit' && !editingCandidate.id.startsWith('temp-')) {
-        url = `${API}/candidates/${editingCandidate.id}`;
-        method = 'PUT';
-      }
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-      setLoading(false);
-
-      if (!res.ok) {
-        // Backend validation/constraint error: show message and keep modal open
-        setApiMessage({ type: 'error', text: data.error || 'Server validation failed.' });
-        showToast(data.error || 'Server validation failed.', 'error');
-        return;
-      }
-
-      // Succeeded: clean up IndexedDB if it was there
-      await db.candidates.where({ tempId: mockId }).delete();
-
-      // Update local state and close modal
-      setCandidates(prev => {
-        if (modalType === 'add') return [data, ...prev];
-        return prev.map(c => c.id === mockId ? data : c);
-      });
-      setModalType(null);
-      setEditingCandidate(null);
-      showToast(
-        modalType === 'add'
-          ? `Candidate "${payload.fullName}" registered successfully!`
-          : `Candidate "${payload.fullName}" details updated successfully!`,
-        'success'
-      );
-      fetchCandidates();
-    } catch (err) {
-      setLoading(false);
-      console.error('Network/server error during candidate save:', err);
-
-      // Save offline fallback: write to IndexedDB, update state, and close modal
-      try {
-        await db.candidates.put(dbPayload);
-        setCandidates(prev => {
-          if (modalType === 'add') return [optimisticCandidate, ...prev];
-          return prev.map(c => c.id === mockId ? { ...c, ...payload } : c);
-        });
-        setModalType(null);
-        setEditingCandidate(null);
-        showConfirm(
-          'Saved Offline',
-          `Network unreachable. Candidate "${payload.fullName}" has been saved locally and will sync once internet returns.`
-        );
-      } catch (dbErr) {
-        console.error('Failed to save candidate locally on fallback:', dbErr);
-        showToast('Failed to save candidate locally.', 'error');
-      }
+    let url = `${API}/candidates`;
+    let method = 'POST';
+    if (modalType === 'edit' && !editingCandidate.id.startsWith('temp-')) {
+      url = `${API}/candidates/${editingCandidate.id}`;
+      method = 'PUT';
     }
+
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          // Revert state if backend validation fails
+          setCandidates(prev => {
+            if (modalType === 'add') return prev.filter(c => c.id !== mockId);
+            return prev.map(c => c.id === mockId ? editingCandidate : c);
+          });
+          showToast(data.error || 'Server validation failed.', 'error');
+          return;
+        }
+        // Cleanup IndexedDB and apply true server response
+        await db.candidates.where({ tempId: mockId }).delete();
+        setCandidates(prev => prev.map(c => c.id === mockId ? data : c));
+        showToast(
+          modalType === 'add'
+            ? `Candidate "${payload.fullName}" registered successfully!`
+            : `Candidate "${payload.fullName}" details updated successfully!`,
+          'success'
+        );
+      })
+      .catch(async (err) => {
+        console.error('Network/server error during candidate save:', err);
+        try {
+          await db.candidates.put(dbPayload);
+          showToast(`Network error. "${payload.fullName}" saved locally and will sync once internet returns.`, 'warning');
+        } catch (dbErr) {
+          showToast('Failed to save candidate locally.', 'error');
+        }
+      });
   };
 
   // Handle Live Call Interview Form Submit
@@ -646,60 +630,46 @@ export default function CandidateManagement({
       return;
     }
 
-    // Online mode: try syncing with backend first
-    try {
-      setLoading(true);
+    // Online mode: use optimistic UI updates
+    setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? updatedCandidate : c));
+    setModalType(null);
+    setEditingCandidate(null);
+    showToast(`Saving interview for "${payload.fullName}"...`, 'info');
 
-      let url = `${API}/candidates/${mockId}`;
-      let method = 'PUT';
+    let url = `${API}/candidates/${mockId}`;
+    let method = 'PUT';
 
-      if (mockId.startsWith('temp-')) {
-        url = `${API}/candidates`;
-        method = 'POST';
-      }
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      setLoading(false);
-
-      if (!res.ok) {
-        // Backend validation/constraint error: show alert and keep modal open so they can correct details
-        showToast('Assessment Submission Failed: ' + (data.error || 'Server validation failed.'), 'error');
-        return;
-      }
-
-      // Succeeded: clean up IndexedDB if it was there
-      await db.candidates.where({ tempId: mockId }).delete();
-
-      // Update local state and close modal
-      setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? data : c));
-      setModalType(null);
-      setEditingCandidate(null);
-      showToast(`Interview for "${payload.fullName}" saved successfully! Fitment outcome: ${payload.outcome}.`, 'success');
-      fetchCandidates();
-    } catch (err) {
-      setLoading(false);
-      console.error('Network/server error during assessment save:', err);
-
-      // Save offline fallback: write to IndexedDB, update state, and close modal
-      try {
-        await db.candidates.put(dbPayload);
-        setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? updatedCandidate : c));
-        setModalType(null);
-        setEditingCandidate(null);
-        showConfirm(
-          'Saved Offline',
-          `Network error. Interview details for "${payload.fullName}" saved locally and will sync once internet returns.`
-        );
-      } catch (dbErr) {
-        console.error('Failed to save assessment locally on fallback:', dbErr);
-        showToast('Failed to save assessment locally.', 'error');
-      }
+    if (mockId.startsWith('temp-')) {
+      url = `${API}/candidates`;
+      method = 'POST';
     }
+
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          // Revert state if backend validation fails
+          setCandidates(prev => prev.map(c => c.id === mockId ? editingCandidate : c));
+          showToast('Assessment Submission Failed: ' + (data.error || 'Server validation failed.'), 'error');
+          return;
+        }
+        await db.candidates.where({ tempId: mockId }).delete();
+        setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? data : c));
+        showToast(`Interview for "${payload.fullName}" saved successfully! Fitment outcome: ${payload.outcome}.`, 'success');
+      })
+      .catch(async (err) => {
+        console.error('Network/server error during assessment save:', err);
+        try {
+          await db.candidates.put(dbPayload);
+          showToast(`Network error. Interview details for "${payload.fullName}" saved locally and will sync once internet returns.`, 'warning');
+        } catch (dbErr) {
+          showToast('Failed to save assessment locally.', 'error');
+        }
+      });
   };
 
   // Confirm delete handler
@@ -956,24 +926,26 @@ export default function CandidateManagement({
 
                       {/* Quick Actions */}
                       <td className="col-span-2 min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6 pt-2 border-t border-slate-100 min-[1000px]:border-none min-[1000px]:pt-0">
-                        <div className="flex items-center w-full min-[1000px]:justify-center gap-1.5 min-[1000px]:gap-2">
+                        <div className="flex items-center w-full min-[1000px]:justify-center gap-1.5 min-[1000px]:gap-2.5">
                           <button
                             onClick={() => openInterviewModal(c)}
-                            className={`flex-1 min-[1000px]:flex-none flex items-center justify-center gap-1 min-[1000px]:gap-1.5 py-1.5 px-2 min-[1000px]:py-1.5 min-[1000px]:px-3 border text-[10px] font-bold rounded-md min-[1000px]:rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer ${isInterviewed ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100' : 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 animate-pulse'}`}
+                            className={`flex-1 min-[1000px]:flex-none flex items-center justify-center gap-1 min-[1000px]:gap-2 py-1.5 px-2 min-[1000px]:py-2 min-[1000px]:px-4 border text-[10px] min-[1000px]:text-xs font-bold rounded-md min-[1000px]:rounded-xl shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer ${isInterviewed ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100' : 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 animate-pulse'}`}
                           >
-                            <PhoneCall className="w-3.5 h-3.5 min-[1000px]:w-3 min-[1000px]:h-3 shrink-0" />
-                            {isInterviewed ? 'Review' : 'Interview'}
+                            <PhoneCall className="w-3.5 h-3.5 min-[1000px]:w-4 min-[1000px]:h-4 shrink-0" />
+                            <span className="min-[1000px]:hidden">{isInterviewed ? 'Review' : 'Interview'}</span>
+                            <span className="hidden min-[1000px]:inline">{isInterviewed ? 'Review Assessment' : 'Take Interview'}</span>
                           </button>
                           <button
                             onClick={() => openViewModal(c)}
-                            className="flex-1 min-[1000px]:flex-none flex items-center justify-center gap-1 min-[1000px]:gap-1.5 py-1.5 px-2 min-[1000px]:py-1.5 min-[1000px]:px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] font-bold rounded-md min-[1000px]:rounded-lg shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer"
+                            className="flex-1 min-[1000px]:flex-none flex items-center justify-center gap-1 min-[1000px]:gap-2 py-1.5 px-2 min-[1000px]:py-2 min-[1000px]:px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] min-[1000px]:text-xs font-bold rounded-md min-[1000px]:rounded-xl shadow-xs transition hover:-translate-y-0.5 whitespace-nowrap cursor-pointer"
                           >
-                            <UserCheck className="w-3.5 h-3.5 min-[1000px]:w-3 min-[1000px]:h-3 shrink-0" />
-                            Profile
+                            <UserCheck className="w-3.5 h-3.5 min-[1000px]:w-4 min-[1000px]:h-4 shrink-0" />
+                            <span className="min-[1000px]:hidden">Profile</span>
+                            <span className="hidden min-[1000px]:inline">View Profile</span>
                           </button>
                           <button
                             onClick={() => triggerDelete(c)}
-                            className="shrink-0 flex items-center justify-center p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-md min-[1000px]:rounded-lg transition cursor-pointer"
+                            className="shrink-0 flex items-center justify-center p-1.5 min-[1000px]:p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-md min-[1000px]:rounded-xl transition cursor-pointer"
                             title="Delete Candidate"
                           >
                             <Trash2 className="w-4 h-4" />

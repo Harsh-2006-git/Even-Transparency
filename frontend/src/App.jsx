@@ -7,6 +7,7 @@ import CandidateManagement from './pages/CandidateManagement';
 import StaffManagement from './pages/StaffManagement';
 import QuestionManagement from './pages/QuestionManagement';
 import Analytics from './pages/Analytics';
+import AuditLogs from './pages/AuditLogs';
 import { db } from './db/indexedDB';
 import { RefreshCw, Clock, AlertCircle, Check, CheckCircle, Edit, X } from 'lucide-react';
 
@@ -39,9 +40,9 @@ function App() {
   const getSectionsForRole = (role) => {
     switch (role) {
       case 'Admin':
-        return ['overview', 'candidate-management', 'register-staff', 'domain-weights', 'database-schema', 'access-privileges', 'question-management', 'analytics'];
+        return ['overview', 'candidate-management', 'register-staff', 'domain-weights', 'database-schema', 'access-privileges', 'question-management', 'analytics', 'audit-logs'];
       case 'Mobiliser':
-        return ['overview', 'candidate-management', 'register-candidate', 'scoring-checksheet', 'mobilized-candidates'];
+        return ['overview', 'candidate-management'];
       default:
         return ['overview'];
     }
@@ -95,7 +96,7 @@ function App() {
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isOnline]);
 
   // Scroll to top when navigating to a new section (but do NOT reset hash on load)
@@ -261,7 +262,6 @@ function App() {
   // Capture PWA installation prompts
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
       setDeferredPrompt(e);
       const dismissed = sessionStorage.getItem('evencargo_install_dismissed');
       if (!dismissed) {
@@ -347,13 +347,13 @@ function App() {
       for (let i = 0; i < progressList.length; i++) {
         const item = progressList[i];
         const itemResult = resultsList.find(r => r.tempId === item.tempId);
-        
+
         // Mark current item as syncing
         setSyncProgress(prev => prev.map((pItem, idx) => idx === i ? { ...pItem, status: 'syncing' } : pItem));
-        
+
         // Wait 600ms for visual transition
         await new Promise(resolve => setTimeout(resolve, 600));
-        
+
         // Mark current item as done or error
         const nextStatus = itemResult && itemResult.status === 'success' ? 'done' : 'error';
         setSyncProgress(prev => prev.map((pItem, idx) => idx === i ? { ...pItem, status: nextStatus } : pItem));
@@ -502,40 +502,7 @@ function App() {
       {/* Spacer to prevent fixed header from overlapping content */}
       <div className="h-20 md:h-16 shrink-0" />
 
-      {/* PWA Install Banner */}
-      {showInstallBanner && deferredPrompt && (
-        <div className="bg-gradient-to-r from-indigo-650 to-blue-600 text-white px-4 py-3 shadow-md flex items-center justify-between gap-3 text-xs shrink-0 animate-slide-in-top">
-          <div className="flex items-center space-x-3 min-w-0">
-            {/* Logo */}
-            <div className="h-9 w-9 bg-white rounded-xl p-1 shrink-0 shadow-sm flex items-center justify-center">
-              <img src="/logo.png" alt="Even Cargo Logo" className="h-7 w-7 object-contain" />
-            </div>
-            <div className="min-w-0">
-              <h4 className="font-extrabold text-[12px] md:text-[13px] leading-tight">Install Even Cargo App</h4>
-              <p className="text-[9px] md:text-[10px] text-indigo-100 font-medium mt-0.5 leading-normal truncate">
-                Download the app on your device for offline candidate registration & zero-delay load times.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleInstallApp}
-              className="bg-white hover:bg-slate-100 text-indigo-750 font-extrabold px-3 py-1.5 rounded-xl transition duration-150 active:scale-95 cursor-pointer text-[10px] md:text-xs shadow-sm whitespace-nowrap"
-            >
-              Download App
-            </button>
-            <button
-              onClick={() => {
-                setShowInstallBanner(false);
-                sessionStorage.setItem('evencargo_install_dismissed', 'true');
-              }}
-              className="p-1 hover:bg-white/10 rounded-lg text-indigo-150 hover:text-white transition cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* Grid container with sidebar and content */}
       <div className="flex flex-1 overflow-hidden relative">
@@ -588,13 +555,15 @@ function App() {
                 showToast={showToast}
               />
             ) : activeSection === 'question-management' ? (
-              <QuestionManagement 
+              <QuestionManagement
                 showToast={showToast}
               />
             ) : activeSection === 'analytics' ? (
               <Analytics
                 user={user}
               />
+            ) : activeSection === 'audit-logs' ? (
+              <AuditLogs user={user} />
             ) : (
               <Dashboard
                 user={user}
@@ -755,15 +724,14 @@ function App() {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`p-3 md:p-4 rounded-xl md:rounded-2xl border shadow-xl flex items-start gap-2.5 md:gap-3 pointer-events-auto animate-slide-in-right transition-all duration-300 ${
-              toast.type === 'success'
+            className={`p-3 md:p-4 rounded-xl md:rounded-2xl border shadow-xl flex items-start gap-2.5 md:gap-3 pointer-events-auto animate-slide-in-right transition-all duration-300 ${toast.type === 'success'
                 ? 'bg-emerald-50 border-emerald-250 text-emerald-800'
                 : toast.type === 'error'
                   ? 'bg-rose-50 border-rose-250 text-rose-800'
                   : toast.type === 'warning'
                     ? 'bg-amber-50 border-amber-200 text-amber-800'
                     : 'bg-indigo-50 border-indigo-200 text-indigo-800'
-            }`}
+              }`}
           >
             {toast.type === 'success' && <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-emerald-600 shrink-0 mt-0.5" />}
             {toast.type === 'error' && <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-rose-600 shrink-0 mt-0.5" />}
@@ -791,7 +759,7 @@ function App() {
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
               <CheckCircle className="w-10 h-10 text-emerald-600" />
             </div>
-            
+
             <div className="space-y-1.5">
               <h3 className="font-extrabold text-sm text-slate-800">{confirmModal.title || 'Saved Successfully'}</h3>
               <p className="text-[10px] text-slate-500 font-semibold leading-relaxed px-2">

@@ -12,7 +12,8 @@ import {
   ChevronRight,
   UserCheck,
   HelpCircle,
-  BarChart2
+  BarChart2,
+  FileText
 } from 'lucide-react';
 
 export default function Sidebar({ user, activeSection, onSectionChange, isOpen, toggleSidebar, isCollapsed }) {
@@ -26,14 +27,12 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
           { id: 'register-staff', label: 'Register Staff', icon: UserPlus },
           { id: 'question-management', label: 'Manage Questions', icon: HelpCircle },
           { id: 'analytics', label: 'Analytics', icon: BarChart2 },
+          { id: 'audit-logs', label: 'Audit Logs', icon: FileText },
         ];
       case 'Mobiliser':
         return [
           { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
           { id: 'candidate-management', label: 'Manage Candidates', icon: Users },
-          { id: 'register-candidate', label: 'Register Candidate', icon: UserPlus },
-          { id: 'scoring-checksheet', label: 'Assessment Checksheet', icon: CheckSquare },
-          { id: 'mobilized-candidates', label: 'Mobilized Candidates', icon: UserCheck },
         ];
       default:
         return [

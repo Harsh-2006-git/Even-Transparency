@@ -8,11 +8,14 @@ import { Op } from 'sequelize';
 import User from './models/User.js';
 import Candidate from './models/Candidate.js';
 import Question from './models/Question.js';
+import AuditLog from './models/AuditLog.js';
 import authRoutes from './routes/authRoutes.js';
 import candidateRoutes from './routes/candidateRoutes.js';
 import questionRoutes from './routes/questionRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
+import auditLogRoutes from './routes/auditLogRoutes.js';
 import { seedQuestions } from './seeders/questionSeeder.js';
+import { initCronJobs } from './utils/cronJobs.js';
 
 dotenv.config();
 
@@ -49,6 +52,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/candidates', candidateRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
 // Seeding helper to create initial administrator
 const seedDefaultAdmin = async () => {
@@ -138,6 +142,9 @@ const startServer = async () => {
           console.error('[Backfill] Error during candidate status backfill:', statusBackfillErr.message);
         }
       })();
+
+      // Initialize Scheduled Cron Jobs
+      initCronJobs();
     }
   } catch (error) {
     console.error('[Express] Server failed to start:', error.message);

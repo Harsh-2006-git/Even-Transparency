@@ -486,7 +486,8 @@ export default function CandidateManagement({
       wcpAnswers: modalType === 'add' ? null : editingCandidate.wcpAnswers || null,
       mobiliserId: modalType === 'add' ? user.id : editingCandidate.mobiliserId,
       recruiterName: modalType === 'add' ? (user.username || user.name || 'System Admin') : (editingCandidate.recruiterName || user.username || 'System Admin'),
-      recruiterPhone: modalType === 'add' ? (user.phone || null) : (editingCandidate.recruiterPhone || user.phone || null)
+      recruiterPhone: modalType === 'add' ? (user.phone || null) : (editingCandidate.recruiterPhone || user.phone || null),
+      isInterview: false
     };
 
     const mockId = modalType === 'add' ? `temp-${uuidv4()}` : editingCandidate.id;
@@ -599,7 +600,8 @@ export default function CandidateManagement({
       score: parseInt(score) || 0,
       outcome,
       wcpAnswers: Object.keys(selectedQuestions).length > 0 ? selectedQuestions : null,
-      notes: notes.trim() || null
+      notes: notes.trim() || null,
+      isInterview: true
     };
 
     const mockId = editingCandidate.id;

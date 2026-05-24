@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import cors from 'cors';
 import compression from 'compression';
 import dotenv from 'dotenv';
@@ -16,10 +17,12 @@ import analyticsRoutes from './routes/analyticsRoutes.js';
 import auditLogRoutes from './routes/auditLogRoutes.js';
 import { seedQuestions } from './seeders/questionSeeder.js';
 import { initCronJobs } from './utils/cronJobs.js';
+import { initSocket } from './utils/socket.js';
 
 dotenv.config();
 
 const app = express();
+const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Enable CORS for frontend connectivity
@@ -83,8 +86,11 @@ const startServer = async () => {
       await sequelize.sync();
     }
 
-    // Start Express Web Server immediately so it's ready to handle requests
-    app.listen(PORT, () => {
+    // Attach Socket.io to the HTTP server
+    initSocket(httpServer);
+
+    // Start Express Web Server
+    httpServer.listen(PORT, () => {
       if (health.success) {
         console.log(`[Server] running on port ${PORT} (Database Connected & Synced)`);
       } else {

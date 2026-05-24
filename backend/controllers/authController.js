@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import User from '../models/User.js';
-import AuditLog from '../models/AuditLog.js';
+import { createAuditLog } from '../utils/auditHelper.js';
 
 // Helper to hash password
 const hashPassword = (password) => {
@@ -30,15 +30,13 @@ export const register = async (req, res) => {
     const userResponse = newUser.toJSON();
     delete userResponse.password;
 
-    try {
-      await AuditLog.create({
-        userId: req.headers['x-admin-id'] || null,
-        action: 'CREATE',
-        entity: 'Staff',
-        entityId: newUser.id,
-        details: `Created staff member: ${username}`
-      });
-    } catch (logErr) { console.error('Audit log failed:', logErr); }
+    await createAuditLog({
+      userId: req.headers['x-admin-id'] || null,
+      action: 'CREATE',
+      entity: 'Staff',
+      entityId: newUser.id,
+      details: `Created staff member: ${username}`
+    });
 
     res.status(201).json(userResponse);
   } catch (error) {
@@ -76,15 +74,13 @@ export const login = async (req, res) => {
     const userResponse = userInstance.toJSON();
     delete userResponse.password;
 
-    try {
-      await AuditLog.create({
-        userId: userInstance.id,
-        action: 'LOGIN',
-        entity: 'User',
-        entityId: userInstance.id,
-        details: 'User logged in successfully'
-      });
-    } catch (logErr) { console.error('Audit log failed:', logErr); }
+    await createAuditLog({
+      userId: userInstance.id,
+      action: 'LOGIN',
+      entity: 'User',
+      entityId: userInstance.id,
+      details: `User logged in: ${userInstance.username}`
+    });
 
     res.json(userResponse);
   } catch (error) {
@@ -132,15 +128,13 @@ export const updateStaff = async (req, res) => {
     const userResponse = userInstance.toJSON();
     delete userResponse.password;
 
-    try {
-      await AuditLog.create({
-        userId: req.headers['x-admin-id'] || null,
-        action: 'UPDATE',
-        entity: 'Staff',
-        entityId: userInstance.id,
-        details: `Updated staff profile: ${updateData.username}`
-      });
-    } catch (logErr) { console.error('Audit log failed:', logErr); }
+    await createAuditLog({
+      userId: req.headers['x-admin-id'] || null,
+      action: 'UPDATE',
+      entity: 'Staff',
+      entityId: userInstance.id,
+      details: `Updated staff profile: ${updateData.username}`
+    });
 
     res.json(userResponse);
   } catch (error) {
@@ -167,20 +161,18 @@ export const deleteStaff = async (req, res) => {
       return res.status(400).json({ error: 'You cannot delete your own admin account.' });
     }
 
-    const username = userInstance.username;
+    const deletedUsername = userInstance.username;
     await userInstance.destroy();
 
-    try {
-      await AuditLog.create({
-        userId: adminId || null,
-        action: 'DELETE',
-        entity: 'Staff',
-        entityId: id,
-        details: `Deleted staff member: ${username}`
-      });
-    } catch (logErr) { console.error('Audit log failed:', logErr); }
+    await createAuditLog({
+      userId: adminId || null,
+      action: 'DELETE',
+      entity: 'Staff',
+      entityId: id,
+      details: `Deleted staff member: ${deletedUsername}`
+    });
 
-    res.json({ message: `Staff member "${username}" deleted successfully.` });
+    res.json({ message: `Staff member "${deletedUsername}" deleted successfully.` });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete staff member', message: error.message });
   }

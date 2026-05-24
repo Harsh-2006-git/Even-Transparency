@@ -1,7 +1,17 @@
-import { useState, useEffect } from 'react';
-import { FileText, Search, Filter, Loader2, RefreshCw, Sliders } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
+import { FileText, Search, Loader2, RefreshCw, Sliders, Wifi, WifiOff } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_BASE_URL;
+const API = import.meta.env.VITE_API_BASE_URL;          // e.g. http://localhost:5000/api
+// Socket.io connects to the base origin, without the /api path
+const SOCKET_URL = (() => {
+  try {
+    const url = new URL(API);
+    return `${url.protocol}//${url.host}`; // → http://localhost:5000
+  } catch {
+    return 'http://localhost:5000';
+  }
+})();
 
 export default function AuditLogs({ user }) {
   const [logs, setLogs] = useState([]);
@@ -10,11 +20,11 @@ export default function AuditLogs({ user }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAction, setFilterAction] = useState('ALL');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [newCount, setNewCount] = useState(0);
+  const socketRef = useRef(null);
 
-  useEffect(() => {
-    if (user) fetchLogs();
-  }, [user]);
-
+  // ── Initial data fetch ────────────────────────────────────────────────────
   const fetchLogs = async () => {
     try {
       setLoading(true);
@@ -25,6 +35,7 @@ export default function AuditLogs({ user }) {
       if (!res.ok) throw new Error('Failed to fetch audit logs');
       const data = await res.json();
       setLogs(data);
+      setNewCount(0);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -32,6 +43,50 @@ export default function AuditLogs({ user }) {
     }
   };
 
+  useEffect(() => {
+    if (!user) return;
+    fetchLogs();
+  }, [user]);
+
+  // ── Socket.io real-time connection ────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setSocketConnected(true);
+      console.log('[Socket.io] ✅ Connected to server. Socket ID:', socket.id);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('[Socket.io] ❌ Connection error:', err.message);
+    });
+
+    socket.on('disconnect', (reason) => {
+      setSocketConnected(false);
+      console.log('[Socket.io] ⚠️ Disconnected. Reason:', reason);
+    });
+
+    // Real-time new log event
+    socket.on('audit:new', (log) => {
+      console.log('[Socket.io] 📋 audit:new received:', log.action, log.entity);
+      setLogs(prev => [log, ...prev]);
+      setNewCount(prev => prev + 1);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
+
+  // ── Filtering ─────────────────────────────────────────────────────────────
   const filteredLogs = logs.filter(log => {
     const matchesSearch =
       (log.user?.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -42,20 +97,22 @@ export default function AuditLogs({ user }) {
   });
 
   const getActionBadge = (action) => {
-    const base = 'px-2 py-0.5 rounded text-[9px] min-[1000px]:text-[10px] font-bold border capitalize';
+    const base = 'px-2 py-0.5 rounded text-[9px] min-[1000px]:text-[10px] font-bold border';
     switch (action) {
-      case 'CREATE':   return <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>CREATE</span>;
-      case 'UPDATE':   return <span className={`${base} bg-blue-50 text-blue-700 border-blue-200`}>UPDATE</span>;
-      case 'DELETE':   return <span className={`${base} bg-rose-50 text-rose-700 border-rose-200`}>DELETE</span>;
-      case 'LOGIN':    return <span className={`${base} bg-amber-50 text-amber-700 border-amber-200`}>LOGIN</span>;
-      case 'INTERVIEW':return <span className={`${base} bg-purple-50 text-purple-700 border-purple-200`}>INTERVIEW</span>;
-      default:         return <span className={`${base} bg-slate-100 text-slate-700 border-slate-200`}>{action}</span>;
+      case 'CREATE':    return <span className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>CREATE</span>;
+      case 'UPDATE':    return <span className={`${base} bg-blue-50 text-blue-700 border-blue-200`}>UPDATE</span>;
+      case 'DELETE':    return <span className={`${base} bg-rose-50 text-rose-700 border-rose-200`}>DELETE</span>;
+      case 'LOGIN':     return <span className={`${base} bg-amber-50 text-amber-700 border-amber-200`}>LOGIN</span>;
+      case 'INTERVIEW': return <span className={`${base} bg-purple-50 text-purple-700 border-purple-200`}>INTERVIEW</span>;
+      default:          return <span className={`${base} bg-slate-100 text-slate-700 border-slate-200`}>{action}</span>;
     }
   };
 
   const formatTime = (ts) => {
-    const d = new Date(ts);
-    return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+    return new Date(ts).toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: true
+    });
   };
 
   return (
@@ -64,8 +121,27 @@ export default function AuditLogs({ user }) {
       {/* Title block */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Audit Logs</h2>
-          <p className="text-xs text-slate-500 mt-1">Track all system activity, user actions, and data changes.</p>
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            Audit Logs
+            {/* Live indicator */}
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border ${socketConnected ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+              {socketConnected
+                ? <><Wifi className="w-2.5 h-2.5" /> LIVE</>
+                : <><WifiOff className="w-2.5 h-2.5" /> OFFLINE</>
+              }
+            </span>
+            {/* New entries badge */}
+            {newCount > 0 && (
+              <button
+                onClick={() => { setNewCount(0); }}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-600 text-white animate-pulse cursor-pointer"
+                title="New entries received – click to dismiss"
+              >
+                +{newCount} new
+              </button>
+            )}
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">Track all system activity, user actions, and data changes. Updates in real-time.</p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <button
@@ -148,10 +224,12 @@ export default function AuditLogs({ user }) {
                 </tr>
               </thead>
               <tbody className="block min-[1000px]:table-row-group divide-y divide-slate-150 text-xs">
-                {filteredLogs.map((log) => (
-                  <tr key={log.id} className="grid grid-cols-2 mb-1.5 min-[1000px]:mb-0 gap-1.5 p-2 min-[1000px]:gap-4 min-[1000px]:p-0 min-[1000px]:table-row hover:bg-slate-50/50 transition duration-150">
-
-                    {/* Timestamp + Action (mobile: col-span-2, desktop: split) */}
+                {filteredLogs.map((log, idx) => (
+                  <tr
+                    key={log.id || idx}
+                    className={`grid grid-cols-2 mb-1.5 min-[1000px]:mb-0 gap-1.5 p-2 min-[1000px]:gap-4 min-[1000px]:p-0 min-[1000px]:table-row hover:bg-slate-50/50 transition duration-150 ${idx === 0 && newCount > 0 ? 'bg-indigo-50/40 min-[1000px]:bg-indigo-50/40' : ''}`}
+                  >
+                    {/* Timestamp */}
                     <td className="col-span-2 min-[1000px]:table-cell min-[1000px]:py-4 min-[1000px]:px-6">
                       <div className="flex items-center justify-between min-[1000px]:block gap-2">
                         <p className="text-[9px] min-[1000px]:text-[10px] font-mono text-slate-500">{formatTime(log.created_at)}</p>
@@ -195,7 +273,7 @@ export default function AuditLogs({ user }) {
         )}
       </div>
 
-      {/* Record count */}
+      {/* Footer */}
       {!loading && !error && filteredLogs.length > 0 && (
         <p className="text-[10px] text-slate-400 font-semibold text-right">
           Showing {filteredLogs.length} of {logs.length} log{logs.length !== 1 ? 's' : ''}

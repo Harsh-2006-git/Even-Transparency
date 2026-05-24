@@ -1,7 +1,7 @@
 import Candidate from '../models/Candidate.js';
 import Question from '../models/Question.js';
 import User from '../models/User.js';
-import AuditLog from '../models/AuditLog.js';
+import { createAuditLog } from '../utils/auditHelper.js';
 import { calculateWCPScore } from '../utils/scoreCalculator.js';
 
 // ── In-memory question cache ─────────────────────────────────────────────────
@@ -111,15 +111,13 @@ export const createCandidate = async (req, res) => {
       fullName, profilePhoto, phone: cleanPhone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
     
-    try {
-      await AuditLog.create({
-        userId: mobiliserId || req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
-        action: 'CREATE',
-        entity: 'Candidate',
-        entityId: candidate.id,
-        details: `Registered candidate: ${fullName}`
-      });
-    } catch (logErr) { console.error('Audit log failed:', logErr); }
+    await createAuditLog({
+      userId: mobiliserId || req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
+      action: 'CREATE',
+      entity: 'Candidate',
+      entityId: candidate.id,
+      details: `Registered candidate: ${fullName}`
+    });
 
     res.status(201).json(candidate);
   } catch (error) {
@@ -174,10 +172,11 @@ export const updateCandidate = async (req, res) => {
       }
     }
 
-    let isInterview = false;
-    if (wcpAnswers) {
-      isInterview = true;
-      if (Object.keys(wcpAnswers).length > 0) {
+    let isInterview = req.body.isInterview === true;
+    let wcpAnswersToSave = candidate.wcpAnswers;
+
+    if (isInterview) {
+      if (wcpAnswers && Object.keys(wcpAnswers).length > 0) {
         const questions = await getQuestions();
         const calcResult = calculateWCPScore(wcpAnswers, questions);
         score = calcResult.finalScore;
@@ -190,26 +189,26 @@ export const updateCandidate = async (req, res) => {
         } else {
           computedOutcome = 'Pending';
         }
+        wcpAnswersToSave = wcpAnswers;
       } else {
         score = null;
         wcpScoreBreakdown = null;
         computedOutcome = 'Pending';
+        wcpAnswersToSave = null;
       }
     }
 
     await candidate.update({
-      fullName, profilePhoto, phone: cleanPhone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
+      fullName, profilePhoto, phone: cleanPhone, email, dateOfBirth, gender, maritalStatus, city, state, score, wcpAnswers: wcpAnswersToSave, wcpScoreBreakdown, notes, outcome: computedOutcome, status, mobiliserId, recruiterName, recruiterPhone
     });
 
-    try {
-      await AuditLog.create({
-        userId: mobiliserId || req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
-        action: isInterview ? 'INTERVIEW' : 'UPDATE',
-        entity: 'Candidate',
-        entityId: candidate.id,
-        details: isInterview ? `Submitted interview assessment for: ${fullName || candidate.fullName}` : `Updated candidate: ${fullName || candidate.fullName}`
-      });
-    } catch (logErr) { console.error('Audit log failed:', logErr); }
+    await createAuditLog({
+      userId: mobiliserId || req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
+      action: isInterview ? 'INTERVIEW' : 'UPDATE',
+      entity: 'Candidate',
+      entityId: candidate.id,
+      details: isInterview ? `Submitted interview assessment for: ${fullName || candidate.fullName}` : `Updated candidate: ${fullName || candidate.fullName}`
+    });
 
     res.json(candidate);
   } catch (error) {
@@ -234,15 +233,13 @@ export const deleteCandidate = async (req, res) => {
     const fullName = candidate.fullName;
     await candidate.destroy();
 
-    try {
-      await AuditLog.create({
-        userId: req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
-        action: 'DELETE',
-        entity: 'Candidate',
-        entityId: id,
-        details: `Deleted candidate: ${fullName}`
-      });
-    } catch (logErr) { console.error('Audit log failed:', logErr); }
+    await createAuditLog({
+      userId: req.headers['x-admin-id'] || req.headers['x-mobiliser-id'] || null,
+      action: 'DELETE',
+      entity: 'Candidate',
+      entityId: id,
+      details: `Deleted candidate: ${fullName}`
+    });
 
     res.json({ message: 'Candidate deleted successfully.' });
   } catch (error) {

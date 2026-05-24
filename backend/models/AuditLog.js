@@ -31,6 +31,11 @@ const AuditLog = sequelize.define('AuditLog', {
   details: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  expires_at: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   }
 }, {
   tableName: 'audit_logs',

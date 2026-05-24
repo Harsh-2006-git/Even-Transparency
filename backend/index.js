@@ -16,7 +16,6 @@ import questionRoutes from './routes/questionRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import auditLogRoutes from './routes/auditLogRoutes.js';
 import { seedQuestions } from './seeders/questionSeeder.js';
-import { initCronJobs } from './utils/cronJobs.js';
 import { initSocket } from './utils/socket.js';
 
 dotenv.config();
@@ -84,6 +83,12 @@ const startServer = async () => {
     if (health.success) {
       // Sync tables silently (without alter: true, which is very slow on cloud DBs)
       await sequelize.sync();
+      try {
+        await sequelize.query('ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;');
+        await sequelize.query('UPDATE audit_logs SET expires_at = created_at + INTERVAL \'30 days\' WHERE expires_at IS NULL;');
+      } catch (err) {
+        console.error('Failed to run migration for expires_at column:', err.message);
+      }
     }
 
     // Attach Socket.io to the HTTP server
@@ -149,8 +154,6 @@ const startServer = async () => {
         }
       })();
 
-      // Initialize Scheduled Cron Jobs
-      initCronJobs();
     }
   } catch (error) {
     console.error('[Express] Server failed to start:', error.message);

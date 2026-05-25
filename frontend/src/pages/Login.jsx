@@ -89,16 +89,20 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
   return (
     <div className="relative min-h-screen min-h-[100dvh] bg-[#f4f6fb] flex items-center justify-center p-4 sm:p-6 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
       
-      {/* Top right Download App button */}
-      {deferredPrompt && (
-        <button
-          onClick={onInstall}
-          className="absolute top-4 right-4 md:top-6 md:right-6 z-50 flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-indigo-650 hover:text-indigo-800 border border-slate-250 rounded-xl text-xs font-extrabold shadow-sm transition duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer"
-        >
-          <Download className="w-4 h-4 text-indigo-650" />
-          <span>Download App</span>
-        </button>
-      )}
+      {/* Floating Download App button - alone in the top right corner */}
+      <button
+        onClick={() => {
+          if (deferredPrompt) {
+            onInstall();
+          } else {
+            alert('To install the app, look for the install icon in your browser address bar or use the "Add to Home Screen" option in your browser menu.');
+          }
+        }}
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-white hover:bg-slate-50 text-indigo-650 hover:text-indigo-800 border border-slate-250 rounded-lg md:rounded-xl text-[10px] md:text-xs font-extrabold shadow-sm transition duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+      >
+        <Download className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-650" />
+        <span>Download App</span>
+      </button>
 
       {/* Centered card wrapper */}
       <div className="w-full max-w-[1120px] bg-white rounded-[24px] lg:rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.06)] border border-slate-200 grid lg:grid-cols-2">
@@ -165,10 +169,10 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
         </div>
 
         {/* RIGHT COLUMN: SECURE LOGIN FORM */}
-        <div className="bg-white flex flex-col overflow-hidden">
-          
+        <div className="bg-white flex flex-col overflow-hidden relative">
+
           {/* Top Banner Image */}
-          <div className="w-full h-32 sm:h-36 lg:h-40 overflow-hidden shrink-0 bg-white">
+          <div className="relative w-full h-32 sm:h-36 lg:h-40 overflow-hidden shrink-0 bg-white">
             {!bannerError ? (
               <img
                 src="/banner.png"

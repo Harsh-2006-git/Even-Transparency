@@ -1,6 +1,6 @@
 import db from '../../models/index.js';
 import { createAuditLog } from '../../services/auditService.js';
-import { createPaymentReference, validateStipendAmount } from '../../services/paymentService.js';
+import { createPaymentReference, validateStipendAmount } from '../../services/razorpayService.js';
 
 export const confirmStipendPayment = async (req, res) => {
   try {

@@ -6,6 +6,13 @@ export const createNotification = async ({
   targetUserIds = [],
   title,
   message,
+  body,
+  channel = 'in_app',
+  channels = ['in_app'],
+  entityType = null,
+  entityId = null,
+  actionUrl = null,
+  isSilent = false,
   language = 'en',
   sentByAdminId = null
 }) => {
@@ -16,8 +23,17 @@ export const createNotification = async ({
       target_user_ids: targetUserIds,
       title,
       message,
+      body: body || message,
       language,
-      delivery_status: 'sent',
+      channel,
+      channels,
+      delivery_status: 'Sent',
+      retry_count: 0,
+      entity_type: entityType,
+      entity_id: entityId,
+      action_url: actionUrl,
+      is_read: false,
+      is_silent: isSilent,
       sent_by_admin_id: sentByAdminId,
       sent_at: new Date()
     });
@@ -36,3 +52,14 @@ export const notifyCandidate = ({ candidateId, title, message, type = 'candidate
     message
   })
 );
+
+export const markNotificationRead = async (notificationId) => {
+  const notification = await db.AdminNotification.findByPk(notificationId);
+  if (!notification) return null;
+  await notification.update({
+    delivery_status: 'Read',
+    is_read: true,
+    read_at: new Date()
+  });
+  return notification;
+};

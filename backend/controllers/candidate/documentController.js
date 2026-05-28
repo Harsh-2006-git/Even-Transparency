@@ -2,7 +2,7 @@ import db from '../../models/index.js';
 import { recalculateProfileCompletion } from '../../utils/profileCompletion.js';
 import { createAuditLog } from '../../services/auditService.js';
 import { notifyCandidate } from '../../services/notificationService.js';
-import { prepareUpload } from '../../services/storageService.js';
+import { fileExists, generateUploadUrl, generateViewUrl } from '../../services/storageService.js';
 
 export const requestDocumentUpload = async (req, res) => {
   try {
@@ -11,21 +11,19 @@ export const requestDocumentUpload = async (req, res) => {
       return res.status(400).json({ error: 'Document type and file name are required.' });
     }
 
-    const upload = prepareUpload({
-      ownerType: 'candidate',
-      ownerId: req.candidate.id,
-      fileName: file_name
+    const upload = await generateUploadUrl({
+      candidateId: req.candidate.id,
+      documentType: document_type,
+      mimeType: mime_type,
+      fileSize: Number(file_size || 0)
     });
 
     return res.status(200).json({
-      message: 'Document upload prepared.',
-      document: {
-        document_type,
-        file_name,
-        file_size,
-        mime_type,
-        file_url: upload.fileUrl,
-        storage_key: upload.storageKey
+      message: 'Upload URL generated. You have 5 minutes to complete the upload.',
+      upload: {
+        ...upload,
+        fileName: file_name,
+        documentType: document_type
       }
     });
   } catch (error) {
@@ -40,6 +38,7 @@ export const confirmDocumentUpload = async (req, res) => {
       document_type,
       file_name,
       file_url,
+      s3_key,
       file_size,
       mime_type,
       expiry_date
@@ -47,6 +46,13 @@ export const confirmDocumentUpload = async (req, res) => {
 
     if (!document_type || !file_name || !file_url) {
       return res.status(400).json({ error: 'Document type, file name and file URL are required.' });
+    }
+
+    if (s3_key) {
+      const exists = await fileExists(s3_key);
+      if (!exists) {
+        return res.status(400).json({ error: 'Upload not detected in S3. Please upload the file before confirming.' });
+      }
     }
 
     const document = await db.CandidateDocument.create({
@@ -100,5 +106,27 @@ export const listCandidateDocuments = async (req, res) => {
   } catch (error) {
     console.error('List candidate documents error:', error);
     return res.status(500).json({ error: 'Failed to fetch documents.' });
+  }
+};
+
+export const getCandidateDocumentViewUrl = async (req, res) => {
+  try {
+    const document = await db.CandidateDocument.findOne({
+      where: {
+        id: req.params.id,
+        candidate_id: req.candidate.id
+      }
+    });
+
+    if (!document) return res.status(404).json({ error: 'Document not found.' });
+
+    const key = document.file_url?.split('.amazonaws.com/')[1];
+    if (!key) return res.status(400).json({ error: 'Document is not backed by an S3 object.' });
+
+    const viewUrl = await generateViewUrl(key);
+    return res.status(200).json({ viewUrl, expiresInSeconds: 900 });
+  } catch (error) {
+    console.error('Get document view URL error:', error);
+    return res.status(500).json({ error: 'Failed to generate document view URL.' });
   }
 };

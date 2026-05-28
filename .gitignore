@@ -37,3 +37,9 @@ lerna-debug.log*
 # Temporary / Agent Workspace directories
 .gemini/
 brain/
+
+# Local reference material
+Helper/
+helper/
+app portal user schema (1).pdf
+apprenticeship portal use case (1).pdf

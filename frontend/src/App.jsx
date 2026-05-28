@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
-import Login from './pages/Login';
+import AdminLogin from './pages/admin/Login';
+import EmployerLogin from './pages/employer/Login';
+import EmployerOnboarding from './pages/employer/Onboarding';
+import CandidateLogin from './pages/candidate/Login';
+import CandidateAuth from './pages/candidate/Auth';
+import CandidateDashboard from './pages/candidate/Dashboard';
 import Dashboard from './pages/Dashboard';
-import CandidateManagement from './pages/CandidateManagement';
-import StaffManagement from './pages/StaffManagement';
-import QuestionManagement from './pages/QuestionManagement';
-import Analytics from './pages/Analytics';
-import AuditLogs from './pages/AuditLogs';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import Employers from './pages/admin/Employers';
+import CompanyManagement from './pages/admin/CompanyManagement';
+import EmployerCompanyManagement from './pages/employer/CompanyManagement';
 import { db } from './db/indexedDB';
 import { RefreshCw, Clock, AlertCircle, Check, CheckCircle, Edit, X } from 'lucide-react';
 
@@ -19,6 +23,9 @@ function App() {
     const saved = localStorage.getItem('evencargo_session');
     return saved ? JSON.parse(saved) : null;
   });
+
+  // Auth screen view: 'staff' | 'employer' | 'employer-onboarding'
+  const [authView, setAuthView] = useState('staff');
 
   // Connection and Sync states
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -40,12 +47,20 @@ function App() {
   const getSectionsForRole = (role) => {
     switch (role) {
       case 'Admin':
-        return ['overview', 'candidate-management', 'register-staff', 'domain-weights', 'database-schema', 'access-privileges', 'question-management', 'analytics', 'audit-logs'];
+        return ['overview', 'employers', 'company-management'];
+      case 'Employer':
+        return ['overview', 'company-management'];
       case 'Mobiliser':
-        return ['overview', 'candidate-management'];
+        return ['overview'];
       default:
         return ['overview'];
     }
+  };
+
+  const canAccessCompanyManagement = (currentUser) => {
+    const accessLevel = (currentUser?.userType || '').toLowerCase();
+    const designation = (currentUser?.role || '').toLowerCase();
+    return accessLevel === 'company admin' || designation === 'company admin';
   };
 
   const handleToggleSidebar = () => {
@@ -64,9 +79,9 @@ function App() {
   useEffect(() => {
     const handleHashChange = () => {
       if (!isOnline) {
-        setActiveSection('candidate-management');
-        if (window.location.hash !== '#/candidate-management') {
-          window.location.hash = '/candidate-management';
+        setActiveSection('overview');
+        if (window.location.hash !== '#/overview') {
+          window.location.hash = '/overview';
         }
         return;
       }
@@ -77,15 +92,18 @@ function App() {
       const role = user?.userType || 'Mobiliser';
       const allowedSections = getSectionsForRole(role);
       const targetSection = allowedSections.includes(section) ? section : 'overview';
+      const guardedSection = targetSection === 'company-management' && !canAccessCompanyManagement(user)
+        ? 'overview'
+        : targetSection;
 
-      setActiveSection(targetSection);
+      setActiveSection(guardedSection);
     };
 
     if (user) {
       if (!isOnline) {
-        setActiveSection('candidate-management');
-        if (window.location.hash !== '#/candidate-management') {
-          window.location.hash = '/candidate-management';
+        setActiveSection('overview');
+        if (window.location.hash !== '#/overview') {
+          window.location.hash = '/overview';
         }
       } else if (!window.location.hash) {
         window.location.hash = '/' + activeSection;
@@ -437,18 +455,26 @@ function App() {
 
   // Fetch initial data when user becomes authenticated
   useEffect(() => {
-    if (user) {
+    if (user && user.userType === 'Mobiliser') {
       fetchCandidates();
-      if (user.userType === 'Admin') {
-        fetchStaff();
-      }
     }
   }, [user]);
 
   // Handle successful login
   const handleLoginSuccess = (userData) => {
-    setUser(userData);
-    localStorage.setItem('evencargo_session', JSON.stringify(userData));
+    const normalizedUser = {
+      ...userData,
+      token: userData?.token || userData?.accessToken || userData?.authToken || null,
+      username: userData?.username || userData?.full_name || userData?.user?.full_name || userData?.user?.email || userData?.email,
+      full_name: userData?.full_name || userData?.user?.full_name || userData?.username || userData?.email,
+      email: userData?.email || userData?.user?.email || '',
+      userType: userData?.userType || userData?.user?.userType || (userData?.user?.role === 'admin' ? 'Employer' : userData?.role) || 'Employer',
+      role: userData?.role || userData?.user?.role || 'admin',
+      employer: userData?.employer || null
+    };
+
+    setUser(normalizedUser);
+    localStorage.setItem('evencargo_session', JSON.stringify(normalizedUser));
   };
 
   // Handle logout
@@ -470,15 +496,54 @@ function App() {
       id: candidate.tempId
     };
     setOfflineEditCandidate(editPayload);
-    setActiveSection('candidate-management');
-    window.location.hash = '/candidate-management';
+    setActiveSection('overview');
+    window.location.hash = '/overview';
   };
 
   // If not logged in, render the secure Login gate
   if (!user) {
+    if (authView === 'employer-onboarding') {
+      return (
+        <EmployerOnboarding
+          onOnboardingSuccess={() => setAuthView('employer')}
+          onCancel={() => setAuthView('employer')}
+        />
+      );
+    }
+    if (authView === 'employer') {
+      return (
+        <EmployerLogin
+          onLoginSuccess={handleLoginSuccess}
+          onStartOnboarding={() => setAuthView('employer-onboarding')}
+          onSwitchToCandidate={() => setAuthView('candidate')}
+          onSwitchToStaff={() => setAuthView('staff')}
+          deferredPrompt={deferredPrompt}
+          onInstall={handleInstallApp}
+        />
+      );
+    }
+    if (authView === 'candidate-auth') {
+      return (
+        <CandidateAuth
+          onAuthSuccess={handleLoginSuccess}
+          onBackToLogin={() => setAuthView('candidate')}
+        />
+      );
+    }
+    if (authView === 'candidate') {
+      return (
+        <CandidateLogin
+          onLoginSuccess={handleLoginSuccess}
+          onStartAuth={() => setAuthView('candidate-auth')}
+          onSwitchToStaff={() => setAuthView('staff')}
+        />
+      );
+    }
     return (
-      <Login
+      <AdminLogin
         onLoginSuccess={handleLoginSuccess}
+        onSwitchToEmployer={() => setAuthView('employer')}
+        onSwitchToCandidate={() => setAuthView('candidate')}
         deferredPrompt={deferredPrompt}
         onInstall={handleInstallApp}
       />
@@ -533,37 +598,19 @@ function App() {
               </div>
             )}
 
-            {/* Conditionally render pages based on active section */}
-            {activeSection === 'candidate-management' ? (
-              <CandidateManagement
-                user={user}
-                candidates={candidates}
-                setCandidates={setCandidates}
-                fetchCandidates={fetchCandidates}
-                isOnline={isOnline}
-                offlineEditCandidate={offlineEditCandidate}
-                setOfflineEditCandidate={setOfflineEditCandidate}
-                showToast={showToast}
-                showConfirm={showConfirm}
-              />
-            ) : activeSection === 'register-staff' ? (
-              <StaffManagement
-                user={user}
-                staffList={staffList}
-                setStaffList={setStaffList}
-                fetchStaff={fetchStaff}
-                showToast={showToast}
-              />
-            ) : activeSection === 'question-management' ? (
-              <QuestionManagement
-                showToast={showToast}
-              />
-            ) : activeSection === 'analytics' ? (
-              <Analytics
-                user={user}
-              />
-            ) : activeSection === 'audit-logs' ? (
-              <AuditLogs user={user} />
+            {user.userType === 'Admin' ? (
+              <>
+                {activeSection === 'overview' && <AdminDashboard adminUser={user} />}
+                {activeSection === 'employers' && <Employers adminUser={user} showToast={showToast} />}
+                {activeSection === 'company-management' && canAccessCompanyManagement(user) && <CompanyManagement adminUser={user} showToast={showToast} />}
+              </>
+            ) : user.userType === 'Employer' ? (
+              <>
+                {activeSection === 'overview' && <EmployerCompanyManagement user={user} showToast={showToast} />}
+                {activeSection === 'company-management' && <EmployerCompanyManagement user={user} showToast={showToast} />}
+              </>
+            ) : user.userType === 'Candidate' ? (
+              <CandidateDashboard user={user} />
             ) : (
               <Dashboard
                 user={user}
@@ -720,7 +767,7 @@ function App() {
       )}
 
       {/* Toast Notification Container */}
-      <div className="fixed bottom-4 right-4 left-4 md:left-auto md:max-w-sm z-[9999] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed top-24 right-4 left-4 md:left-auto md:max-w-sm z-[9999] flex flex-col gap-2 pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}

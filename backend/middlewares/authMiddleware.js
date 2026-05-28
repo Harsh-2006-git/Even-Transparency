@@ -1,21 +1,34 @@
-import User from '../models/User.js';
+import jwt from 'jsonwebtoken';
+import db from '../models/index.js';
 
-export const requireAdmin = async (req, res, next) => {
-  const adminId = req.headers['x-admin-id'];
+const JWT_SECRET = process.env.JWT_SECRET || 'even_cargo_secret_key';
 
-  if (!adminId) {
-    return res.status(401).json({ error: 'Authentication required. Admin ID missing in headers.' });
-  }
-
+export const authMiddleware = async (req, res, next) => {
   try {
-    const admin = await User.findByPk(adminId);
-    if (!admin || admin.userType !== 'Admin') {
-      return res.status(403).json({ error: 'Access denied. Only administrators can perform this action.' });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authorization header missing or invalid format' });
     }
-    
-    req.admin = admin;
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const user = await db.EmployerUser.findByPk(decoded.id, {
+      include: [db.Employer]
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'User no longer exists' });
+    }
+
+    if (user.account_status === 'suspended') {
+      return res.status(403).json({ error: 'Your account is suspended' });
+    }
+
+    req.user = user;
     next();
   } catch (error) {
-    res.status(505).json({ error: 'Authorization check failed.', message: error.message });
+    console.error('Auth middleware error:', error.message);
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 };

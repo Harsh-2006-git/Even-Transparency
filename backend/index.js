@@ -6,22 +6,16 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import sequelize, { testConnection } from './config/db.js';
 import { Op } from 'sequelize';
-import User from './models/User.js';
-import Candidate from './models/Candidate.js';
-import Question from './models/Question.js';
-import AuditLog from './models/AuditLog.js';
+import employerRoutes from './routes/employerRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import candidateRoutes from './routes/candidateRoutes.js';
-import questionRoutes from './routes/questionRoutes.js';
-import analyticsRoutes from './routes/analyticsRoutes.js';
-import auditLogRoutes from './routes/auditLogRoutes.js';
-import { seedQuestions } from './seeders/questionSeeder.js';
-import { initSocket } from './utils/socket.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import './models/index.js';
 
 dotenv.config();
 
 const app = express();
-const httpServer = http.createServer(app);
+
 const PORT = process.env.PORT || 5000;
 
 // Enable CORS for frontend connectivity
@@ -49,122 +43,23 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-// 2. Mount Modular Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/candidates', candidateRoutes);
-app.use('/api/questions', questionRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/audit-logs', auditLogRoutes);
-
-// Seeding helper to create initial administrator
-const seedDefaultAdmin = async () => {
-  try {
-    const userCount = await User.count();
-    if (userCount === 0) {
-      const adminPassword = crypto.createHash('sha256').update('adminpassword').digest('hex');
-      await User.create({
-        username: 'Even Cargo',
-        email: 'admin@evencargo.in',
-        password: adminPassword,
-        phone: '+91 99999 99999',
-        userType: 'Admin'
-      });
-    }
-  } catch (err) {
-    console.error('[Seeder] Failed to seed default admin:', err.message);
-  }
-};
+app.use('/api', authRoutes);
+app.use('/api', employerRoutes);
+app.use('/api', candidateRoutes);
+app.use('/api', notificationRoutes);
 
 // Synchronize database models and start listening
 const startServer = async () => {
   try {
-    const health = await testConnection();
-
-    if (health.success) {
-      // Sync tables silently (without alter: true, which is very slow on cloud DBs)
-      await sequelize.sync();
-      try {
-        await sequelize.query('ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;');
-        await sequelize.query('UPDATE audit_logs SET expires_at = created_at + INTERVAL \'30 days\' WHERE expires_at IS NULL;');
-      } catch (err) {
-        console.error('Failed to run migration for expires_at column:', err.message);
-      }
-
-      // Migration: add location column to users table if it doesn't exist
-      try {
-        await sequelize.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS location VARCHAR(150);');
-        console.log('[Migration] users.location column ready.');
-      } catch (err) {
-        console.error('[Migration] Failed to add location column to users:', err.message);
-      }
-    }
-
-    // Attach Socket.io to the HTTP server
-    initSocket(httpServer);
-
-    // Start Express Web Server
-    httpServer.listen(PORT, () => {
-      if (health.success) {
-        console.log(`[Server] running on port ${PORT} (Database Connected & Synced)`);
-      } else {
-        console.warn('[Database] Warning: Sync skipped (Database is unreachable).');
-        console.log(`[Server] running on port ${PORT} (Database Offline)`);
-      }
+    await sequelize.authenticate();
+    console.log('Database connection has been established successfully.');
+    await sequelize.sync();
+    console.log('All models synced successfully.');
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
     });
-
-    if (health.success) {
-      // Run seed check silently
-      await seedDefaultAdmin();
-      await seedQuestions();
-
-      // Fire-and-forget backfills so they don't block server startup
-      (async () => {
-        try {
-          const candidatesToBackfill = await Candidate.findAll({
-            where: {
-              mobiliserId: { [Op.ne]: null },
-              [Op.or]: [
-                { recruiterName: null },
-                { recruiterPhone: null }
-              ]
-            }
-          });
-
-          if (candidatesToBackfill.length > 0) {
-            console.log(`[Backfill] Found ${candidatesToBackfill.length} candidates missing recruiter details. Backfilling...`);
-            for (const candidate of candidatesToBackfill) {
-              const recruiter = await User.findByPk(candidate.mobiliserId);
-              if (recruiter) {
-                await candidate.update({
-                  recruiterName: recruiter.username,
-                  recruiterPhone: recruiter.phone
-                });
-              }
-            }
-          }
-        } catch (backfillErr) {
-          console.error('[Backfill] Error during candidate recruiter backfill:', backfillErr.message);
-        }
-
-        try {
-          const candidatesToBackfillStatus = await Candidate.findAll({
-            where: { status: null }
-          });
-
-          if (candidatesToBackfillStatus.length > 0) {
-            console.log(`[Backfill] Found ${candidatesToBackfillStatus.length} candidates missing status. Backfilling to 'pending'...`);
-            for (const candidate of candidatesToBackfillStatus) {
-              await candidate.update({ status: 'pending' });
-            }
-          }
-        } catch (statusBackfillErr) {
-          console.error('[Backfill] Error during candidate status backfill:', statusBackfillErr.message);
-        }
-      })();
-
-    }
   } catch (error) {
-    console.error('[Express] Server failed to start:', error.message);
+    console.error('Failed to start server / sync database:', error);
   }
 };
 

@@ -1,20 +1,18 @@
-import express from 'express';
-import { 
-  getCandidates, 
-  createCandidate, 
-  getCandidateById, 
-  updateCandidate, 
-  deleteCandidate,
-  bulkSyncCandidates
-} from '../controllers/candidateController.js';
+import { Router } from 'express';
+import { login, register } from '../controllers/candidate/authController.js';
+import { confirmDocumentUpload, listCandidateDocuments, requestDocumentUpload } from '../controllers/candidate/documentController.js';
+import { sendCandidateOTP, verifyCandidateOTP } from '../controllers/candidate/otpController.js';
+import { candidateAuthMiddleware } from '../middlewares/candidateAuthMiddleware.js';
 
-const router = express.Router();
+const router = Router();
 
-router.get('/', getCandidates);
-router.post('/', createCandidate);
-router.post('/sync', bulkSyncCandidates);
-router.get('/:id', getCandidateById);
-router.put('/:id', updateCandidate);
-router.delete('/:id', deleteCandidate);
+router.post('/auth/candidate/register', register);
+router.post('/auth/candidate/login', login);
+router.post('/auth/candidate/otp/send', sendCandidateOTP);
+router.post('/auth/candidate/otp/verify', verifyCandidateOTP);
+
+router.get('/candidate/documents', candidateAuthMiddleware, listCandidateDocuments);
+router.post('/candidate/documents/upload-request', candidateAuthMiddleware, requestDocumentUpload);
+router.post('/candidate/documents/confirm', candidateAuthMiddleware, confirmDocumentUpload);
 
 export default router;

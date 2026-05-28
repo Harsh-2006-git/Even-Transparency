@@ -13,26 +13,35 @@ import {
   UserCheck,
   HelpCircle,
   BarChart2,
-  FileText
+  FileText,
+  Building2,
+  Settings2
 } from 'lucide-react';
 
 export default function Sidebar({ user, activeSection, onSectionChange, isOpen, toggleSidebar, isCollapsed }) {
+  const canAccessCompanyManagement = () => {
+    const accessLevel = (user?.userType || '').toLowerCase();
+    const designation = (user?.role || '').toLowerCase();
+    return accessLevel === 'company admin' || designation === 'company admin';
+  };
+
   // Define sidebar items based on the logged-in user type
   const getSidebarItems = () => {
     switch (user?.userType) {
       case 'Admin':
         return [
           { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-          { id: 'candidate-management', label: 'Manage Candidates', icon: Users },
-          { id: 'register-staff', label: 'Register Staff', icon: UserPlus },
-          { id: 'question-management', label: 'Manage Questions', icon: HelpCircle },
-          { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-          { id: 'audit-logs', label: 'Audit Logs', icon: FileText },
+          { id: 'employers', label: 'Employers', icon: Building2 },
+          ...(canAccessCompanyManagement() ? [{ id: 'company-management', label: 'Company Management', icon: Settings2 }] : []),
+        ];
+      case 'Employer':
+        return [
+          { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'company-management', label: 'Company Management', icon: Settings2 },
         ];
       case 'Mobiliser':
         return [
           { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-          { id: 'candidate-management', label: 'Manage Candidates', icon: Users },
         ];
       default:
         return [
@@ -104,13 +113,13 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
               title={isCollapsed ? `${user.username} (${user.email}) - ${user.userType}` : ''}
             >
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-blue-600 flex items-center justify-center font-extrabold text-white text-xs shrink-0 shadow-xs select-none">
-                {user.username.substring(0, 2).toUpperCase()}
+                {(user.username || user.full_name || 'US').substring(0, 2).toUpperCase()}
               </div>
               <div className={`text-left min-w-0 ${isCollapsed ? 'md:hidden block' : 'block'}`}>
-                <p className="font-extrabold text-slate-800 text-xs leading-none">{user.username}</p>
+                <p className="font-extrabold text-slate-800 text-xs leading-none">{user.username || user.full_name}</p>
                 <p className="text-slate-500 font-semibold text-[10px] truncate mt-1">{user.email}</p>
                 <span className="inline-block px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-[8px] uppercase tracking-wider rounded-md mt-1.5 leading-none">
-                  {user.userType}
+                  {user.userType || user.role}
                 </span>
               </div>
             </div>

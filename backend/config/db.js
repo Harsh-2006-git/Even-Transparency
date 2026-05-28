@@ -73,7 +73,9 @@ const sequelize = new Sequelize(databaseUrl, {
       ? { rejectUnauthorized: false }
       : false,
     // Custom socket stream to override DNS lookup for resolving Neon DB hostname
-    stream: () => new CustomSocket()
+    ...(databaseUrl && !databaseUrl.includes('localhost') && !databaseUrl.includes('127.0.0.1')
+      ? { stream: () => new CustomSocket() }
+      : {})
   }
 });
 

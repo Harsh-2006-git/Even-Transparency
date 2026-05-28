@@ -11,13 +11,14 @@ import {
   ShieldCheck,
   Sparkles,
   Download,
+  ArrowRight,
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
-export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export default function Login({ onLoginSuccess, onSwitchToEmployer, deferredPrompt, onInstall }) {
+  const [username, setUsername] = useState('admin@evencargo.in');
+  const [password, setPassword] = useState('admin@pass123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -77,7 +78,7 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
     {
       icon: <BarChart3 size={18} />,
       title: 'Role-based Access',
-      desc: 'Mobiliser and Admin access for better oversight and control.',
+      desc: 'Admin access for approvals, staff controls, analytics and audit oversight.',
     },
     {
       icon: <PieChart size={18} />,
@@ -138,11 +139,11 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
 
             <div>
               <h2 className="text-[26px] leading-tight font-bold text-[#112B5C]">
-                Empowering Women. <br />
-                Driving Logistics Forward.
+                Admin control for every <br />
+                hiring and partner workflow.
               </h2>
               <p className="text-xs leading-relaxed text-slate-500 mt-2 max-w-[450px] font-normal">
-                Even Cargo is a platform to hire, train and empower women to build a strong logistics network with their own vehicles.
+                Review candidates, manage staff, approve employer partners and monitor operational performance from one workspace.
               </p>
             </div>
           </div>
@@ -210,16 +211,16 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
                   <span className="text-[#4F7DCB] ml-1.5">Cargo</span>
                 </h1>
                 <p className="text-[11px] text-slate-500 font-normal text-center">
-                  Empowering Women. Driving Logistics Forward.
+                  Admin Control Portal
                 </p>
               </div>
 
               <div className="text-center lg:text-left">
                 <h2 className="text-2xl font-bold text-slate-800">
-                  Welcome Back
+                  Admin Portal
                 </h2>
                 <p className="mt-1 text-xs text-slate-500 font-normal">
-                  Sign in to your staff portal account
+                  Sign in to manage Even Cargo operations
                 </p>
               </div>
 
@@ -228,7 +229,7 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
               {/* Email Input */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block pl-0.5">
-                  Email / Username
+                  Admin Email
                 </label>
                 <div className="relative">
                   <Mail
@@ -239,7 +240,7 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter email"
+                    placeholder="admin@evencargo.in"
                     className="w-full h-12 rounded-xl border border-slate-250 bg-white pl-10 pr-4 text-xs text-slate-700 outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-blue-50/50 transition placeholder:text-slate-400 font-normal"
                     required
                   />
@@ -250,8 +251,8 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center pl-0.5">
                   <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
-                    Password
-                  </label>
+                    Admin Password
+                    </label>
                   <button
                     type="button"
                     className="text-[10px] font-semibold text-[#2563eb] hover:underline"
@@ -293,16 +294,28 @@ export default function Login({ onLoginSuccess, deferredPrompt, onInstall }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold text-xs shadow-md shadow-blue-100 hover:scale-[1.01] active:scale-[0.99] transition disabled:opacity-50 flex items-center justify-center"
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold text-xs shadow-md shadow-blue-100 hover:scale-[1.01] active:scale-[0.99] transition disabled:opacity-50 flex items-center justify-center cursor-pointer"
               >
-                {loading ? 'Authenticating...' : 'Sign In'}
+                {loading ? 'Authenticating...' : 'Sign In as Admin'}
               </button>
 
             </form>
 
+            {/* Switch to Employer Login */}
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={onSwitchToEmployer}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4F7DCB] hover:text-[#385b9b] transition cursor-pointer hover:underline"
+              >
+                <span>Employer Partner Portal</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
             {/* Copyright Footer */}
-            <div className="pt-4 border-t border-slate-100">
-              <p className="text-[9px] text-center text-slate-400 tracking-wide font-normal">
+            <div className="pt-4 border-t border-slate-100 text-center">
+              <p className="text-[9px] text-slate-400 tracking-wide font-normal">
                 © {new Date().getFullYear()} Even Cargo. All rights reserved.
               </p>
             </div>

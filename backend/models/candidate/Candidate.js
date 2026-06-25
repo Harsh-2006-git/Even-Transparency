@@ -58,6 +58,9 @@ export default (sequelize, DataTypes) => {
     preferred_language: {
       type: DataTypes.STRING
     },
+    mobile_otp_verified: {
+      type: DataTypes.BOOLEAN
+    },
     aadhaar_number_encrypted: {
       type: DataTypes.STRING
     },
@@ -68,6 +71,21 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING
     },
     pan_number: {
+      type: DataTypes.STRING
+    },
+    resume_url: {
+      type: DataTypes.STRING
+    },
+    category_certificate_url: {
+      type: DataTypes.STRING
+    },
+    emergency_contact_name: {
+      type: DataTypes.STRING
+    },
+    emergency_contact_relation: {
+      type: DataTypes.STRING
+    },
+    emergency_contact_phone: {
       type: DataTypes.STRING
     },
     digilocker_linked: {

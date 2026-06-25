@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { LogOut, Menu, Database, X, CheckCircle2, RefreshCw, Edit, AlertCircle, UserCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { LogOut, Menu, Database, X, CheckCircle2, RefreshCw, Edit, AlertCircle, UserCircle, ChevronDown, ChevronUp, Search, Bell } from 'lucide-react';
 
 export default function Header({
   user,
@@ -29,6 +29,108 @@ export default function Header({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (user?.userType === 'Employer') {
+    const companyName = user.employer?.company_name || 'TechNova Solutions Pvt. Ltd.';
+    const getInitials = (name) => {
+      const clean = name || 'Company';
+      const parts = clean.trim().split(/\s+/);
+      return parts.length >= 2 
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : clean.substring(0, 2).toUpperCase();
+    };
+    const initials = getInitials(companyName);
+
+    return (
+      <header className="border-b border-slate-300 bg-white fixed top-0 left-0 right-0 z-50 shadow-sm h-20 md:h-16 shrink-0">
+        <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
+          
+          {/* Left: Hamburger & Brand Info */}
+          <div className="flex items-center shrink-0">
+            {isOnline ? (
+              <button
+                onClick={onToggleSidebar}
+                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition cursor-pointer"
+                aria-label="Toggle Sidebar"
+              >
+                <Menu className="h-5 w-5" strokeWidth={2.5} />
+              </button>
+            ) : (
+              <div className="p-2 text-slate-300 cursor-not-allowed" title="Navigation disabled offline">
+                <Menu className="h-5 w-5 opacity-40" strokeWidth={2.5} />
+              </div>
+            )}
+            
+            <div className="leading-tight whitespace-nowrap ml-1 flex flex-col justify-center">
+              <h1 className="font-extrabold text-[15px] md:text-[18px] tracking-tight flex items-baseline leading-none whitespace-nowrap">
+                <span className="text-[#4F7DCB]">Even</span>
+                <span className="text-[#F39A42]">Cargo</span>
+              </h1>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 whitespace-nowrap">
+                Employer Portal
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Notification, Avatar */}
+          <div className="flex items-center gap-3.5 shrink-0 ml-auto">
+            {/* Notification Bell */}
+            <button className="h-9 w-9 rounded-xl hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-800 transition flex items-center justify-center cursor-pointer relative shadow-xs active:scale-95">
+              <Bell className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 bg-[#6D3BFF] text-white rounded-full text-[8px] font-black h-4.5 w-4.5 flex items-center justify-center border-2 border-white shadow-sm">
+                6
+              </span>
+            </button>
+
+            {/* Profile Dropdown */}
+            <div className="relative" ref={profileRef}>
+              <button 
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                className="flex items-center gap-2.5 p-1 pr-3 pl-1 bg-white hover:bg-slate-50 rounded-full border border-slate-200 hover:shadow-sm transition cursor-pointer active:scale-95"
+              >
+                <div className="h-7.5 w-7.5 rounded-full bg-[#6D3BFF] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm shadow-violet-150">
+                  {initials}
+                </div>
+                <span className="hidden md:block text-xs font-black text-slate-700 max-w-[150px] truncate">
+                  {companyName}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={3} />
+              </button>
+
+              {showProfileDropdown && (
+                <div className="absolute right-0 top-11.5 w-52 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-1.5 text-xs animate-fade-in">
+                  <div className="px-3 py-2.5 border-b border-slate-100 flex items-center gap-2.5">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#6D3BFF] text-white font-black text-sm shrink-0">
+                      {initials}
+                    </div>
+                    <div className="flex flex-col overflow-hidden leading-tight">
+                      <span className="font-extrabold text-slate-800 truncate">{companyName}</span>
+                      <span className="text-[10px] text-slate-550 truncate">{user.email}</span>
+                    </div>
+                  </div>
+                  <div className="py-1">
+                    <button 
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        onLogout();
+                      }}
+                      className="w-full px-3 py-1.5 hover:bg-slate-50 text-rose-500 cursor-pointer flex items-center gap-2 font-bold transition"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="border-b border-slate-300 bg-white fixed top-0 left-0 right-0 z-50 shadow-sm h-20 md:h-16 shrink-0">
       <div className="h-full px-4 md:px-6 flex items-center justify-between">

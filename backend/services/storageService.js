@@ -1,4 +1,20 @@
 import crypto from 'crypto';
+import { v2 as cloudinary } from 'cloudinary';
+import dotenv from 'dotenv';
+
+// Pre-load environment variables for Cloudinary configuration in ES Modules
+dotenv.config();
+
+// Cloudinary URL map to cache successfully uploaded file URLs by key/publicId
+export const cloudinaryUrls = new Map();
+
+// Configure Cloudinary using environment credentials
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
 
 const ALLOWED_TYPES = {
   'image/jpeg': 'jpg',
@@ -10,26 +26,6 @@ const ALLOWED_TYPES = {
 const MAX_FILE_SIZES = {
   'Passport Photo': 2 * 1024 * 1024,
   default: 5 * 1024 * 1024
-};
-
-const getAwsClients = async () => {
-  if (!process.env.AWS_S3_BUCKET) {
-    throw new Error('AWS_S3_BUCKET is not configured.');
-  }
-
-  const s3 = await import('@aws-sdk/client-s3');
-  const presigner = await import('@aws-sdk/s3-request-presigner');
-  const s3Client = new s3.S3Client({
-    region: process.env.AWS_REGION || 'ap-south-1',
-    credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-      ? {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-        }
-      : undefined
-  });
-
-  return { ...s3, ...presigner, s3Client };
 };
 
 const validateFile = ({ documentType, mimeType, fileSize }) => {
@@ -53,64 +49,86 @@ export const generateUploadUrl = async ({ candidateId, documentType, mimeType, f
   validateFile({ documentType, mimeType, fileSize });
 
   const s3Key = createS3Key({ candidateId, documentType, mimeType });
-  const bucket = process.env.AWS_S3_BUCKET;
+  
+  // Point uploadUrl to the local express proxy endpoint which handles uploading to Cloudinary
+  const port = process.env.PORT || 5000;
+  const uploadUrl = `http://localhost:${port}/api/candidate/documents/upload-proxy?key=${encodeURIComponent(s3Key)}`;
+  
+  const resourceType = String(s3Key).endsWith('.pdf') ? 'raw' : 'image';
+  const fileUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/${resourceType}/upload/${s3Key}`;
 
-  try {
-    const { PutObjectCommand, getSignedUrl, s3Client } = await getAwsClients();
-    const command = new PutObjectCommand({
-      Bucket: bucket,
-      Key: s3Key,
-      ContentType: mimeType,
-      ContentLength: Number(fileSize || 0),
-      Metadata: {
-        candidateId: String(candidateId),
-        documentType,
-        uploadedAt: new Date().toISOString()
-      }
-    });
-    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
-    const fileUrl = `https://${bucket}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${s3Key}`;
-    return { uploadUrl, s3Key, fileUrl };
-  } catch (error) {
-    if (error.code === 'ERR_MODULE_NOT_FOUND') {
-      throw new Error('AWS SDK packages are not installed. Install @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner.');
-    }
-    throw error;
-  }
+  return { uploadUrl, s3Key, fileUrl };
 };
 
 export const generateViewUrl = async (s3Key, expiresIn = 900) => {
-  try {
-    const { GetObjectCommand, getSignedUrl, s3Client } = await getAwsClients();
-    return getSignedUrl(s3Client, new GetObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET,
-      Key: s3Key
-    }), { expiresIn });
-  } catch (error) {
-    if (error.code === 'ERR_MODULE_NOT_FOUND') {
-      throw new Error('AWS SDK packages are not installed. Install @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner.');
-    }
-    throw error;
+  // If s3Key starts with http or https, it is already a direct Cloudinary URL
+  if (String(s3Key).startsWith('http://') || String(s3Key).startsWith('https://')) {
+    return s3Key;
   }
+  const resourceType = String(s3Key).endsWith('.pdf') ? 'raw' : 'image';
+  return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/${resourceType}/upload/${s3Key}`;
 };
 
 export const deleteFile = async (s3Key) => {
-  const { DeleteObjectCommand, s3Client } = await getAwsClients();
-  await s3Client.send(new DeleteObjectCommand({
-    Bucket: process.env.AWS_S3_BUCKET,
-    Key: s3Key
-  }));
+  if (!s3Key) return;
+  
+  let key = s3Key;
+  if (String(s3Key).startsWith('http://') || String(s3Key).startsWith('https://')) {
+    const uploadIndex = s3Key.indexOf('/upload/');
+    if (uploadIndex !== -1) {
+      key = s3Key.substring(uploadIndex + 8);
+      if (key.startsWith('v')) {
+        const parts = key.split('/');
+        if (parts[0].match(/^v\d+$/)) {
+          parts.shift();
+          key = parts.join('/');
+        }
+      }
+    } else {
+      return;
+    }
+  }
+
+  const resourceType = String(key).endsWith('.pdf') ? 'raw' : 'image';
+  const publicId = resourceType === 'image' 
+    ? String(key).replace(/\.[^/.]+$/, "") 
+    : key;
+
+  try {
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+    console.log(`[Cloudinary Delete] Deleted asset ${publicId} of type ${resourceType}. Result:`, result);
+  } catch (error) {
+    console.error('Cloudinary delete error:', error);
+  }
 };
 
 export const fileExists = async (s3Key) => {
+  if (!s3Key) return false;
+  
+  let key = s3Key;
+  if (String(s3Key).startsWith('http://') || String(s3Key).startsWith('https://')) {
+    const uploadIndex = s3Key.indexOf('/upload/');
+    if (uploadIndex !== -1) {
+      key = s3Key.substring(uploadIndex + 8);
+      if (key.startsWith('v')) {
+        const parts = key.split('/');
+        if (parts[0].match(/^v\d+$/)) {
+          parts.shift();
+          key = parts.join('/');
+        }
+      }
+    }
+  }
+
+  const resourceType = String(key).endsWith('.pdf') ? 'raw' : 'image';
+  const publicId = resourceType === 'image' 
+    ? String(key).replace(/\.[^/.]+$/, "") 
+    : key;
+
   try {
-    const { HeadObjectCommand, s3Client } = await getAwsClients();
-    await s3Client.send(new HeadObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET,
-      Key: s3Key
-    }));
+    await cloudinary.api.resource(publicId, { resource_type: resourceType });
     return true;
-  } catch {
+  } catch (error) {
     return false;
   }
 };

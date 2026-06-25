@@ -7,12 +7,15 @@ import {
   Mail,
   MapPin,
   Phone,
+  TrendingUp,
   RefreshCw,
   Search,
   ShieldCheck,
   Users,
   XCircle,
-  ArrowLeft
+  ArrowLeft,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
@@ -25,6 +28,8 @@ export default function Employers({ adminUser, showToast }) {
   const [actingEmployerId, setActingEmployerId] = useState(null);
   const [employerSearch, setEmployerSearch] = useState('');
   const [employerRemarks, setEmployerRemarks] = useState('');
+  const [editingEmployer, setEditingEmployer] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   const fetchEmployers = async () => {
     setEmployersLoading(true);
@@ -48,7 +53,10 @@ export default function Employers({ adminUser, showToast }) {
   };
 
   useEffect(() => {
-    fetchEmployers();
+    const timer = setTimeout(() => {
+      fetchEmployers();
+    }, 0);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -118,6 +126,53 @@ export default function Employers({ adminUser, showToast }) {
     }
   };
 
+  const deleteEmployer = async (employerId) => {
+    const confirmed = window.confirm('Delete this employer permanently?');
+    if (!confirmed) return;
+
+    setActingEmployerId(employerId);
+    setEmployerActionLoading('delete');
+    try {
+      const res = await fetch(`${API}/admin/employers/${employerId}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-id': adminUser.id }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete employer.');
+      setEmployers((prev) => prev.filter((employer) => employer.id !== employerId));
+      if (detailedEmployerId === employerId) setDetailedEmployerId(null);
+      showToast?.(data.message, 'success');
+    } catch (err) {
+      showToast?.(err.message, 'error');
+    } finally {
+      setEmployerActionLoading(null);
+      setActingEmployerId(null);
+    }
+  };
+
+  const saveEmployerEdit = async (draft) => {
+    setEditLoading(true);
+    try {
+      const res = await fetch(`${API}/admin/employers/${draft.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-id': adminUser.id
+        },
+        body: JSON.stringify(draft)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update employer.');
+      setEmployers((prev) => prev.map((employer) => employer.id === draft.id ? data.employer : employer));
+      setEditingEmployer(null);
+      showToast?.(data.message, 'success');
+    } catch (err) {
+      showToast?.(err.message, 'error');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   // ---------------------------------------------------------------------------
   // DETAILS VIEW
   // ---------------------------------------------------------------------------
@@ -132,49 +187,84 @@ export default function Employers({ adminUser, showToast }) {
           Back to Employers
         </button>
 
-        <section className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden p-5 md:p-8">
-          <div className="space-y-6">
-            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 border-b border-slate-100 pb-6">
-              <div>
-                <StatusBadge status={detailedEmployer.verification_status || 'pending'} />
-                <h4 className="text-2xl font-black text-slate-850 mt-3">{displayValue(detailedEmployer.company_name)}</h4>
-                <p className="text-sm font-semibold text-slate-500 mt-1">{displayValue(detailedEmployer.legal_entity_name)}</p>
+        <section className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-50 via-white to-slate-50 border-b border-slate-200 p-5 md:p-8">
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-lg font-black shadow-sm">
+                  {(detailedEmployer.company_name || 'EM').slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <StatusBadge status={detailedEmployer.verification_status || 'pending'} />
+                  <h4 className="text-2xl font-black text-slate-850 mt-3">{displayValue(detailedEmployer.company_name)}</h4>
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold text-slate-500">
+                    <span className="inline-flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" />{displayValue(detailedEmployer.legal_entity_name)}</span>
+                    <span className="inline-flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{displayValue(detailedEmployer.official_email)}</span>
+                    <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" />{displayValue(detailedEmployer.headquarters_city || detailedEmployer.headquarters_state)}</span>
+                  </div>
+                </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateEmployerApproval(detailedEmployer.id, 'rejected', employerRemarks)}
-                  disabled={employerActionLoading === 'rejected'}
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60"
-                >
-                  <XCircle className="w-4 h-4" />
-                  {employerActionLoading === 'rejected' ? 'Declining...' : 'Decline'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateEmployerApproval(detailedEmployer.id, 'approved')}
-                  disabled={employerActionLoading === 'approved'}
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-60"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  {employerActionLoading === 'approved' ? 'Approving...' : 'Approve'}
-                </button>
+                {(detailedEmployer.verification_status || 'pending') === 'pending' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => updateEmployerApproval(detailedEmployer.id, 'rejected', employerRemarks)}
+                      disabled={employerActionLoading === 'rejected'}
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      {employerActionLoading === 'rejected' ? 'Declining...' : 'Decline'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateEmployerApproval(detailedEmployer.id, 'approved')}
+                      disabled={employerActionLoading === 'approved'}
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-60"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      {employerActionLoading === 'approved' ? 'Approving...' : 'Approve'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => deleteEmployer(detailedEmployer.id)}
+                    disabled={employerActionLoading === 'delete'}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {employerActionLoading === 'delete' ? 'Deleting...' : 'Delete'}
+                  </button>
+                )}
               </div>
             </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+              <MiniMetric label="Onboarding" value={detailedEmployer.onboarding_status} />
+              <MiniMetric label="Suspension" value={detailedEmployer.suspension_status} />
+              <MiniMetric label="Apprentices" value={detailedEmployer.active_apprentice_count || 0} />
+              <MiniMetric label="Registered" value={formatDate(detailedEmployer.created_at)} />
+            </div>
+          </div>
 
+          <div className="p-5 md:p-8 space-y-5">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <DetailBox icon={Building2} title="Company Information" rows={[
                 ['Type', detailedEmployer.company_type],
                 ['Industry', detailedEmployer.industry_sector],
+                ['Legal Entity', detailedEmployer.legal_entity_name],
+                ['Company Code', detailedEmployer.employer_code],
                 ['Size', detailedEmployer.company_size],
-                ['Website', detailedEmployer.website_url]
+                ['Website', detailedEmployer.website_url],
+                ['Incorporation Date', formatDate(detailedEmployer.incorporation_date)]
               ]} />
               <DetailBox icon={ShieldCheck} title="Compliance & Legal" rows={[
                 ['CIN', detailedEmployer.cin_number],
                 ['GST', detailedEmployer.gst_number],
                 ['PAN', detailedEmployer.pan_number],
                 ['NAPS ID', detailedEmployer.naps_establishment_id],
-                ['POSH', detailedEmployer.posh_compliance]
+                ['ESIC', detailedEmployer.esic_registration_number],
+                ['EPFO', detailedEmployer.epfo_registration_number]
               ]} />
               <DetailBox icon={MapPin} title="Headquarters" rows={[
                 ['Address', detailedEmployer.registered_address],
@@ -186,30 +276,34 @@ export default function Employers({ adminUser, showToast }) {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Mail className="w-4 h-4 text-indigo-600" />
-                  <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Primary Contact</h5>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0">
-                      <Mail className="w-4 h-4 text-slate-400" />
-                    </div>
-                    <p className="text-sm font-semibold text-slate-700">{displayValue(detailedEmployer.official_email)}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0">
-                      <Phone className="w-4 h-4 text-slate-400" />
-                    </div>
-                    <p className="text-sm font-semibold text-slate-700">{displayValue(detailedEmployer.official_phone_number)}</p>
-                  </div>
-                </div>
-              </div>
+              <DetailBox icon={Mail} title="Primary Contact" rows={[
+                ['Email', detailedEmployer.official_email],
+                ['Phone', detailedEmployer.official_phone_number],
+                ['Last Login', formatDate(detailedEmployer.last_login_at)],
+                ['Agreement Signed', detailedEmployer.agreement_signed ? 'Yes' : 'No'],
+                ['Agreement Signed At', formatDate(detailedEmployer.agreement_signed_at)]
+              ]} />
+              <DetailBox icon={TrendingUp} title="Metrics & Readiness" rows={[
+                ['Safety Score', detailedEmployer.safety_score],
+                ['Compliance Score', detailedEmployer.compliance_score],
+                ['Active Apprentices', detailedEmployer.active_apprentice_count],
+                ['Total Hired', detailedEmployer.total_apprentices_hired],
+                ['Retention Rate', detailedEmployer.retention_rate],
+                ['Average Stipend', detailedEmployer.average_stipend]
+              ]} />
+              <DetailBox icon={CheckCircle} title="Workplace Policies" rows={[
+                ['Gender Policy', detailedEmployer.gender_policy_status],
+                ['POSH Compliance', detailedEmployer.posh_compliance],
+                ['Maternity Policy', detailedEmployer.maternity_policy_available],
+                ['Women Friendly Workplace', detailedEmployer.women_friendly_workplace],
+                ['Suspension Reason', detailedEmployer.suspension_reason]
+              ]} />
 
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-200 hover:shadow-sm transition">
                 <div className="flex items-center gap-2 mb-4">
-                  <Users className="w-4 h-4 text-indigo-600" />
+                  <span className="h-8 w-8 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-650 flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </span>
                   <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Employer Users</h5>
                 </div>
                 {employerUsers.length === 0 ? (
@@ -364,29 +458,54 @@ export default function Employers({ adminUser, showToast }) {
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-right border-b border-slate-200">
                           <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => updateEmployerApproval(employer.id, 'approved')}
-                              disabled={actingEmployerId === employer.id && employerActionLoading === 'approved'}
-                              title="Approve"
-                              className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition disabled:opacity-50"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const reason = window.prompt("Optional: Enter reason for declining:");
-                                if (reason !== null) {
-                                  updateEmployerApproval(employer.id, 'rejected', reason);
-                                }
-                              }}
-                              disabled={actingEmployerId === employer.id && employerActionLoading === 'rejected'}
-                              title="Decline"
-                              className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition disabled:opacity-50"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
+                            {(employer.verification_status || 'pending') === 'pending' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => updateEmployerApproval(employer.id, 'approved')}
+                                  disabled={actingEmployerId === employer.id && employerActionLoading === 'approved'}
+                                  title="Approve"
+                                  className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition disabled:opacity-50"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const reason = window.prompt("Optional: Enter reason for declining:");
+                                    if (reason !== null) {
+                                      updateEmployerApproval(employer.id, 'rejected', reason);
+                                    }
+                                  }}
+                                  disabled={actingEmployerId === employer.id && employerActionLoading === 'rejected'}
+                                  title="Decline"
+                                  className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition disabled:opacity-50"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                            {(employer.verification_status || 'pending') !== 'pending' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingEmployer(employer)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-wider rounded-xl transition"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteEmployer(employer.id)}
+                                  disabled={actingEmployerId === employer.id && employerActionLoading === 'delete'}
+                                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold uppercase tracking-wider rounded-xl transition disabled:opacity-50"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Delete
+                                </button>
+                              </>
+                            )}
                             <div className="w-px h-6 bg-slate-200 mx-1"></div>
                             <button
                               type="button"
@@ -406,7 +525,110 @@ export default function Employers({ adminUser, showToast }) {
             </div>
           </div>
           {/* TABLE END */}
+      <EditEmployerModal
+        employer={editingEmployer}
+        loading={editLoading}
+        onCancel={() => setEditingEmployer(null)}
+        onSave={saveEmployerEdit}
+      />
     </div>
+  );
+}
+
+function EditEmployerModal({ employer, loading, onCancel, onSave }) {
+  const [draft, setDraft] = useState(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!employer) {
+        setDraft(null);
+        return;
+      }
+      setDraft({
+        id: employer.id,
+        company_name: employer.company_name || '',
+        legal_entity_name: employer.legal_entity_name || '',
+        company_type: employer.company_type || '',
+        industry_sector: employer.industry_sector || '',
+        company_size: employer.company_size || '',
+        website_url: employer.website_url || '',
+        official_email: employer.official_email || '',
+        official_phone_number: employer.official_phone_number || '',
+        gst_number: employer.gst_number || '',
+        pan_number: employer.pan_number || '',
+        naps_establishment_id: employer.naps_establishment_id || '',
+        registered_address: employer.registered_address || '',
+        headquarters_city: employer.headquarters_city || '',
+        headquarters_state: employer.headquarters_state || '',
+        headquarters_pincode: employer.headquarters_pincode || '',
+        verification_status: employer.verification_status || 'pending',
+        onboarding_status: employer.onboarding_status || 'pending',
+        suspension_status: employer.suspension_status || 'active'
+      });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [employer]);
+
+  if (!employer || !draft) return null;
+
+  const update = (key, value) => setDraft((prev) => ({ ...prev, [key]: value }));
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-3xl max-h-[90dvh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h3 className="text-lg font-black text-slate-900">Edit employer</h3>
+            <p className="mt-1 text-xs font-semibold text-slate-500">Update employer company and compliance details.</p>
+          </div>
+          <button type="button" onClick={onCancel} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Close</button>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <EditField label="Company name" value={draft.company_name} onChange={(value) => update('company_name', value)} />
+          <EditField label="Legal entity" value={draft.legal_entity_name} onChange={(value) => update('legal_entity_name', value)} />
+          <EditField label="Company type" value={draft.company_type} onChange={(value) => update('company_type', value)} />
+          <EditField label="Industry" value={draft.industry_sector} onChange={(value) => update('industry_sector', value)} />
+          <EditField label="Company size" value={draft.company_size} onChange={(value) => update('company_size', value)} />
+          <EditField label="Website" value={draft.website_url} onChange={(value) => update('website_url', value)} />
+          <EditField label="Official email" value={draft.official_email} onChange={(value) => update('official_email', value)} />
+          <EditField label="Official phone" value={draft.official_phone_number} onChange={(value) => update('official_phone_number', value.replace(/\D/g, '').slice(0, 10))} />
+          <EditField label="GST" value={draft.gst_number} onChange={(value) => update('gst_number', value.toUpperCase())} />
+          <EditField label="PAN" value={draft.pan_number} onChange={(value) => update('pan_number', value.toUpperCase())} />
+          <EditField label="NAPS ID" value={draft.naps_establishment_id} onChange={(value) => update('naps_establishment_id', value)} />
+          <EditSelect label="Verification" value={draft.verification_status} onChange={(value) => update('verification_status', value)} options={['pending', 'approved', 'rejected']} />
+          <EditField label="Registered address" value={draft.registered_address} onChange={(value) => update('registered_address', value)} />
+          <EditField label="City" value={draft.headquarters_city} onChange={(value) => update('headquarters_city', value)} />
+          <EditField label="State" value={draft.headquarters_state} onChange={(value) => update('headquarters_state', value)} />
+          <EditField label="Pincode" value={draft.headquarters_pincode} onChange={(value) => update('headquarters_pincode', value.replace(/\D/g, '').slice(0, 6))} />
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+          <button type="button" onClick={onCancel} disabled={loading} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60">Cancel</button>
+          <button type="button" onClick={() => onSave(draft)} disabled={loading} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-60">{loading ? 'Saving...' : 'Save changes'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditField({ label, value, onChange, type = 'text' }) {
+  return (
+    <label className="space-y-1">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
+      <input type={type} value={value || ''} onChange={(e) => onChange(e.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10" />
+    </label>
+  );
+}
+
+function EditSelect({ label, value, onChange, options }) {
+  return (
+    <label className="space-y-1">
+      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
+      <select value={value || ''} onChange={(e) => onChange(e.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10">
+        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    </label>
   );
 }
 
@@ -450,14 +672,16 @@ function StatusBadge({ status }) {
 
 function DetailBox({ icon: Icon, title, rows }) {
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 hover:border-slate-300 transition">
-      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200/60">
-        <Icon className="w-4 h-4 text-indigo-600" />
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-200 hover:shadow-sm transition">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200/70">
+        <span className="h-8 w-8 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-650 flex items-center justify-center">
+          <Icon className="w-4 h-4" />
+        </span>
         <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">{title}</h5>
       </div>
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-3">
         {rows.map(([label, value]) => (
-          <div key={label}>
+          <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
             <p className="text-xs font-semibold text-slate-700 mt-0.5 break-words">{displayValue(value)}</p>
           </div>
@@ -467,6 +691,24 @@ function DetailBox({ icon: Icon, title, rows }) {
   );
 }
 
+function MiniMetric({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm">
+      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="mt-1 text-xs font-black text-slate-800">{displayValue(value)}</p>
+    </div>
+  );
+}
+
 function displayValue(value) {
   return value || 'Not provided';
+}
+
+function formatDate(value) {
+  if (!value) return 'Not provided';
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
 }

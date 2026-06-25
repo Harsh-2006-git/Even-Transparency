@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  ArrowRight,
   BarChart3,
   Building2,
   Download,
@@ -14,7 +13,7 @@ import {
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
-export default function AdminLogin({ onLoginSuccess, onSwitchToEmployer, onSwitchToCandidate, deferredPrompt, onInstall }) {
+export default function AdminLogin({ onLoginSuccess, deferredPrompt, onInstall }) {
   const [email, setEmail] = useState('admin@evencargo.in');
   const [password, setPassword] = useState('admin@pass123');
   const [error, setError] = useState('');
@@ -243,27 +242,6 @@ export default function AdminLogin({ onLoginSuccess, onSwitchToEmployer, onSwitc
                   {loading ? 'Authenticating...' : 'Sign In as Admin'}
                 </button>
               </form>
-
-              <div className="text-center pt-0">
-                <button
-                  type="button"
-                  onClick={onSwitchToEmployer}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#4F7DCB] hover:text-[#385b9b] transition cursor-pointer hover:underline leading-none"
-                >
-                  <span>Employer Partner Portal</span>
-                  <ArrowRight size={13} />
-                </button>
-              </div>
-
-              <div className="text-center pt-0">
-                <button
-                  type="button"
-                  onClick={onSwitchToCandidate}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 transition cursor-pointer hover:underline leading-none"
-                >
-                  <span>Candidate Portal</span>
-                </button>
-              </div>
 
               <div className="pt-2 border-t border-slate-100 text-center">
                 <p className="text-[8px] text-slate-400 tracking-wide font-normal leading-none">

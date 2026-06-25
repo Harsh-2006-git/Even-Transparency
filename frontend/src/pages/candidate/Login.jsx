@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Mail,
+  Phone,
   Lock,
   Eye,
   EyeOff,
@@ -14,8 +14,8 @@ import {
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
-export default function CandidateLogin({ onLoginSuccess, onStartAuth, onSwitchToStaff }) {
-  const [email, setEmail] = useState('');
+export default function CandidateLogin({ onLoginSuccess, onStartAuth }) {
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,7 @@ export default function CandidateLogin({ onLoginSuccess, onStartAuth, onSwitchTo
       const res = await fetch(`${API}/auth/candidate/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password: password.trim() })
+        body: JSON.stringify({ mobile_number: loginId.trim(), password: password.trim() })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Authentication failed.');
@@ -160,15 +160,15 @@ export default function CandidateLogin({ onLoginSuccess, onStartAuth, onSwitchTo
               <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block pl-0.5">
-                    Registered Email
+                    Registered Mobile
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. candidate@email.com"
+                      type="tel"
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="10 digit mobile number"
                       className="w-full h-11 rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs text-slate-700 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100/80 transition placeholder:text-slate-400 font-normal"
                       required
                     />
@@ -214,7 +214,7 @@ export default function CandidateLogin({ onLoginSuccess, onStartAuth, onSwitchTo
                 </button>
               </form>
 
-              <div className="text-center pt-1">
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-1">
                 <button
                   type="button"
                   onClick={onStartAuth}
@@ -223,16 +223,14 @@ export default function CandidateLogin({ onLoginSuccess, onStartAuth, onSwitchTo
                   <span>Create candidate account</span>
                   <ArrowRight size={14} />
                 </button>
-              </div>
 
-              <div className="text-center pb-1">
-                <button
-                  type="button"
-                  onClick={onSwitchToStaff}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 transition cursor-pointer hover:underline"
+                <a
+                  href="/employer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-violet-700 transition hover:underline"
                 >
-                  <span>Staff Portal Login</span>
-                </button>
+                  <span>Employer Partner Portal</span>
+                  <ArrowRight size={14} />
+                </a>
               </div>
 
               <div className="pt-3 border-t border-slate-100 text-center">

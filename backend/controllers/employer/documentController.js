@@ -1,9 +1,6 @@
 import db from '../../models/index.js';
-import { recalculateProfileCompletion } from '../../utils/profileCompletion.js';
 import { createAuditLog } from '../../services/auditService.js';
-import { notifyCandidate } from '../../services/notificationService.js';
 import { fileExists, generateUploadUrl, generateViewUrl, cloudinaryUrls, deleteFile } from '../../services/storageService.js';
-import { v2 as cloudinary } from 'cloudinary';
 
 export const requestDocumentUpload = async (req, res) => {
   try {
@@ -12,8 +9,13 @@ export const requestDocumentUpload = async (req, res) => {
       return res.status(400).json({ error: 'Document type and file name are required.' });
     }
 
+    const employerId = req.user?.Employer?.id;
+    if (!employerId) {
+      return res.status(400).json({ error: 'Employer record not found for this user.' });
+    }
+
     const upload = await generateUploadUrl({
-      candidateId: req.candidate.id,
+      candidateId: employerId,
       documentType: document_type,
       mimeType: mime_type,
       fileSize: Number(file_size || 0)
@@ -49,6 +51,11 @@ export const confirmDocumentUpload = async (req, res) => {
       return res.status(400).json({ error: 'Document type, file name and file URL are required.' });
     }
 
+    const employerId = req.user?.Employer?.id;
+    if (!employerId) {
+      return res.status(400).json({ error: 'Employer record not found for this user.' });
+    }
+
     let finalFileUrl = file_url;
     const isCloudinary = s3_key && cloudinaryUrls.has(s3_key);
     
@@ -63,10 +70,10 @@ export const confirmDocumentUpload = async (req, res) => {
       finalFileUrl = await generateViewUrl(s3_key);
     }
 
-    // Check if a document of this type already exists for the candidate to replace it
-    let document = await db.CandidateDocument.findOne({
+    // Check if a document of this type already exists for the employer to replace it
+    let document = await db.EmployerDocument.findOne({
       where: {
-        candidate_id: req.candidate.id,
+        employer_id: employerId,
         document_type
       }
     });
@@ -87,7 +94,6 @@ export const confirmDocumentUpload = async (req, res) => {
         file_url: finalFileUrl,
         file_size,
         mime_type,
-        ocr_status: ['Aadhaar Card', 'PAN Card', 'Bank Passbook'].includes(document_type) ? 'pending' : 'skipped',
         verification_status: 'approved',
         verified_at: new Date(),
         expiry_date: expiry_date || null,
@@ -95,14 +101,13 @@ export const confirmDocumentUpload = async (req, res) => {
       });
     } else {
       // Create new record
-      document = await db.CandidateDocument.create({
-        candidate_id: req.candidate.id,
+      document = await db.EmployerDocument.create({
+        employer_id: employerId,
         document_type,
         file_name,
         file_url: finalFileUrl,
         file_size,
         mime_type,
-        ocr_status: ['Aadhaar Card', 'PAN Card', 'Bank Passbook'].includes(document_type) ? 'pending' : 'skipped',
         verification_status: 'approved',
         verified_at: new Date(),
         expiry_date: expiry_date || null,
@@ -110,21 +115,15 @@ export const confirmDocumentUpload = async (req, res) => {
       });
     }
 
-    await recalculateProfileCompletion(req.candidate);
     await createAuditLog({
-      actorType: 'candidate',
-      actorId: req.candidate.id,
-      moduleName: 'candidate_documents',
-      entityType: 'CandidateDocument',
+      actorType: 'employer',
+      actorId: req.user.id,
+      moduleName: 'employer_documents',
+      entityType: 'EmployerDocument',
       entityId: document.id,
       actionType: 'document_uploaded',
       newValues: document.toJSON(),
       req
-    });
-    await notifyCandidate({
-      candidateId: req.candidate.id,
-      title: 'Document uploaded',
-      message: `${document_type} was uploaded and verified successfully.`
     });
 
     return res.status(201).json({
@@ -137,32 +136,42 @@ export const confirmDocumentUpload = async (req, res) => {
   }
 };
 
-export const listCandidateDocuments = async (req, res) => {
+export const listEmployerDocuments = async (req, res) => {
   try {
-    const documents = await db.CandidateDocument.findAll({
-      where: { candidate_id: req.candidate.id },
+    const employerId = req.user?.Employer?.id;
+    if (!employerId) {
+      return res.status(400).json({ error: 'Employer record not found for this user.' });
+    }
+
+    const documents = await db.EmployerDocument.findAll({
+      where: { employer_id: employerId },
       order: [['created_at', 'DESC']]
     });
 
     return res.status(200).json(documents);
   } catch (error) {
-    console.error('List candidate documents error:', error);
+    console.error('List employer documents error:', error);
     return res.status(500).json({ error: 'Failed to fetch documents.' });
   }
 };
 
-export const getCandidateDocumentViewUrl = async (req, res) => {
+export const getEmployerDocumentViewUrl = async (req, res) => {
   try {
-    const document = await db.CandidateDocument.findOne({
+    const employerId = req.user?.Employer?.id;
+    if (!employerId) {
+      return res.status(400).json({ error: 'Employer record not found for this user.' });
+    }
+
+    const document = await db.EmployerDocument.findOne({
       where: {
         id: req.params.id,
-        candidate_id: req.candidate.id
+        employer_id: employerId
       }
     });
 
     if (!document) return res.status(404).json({ error: 'Document not found.' });
 
-    // If the file is on Cloudinary (no amazonaws.com domain), return it directly
+    // If the file is on Cloudinary, return it directly
     if (document.file_url && !document.file_url.includes('.amazonaws.com/')) {
       return res.status(200).json({ viewUrl: document.file_url, expiresInSeconds: 900 });
     }
@@ -175,52 +184,5 @@ export const getCandidateDocumentViewUrl = async (req, res) => {
   } catch (error) {
     console.error('Get document view URL error:', error);
     return res.status(500).json({ error: 'Failed to generate document view URL.' });
-  }
-};
-
-export const uploadProxy = async (req, res) => {
-  try {
-    const { key } = req.query;
-    if (!key) {
-      return res.status(400).json({ error: 'Missing key parameter' });
-    }
-
-    if (!req.body || !Buffer.isBuffer(req.body) || req.body.length === 0) {
-      return res.status(400).json({ error: 'Empty or invalid file payload' });
-    }
-
-    // Determine publicId and resource type from the key
-    const resourceType = String(key).endsWith('.pdf') ? 'raw' : 'image';
-    const publicId = resourceType === 'image' 
-      ? String(key).replace(/\.[^/.]+$/, "") 
-      : key;
-
-    const options = {
-      public_id: publicId,
-      resource_type: resourceType,
-      overwrite: true
-    };
-
-    // Upload raw buffer directly to Cloudinary
-    const result = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(options, (error, uploadResult) => {
-        if (uploadResult) {
-          resolve(uploadResult);
-        } else {
-          reject(error);
-        }
-      });
-      stream.end(req.body);
-    });
-
-    // Cache the resulting secure URL by key
-    cloudinaryUrls.set(key, result.secure_url);
-
-    console.log(`[Cloudinary Proxy] Successfully uploaded file to Cloudinary public_id: ${publicId}`);
-
-    return res.status(200).json({ success: true, fileUrl: result.secure_url });
-  } catch (error) {
-    console.error('Cloudinary proxy upload error:', error);
-    return res.status(500).json({ error: 'Failed to upload file to storage.' });
   }
 };

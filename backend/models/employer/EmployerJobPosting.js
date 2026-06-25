@@ -86,13 +86,22 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING
     },
     job_description: {
-      type: DataTypes.STRING
+      type: DataTypes.TEXT
     },
     skills_required: {
       type: DataTypes.STRING
     },
     language_requirements: {
       type: DataTypes.STRING
+    },
+    location: {
+      type: DataTypes.STRING
+    },
+    benefits: {
+      type: DataTypes.JSONB
+    },
+    preferred_criteria: {
+      type: DataTypes.TEXT
     },
     start_date: {
       type: DataTypes.DATE

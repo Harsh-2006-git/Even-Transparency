@@ -7,15 +7,44 @@ import EmployerOnboarding from './pages/employer/Onboarding';
 import CandidateLogin from './pages/candidate/Login';
 import CandidateAuth from './pages/candidate/Auth';
 import CandidateDashboard from './pages/candidate/Dashboard';
+import CandidateProfile from './pages/candidate/Profile';
+import CandidateApplications from './pages/candidate/Applications';
+import CandidateJobs from './pages/candidate/Jobs';
+import CandidateDocuments from './pages/candidate/Documents';
+import CandidateInterviews from './pages/candidate/Interviews';
+import CandidateNotifications from './pages/candidate/Notifications';
+import CandidateSettings from './pages/candidate/Settings';
+import CandidateGrievances from './pages/candidate/Grievances';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Employers from './pages/admin/Employers';
+import Candidates from './pages/admin/Candidates';
 import CompanyManagement from './pages/admin/CompanyManagement';
+import AdminSettings from './pages/admin/Settings';
 import EmployerCompanyManagement from './pages/employer/CompanyManagement';
+import EmployerDashboard from './pages/employer/Dashboard';
+import EmployerDocuments from './pages/employer/Documents';
+import EmployerSettings from './pages/employer/Settings';
+import EmployerNotifications from './pages/employer/Notifications';
+import EmployerGrievances from './pages/employer/Grievances';
+import EmployerCreateDrive from './pages/employer/CreateDrive';
+import EmployerOpenings from './pages/employer/Openings';
+import EmployerCandidates from './pages/employer/Candidates';
+import EmployerInterviews from './pages/employer/Interviews';
+import EmployerApprentices from './pages/employer/Apprentices';
 import { db } from './db/indexedDB';
 import { RefreshCw, Clock, AlertCircle, Check, CheckCircle, Edit, X } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
+
+const getAuthViewFromPath = () => {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/candidate';
+  if (path === '/candidate/register') return 'candidate-auth';
+  if (path === '/candidate') return 'candidate';
+  if (path === '/employer/onboarding') return 'employer-onboarding';
+  if (path === '/employer') return 'employer';
+  return 'staff';
+};
 
 function App() {
   // Session State
@@ -24,8 +53,12 @@ function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Auth screen view: 'staff' | 'employer' | 'employer-onboarding'
-  const [authView, setAuthView] = useState('staff');
+  // Auth screen view comes from the public URL route.
+  const [authView, setAuthView] = useState(getAuthViewFromPath);
+
+  // Holds candidate session when they have logged in but still have pending onboarding.
+  // Renders CandidateAuth in onboarding-resume mode instead of the main dashboard.
+  const [pendingOnboardingUser, setPendingOnboardingUser] = useState(null);
 
   // Connection and Sync states
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -37,6 +70,7 @@ function App() {
   // Layout navigation states
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const [editingJob, setEditingJob] = useState(null);
 
   // Parse initial section from URL hash or default to 'overview'
   const [activeSection, setActiveSection] = useState(() => {
@@ -47,9 +81,17 @@ function App() {
   const getSectionsForRole = (role) => {
     switch (role) {
       case 'Admin':
-        return ['overview', 'employers', 'company-management'];
+        return [
+          'overview', 'employers', 'apprentices', 'candidates',
+          'openings', 'applications', 'interviews', 'contracts',
+          'stipend', 'reports', 'compliance', 'communications',
+          'user-management', 'settings', 'audit-logs', 'support',
+          'company-management'
+        ];
       case 'Employer':
-        return ['overview', 'company-management'];
+        return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'reports', 'notifications', 'grievances', 'settings', 'support'];
+      case 'Candidate':
+        return ['overview', 'profile', 'applications', 'jobs', 'documents', 'interviews', 'grievances', 'notifications', 'settings'];
       case 'Mobiliser':
         return ['overview'];
       default:
@@ -74,6 +116,17 @@ function App() {
   const handleSectionChange = (sectionId) => {
     window.location.hash = '/' + sectionId;
   };
+
+  const navigateAuth = (path) => {
+    window.history.pushState({}, '', path);
+    setAuthView(getAuthViewFromPath());
+  };
+
+  useEffect(() => {
+    const handlePopState = () => setAuthView(getAuthViewFromPath());
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Sync state with URL hash changes (navigation via sidebar links)
   useEffect(() => {
@@ -124,6 +177,20 @@ function App() {
       contentBox.scrollTop = 0;
     }
   }, [activeSection]);
+
+  // Sync the URL path to the logged-in user's role.
+  // Ensures employer sessions always live at /employer#/section
+  // and candidate sessions at /candidate#/section — both on fresh
+  // login AND after a page refresh that restores from localStorage.
+  useEffect(() => {
+    if (!user) return;
+    const currentPath = window.location.pathname.replace(/\/+$/, '');
+    if (user.userType === 'Employer' && !currentPath.startsWith('/employer')) {
+      window.history.replaceState({}, '', '/employer' + (window.location.hash || ''));
+    } else if (user.userType === 'Candidate' && !currentPath.startsWith('/candidate')) {
+      window.history.replaceState({}, '', '/candidate' + (window.location.hash || ''));
+    }
+  }, [user]);
 
   // Connection health states
   const [backendStatus, setBackendStatus] = useState('checking');
@@ -458,6 +525,28 @@ function App() {
     if (user && user.userType === 'Mobiliser') {
       fetchCandidates();
     }
+    if (user && user.userType === 'Employer' && !user.employer?.employer_code) {
+      fetch(`${API}/employer/company`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.employer) {
+            setUser(prev => {
+              const updated = {
+                ...prev,
+                employer: {
+                  ...prev.employer,
+                  ...data.employer
+                }
+              };
+              localStorage.setItem('evencargo_session', JSON.stringify(updated));
+              return updated;
+            });
+          }
+        })
+        .catch(err => console.error('Failed to sync employer details cache:', err));
+    }
   }, [user]);
 
   // Handle successful login
@@ -473,21 +562,57 @@ function App() {
       employer: userData?.employer || null
     };
 
+    // If a Candidate logged in normally but their onboarding is still pending,
+    // hold off on setting the main session and show the onboarding form instead.
+    const onboardingStatus =
+      userData?.candidate?.onboarding_status ||
+      userData?.onboarding_status;
+    if (normalizedUser.userType === 'Candidate' && onboardingStatus === 'pending') {
+      setPendingOnboardingUser(normalizedUser);
+      return;
+    }
+
     setUser(normalizedUser);
     localStorage.setItem('evencargo_session', JSON.stringify(normalizedUser));
+
+    // Navigate to the role-specific base path so section hashes
+    // are always scoped under /employer or /candidate.
+    if (normalizedUser.userType === 'Employer') {
+      window.history.pushState({}, '', '/employer');
+    } else if (normalizedUser.userType === 'Candidate') {
+      window.history.pushState({}, '', '/candidate');
+    }
   };
 
-  // Handle logout
+  // Handle logout — navigate back to the typed login page
   const handleLogout = () => {
+    const userType = user?.userType;
     setUser(null);
     setCandidates([]);
     setStaffList([]);
     localStorage.removeItem('evencargo_session');
-    window.location.hash = '';
+    // Navigate to the appropriate login screen
+    if (userType === 'Employer') {
+      window.history.pushState({}, '', '/employer');
+      setAuthView('employer');
+    } else if (userType === 'Candidate') {
+      window.history.pushState({}, '', '/candidate');
+      setAuthView('candidate');
+    } else {
+      window.location.hash = '';
+    }
   };
 
   const handleCandidateAdded = (newCandidate) => {
     setCandidates(prev => [newCandidate, ...prev]);
+  };
+
+  const handleUserUpdate = (updates) => {
+    setUser((prev) => {
+      const next = { ...prev, ...updates };
+      localStorage.setItem('evencargo_session', JSON.stringify(next));
+      return next;
+    });
   };
 
   const handleEditOfflineCandidate = (candidate) => {
@@ -505,8 +630,8 @@ function App() {
     if (authView === 'employer-onboarding') {
       return (
         <EmployerOnboarding
-          onOnboardingSuccess={() => setAuthView('employer')}
-          onCancel={() => setAuthView('employer')}
+          onOnboardingSuccess={() => navigateAuth('/employer')}
+          onCancel={() => navigateAuth('/employer')}
         />
       );
     }
@@ -514,9 +639,7 @@ function App() {
       return (
         <EmployerLogin
           onLoginSuccess={handleLoginSuccess}
-          onStartOnboarding={() => setAuthView('employer-onboarding')}
-          onSwitchToCandidate={() => setAuthView('candidate')}
-          onSwitchToStaff={() => setAuthView('staff')}
+          onStartOnboarding={() => navigateAuth('/employer/onboarding')}
           deferredPrompt={deferredPrompt}
           onInstall={handleInstallApp}
         />
@@ -526,7 +649,24 @@ function App() {
       return (
         <CandidateAuth
           onAuthSuccess={handleLoginSuccess}
-          onBackToLogin={() => setAuthView('candidate')}
+          onBackToLogin={() => navigateAuth('/candidate')}
+        />
+      );
+    }
+    // Candidate logged in from Login page but onboarding is still pending.
+    // Show the CandidateAuth form in resume-onboarding mode.
+    if (pendingOnboardingUser) {
+      return (
+        <CandidateAuth
+          onAuthSuccess={(data) => {
+            setPendingOnboardingUser(null);
+            handleLoginSuccess(data);
+          }}
+          onBackToLogin={() => {
+            setPendingOnboardingUser(null);
+            navigateAuth('/candidate');
+          }}
+          resumeSession={pendingOnboardingUser}
         />
       );
     }
@@ -534,16 +674,13 @@ function App() {
       return (
         <CandidateLogin
           onLoginSuccess={handleLoginSuccess}
-          onStartAuth={() => setAuthView('candidate-auth')}
-          onSwitchToStaff={() => setAuthView('staff')}
+          onStartAuth={() => navigateAuth('/candidate/register')}
         />
       );
     }
     return (
       <AdminLogin
         onLoginSuccess={handleLoginSuccess}
-        onSwitchToEmployer={() => setAuthView('employer')}
-        onSwitchToCandidate={() => setAuthView('candidate')}
         deferredPrompt={deferredPrompt}
         onInstall={handleInstallApp}
       />
@@ -601,16 +738,108 @@ function App() {
             {user.userType === 'Admin' ? (
               <>
                 {activeSection === 'overview' && <AdminDashboard adminUser={user} />}
-                {activeSection === 'employers' && <Employers adminUser={user} showToast={showToast} />}
+                {activeSection === 'employers' && <CompanyManagement adminUser={user} showToast={showToast} />}
+                {activeSection === 'candidates' && <Candidates adminUser={user} showToast={showToast} />}
+                {activeSection === 'settings' && <AdminSettings adminUser={user} onUserUpdate={handleUserUpdate} showToast={showToast} />}
                 {activeSection === 'company-management' && canAccessCompanyManagement(user) && <CompanyManagement adminUser={user} showToast={showToast} />}
               </>
             ) : user.userType === 'Employer' ? (
               <>
-                {activeSection === 'overview' && <EmployerCompanyManagement user={user} showToast={showToast} />}
-                {activeSection === 'company-management' && <EmployerCompanyManagement user={user} showToast={showToast} />}
+                {activeSection === 'overview' && (
+                  <EmployerDashboard 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                    setEditingJob={setEditingJob}
+                    showToast={showToast} 
+                  />
+                )}
+                {(activeSection === 'company-management' || activeSection === 'profile') && (
+                  <EmployerCompanyManagement 
+                    user={user} 
+                    showToast={showToast} 
+                  />
+                )}
+                {activeSection === 'documents' && (
+                  <EmployerDocuments 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                  />
+                )}
+                {activeSection === 'settings' && (
+                  <EmployerSettings 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                    onUserUpdate={handleUserUpdate}
+                  />
+                )}
+                {activeSection === 'notifications' && (
+                  <EmployerNotifications 
+                    onSectionChange={handleSectionChange} 
+                  />
+                )}
+                {activeSection === 'grievances' && (
+                  <EmployerGrievances 
+                    user={user} 
+                  />
+                )}
+                {activeSection === 'openings' && (
+                  <EmployerOpenings 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                    setEditingJob={setEditingJob}
+                    showToast={showToast} 
+                  />
+                )}
+                {activeSection === 'create-opening' && (
+                  <EmployerCreateDrive 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                    editingJob={editingJob}
+                    setEditingJob={setEditingJob}
+                    showToast={showToast}
+                  />
+                )}
+                {activeSection === 'candidates' && (
+                  <EmployerCandidates 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                    showToast={showToast} 
+                  />
+                )}
+                {activeSection === 'interviews' && (
+                  <EmployerInterviews 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                    showToast={showToast} 
+                  />
+                )}
+                {activeSection === 'apprentices' && (
+                  <EmployerApprentices 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                    showToast={showToast} 
+                  />
+                )}
+                {!['overview', 'company-management', 'profile', 'documents', 'settings', 'notifications', 'grievances', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices'].includes(activeSection) && (
+                  <EmployerDashboard 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                    showToast={showToast} 
+                  />
+                )}
               </>
             ) : user.userType === 'Candidate' ? (
-              <CandidateDashboard user={user} />
+              <>
+                {activeSection === 'overview' && <CandidateDashboard user={user} onUserUpdate={handleUserUpdate} onSectionChange={handleSectionChange} />}
+                {activeSection === 'profile' && <CandidateProfile user={user} onUserUpdate={handleUserUpdate} />}
+                {activeSection === 'applications' && <CandidateApplications onSectionChange={handleSectionChange} />}
+                {activeSection === 'jobs' && <CandidateJobs />}
+                {activeSection === 'documents' && <CandidateDocuments user={user} onUserUpdate={handleUserUpdate} onSectionChange={handleSectionChange} />}
+                {activeSection === 'interviews' && <CandidateInterviews onSectionChange={handleSectionChange} />}
+                {activeSection === 'grievances' && <CandidateGrievances user={user} />}
+                {activeSection === 'notifications' && <CandidateNotifications onSectionChange={handleSectionChange} />}
+                {activeSection === 'settings' && <CandidateSettings user={user} onSectionChange={handleSectionChange} onUserUpdate={handleUserUpdate} />}
+              </>
             ) : (
               <Dashboard
                 user={user}

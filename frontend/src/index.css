@@ -2,6 +2,19 @@
 
 @theme {
   --font-sans: "Inter", sans-serif;
+  --color-violet-650: #6D3BFF;
+  --color-violet-655: #5C2FFF;
+  --color-violet-750: #5C2FFF;
+  --color-violet-755: #4F1FFF;
+  --color-violet-850: #3B00FF;
+  --color-violet-855: #3B00FF;
+  --color-indigo-650: #4F46E5;
+  --color-indigo-150: #E0E7FF;
+  --color-slate-250: #E2E8F0;
+  --color-emerald-250: #34D399;
+  --color-orange-250: #F97316;
+  --color-amber-250: #FBBF24;
+  --color-rose-250: #F87171;
 }
 
 @keyframes slide-in-right {
@@ -17,4 +30,23 @@
 
 .animate-slide-in-right {
   animation: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.profile-input {
+  width: 100%;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(226 232 240);
+  background: white;
+  padding: 0 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(51 65 85);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profile-input:focus {
+  border-color: rgb(124 58 237);
+  box-shadow: 0 0 0 4px rgb(237 233 254);
 }

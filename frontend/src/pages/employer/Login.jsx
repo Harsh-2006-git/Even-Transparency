@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Mail,
+  Phone,
   Lock,
   Eye,
   EyeOff,
@@ -14,8 +14,8 @@ import {
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
-export default function EmployerLogin({ onLoginSuccess, onStartOnboarding, onSwitchToCandidate, onSwitchToStaff, deferredPrompt, onInstall }) {
-  const [email, setEmail] = useState('');
+export default function EmployerLogin({ onLoginSuccess, onStartOnboarding, deferredPrompt, onInstall }) {
+  const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,8 +26,13 @@ export default function EmployerLogin({ onLoginSuccess, onStartOnboarding, onSwi
     e.preventDefault();
     setError('');
 
-    if (!email.trim() || !password.trim()) {
+    if (!mobileNumber.trim() || !password.trim()) {
       setError('Please fill in all fields.');
+      return;
+    }
+
+    if (mobileNumber.length !== 10) {
+      setError('Please enter a valid 10-digit mobile number.');
       return;
     }
 
@@ -38,7 +43,7 @@ export default function EmployerLogin({ onLoginSuccess, onStartOnboarding, onSwi
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: email.trim(),
+          mobile_number: mobileNumber.trim(),
           password: password.trim(),
         }),
       });
@@ -206,21 +211,21 @@ export default function EmployerLogin({ onLoginSuccess, onStartOnboarding, onSwi
 
               <form onSubmit={handleSubmit} className="space-y-3">
                 
-                {/* Official Email */}
+                {/* Company Mobile Number */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block pl-0.5">
-                    Official Corporate Email
+                    Company Mobile Number
                   </label>
                   <div className="relative">
-                    <Mail
+                    <Phone
                       size={18}
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
                     />
                     <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. partner@company.com"
+                      type="tel"
+                      value={mobileNumber}
+                      onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="10 digit mobile number"
                       className="w-full h-11 rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-xs text-slate-700 outline-none focus:border-[#F39A42] focus:ring-2 focus:ring-orange-50/50 transition placeholder:text-slate-400 font-normal"
                       required
                     />
@@ -281,8 +286,8 @@ export default function EmployerLogin({ onLoginSuccess, onStartOnboarding, onSwi
 
               </form>
 
-              {/* Redirect to Onboarding */}
-              <div className="text-center pt-1">
+              {/* Secondary navigation */}
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-1">
                 <button
                   type="button"
                   onClick={onStartOnboarding}
@@ -291,24 +296,13 @@ export default function EmployerLogin({ onLoginSuccess, onStartOnboarding, onSwi
                   <span>Become an Employer Partner</span>
                   <ArrowRight size={14} />
                 </button>
-              </div>
-
-              {/* Switch to Staff Portal */}
-              <div className="text-center pb-1">
-                <button
-                  type="button"
-                  onClick={onSwitchToCandidate}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4F7DCB] hover:text-[#385b9b] transition cursor-pointer hover:underline mr-4"
+                <a
+                  href="/candidate"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#4F7DCB] transition hover:underline"
                 >
                   <span>Candidate Portal</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={onSwitchToStaff}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 transition cursor-pointer hover:underline"
-                >
-                  <span>Staff Portal Login</span>
-                </button>
+                  <ArrowRight size={14} />
+                </a>
               </div>
 
               {/* Copyright */}

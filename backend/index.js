@@ -110,8 +110,7 @@ async function ensureDbColumnsExist() {
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://even-cargo-hire.vercel.app',
-    'https://even-cargo-hire.vercel.app/'
+    'https://even-cargo-apprenticeship-portal.vercel.app'
   ],
   credentials: true
 }));

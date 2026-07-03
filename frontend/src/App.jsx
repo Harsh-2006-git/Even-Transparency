@@ -21,6 +21,7 @@ import Employers from './pages/admin/Employers';
 import Candidates from './pages/admin/Candidates';
 import CompanyManagement from './pages/admin/CompanyManagement';
 import AdminSettings from './pages/admin/Settings';
+import AdminGrievances from './pages/admin/Grievances';
 import EmployerCompanyManagement from './pages/employer/CompanyManagement';
 import EmployerDashboard from './pages/employer/Dashboard';
 import EmployerDocuments from './pages/employer/Documents';
@@ -86,7 +87,7 @@ function App() {
           'openings', 'applications', 'interviews', 'contracts',
           'stipend', 'reports', 'compliance', 'communications',
           'user-management', 'settings', 'audit-logs', 'support',
-          'company-management'
+          'company-management', 'grievances'
         ];
       case 'Employer':
         return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'reports', 'notifications', 'grievances', 'settings', 'support'];
@@ -172,6 +173,7 @@ function App() {
 
   // Scroll to top when navigating to a new section (but do NOT reset hash on load)
   useEffect(() => {
+    window.scrollTo(0, 0);
     const contentBox = document.getElementById('main-content-scroll');
     if (contentBox) {
       contentBox.scrollTop = 0;
@@ -603,6 +605,198 @@ function App() {
     }
   };
 
+  // Global fetch interceptor for handling 401 status and auto-refresh/logout
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    let isRefreshing = false;
+    let refreshQueue = [];
+
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      
+      // Determine if it is a backend API request that requires authentication
+      const isApiRequest = url.includes('/api/');
+      const isAuthRequest = url.includes('/api/auth/') || url.includes('/auth/');
+
+      if (!isApiRequest || isAuthRequest) {
+        return originalFetch(input, init);
+      }
+
+      // Check current session
+      let currentSession = null;
+      try {
+        const saved = localStorage.getItem('evencargo_session');
+        if (saved) {
+          currentSession = JSON.parse(saved);
+        }
+      } catch (err) {
+        console.error('Interceptor session parse error:', err);
+      }
+
+      if (!currentSession?.token) {
+        return originalFetch(input, init);
+      }
+
+      // Attach access token automatically if request headers exist and don't already have authorization
+      let updatedInit = { ...init };
+      if (currentSession.token) {
+        if (!updatedInit.headers) {
+          updatedInit.headers = { 'Authorization': `Bearer ${currentSession.token}` };
+        } else {
+          // If headers exist, format it appropriately
+          if (updatedInit.headers instanceof Headers) {
+            if (!updatedInit.headers.has('Authorization')) {
+              updatedInit.headers.set('Authorization', `Bearer ${currentSession.token}`);
+            }
+          } else if (Array.isArray(updatedInit.headers)) {
+            const hasAuth = updatedInit.headers.some(([k]) => k.toLowerCase() === 'authorization');
+            if (!hasAuth) {
+              updatedInit.headers.push(['Authorization', `Bearer ${currentSession.token}`]);
+            }
+          } else {
+            const hasAuth = Object.keys(updatedInit.headers).some(k => k.toLowerCase() === 'authorization');
+            if (!hasAuth) {
+              updatedInit.headers = {
+                ...updatedInit.headers,
+                'Authorization': `Bearer ${currentSession.token}`
+              };
+            }
+          }
+        }
+      }
+
+      let response;
+      try {
+        response = await originalFetch(input, updatedInit);
+      } catch (err) {
+        throw err;
+      }
+
+      if (response.status === 401) {
+        const refreshToken = currentSession.refreshToken;
+
+        if (!refreshToken) {
+          console.warn('Unauthorized error (401) received and no refresh token found. Logging out.');
+          handleLogout();
+          showToast?.('Session expired. Please log in again.', 'error');
+          return response;
+        }
+
+        if (isRefreshing) {
+          return new Promise((resolve) => {
+            refreshQueue.push((newToken) => {
+              const retryInit = { ...init };
+              if (!retryInit.headers) {
+                retryInit.headers = { 'Authorization': `Bearer ${newToken}` };
+              } else {
+                if (retryInit.headers instanceof Headers) {
+                  retryInit.headers.set('Authorization', `Bearer ${newToken}`);
+                } else if (Array.isArray(retryInit.headers)) {
+                  const authIdx = retryInit.headers.findIndex(([k]) => k.toLowerCase() === 'authorization');
+                  if (authIdx !== -1) retryInit.headers[authIdx][1] = `Bearer ${newToken}`;
+                  else retryInit.headers.push(['Authorization', `Bearer ${newToken}`]);
+                } else {
+                  // Find existing auth header case-insensitively and remove/overwrite it
+                  const cleanHeaders = {};
+                  Object.keys(retryInit.headers).forEach(k => {
+                    if (k.toLowerCase() !== 'authorization') {
+                      cleanHeaders[k] = retryInit.headers[k];
+                    }
+                  });
+                  retryInit.headers = {
+                    ...cleanHeaders,
+                    'Authorization': `Bearer ${newToken}`
+                  };
+                }
+              }
+              resolve(originalFetch(input, retryInit));
+            });
+          });
+        }
+
+        isRefreshing = true;
+        console.log('Access token expired. Attempting token refresh...');
+
+        try {
+          const refreshRes = await originalFetch(`${API}/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ refreshToken })
+          });
+
+          if (refreshRes.ok) {
+            const data = await refreshRes.json();
+            const { token: newToken, refreshToken: newRefreshToken } = data;
+
+            const updatedSession = {
+              ...currentSession,
+              token: newToken,
+              refreshToken: newRefreshToken
+            };
+
+            localStorage.setItem('evencargo_session', JSON.stringify(updatedSession));
+            setUser(updatedSession);
+            console.log('Token refreshed successfully. Retrying original request.');
+
+            isRefreshing = false;
+            
+            // Resolve all queued requests
+            refreshQueue.forEach((cb) => cb(newToken));
+            refreshQueue = [];
+
+            // Retry the current request
+            const retryInit = { ...init };
+            if (!retryInit.headers) {
+              retryInit.headers = { 'Authorization': `Bearer ${newToken}` };
+            } else {
+              if (retryInit.headers instanceof Headers) {
+                retryInit.headers.set('Authorization', `Bearer ${newToken}`);
+              } else if (Array.isArray(retryInit.headers)) {
+                const authIdx = retryInit.headers.findIndex(([k]) => k.toLowerCase() === 'authorization');
+                if (authIdx !== -1) retryInit.headers[authIdx][1] = `Bearer ${newToken}`;
+                else retryInit.headers.push(['Authorization', `Bearer ${newToken}`]);
+              } else {
+                const cleanHeaders = {};
+                Object.keys(retryInit.headers).forEach(k => {
+                  if (k.toLowerCase() !== 'authorization') {
+                    cleanHeaders[k] = retryInit.headers[k];
+                  }
+                });
+                retryInit.headers = {
+                  ...cleanHeaders,
+                  'Authorization': `Bearer ${newToken}`
+                };
+              }
+            }
+            return originalFetch(input, retryInit);
+          } else {
+            console.error('Refresh token request failed with status:', refreshRes.status);
+            isRefreshing = false;
+            refreshQueue = [];
+            handleLogout();
+            showToast?.('Session expired. Please log in again.', 'error');
+            return response;
+          }
+        } catch (refreshErr) {
+          console.error('Network error during token refresh:', refreshErr);
+          isRefreshing = false;
+          refreshQueue = [];
+          handleLogout();
+          showToast?.('Session expired. Please log in again.', 'error');
+          return response;
+        }
+      }
+
+      return response;
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [setUser, handleLogout]);
+
   const handleCandidateAdded = (newCandidate) => {
     setCandidates(prev => [newCandidate, ...prev]);
   };
@@ -688,7 +882,7 @@ function App() {
   }
 
   return (
-    <div className="h-dvh w-screen flex flex-col overflow-hidden bg-slate-50 text-slate-800 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50 text-slate-800 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
 
       {/* Header component */}
       <Header
@@ -742,6 +936,7 @@ function App() {
                 {activeSection === 'candidates' && <Candidates adminUser={user} showToast={showToast} />}
                 {activeSection === 'settings' && <AdminSettings adminUser={user} onUserUpdate={handleUserUpdate} showToast={showToast} />}
                 {activeSection === 'company-management' && canAccessCompanyManagement(user) && <CompanyManagement adminUser={user} showToast={showToast} />}
+                {activeSection === 'grievances' && <AdminGrievances adminUser={user} showToast={showToast} />}
               </>
             ) : user.userType === 'Employer' ? (
               <>
@@ -832,8 +1027,8 @@ function App() {
               <>
                 {activeSection === 'overview' && <CandidateDashboard user={user} onUserUpdate={handleUserUpdate} onSectionChange={handleSectionChange} />}
                 {activeSection === 'profile' && <CandidateProfile user={user} onUserUpdate={handleUserUpdate} />}
-                {activeSection === 'applications' && <CandidateApplications onSectionChange={handleSectionChange} />}
-                {activeSection === 'jobs' && <CandidateJobs />}
+                {activeSection === 'applications' && <CandidateApplications user={user} onSectionChange={handleSectionChange} />}
+                {activeSection === 'jobs' && <CandidateJobs user={user} />}
                 {activeSection === 'documents' && <CandidateDocuments user={user} onUserUpdate={handleUserUpdate} onSectionChange={handleSectionChange} />}
                 {activeSection === 'interviews' && <CandidateInterviews onSectionChange={handleSectionChange} />}
                 {activeSection === 'grievances' && <CandidateGrievances user={user} />}

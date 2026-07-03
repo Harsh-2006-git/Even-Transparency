@@ -2,19 +2,25 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   BadgeCheck,
   BookOpen,
+  Briefcase,
   CheckCircle,
+  ChevronRight,
   Clock,
   Eye,
   FileText,
+  GraduationCap,
   Mail,
   MapPin,
   Phone,
   RefreshCw,
   Search,
   Pencil,
+  Sparkles,
   Trash2,
+  UserCheck,
   UserCircle2,
   Wrench,
   XCircle
@@ -32,6 +38,7 @@ export default function Candidates({ adminUser, showToast }) {
   const [deleteCandidateId, setDeleteCandidateId] = useState(null);
   const [editingCandidate, setEditingCandidate] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
   const fetchCandidates = async () => {
     setLoading(true);
@@ -160,149 +167,408 @@ export default function Candidates({ adminUser, showToast }) {
     const documents = detailedCandidate.CandidateDocuments || [];
 
     return (
-      <div className="space-y-6 animate-fade-in">
-        <button
-          onClick={() => setDetailedCandidateId(null)}
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Candidates
-        </button>
+      <div className="space-y-6 animate-fade-in pb-12">
+        {/* Breadcrumbs and Top Actions Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <nav className="flex items-center gap-1.5 text-[11px] font-bold select-none">
+            <span className="text-slate-400 cursor-pointer hover:text-slate-600" onClick={() => setDetailedCandidateId(null)}>Candidates</span>
+            <ChevronRight size={12} className="text-slate-300 shrink-0" />
+            <span className="text-slate-800">{detailedCandidate.full_name || 'Candidate Details'}</span>
+          </nav>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setDeleteCandidateId(detailedCandidate.id)}
+              disabled={actionLoading === 'delete'}
+              className="h-10 px-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-xs font-black flex items-center gap-2 transition cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Candidate
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingCandidate(detailedCandidate)}
+              className="h-10 px-4 bg-[#6D3BFF] hover:bg-[#5C2FFF] text-white rounded-xl text-xs font-black shadow-md shadow-violet-200 flex items-center gap-2 transition cursor-pointer"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit Profile
+            </button>
+            
+            {(detailedCandidate.verification_status || 'pending') === 'pending' ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateCandidateApproval(detailedCandidate.id, 'rejected')}
+                  disabled={actionLoading === 'rejected'}
+                  className="h-10 px-4 rounded-xl border border-rose-250 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60 cursor-pointer"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateCandidateApproval(detailedCandidate.id, 'approved')}
+                  disabled={actionLoading === 'approved'}
+                  className="h-10 px-4 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-60 cursor-pointer"
+                >
+                  Approve
+                </button>
+              </div>
+            ) : (
+              <span className={`h-10 px-4 flex items-center rounded-xl text-xs font-black border uppercase tracking-wider ${
+                detailedCandidate.verification_status === 'approved' 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                  : 'bg-rose-50 text-rose-700 border-rose-100'
+              }`}>
+                {detailedCandidate.verification_status === 'approved' ? 'Approved' : 'Rejected'}
+              </span>
+            )}
+          </div>
+        </div>
 
-        <section className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-indigo-50 via-white to-slate-50 border-b border-slate-200 p-5 md:p-8">
-            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="h-14 w-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-lg font-black shadow-sm">
-                  {(detailedCandidate.full_name || detailedCandidate.mobile_number || 'CA').slice(0, 2).toUpperCase()}
-                </div>
-                <div>
+        {/* TOP HERO PROFILE SECTION */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-xs">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            {/* Left: Avatar and Basic Meta */}
+            <div className="flex items-start sm:items-center gap-4.5">
+              <div className="h-18 w-18 shrink-0 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-xl font-black shadow-md border border-violet-100 relative">
+                {(detailedCandidate.full_name || 'CA').slice(0, 2).toUpperCase()}
+                <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">{detailedCandidate.full_name}</h2>
                   <StatusBadge status={detailedCandidate.verification_status || 'pending'} />
-                  <h4 className="text-2xl font-black text-slate-850 mt-3">{displayValue(detailedCandidate.full_name)}</h4>
-                  <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold text-slate-500">
-                    <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{displayValue(detailedCandidate.mobile_number)}</span>
-                    <span className="inline-flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{displayValue(detailedCandidate.email)}</span>
-                    <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" />{displayValue(address.city || address.state)}</span>
-                  </div>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-semibold text-slate-500 pt-0.5">
+                  <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" />{displayValue(detailedCandidate.mobile_number)}</span>
+                  <span className="inline-flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-slate-400" />{displayValue(detailedCandidate.email)}</span>
+                  <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" />{displayValue(address.city || address.state)}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-2 pt-1.5 border-t border-slate-50">
+                  <span className="px-2 py-0.5 bg-slate-100 text-slate-650 rounded-md text-[10px] font-bold">{education.qualification_level || 'No Qualification'}</span>
+                  <span className="px-2 py-0.5 bg-slate-100 text-slate-650 rounded-md text-[10px] font-bold">{detailedCandidate.availability_status || 'Available'}</span>
+                  <span className="px-2 py-0.5 bg-slate-100 text-slate-650 rounded-md text-[10px] font-bold">{detailedCandidate.gender || 'Not specified'}</span>
+                  {detailedCandidate.age && <span className="px-2 py-0.5 bg-slate-100 text-slate-650 rounded-md text-[10px] font-bold">Age {detailedCandidate.age}</span>}
                 </div>
               </div>
-              <div className="flex gap-2">
-                {(detailedCandidate.verification_status || 'pending') === 'pending' ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => updateCandidateApproval(detailedCandidate.id, 'rejected')}
-                      disabled={actionLoading === 'rejected'}
-                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      {actionLoading === 'rejected' ? 'Rejecting...' : 'Reject'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateCandidateApproval(detailedCandidate.id, 'approved')}
-                      disabled={actionLoading === 'approved'}
-                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-60"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      {actionLoading === 'approved' ? 'Approving...' : 'Approve'}
-                    </button>
-                  </>
+            </div>
+
+            {/* Middle: Onboarding and Progress metrics */}
+            <div className="flex items-center gap-4 flex-wrap border-t border-slate-100 lg:border-t-0 pt-4 lg:pt-0">
+              <div className="flex items-center gap-3 bg-slate-50/50 border border-slate-100 rounded-2xl px-4 py-3">
+                <div className="space-y-0.5 text-left">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Onboarding</p>
+                  <p className="text-xs font-extrabold text-emerald-600">{detailedCandidate.onboarding_status || 'Pending'}</p>
+                </div>
+                <ChevronRight size={14} className="text-slate-300" />
+                <div className="space-y-0.5 text-left">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Availability</p>
+                  <p className="text-xs font-extrabold text-indigo-600">{detailedCandidate.availability_status || 'Available'}</p>
+                </div>
+              </div>
+
+              {/* Circular Progress Wheel */}
+              {(() => {
+                const profilePercent = Number(detailedCandidate.profile_completion_percentage || 0);
+                return (
+                  <div className="flex items-center gap-3 bg-slate-50/50 border border-slate-100 rounded-2xl px-4 py-3">
+                    <div className="relative flex items-center justify-center shrink-0">
+                      <svg className="w-10 h-10 transform -rotate-90">
+                        <circle cx="20" cy="20" r="15" stroke="#E2E8F0" strokeWidth="2.5" fill="transparent" />
+                        <circle cx="20" cy="20" r="15" stroke="#6D3BFF" strokeWidth="2.5" fill="transparent"
+                          strokeDasharray={2 * Math.PI * 15}
+                          strokeDashoffset={2 * Math.PI * 15 - (profilePercent / 100) * (2 * Math.PI * 15)}
+                          strokeLinecap="round" />
+                      </svg>
+                      <span className="absolute text-[9px] font-black text-slate-800">{profilePercent}%</span>
+                    </div>
+                    <div className="text-left space-y-0.5">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Completion</p>
+                      <p className="text-xs font-black text-slate-700">{profilePercent}% Complete</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="bg-slate-50/50 border border-slate-100 rounded-2xl px-4 py-3 text-left space-y-0.5">
+                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Registered On</p>
+                <p className="text-xs font-extrabold text-slate-700">{formatDate(detailedCandidate.registration_date)}</p>
+              </div>
+            </div>
+
+            {/* Right: Quick metadata card */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 min-w-[210px] text-xs font-semibold text-slate-700 space-y-2 text-left">
+              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">NAPS ID</span><span className="font-extrabold text-slate-850">{displayValue(detailedCandidate.naps_candidate_id)}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">PAN</span><span className="font-extrabold text-slate-850">{displayValue(detailedCandidate.pan_number)}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">Aadhaar (Last 4)</span><span className="font-extrabold text-slate-850">{detailedCandidate.aadhaar_last_4 ? `****${detailedCandidate.aadhaar_last_4}` : 'Not provided'}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">Status</span><span className="font-extrabold text-slate-850">{detailedCandidate.availability_status || 'Available'}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">Onboarding</span><span className="font-extrabold text-slate-850">{detailedCandidate.onboarding_status || 'Approved'}</span></div>
+            </div>
+          </div>
+        </div>
+
+        {/* TAB NAVIGATION BAR */}
+        <div className="flex items-center gap-1.5 border-b border-slate-200 overflow-x-auto select-none no-scrollbar">
+          {[
+            { id: 'all', label: 'All Details', icon: Sparkles },
+            { id: 'overview', label: 'Overview', icon: UserCircle2 },
+            { id: 'education', label: 'Education', icon: BookOpen },
+            { id: 'skills', label: 'Skills', icon: Wrench },
+            { id: 'documents', label: 'Documents', icon: FileText },
+            { id: 'experience', label: 'Work Experience', icon: Clock }
+          ].map((t) => {
+            const Icon = t.icon;
+            const active = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                  active 
+                    ? 'border-[#6D3BFF] text-[#6D3BFF] font-black' 
+                    : 'border-transparent text-slate-500 hover:text-slate-850 hover:border-slate-300'
+                }`}
+              >
+                <Icon size={14} className={active ? 'text-[#6D3BFF]' : 'text-slate-400'} />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* TWO-COLUMN CONTENT GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_310px] gap-6 items-start">
+          {/* Main Left Pane Content */}
+          <div className="space-y-6">
+            {activeTab === 'overview' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <DetailBox icon={UserCircle2} title="Personal Information" rows={[
+                  ['Name', detailedCandidate.full_name],
+                  ['Gender', detailedCandidate.gender],
+                  ['Date of Birth', formatDate(detailedCandidate.date_of_birth)],
+                  ['Age', detailedCandidate.age],
+                  ['Phone', detailedCandidate.mobile_number],
+                  ['Email', detailedCandidate.email],
+                  ['First Name', detailedCandidate.first_name],
+                  ['Last Name', detailedCandidate.last_name]
+                ]} />
+                <DetailBox icon={MapPin} title="Address Details" rows={[
+                  ['Address Type', address.address_type || 'Current'],
+                  ['Address', [address.address_line_1, address.address_line_2].filter(Boolean).join(', ')],
+                  ['Landmark', address.landmark],
+                  ['City', address.city],
+                  ['District', address.district],
+                  ['State', address.state],
+                  ['Pincode', address.pincode]
+                ]} />
+                <div className="md:col-span-2">
+                  <DetailBox icon={BadgeCheck} title="Identity Details" rows={[
+                    ['Aadhaar Last 4', detailedCandidate.aadhaar_last_4],
+                    ['PAN', detailedCandidate.pan_number],
+                    ['NAPS Establishment ID', detailedCandidate.naps_candidate_id],
+                    ['Onboarding Completion Status', detailedCandidate.onboarding_status],
+                    ['Verification Code', detailedCandidate.id]
+                  ]} />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'education' && (
+              <DetailBox icon={GraduationCap} title="Education History" rows={[
+                ['Qualification Level', education.qualification_level],
+                ['Course / Degree', education.course_name],
+                ['Specialization', education.specialization],
+                ['Institution Name', education.institution_name],
+                ['Board / University', education.board_or_university],
+                ['Passing Year', education.passing_year],
+                ['Score / CGPA / Percentage', education.percentage_or_cgpa],
+                ['Currently Pursuing', education.currently_pursuing ? 'Yes' : 'No']
+              ]} />
+            )}
+
+            {activeTab === 'skills' && (
+              <SummaryList icon={Wrench} title="Skills Checklist" empty="No skills submitted.">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {skills.length === 0 ? (
+                    <div className="col-span-2 text-center text-xs font-bold text-slate-400 py-6">No skills submitted yet.</div>
+                  ) : (
+                    skills.map((skill) => (
+                      <div key={skill.id} className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-700">
+                        <div>
+                          <p className="font-extrabold text-slate-800 text-xs">{skill.skill_name}</p>
+                          <p className="text-[10px] text-slate-450 mt-0.5">{skill.skill_category || 'General'} • {skill.proficiency_level || 'Beginner'}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-lg text-[9px] uppercase tracking-wide font-black ${
+                          skill.certified 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                            : 'bg-slate-100 text-slate-500 border border-slate-200'
+                        }`}>
+                          {skill.certified ? 'Certified' : 'Not certified'}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </SummaryList>
+            )}
+
+            {activeTab === 'documents' && (
+              <div className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-xs">
+                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-slate-100">
+                  <FileText className="w-4.5 h-4.5 text-violet-600" />
+                  <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Uploaded Documents</h3>
+                </div>
+                {documents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50/50 border-2 border-dashed border-slate-200/80 rounded-2xl">
+                    <FileText className="w-12 h-12 text-slate-300 mb-3" />
+                    <p className="text-xs font-black text-slate-750">No documents submitted</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Candidate documents will appear here once uploaded.</p>
+                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setDeleteCandidateId(detailedCandidate.id)}
-                    disabled={actionLoading === 'delete'}
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {actionLoading === 'delete' ? 'Deleting...' : 'Delete'}
-                  </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {documents.map((doc) => (
+                      <div key={doc.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex flex-col justify-between hover:border-violet-300 hover:shadow-xs transition duration-300">
+                        <div>
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="p-2.5 bg-violet-50 text-violet-650 rounded-xl border border-violet-100/50">
+                              <FileText size={18} />
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
+                              (doc.verification_status || 'pending').toLowerCase() === 'approved' || (doc.verification_status || 'pending').toLowerCase() === 'verified'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                : 'bg-amber-50 text-amber-700 border border-amber-100'
+                            }`}>
+                              {doc.verification_status || 'pending'}
+                            </span>
+                          </div>
+                          <p className="text-xs font-black text-slate-800 mt-3 truncate">{doc.document_type}</p>
+                          <p className="text-[10px] font-semibold text-slate-450 mt-0.5 truncate">{doc.file_name}</p>
+                        </div>
+                        <div className="flex items-center gap-2 border-t border-slate-100 pt-3 mt-4">
+                          <button
+                            type="button"
+                            onClick={() => doc.file_name ? window.open(`${API}/uploads/${doc.file_name}`, '_blank') : showToast('No file uploaded', 'error')}
+                            className="flex-1 py-1.5 border border-violet-100 hover:bg-violet-50 text-[10px] font-extrabold text-[#6D3BFF] rounded-lg transition cursor-pointer"
+                          >
+                            View
+                          </button>
+                          <a
+                            href={`${API}/uploads/${doc.file_name}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 py-1.5 bg-[#6D3BFF] hover:bg-[#5C2FFF] text-white text-[10px] font-extrabold text-center rounded-lg transition cursor-pointer block"
+                          >
+                            Download
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
-              <MiniMetric label="Onboarding" value={detailedCandidate.onboarding_status} />
-              <MiniMetric label="Availability" value={detailedCandidate.availability_status} />
-              <MiniMetric label="Profile" value={`${Number(detailedCandidate.profile_completion_percentage || 0)}%`} />
-              <MiniMetric label="Registered" value={formatDate(detailedCandidate.registration_date)} />
-            </div>
+            )}
+
+            {activeTab === 'experience' && (
+              <SummaryList icon={Briefcase} title="Work Experience Timeline" empty="No work experience logs found.">
+                <div className="space-y-4">
+                  {experiences.length === 0 ? (
+                    <div className="text-center text-xs font-bold text-slate-400 py-6">No work experience submitted yet.</div>
+                  ) : (
+                    experiences.map((exp) => (
+                      <div key={exp.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-bold text-slate-700">
+                        <div className="flex items-start gap-3">
+                          <span className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100/50 shrink-0">
+                            <Briefcase size={16} />
+                          </span>
+                          <div>
+                            <p className="font-extrabold text-slate-800 text-xs">{exp.company_name}</p>
+                            <p className="text-slate-500 font-semibold text-[10px] mt-0.5">{exp.designation || 'Apprentice'} • {exp.employment_type || 'Full-time'}</p>
+                            {exp.responsibilities && <p className="text-[10px] font-medium text-slate-450 mt-1.5 max-w-xl leading-relaxed">{exp.responsibilities}</p>}
+                          </div>
+                        </div>
+                        <div className="text-left sm:text-right shrink-0">
+                          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
+                            exp.currently_working 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                              : 'bg-slate-100 text-slate-500 border border-slate-200'
+                          }`}>
+                            {exp.currently_working ? 'Currently working' : 'Past role'}
+                          </span>
+                          <p className="text-[10px] text-slate-450 font-extrabold mt-1.5">{exp.start_date || 'N/A'} — {exp.currently_working ? 'Present' : exp.end_date || 'N/A'}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </SummaryList>
+            )}
           </div>
 
-          <div className="p-5 md:p-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <DetailBox icon={UserCircle2} title="Basic Info" rows={[
-              ['Name', detailedCandidate.full_name],
-              ['First name', detailedCandidate.first_name],
-              ['Last name', detailedCandidate.last_name],
-              ['Gender', detailedCandidate.gender],
-              ['DOB', formatDate(detailedCandidate.date_of_birth)],
-              ['Age', detailedCandidate.age],
-              ['Phone', detailedCandidate.mobile_number],
-              ['Email', detailedCandidate.email]
-            ]} />
-            <DetailBox icon={BadgeCheck} title="Identity" rows={[
-              ['Aadhaar last 4', detailedCandidate.aadhaar_last_4],
-              ['PAN', detailedCandidate.pan_number],
-              ['NAPS ID', detailedCandidate.naps_candidate_id],
-              ['Onboarding', detailedCandidate.onboarding_status],
-              ['Availability', detailedCandidate.availability_status],
-              ['Completion', `${Number(detailedCandidate.profile_completion_percentage || 0)}%`]
-            ]} />
-            <DetailBox icon={MapPin} title="Address" rows={[
-              ['Type', address.address_type],
-              ['Address', [address.address_line_1, address.address_line_2].filter(Boolean).join(', ')],
-              ['Landmark', address.landmark],
-              ['City', address.city],
-              ['District', address.district],
-              ['State', address.state],
-              ['Pincode', address.pincode]
-            ]} />
-          </div>
+          {/* Right Pane Sidebar */}
+          <div className="space-y-5">
+            {/* Timeline Section */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs">
+              <div className="flex items-center gap-2 mb-5 pb-3 border-b border-slate-100">
+                <Clock className="w-4 h-4 text-violet-600" />
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Activity Timeline</h3>
+              </div>
+              <div className="relative border-l border-slate-100 pl-4 ml-2 space-y-6">
+                <div className="relative">
+                  <span className="absolute -left-[21px] top-0 h-2.5 w-2.5 rounded-full bg-violet-600 ring-4 ring-violet-50"></span>
+                  <p className="text-xs font-bold text-slate-850">Registered on portal</p>
+                  <p className="text-[10px] text-slate-450 mt-0.5">{formatDate(detailedCandidate.registration_date)}</p>
+                </div>
+                <div className="relative">
+                  <span className="absolute -left-[21px] top-0 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-4 ring-indigo-50"></span>
+                  <p className="text-xs font-bold text-slate-850">Profile completed {detailedCandidate.profile_completion_percentage || 0}%</p>
+                  <p className="text-[10px] text-slate-450 mt-0.5">{formatDate(detailedCandidate.updatedAt || detailedCandidate.registration_date)}</p>
+                </div>
+                <div className="relative">
+                  <span className="absolute -left-[21px] top-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></span>
+                  <p className="text-xs font-bold text-slate-850">Availability: {detailedCandidate.availability_status || 'available'}</p>
+                  <p className="text-[10px] text-slate-450 mt-0.5">Updated automatically</p>
+                </div>
+                <div className="relative">
+                  <span className="absolute -left-[21px] top-0 h-2.5 w-2.5 rounded-full bg-amber-500 ring-4 ring-amber-50"></span>
+                  <p className="text-xs font-bold text-slate-850">Onboarding status: {detailedCandidate.onboarding_status || 'Approved'}</p>
+                  <p className="text-[10px] text-slate-450 mt-0.5">Approved by administrator</p>
+                </div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
-            <DetailBox icon={BookOpen} title="Education" rows={[
-              ['Qualification', education.qualification_level],
-              ['Course', education.course_name],
-              ['Specialization', education.specialization],
-              ['Institution', education.institution_name],
-              ['Board / University', education.board_or_university],
-              ['Passing Year', education.passing_year],
-              ['Score', education.percentage_or_cgpa]
-            ]} />
-            <SummaryList icon={Wrench} title="Skills" empty="No skills submitted.">
-              {skills.map((skill) => (
-                <ListRow
-                  key={skill.id}
-                  title={skill.skill_name}
-                  subtitle={[skill.skill_category, skill.proficiency_level].filter(Boolean).join(' • ')}
-                  meta={skill.certified ? skill.certification_name || 'Certified' : 'Not certified'}
-                />
-              ))}
-            </SummaryList>
-            <SummaryList icon={FileText} title="Documents" empty="No documents submitted.">
-              {documents.map((document) => (
-                <ListRow
-                  key={document.id}
-                  title={document.document_type}
-                  subtitle={document.file_name}
-                  meta={document.verification_status || 'pending'}
-                />
-              ))}
-            </SummaryList>
-            <SummaryList icon={Clock} title="Work Experience" empty="No work experience submitted.">
-              {experiences.map((experience) => (
-                <ListRow
-                  key={experience.id}
-                  title={experience.company_name}
-                  subtitle={experience.designation}
-                  meta={experience.currently_working ? 'Currently working' : 'Past role'}
-                />
-              ))}
-            </SummaryList>
+            {/* Quick Actions List */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-3.5">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                <Sparkles className="w-4 h-4 text-violet-600" />
+                <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Quick Actions</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-2 text-xs font-bold text-slate-655">
+                <button
+                  onClick={() => window.open(`mailto:${detailedCandidate.email}`)}
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#6D3BFF] hover:text-[#6D3BFF] transition text-left cursor-pointer font-extrabold"
+                >
+                  <span>Send Email</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => showToast('Feature coming soon: Candidate Applications', 'info')}
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#6D3BFF] hover:text-[#6D3BFF] transition text-left cursor-pointer font-extrabold"
+                >
+                  <span>View Candidate Applications</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => showToast(`Reviewing documents of ${detailedCandidate.full_name}`, 'info')}
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#6D3BFF] hover:text-[#6D3BFF] transition text-left cursor-pointer font-extrabold"
+                >
+                  <span>Approve Documents</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
-          </div>
-        </section>
+        </div>
       </div>
     );
   }
@@ -678,20 +944,23 @@ function StatusBadge({ status }) {
 
 function DetailBox({ icon: Icon, title, rows }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-200 hover:shadow-sm transition">
-      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200/70">
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-200 hover:shadow-xs transition duration-300">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
         <span className="h-8 w-8 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-650 flex items-center justify-center">
           <Icon className="w-4 h-4" />
         </span>
-        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">{title}</h5>
+        <h5 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">{title}</h5>
       </div>
-      <div className="grid grid-cols-1 gap-3">
-        {rows.map(([label, value]) => (
-          <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
-            <p className="text-xs font-semibold text-slate-700 mt-0.5 break-words">{displayValue(value)}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-slate-700">
+        {rows.map(([label, value], idx) => {
+          const isWide = label.toLowerCase() === 'address' || label.toLowerCase() === 'name';
+          return (
+            <div key={label} className={`${isWide ? 'col-span-2' : 'col-span-1'} ${idx >= 2 ? 'border-t border-slate-100/60 pt-3' : ''}`}>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
+              <p className="mt-1.5 text-slate-800 font-extrabold text-xs break-words">{displayValue(value)}</p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -700,26 +969,34 @@ function DetailBox({ icon: Icon, title, rows }) {
 function SummaryList({ icon: Icon, title, empty, children }) {
   const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-200 hover:shadow-sm transition">
-      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200/70">
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-200 hover:shadow-xs transition duration-300">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
         <span className="h-8 w-8 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-650 flex items-center justify-center">
           <Icon className="w-4 h-4" />
         </span>
-        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">{title}</h5>
+        <h5 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">{title}</h5>
       </div>
-      {hasChildren ? <div className="space-y-3">{children}</div> : <p className="text-xs font-semibold text-slate-500">{empty}</p>}
+      {hasChildren ? <div className="space-y-2.5">{children}</div> : <div className="p-4 text-center text-xs font-bold text-slate-400">{empty}</div>}
     </div>
   );
 }
 
 function ListRow({ title, subtitle, meta }) {
+  const isPending = String(meta || '').toLowerCase() === 'pending';
+  const isApproved = String(meta || '').toLowerCase() === 'approved' || String(meta || '').toLowerCase() === 'verified';
+  const badgeCls = isApproved 
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+    : isPending
+      ? 'bg-amber-50 text-amber-700 border-amber-100'
+      : 'bg-slate-50 text-slate-500 border-slate-150';
+
   return (
-    <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+    <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 hover:border-indigo-100 hover:shadow-xs transition duration-200">
       <div className="min-w-0">
-        <p className="font-bold text-slate-700 text-xs truncate">{displayValue(title)}</p>
-        <p className="text-slate-500 text-[10px] font-semibold mt-0.5 truncate">{displayValue(subtitle)}</p>
+        <p className="font-extrabold text-slate-800 text-xs truncate">{displayValue(title)}</p>
+        <p className="text-slate-450 text-[10px] font-semibold mt-0.5 truncate">{displayValue(subtitle)}</p>
       </div>
-      <span className="shrink-0 rounded-lg bg-slate-100 border border-slate-200 px-2 py-1 text-[9px] font-bold uppercase text-slate-500">
+      <span className={`shrink-0 rounded-lg border px-2 py-0.5 text-[9px] font-black uppercase ${badgeCls}`}>
         {displayValue(meta)}
       </span>
     </div>

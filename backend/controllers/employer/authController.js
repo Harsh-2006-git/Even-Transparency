@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../../models/index.js';
 import { sendOTP, verifyOTP } from '../../services/otpService.js';
+import { generateTokenPair } from '../../services/tokenService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'even_cargo_secret_key';
 
@@ -90,7 +91,7 @@ export const login = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid mobile number or password' });
+      return res.status(404).json({ error: 'This mobile number is not registered as an employer.' });
     }
 
     if (user.account_status === 'suspended') {
@@ -103,18 +104,18 @@ export const login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid mobile number or password' });
+      return res.status(401).json({ error: 'Incorrect password. Please try again.' });
     }
 
     // Update last login
     user.last_login_at = new Date();
     await user.save();
 
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    const tokens = generateTokenPair({ id: user.id, email: user.email, type: 'employer' });
 
     return res.status(200).json({
       message: 'Login successful',
-      token,
+      ...tokens,
       id: user.id,
       username: user.full_name || user.email,
       full_name: user.full_name,
@@ -360,15 +361,11 @@ export const register = async (req, res) => {
         if (!isMatch) {
           return res.status(401).json({ error: 'This number is already registered. The password you entered is incorrect.' });
         }
-        const token = jwt.sign(
-          { id: existingUser.id, email: existingUser.email, type: 'employer' },
-          JWT_SECRET,
-          { expiresIn: '7d' }
-        );
+        const tokens = generateTokenPair({ id: existingUser.id, email: existingUser.email, type: 'employer' });
         return res.status(200).json({
           message: 'Account already exists. Please complete your onboarding.',
           onboarding_incomplete: true,
-          token,
+          ...tokens,
           id: existingUser.id,
           username: existingUser.full_name || existingUser.mobile_number,
           full_name: existingUser.full_name,
@@ -410,12 +407,12 @@ export const register = async (req, res) => {
 
       await transaction.commit();
 
-      const token = jwt.sign({ id: user.id, email: user.email, type: 'employer' }, JWT_SECRET, { expiresIn: '7d' });
+      const tokens = generateTokenPair({ id: user.id, email: user.email, type: 'employer' });
 
       return res.status(201).json({
         message: 'Employer pre-registered successfully.',
         onboarding_incomplete: true,
-        token,
+        ...tokens,
         id: user.id,
         username: user.full_name || user.mobile_number,
         full_name: user.full_name,

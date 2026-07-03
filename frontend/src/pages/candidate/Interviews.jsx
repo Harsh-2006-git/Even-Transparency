@@ -127,7 +127,7 @@ const INITIAL_INTERVIEWS = [
 ];
 
 export default function CandidateInterviews({ onSectionChange }) {
-  const [interviews, setInterviews] = useState(INITIAL_INTERVIEWS);
+  const [interviews, setInterviews] = useState([]);
   const [activeTab, setActiveTab] = useState('Upcoming'); // 'Upcoming', 'Completed', 'Cancelled'
   const [selectedInterview, setSelectedInterview] = useState(null); // For Details Drawer
   const [feedbackInterview, setFeedbackInterview] = useState(null); // For Feedback Dialog
@@ -573,62 +573,6 @@ export default function CandidateInterviews({ onSectionChange }) {
               View Preparation Resources
             </button>
           </div>
-
-          {/* Card 3: Past Interview Summary (doughnut chart) */}
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 text-left shadow-xs">
-            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-4">Past Interview Summary</h4>
-            <div className="flex items-center gap-5">
-              {/* Doughnut SVG */}
-              <div className="relative w-20 h-20 shrink-0">
-                <svg viewBox="0 0 36 36" className="w-20 h-20 -rotate-90">
-                  {/* Background Gray Ring */}
-                  <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" strokeWidth="4" />
-                  
-                  {/* Completed segment (Flipkart) - 3/5 = 60%. Dasharray="60 40", Offset=100 */}
-                  <circle cx="18" cy="18" r="15.915" fill="none" stroke="#2563eb" strokeWidth="4"
-                    strokeDasharray="60 40" strokeDashoffset="100" />
-                  
-                  {/* Selected segment (TCI Express) - 1/5 = 20%. Dasharray="20 80", Offset=40 */}
-                  <circle cx="18" cy="18" r="15.915" fill="none" stroke="#10b981" strokeWidth="4"
-                    strokeDasharray="20 80" strokeDashoffset="40" />
-
-                  {/* Not Selected segment (Ekart) - 1/5 = 20%. Dasharray="20 80", Offset=20 */}
-                  <circle cx="18" cy="18" r="15.915" fill="none" stroke="#ef4444" strokeWidth="4"
-                    strokeDasharray="20 80" strokeDashoffset="20" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-sm font-black text-slate-700 leading-none">5</span>
-                  <span className="text-[7px] text-slate-400 font-bold uppercase leading-none mt-0.5">Total</span>
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center justify-between text-[9px] font-bold text-slate-600">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span>Selected</span>
-                  </div>
-                  <span>1 (20%)</span>
-                </div>
-                <div className="flex items-center justify-between text-[9px] font-bold text-slate-600">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>Completed</span>
-                  </div>
-                  <span>3 (60%)</span>
-                </div>
-                <div className="flex items-center justify-between text-[9px] font-bold text-slate-600">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                    <span>Not Selected</span>
-                  </div>
-                  <span>1 (20%)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
 

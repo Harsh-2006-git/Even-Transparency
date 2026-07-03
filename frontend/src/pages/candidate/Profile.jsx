@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { INDIA_STATES, INDIA_STATES_DATA } from '../../utils/indiaStates.js';
 import {
   AlertCircle,
   ArrowRight,
@@ -147,6 +148,10 @@ export default function CandidateProfile({ user, onUserUpdate }) {
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [editSection, setEditSection] = useState(null);
+  const [customDistrict, setCustomDistrict] = useState(false);
+  const [customCity, setCustomCity] = useState(false);
+  const [customCourse, setCustomCourse] = useState(false);
+  const [customSpecialization, setCustomSpecialization] = useState(false);
   
   // Document Preview states
   const [selectedPreviewDoc, setSelectedPreviewDoc] = useState(null);
@@ -879,31 +884,96 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                   />
                 </label>
                 <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">City</span>
-                  <input
-                    type="text"
-                    value={profileForm.address.city || ''}
-                    onChange={(e) => updateAddressField('city', e.target.value)}
+                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">State</span>
+                  <select
+                    value={profileForm.address.state || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomDistrict(false);
+                      setCustomCity(false);
+                      setProfileForm((prev) => ({
+                        ...prev,
+                        address: {
+                          ...prev.address,
+                          state: val,
+                          district: '',
+                          city: ''
+                        }
+                      }));
+                    }}
                     className="profile-input"
-                  />
+                  >
+                    <option value="">Select State / UT</option>
+                    {INDIA_STATES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </label>
                 <label className="space-y-1.5 block">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">District</span>
-                  <input
-                    type="text"
-                    value={profileForm.address.district || ''}
-                    onChange={(e) => updateAddressField('district', e.target.value)}
+                  <select
+                    value={customDistrict ? 'custom_other' : (profileForm.address.district || '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'custom_other') {
+                        setCustomDistrict(true);
+                        updateAddressField('district', '');
+                      } else {
+                        setCustomDistrict(false);
+                        updateAddressField('district', val);
+                      }
+                    }}
+                    disabled={!profileForm.address.state}
                     className="profile-input"
-                  />
+                  >
+                    <option value="">Select District</option>
+                    {profileForm.address.state && (INDIA_STATES_DATA[profileForm.address.state]?.districts || []).map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                    {profileForm.address.state && <option value="custom_other">Other (Type manually)</option>}
+                  </select>
+                  {customDistrict && (
+                    <input
+                      type="text"
+                      value={profileForm.address.district || ''}
+                      onChange={(e) => updateAddressField('district', e.target.value)}
+                      placeholder="Enter custom district name"
+                      className="profile-input mt-2"
+                    />
+                  )}
                 </label>
                 <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">State</span>
-                  <input
-                    type="text"
-                    value={profileForm.address.state || ''}
-                    onChange={(e) => updateAddressField('state', e.target.value)}
+                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">City</span>
+                  <select
+                    value={customCity ? 'custom_other' : (profileForm.address.city || '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'custom_other') {
+                        setCustomCity(true);
+                        updateAddressField('city', '');
+                      } else {
+                        setCustomCity(false);
+                        updateAddressField('city', val);
+                      }
+                    }}
+                    disabled={!profileForm.address.state}
                     className="profile-input"
-                  />
+                  >
+                    <option value="">Select City / Town</option>
+                    {profileForm.address.state && (INDIA_STATES_DATA[profileForm.address.state]?.cities || []).map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                    {profileForm.address.state && <option value="custom_other">Other (Type manually)</option>}
+                  </select>
+                  {customCity && (
+                    <input
+                      type="text"
+                      value={profileForm.address.city || ''}
+                      onChange={(e) => updateAddressField('city', e.target.value)}
+                      placeholder="Enter custom city name"
+                      className="profile-input mt-2"
+                    />
+                  )}
                 </label>
                 <label className="space-y-1.5 block">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Pincode</span>
@@ -1001,33 +1071,104 @@ export default function CandidateProfile({ user, onUserUpdate }) {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="space-y-1.5 block">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Qualification Level</span>
-                  <input
-                    type="text"
+                  <select
                     value={profileForm.education.qualification_level || ''}
                     onChange={(e) => updateNestedField('education', 'qualification_level', e.target.value)}
                     className="profile-input"
-                    placeholder="e.g. 10th Standard, 12th Standard, Graduate"
-                  />
+                  >
+                    <option value="">Select qualification</option>
+                    <option>10th Pass</option>
+                    <option>12th Pass</option>
+                    <option>ITI / Diploma</option>
+                    <option>Graduate</option>
+                    <option>Postgraduate</option>
+                  </select>
                 </label>
                 <label className="space-y-1.5 block">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Course / Degree</span>
-                  <input
-                    type="text"
-                    value={profileForm.education.course_name || ''}
-                    onChange={(e) => updateNestedField('education', 'course_name', e.target.value)}
+                  <select
+                    value={customCourse ? 'custom_other' : (profileForm.education.course_name || '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'custom_other') {
+                        setCustomCourse(true);
+                        updateNestedField('education', 'course_name', '');
+                      } else {
+                        setCustomCourse(false);
+                        updateNestedField('education', 'course_name', val);
+                      }
+                    }}
                     className="profile-input"
-                    placeholder="e.g. B.Sc, General Commerce"
-                  />
+                  >
+                    <option value="">Select Course Name</option>
+                    <option>Class 10</option>
+                    <option>Class 12</option>
+                    <option>ITI (Fitter)</option>
+                    <option>ITI (Electrician)</option>
+                    <option>Diploma (Mechanical)</option>
+                    <option>Diploma (Electrical)</option>
+                    <option>B.A</option>
+                    <option>B.Sc</option>
+                    <option>B.Com</option>
+                    <option>B.Tech</option>
+                    <option>BCA</option>
+                    <option>BBA</option>
+                    <option>M.A</option>
+                    <option>M.Sc</option>
+                    <option>M.Com</option>
+                    <option>MBA</option>
+                    <option>MCA</option>
+                    <option value="custom_other">Other (Type manually)</option>
+                  </select>
+                  {customCourse && (
+                    <input
+                      type="text"
+                      value={profileForm.education.course_name || ''}
+                      onChange={(e) => updateNestedField('education', 'course_name', e.target.value)}
+                      placeholder="Enter custom course name"
+                      className="profile-input mt-2"
+                    />
+                  )}
                 </label>
                 <label className="space-y-1.5 block">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Specialization</span>
-                  <input
-                    type="text"
-                    value={profileForm.education.specialization || ''}
-                    onChange={(e) => updateNestedField('education', 'specialization', e.target.value)}
+                  <select
+                    value={customSpecialization ? 'custom_other' : (profileForm.education.specialization || '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'custom_other') {
+                        setCustomSpecialization(true);
+                        updateNestedField('education', 'specialization', '');
+                      } else {
+                        setCustomSpecialization(false);
+                        updateNestedField('education', 'specialization', val);
+                      }
+                    }}
                     className="profile-input"
-                    placeholder="e.g. Logistics Management, Science"
-                  />
+                  >
+                    <option value="">Select Specialization</option>
+                    <option>General</option>
+                    <option>Science</option>
+                    <option>Commerce</option>
+                    <option>Arts</option>
+                    <option>Fitter</option>
+                    <option>Electrician</option>
+                    <option>Mechanical</option>
+                    <option>Electrical</option>
+                    <option>Computers</option>
+                    <option>Finance</option>
+                    <option>Marketing</option>
+                    <option value="custom_other">Other (Type manually)</option>
+                  </select>
+                  {customSpecialization && (
+                    <input
+                      type="text"
+                      value={profileForm.education.specialization || ''}
+                      onChange={(e) => updateNestedField('education', 'specialization', e.target.value)}
+                      placeholder="Enter custom specialization"
+                      className="profile-input mt-2"
+                    />
+                  )}
                 </label>
                 <label className="space-y-1.5 block">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Institution Name</span>
@@ -1049,13 +1190,16 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                 </label>
                 <label className="space-y-1.5 block">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Passing Year</span>
-                  <input
-                    type="text"
+                  <select
                     value={profileForm.education.passing_year || ''}
-                    onChange={(e) => updateNestedField('education', 'passing_year', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    onChange={(e) => updateNestedField('education', 'passing_year', e.target.value)}
                     className="profile-input"
-                    placeholder="YYYY"
-                  />
+                  >
+                    <option value="">Select Passing Year</option>
+                    {Array.from({ length: 33 }, (_, i) => String(2027 - i)).map((yr) => (
+                      <option key={yr} value={yr}>{yr}</option>
+                    ))}
+                  </select>
                 </label>
                 <label className="space-y-1.5 block">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Percentage / CGPA</span>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   CheckCircle,
+  AlertTriangle,
   Clock,
   Eye,
   Mail,
@@ -30,6 +31,7 @@ export default function Employers({ adminUser, showToast }) {
   const [employerRemarks, setEmployerRemarks] = useState('');
   const [editingEmployer, setEditingEmployer] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [deleteEmployerId, setDeleteEmployerId] = useState(null);
 
   const fetchEmployers = async () => {
     setEmployersLoading(true);
@@ -127,9 +129,6 @@ export default function Employers({ adminUser, showToast }) {
   };
 
   const deleteEmployer = async (employerId) => {
-    const confirmed = window.confirm('Delete this employer permanently?');
-    if (!confirmed) return;
-
     setActingEmployerId(employerId);
     setEmployerActionLoading('delete');
     try {
@@ -141,6 +140,7 @@ export default function Employers({ adminUser, showToast }) {
       if (!res.ok) throw new Error(data.error || 'Failed to delete employer.');
       setEmployers((prev) => prev.filter((employer) => employer.id !== employerId));
       if (detailedEmployerId === employerId) setDetailedEmployerId(null);
+      setDeleteEmployerId(null);
       showToast?.(data.message, 'success');
     } catch (err) {
       showToast?.(err.message, 'error');
@@ -497,7 +497,7 @@ export default function Employers({ adminUser, showToast }) {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => deleteEmployer(employer.id)}
+                                  onClick={() => setDeleteEmployerId(employer.id)}
                                   disabled={actingEmployerId === employer.id && employerActionLoading === 'delete'}
                                   className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold uppercase tracking-wider rounded-xl transition disabled:opacity-50"
                                 >
@@ -530,6 +530,12 @@ export default function Employers({ adminUser, showToast }) {
         loading={editLoading}
         onCancel={() => setEditingEmployer(null)}
         onSave={saveEmployerEdit}
+      />
+      <DeleteEmployerModal
+        employer={employers.find(e => e.id === deleteEmployerId)}
+        loading={employerActionLoading === 'delete'}
+        onCancel={() => setDeleteEmployerId(null)}
+        onConfirm={() => deleteEmployer(deleteEmployerId)}
       />
     </div>
   );
@@ -711,4 +717,49 @@ function formatDate(value) {
     month: 'short',
     year: 'numeric'
   });
+}
+
+function DeleteEmployerModal({ employer, loading, onCancel, onConfirm }) {
+  if (!employer) return null;
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-rose-100 bg-white p-5 shadow-2xl">
+        <div className="flex items-start gap-3 text-left">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100">
+            <AlertTriangle size={20} />
+          </span>
+          <div>
+            <h3 className="text-base font-bold text-slate-950">Delete employer?</h3>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              This will permanently remove <span className="font-bold text-slate-700">{displayValue(employer.company_name)}</span> and all related apprenticeship openings and settings.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700 text-left">
+          This action cannot be undone.
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60 cursor-pointer"
+          >
+            Keep employer
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-sm shadow-rose-100 hover:bg-rose-700 disabled:opacity-60 cursor-pointer"
+          >
+            {loading ? 'Deleting...' : 'Delete employer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -104,6 +104,22 @@ async function ensureDbColumnsExist() {
       console.log('Altered employerjobpostings.job_description column to TEXT.');
     }
   }
+
+  // 4. Check candidategrievances table
+  const grievancesTable = await queryInterface.describeTable('candidategrievances').catch(() => null);
+  if (grievancesTable) {
+    const grievanceColumns = [
+      ['filed_by', { type: sequelize.Sequelize.STRING, allowNull: true, defaultValue: 'Candidate' }],
+      ['evidence_urls', { type: sequelize.Sequelize.JSON, allowNull: true }]
+    ];
+
+    for (const [columnName, definition] of grievanceColumns) {
+      if (!grievancesTable[columnName]) {
+        await queryInterface.addColumn('candidategrievances', columnName, definition);
+        console.log(`Added missing candidategrievances.${columnName} column.`);
+      }
+    }
+  }
 }
 
 // Enable CORS for frontend connectivity

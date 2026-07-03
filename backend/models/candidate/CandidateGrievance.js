@@ -39,8 +39,17 @@ export default (sequelize, DataTypes) => {
     evidence_document_ids: {
       type: DataTypes.ARRAY(DataTypes.UUID)
     },
+    evidence_urls: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
     status: {
       type: DataTypes.STRING
+    },
+    filed_by: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'Candidate'
     },
     assigned_to: {
       type: DataTypes.UUID

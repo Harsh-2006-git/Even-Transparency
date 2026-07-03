@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   AlertTriangle, Plus, X, Upload, FileText, Eye, Trash2,
   ChevronDown, ChevronRight, ChevronLeft, Search,
@@ -11,104 +11,7 @@ import {
 } from 'lucide-react';
 
 // ─── Static sample data ────────────────────────────────────────────────────
-const SAMPLE_GRIEVANCES = [
-  {
-    id: '1',
-    grievance_code: 'EGRV-2026-00012',
-    grievance_category: 'Candidate Misconduct',
-    related_to: 'Apprentice',
-    candidate: 'Harsh Manmade',
-    contract: 'CON-2026-1023',
-    severity_level: 'High',
-    status: 'In Review',
-    created_at: '2026-06-02',
-    updated_at: '2026-06-04',
-    grievance_description: 'The apprentice has been absent without leave for 5 consecutive working days and has not responded to any communication. This is causing operational disruption and affecting the team.',
-    assigned_to: 'Rahul Mehta (Support Officer)',
-    resolution_notes: null,
-    resolved_at: null,
-    timeline: [
-      { date: '02 Jun 2026', event: 'Grievance Submitted', detail: 'Your grievance has been received and logged in the system.', status: 'done' },
-      { date: '03 Jun 2026', event: 'Assigned to Support Officer', detail: 'Rahul Mehta has been assigned to review your case.', status: 'done' },
-      { date: '04 Jun 2026', event: 'Under Investigation', detail: 'Investigation has been initiated. Evidence is being reviewed.', status: 'active' },
-      { date: null, event: 'Resolution Pending', detail: '', status: 'pending' },
-      { date: null, event: 'Closed', detail: '', status: 'pending' },
-    ],
-    progressStep: 2,
-  },
-  {
-    id: '2',
-    grievance_code: 'EGRV-2026-00008',
-    grievance_category: 'Platform / Technical Issue',
-    related_to: 'Platform',
-    candidate: 'N/A',
-    contract: 'N/A',
-    severity_level: 'Medium',
-    status: 'Investigating',
-    created_at: '2026-05-25',
-    updated_at: '2026-05-28',
-    grievance_description: 'The contract generation module is generating documents with incorrect stipend amounts. Multiple contracts have already been signed with wrong values, causing financial discrepancies.',
-    assigned_to: 'Priya Sharma (Senior Tech Officer)',
-    resolution_notes: null,
-    resolved_at: null,
-    timeline: [
-      { date: '25 May 2026', event: 'Grievance Submitted', detail: 'Logged in the system.', status: 'done' },
-      { date: '26 May 2026', event: 'Assigned to Officer', detail: 'Priya Sharma assigned.', status: 'done' },
-      { date: '28 May 2026', event: 'Investigation Started', detail: 'Technical audit scheduled.', status: 'done' },
-      { date: '30 May 2026', event: 'Additional Info Requested', detail: 'Please share affected contract IDs.', status: 'active' },
-      { date: null, event: 'Closed', detail: '', status: 'pending' },
-    ],
-    progressStep: 3,
-  },
-  {
-    id: '3',
-    grievance_code: 'EGRV-2026-00005',
-    grievance_category: 'Compliance / Regulatory',
-    related_to: 'Compliance',
-    candidate: 'N/A',
-    contract: 'N/A',
-    severity_level: 'Low',
-    status: 'Resolved',
-    created_at: '2026-05-15',
-    updated_at: '2026-05-21',
-    grievance_description: 'There was a discrepancy in the NAPS portal registration number mapping causing incorrect data to be submitted to the government portal.',
-    assigned_to: 'Amit Joshi (Compliance Officer)',
-    resolution_notes: 'The NAPS registration data has been corrected and resubmitted to the government portal. All records are now accurate. No further action required from the employer.',
-    resolved_at: '2026-05-21',
-    timeline: [
-      { date: '15 May 2026', event: 'Grievance Submitted', detail: 'Logged.', status: 'done' },
-      { date: '16 May 2026', event: 'Assigned', detail: 'Amit Joshi assigned.', status: 'done' },
-      { date: '18 May 2026', event: 'Investigation Started', detail: '', status: 'done' },
-      { date: '20 May 2026', event: 'Resolution Proposed', detail: 'Data correction initiated.', status: 'done' },
-      { date: '21 May 2026', event: 'Closed', detail: 'Resolution accepted.', status: 'done' },
-    ],
-    progressStep: 4,
-  },
-  {
-    id: '4',
-    grievance_code: 'EGRV-2026-00002',
-    grievance_category: 'Payment / Billing Issue',
-    related_to: 'Platform',
-    candidate: 'N/A',
-    contract: 'N/A',
-    severity_level: 'High',
-    status: 'Closed',
-    created_at: '2026-05-01',
-    updated_at: '2026-05-08',
-    grievance_description: 'An incorrect amount was deducted from our registered account for apprenticeship platform usage fees. The billing statement showed double charges for the month of April 2026.',
-    assigned_to: 'Deepa Nair (Finance Officer)',
-    resolution_notes: 'The duplicate billing has been identified and the excess amount of ₹12,500 has been refunded to the registered account. The billing team has applied a fix to prevent future occurrences.',
-    resolved_at: '2026-05-08',
-    timeline: [
-      { date: '01 May 2026', event: 'Grievance Submitted', detail: '', status: 'done' },
-      { date: '02 May 2026', event: 'Assigned', detail: '', status: 'done' },
-      { date: '04 May 2026', event: 'Investigation Started', detail: '', status: 'done' },
-      { date: '06 May 2026', event: 'Resolution Proposed', detail: 'Refund initiated.', status: 'done' },
-      { date: '08 May 2026', event: 'Closed', detail: 'Refund received.', status: 'done' },
-    ],
-    progressStep: 4,
-  },
-];
+const SAMPLE_GRIEVANCES = [];
 
 const CATEGORIES = [
   'Candidate Misconduct', 'Platform / Technical Issue', 'Compliance / Regulatory',
@@ -281,6 +184,53 @@ function GrievanceDrawer({ grievance, onClose }) {
             </div>
           </div>
 
+          {/* Supporting Evidence */}
+          {grievance.evidence_urls && grievance.evidence_urls.length > 0 && (
+            <div>
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Supporting Evidence</h4>
+              <div className="grid grid-cols-2 gap-3">
+                {grievance.evidence_urls.map((url, index) => {
+                  const isImage = /\.(jpg|jpeg|png|webp|gif)($|\?)/i.test(url) || url.includes('/image/upload/');
+                  const fileName = url.substring(url.lastIndexOf('/') + 1).split('?')[0];
+
+                  return (
+                    <div key={index} className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex flex-col">
+                      {isImage ? (
+                        <div className="h-32 bg-slate-100 flex items-center justify-center overflow-hidden border-b border-slate-200 group relative">
+                          <img src={url} alt="Evidence document" className="object-cover w-full h-full" />
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white font-extrabold text-[10px] uppercase transition-opacity tracking-wider"
+                          >
+                            View Fullscreen
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="h-32 bg-slate-100 flex flex-col items-center justify-center p-4 border-b border-slate-200">
+                          <FileText size={32} className="text-slate-400 mb-1" />
+                          <span className="text-[10px] text-slate-500 font-extrabold text-center truncate w-full px-2">{fileName}</span>
+                        </div>
+                      )}
+                      <div className="p-2 flex items-center justify-between shrink-0 bg-white">
+                        <span className="text-[9px] font-black text-slate-450 uppercase">Document #{index + 1}</span>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-black text-indigo-700 hover:text-indigo-900 transition flex items-center gap-0.5"
+                        >
+                          Open Link
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Resolution */}
           {grievance.resolution_notes && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
@@ -291,9 +241,14 @@ function GrievanceDrawer({ grievance, onClose }) {
               <p className="text-[11px] text-emerald-700 font-semibold leading-relaxed">{grievance.resolution_notes}</p>
               <div className="flex items-center justify-between pt-1">
                 <span className="text-[9px] font-black text-emerald-600">Resolved on {formatDate(grievance.resolved_at)}</span>
-                <button className="flex items-center gap-1 text-[10px] font-black text-emerald-700 hover:text-emerald-900 transition cursor-pointer">
-                  <Download size={11} /> Download Report
-                </button>
+                <a
+                  href={grievance.evidence_urls?.[0] || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[10px] font-black text-emerald-700 hover:text-emerald-900 transition cursor-pointer"
+                >
+                  <Download size={11} /> Open First Attachment
+                </a>
               </div>
             </div>
           )}
@@ -324,8 +279,63 @@ export default function EmployerGrievances({ user }) {
     severity_level: '',
     related_to: '',
     grievance_description: '',
+    custom_category: '',
   });
   const [errors, setErrors] = useState({});
+
+  const API = import.meta.env.VITE_API_BASE_URL;
+
+  const fetchGrievances = async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch(`${API}/employer/grievances`, {
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const formatted = data.map(g => {
+          const dateStr = formatDate(g.created_at || g.createdAt);
+          const resolvedStr = g.resolved_at ? formatDate(g.resolved_at) : null;
+          
+          const timeline = [
+            { date: dateStr, event: 'Grievance Submitted', detail: 'Your grievance has been received and logged.', status: 'done' }
+          ];
+
+          let progressStep = 0;
+          if (g.status === 'In Review') {
+            timeline.push({ date: formatDate(g.updated_at || g.updatedAt), event: 'Under Review', detail: 'The grievance is being reviewed by Admin.', status: 'active' });
+            progressStep = 1;
+          } else if (g.status === 'Investigating') {
+            timeline.push({ date: formatDate(g.updated_at || g.updatedAt), event: 'Investigation Started', detail: 'Investigation is under progress.', status: 'active' });
+            progressStep = 2;
+          } else if (g.status === 'Resolved') {
+            timeline.push({ date: resolvedStr, event: 'Resolution Proposed', detail: 'Grievance has been resolved.', status: 'done' });
+            progressStep = 3;
+          } else if (g.status === 'Closed') {
+            timeline.push({ date: resolvedStr, event: 'Closed', detail: 'Grievance closed.', status: 'done' });
+            progressStep = 4;
+          }
+
+          return {
+            ...g,
+            candidate: g.Candidate?.full_name || 'N/A',
+            contract: g.contract_id ? 'CON-2026' : 'N/A',
+            timeline,
+            progressStep
+          };
+        });
+
+        setGrievances(formatted);
+      }
+    } catch (error) {
+      console.error('Fetch grievances error:', error);
+      toast('Failed to load grievances.', 'error');
+    }
+  };
+
+  useEffect(() => {
+    fetchGrievances();
+  }, []);
 
   const toast = (msg, type = 'success') => {
     const id = Date.now();
@@ -351,7 +361,11 @@ export default function EmployerGrievances({ user }) {
 
   const validate = () => {
     const e = {};
-    if (!form.grievance_category) e.grievance_category = 'Please select a category.';
+    if (!form.grievance_category) {
+      e.grievance_category = 'Please select a category.';
+    } else if (form.grievance_category === 'Other' && !form.custom_category?.trim()) {
+      e.custom_category = 'Please type your custom category.';
+    }
     if (!form.severity_level) e.severity_level = 'Please select severity.';
     if (!form.related_to) e.related_to = 'Please select what this is related to.';
     if (!form.grievance_description.trim()) e.grievance_description = 'Description is required.';
@@ -365,32 +379,67 @@ export default function EmployerGrievances({ user }) {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 1200));
-    const code = `EGRV-2026-${String(Math.floor(Math.random() * 89999) + 10000)}`;
-    const newG = {
-      id: String(Date.now()),
-      grievance_code: code,
-      grievance_category: form.grievance_category,
-      related_to: form.related_to,
-      candidate: 'Pending Assignment',
-      contract: 'Pending',
-      severity_level: form.severity_level,
-      status: 'Open',
-      created_at: new Date().toISOString().slice(0, 10),
-      updated_at: new Date().toISOString().slice(0, 10),
-      grievance_description: form.grievance_description,
-      assigned_to: 'Pending',
-      resolution_notes: null,
-      resolved_at: null,
-      timeline: [{ date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), event: 'Grievance Submitted', detail: 'Your grievance has been received and logged.', status: 'done' }],
-      progressStep: 0,
-    };
-    setGrievances(p => [newG, ...p]);
-    setForm({ grievance_category: '', severity_level: '', related_to: '', grievance_description: '' });
-    setUploadedFiles([]);
-    setErrors({});
-    setSubmitting(false);
-    toast(`Grievance ${code} submitted successfully!`);
+
+    const category = form.grievance_category === 'Other' && form.custom_category
+      ? form.custom_category
+      : form.grievance_category;
+
+    try {
+      // 1. Upload files to Cloudinary via Proxy first
+      const evidence_urls = [];
+      for (const item of uploadedFiles) {
+        const file = item.file;
+        const key = `grievances/employer/${user.id}/${Date.now()}-${Math.floor(Math.random() * 10000)}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        
+        const uploadRes = await fetch(`${API}/candidate/documents/upload-proxy?key=${encodeURIComponent(key)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type },
+          body: file
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(`Failed to upload file ${file.name}.`);
+        }
+
+        const uploadData = await uploadRes.json();
+        if (uploadData.fileUrl) {
+          evidence_urls.push(uploadData.fileUrl);
+        }
+      }
+
+      // 2. Submit grievance details
+      const res = await fetch(`${API}/employer/grievances`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify({
+          grievance_category: category,
+          severity_level: form.severity_level,
+          grievance_description: form.grievance_description,
+          related_to: form.related_to,
+          evidence_urls
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast(`Grievance ${data.grievance_code} submitted successfully!`);
+        setForm({ grievance_category: '', severity_level: '', related_to: '', grievance_description: '', custom_category: '' });
+        setUploadedFiles([]);
+        setErrors({});
+        fetchGrievances();
+      } else {
+        const err = await res.json();
+        toast(err.error || 'Failed to submit grievance.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      toast('Connection error.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const filtered = grievances.filter(g => {
@@ -477,6 +526,19 @@ export default function EmployerGrievances({ user }) {
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   {errors.grievance_category && <p className="text-[10px] text-rose-600 font-semibold">{errors.grievance_category}</p>}
+                  
+                  {form.grievance_category === 'Other' && (
+                    <div className="mt-2 space-y-1">
+                      <input
+                        type="text"
+                        placeholder="Type custom category"
+                        value={form.custom_category || ''}
+                        onChange={e => setForm(p => ({ ...p, custom_category: e.target.value }))}
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none"
+                      />
+                      {errors.custom_category && <p className="text-[10px] text-rose-600 font-semibold">{errors.custom_category}</p>}
+                    </div>
+                  )}
                 </div>
                 {/* Severity */}
                 <div className="space-y-1.5">

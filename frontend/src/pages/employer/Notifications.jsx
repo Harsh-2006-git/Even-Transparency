@@ -113,11 +113,11 @@ const MORE_NOTIFICATIONS = [
 ];
 
 export default function EmployerNotifications({ onSectionChange }) {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMenuId, setActiveMenuId] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
   const triggerToast = (msg) => {

@@ -22,13 +22,7 @@ const INITIAL_KPI_STATS = {
 };
 
 // Openings
-const OPENINGS = [
-  { id: 'all', name: 'All Openings' },
-  { id: 'warehouse', name: 'Warehouse Apprentice', code: 'TNV-APP-2026-001', positions: 20, joined: 18, vacant: 2 },
-  { id: 'operations', name: 'Operations Apprentice', code: 'TNV-APP-2026-002', positions: 15, joined: 12, vacant: 3 },
-  { id: 'logistics', name: 'Logistics Apprentice', code: 'TNV-APP-2026-003', positions: 12, joined: 10, vacant: 2 },
-  { id: 'data', name: 'Data Analyst Apprentice', code: 'TNV-APP-2026-004', positions: 10, joined: 8, vacant: 2 }
-];
+const OPENINGS = [];
 
 // Mock database of apprentices (12 mock entries representing pagination pages)
 const INITIAL_APPRENTICES = [
@@ -462,28 +456,23 @@ const INITIAL_APPRENTICES = [
 ];
 
 // Line Chart Data - Attendance Trend
-const ATTENDANCE_TREND_DATA = [
-  { month: 'Jan 2026', attendance: 80 },
-  { month: 'Feb 2026', attendance: 85 },
-  { month: 'Mar 2026', attendance: 82 },
-  { month: 'Apr 2026', attendance: 89 },
-  { month: 'May 2026', attendance: 92 },
-  { month: 'Jun 2026', attendance: 96 }
-];
+const ATTENDANCE_TREND_DATA = [];
 
 // Bar Chart Data - Performance Distribution
-const PERFORMANCE_DIST_DATA = [
-  { name: 'Excellent (4.5 - 5)', count: 40, color: '#6D3BFF' },
-  { name: 'Good (3.5 - 4.4)', count: 35, color: '#818CF8' },
-  { name: 'Average (2.5 - 3.4)', count: 15, color: '#A5B4FC' },
-  { name: 'Needs Improvement (< 2.5)', count: 6, color: '#C7D2FE' }
-];
+const PERFORMANCE_DIST_DATA = [];
 
 export default function EmployerApprentices({ user, onSectionChange, showToast }) {
   // Page states
-  const [kpiStats, setKpiStats] = useState(INITIAL_KPI_STATS);
-  const [apprentices, setApprentices] = useState(INITIAL_APPRENTICES);
-  const [selectedOpeningId, setSelectedOpeningId] = useState('warehouse'); // default focused job: Warehouse Apprentice
+  const [kpiStats, setKpiStats] = useState({
+    totalApprentices: 0,
+    activeApprentices: 0,
+    onboardingPending: 0,
+    contractsActive: 0,
+    attendanceAverage: '0%',
+    completionRate: '0%'
+  });
+  const [apprentices, setApprentices] = useState([]);
+  const [selectedOpeningId, setSelectedOpeningId] = useState(''); // default focused job empty
 
   // Right slide-over profile drawer state
   const [selectedApprentice, setSelectedApprentice] = useState(null);
@@ -865,7 +854,7 @@ export default function EmployerApprentices({ user, onSectionChange, showToast }
           </div>
 
           {/* ── Selected Opening Summary Card ── */}
-          {selectedOpeningId !== 'all' && (
+          {selectedOpeningId !== 'all' && selectedOpening && (
             <div className="bg-white border border-slate-200 rounded-2xl p-4.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <span className="text-[9px] font-black uppercase text-slate-400">Selected Opening</span>

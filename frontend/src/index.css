@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+html, body, #root {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  background-color: #f8fafc !important;
+}
+
 @theme {
   --font-sans: "Inter", sans-serif;
   --color-violet-650: #6D3BFF;
@@ -49,4 +61,8 @@
 .profile-input:focus {
   border-color: rgb(124 58 237);
   box-shadow: 0 0 0 4px rgb(237 233 254);
+}
+
+.overflow-y-auto, .overflow-auto {
+  overscroll-behavior: contain !important;
 }

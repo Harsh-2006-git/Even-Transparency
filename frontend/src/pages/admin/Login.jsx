@@ -14,6 +14,7 @@ import {
 const API = import.meta.env.VITE_API_BASE_URL;
 
 export default function AdminLogin({ onLoginSuccess, deferredPrompt, onInstall }) {
+  const [showInstallModal, setShowInstallModal] = useState(false);
   const [email, setEmail] = useState('admin@evencargo.in');
   const [password, setPassword] = useState('admin@pass123');
   const [error, setError] = useState('');
@@ -86,7 +87,7 @@ export default function AdminLogin({ onLoginSuccess, deferredPrompt, onInstall }
           if (deferredPrompt) {
             onInstall();
           } else {
-            alert('To install the app, look for the install icon in your browser address bar or use the Add to Home Screen option in your browser menu.');
+            setShowInstallModal(true);
           }
         }}
         className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-white hover:bg-slate-50 text-indigo-650 hover:text-indigo-800 border border-slate-250 rounded-lg md:rounded-xl text-[10px] md:text-xs font-extrabold shadow-sm transition duration-200 hover:-translate-y-0.5 active:scale-95 cursor-pointer"
@@ -252,6 +253,32 @@ export default function AdminLogin({ onLoginSuccess, deferredPrompt, onInstall }
           </div>
         </div>
       </div>
+      {/* Install PWA Guide Modal */}
+      {showInstallModal && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 text-left">
+          <div className="absolute inset-0" onClick={() => setShowInstallModal(false)} />
+          <div className="relative bg-white border border-slate-200 rounded-3xl w-full max-w-sm shadow-2xl p-6 flex flex-col items-center text-center space-y-4 animate-scale-up z-10 font-sans">
+            <div className="p-3 bg-indigo-50 text-indigo-650 rounded-full border border-indigo-100">
+              <Download className="w-10 h-10 text-indigo-650" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="font-extrabold text-sm text-slate-800">Install Web App</h3>
+              <p className="text-[10px] text-slate-500 font-semibold leading-relaxed px-2">
+                To install the app, look for the install icon in your browser address bar or use the Add to Home Screen option in your browser menu.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowInstallModal(false)}
+              className="w-full mt-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md text-xs cursor-pointer"
+            >
+              Okay
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -13,7 +13,9 @@ import {
   Briefcase,
   AlertCircle
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+
+const API = import.meta.env.VITE_API_BASE_URL;
 
 const getStatusColor = (status) => {
   const s = String(status || '').toLowerCase().replace(/[^a-z]/g, '');
@@ -25,6 +27,8 @@ const getStatusColor = (status) => {
       return 'border-rose-200 bg-rose-50/70 text-rose-700';
     case 'shortlisted':
       return 'border-emerald-200 bg-emerald-50/70 text-emerald-700';
+    case 'interview':
+      return 'border-orange-200 bg-orange-50/70 text-orange-700';
     case 'applied':
       return 'border-violet-200 bg-violet-50/70 text-violet-700';
     case 'underreview':
@@ -32,6 +36,8 @@ const getStatusColor = (status) => {
     case 'offered':
     case 'offer':
       return 'border-sky-200 bg-sky-50/70 text-sky-700';
+    case 'withdrawn':
+      return 'border-slate-200 bg-slate-100 text-slate-500';
     default:
       return 'border-slate-200 bg-slate-50/70 text-slate-700';
   }
@@ -47,6 +53,8 @@ const getLeftBorderColor = (status) => {
       return 'border-l-rose-500';
     case 'shortlisted':
       return 'border-l-emerald-500';
+    case 'interview':
+      return 'border-l-orange-500';
     case 'applied':
       return 'border-l-violet-500';
     case 'underreview':
@@ -54,86 +62,262 @@ const getLeftBorderColor = (status) => {
     case 'offered':
     case 'offer':
       return 'border-l-sky-500';
+    case 'withdrawn':
+      return 'border-l-slate-350';
     default:
       return 'border-l-slate-400';
   }
 };
 
-const MOCK_APPLICATIONS = [
-  {
-    id: 'app-1',
-    company: 'Blue Dart',
-    logoLetter: 'BD',
-    logoBg: 'from-blue-600 to-sky-400',
-    position: 'Warehouse Apprentice',
-    location: 'Indore, MP',
-    appliedDate: '30 May 2025',
-    status: 'Under Review',
-    currentStage: 'Background Verification',
-    stipend: '₹12,000 / month',
-    steps: [
-      { name: 'Applied', done: true },
-      { name: 'Docs Match', done: true },
-      { name: 'Under Review', current: true },
-      { name: 'Interview', future: true },
-      { name: 'Offer Letter', future: true }
-    ]
-  },
-  {
-    id: 'app-2',
-    company: 'Delhivery',
-    logoLetter: 'DV',
-    logoBg: 'from-rose-500 to-orange-400',
-    position: 'Operations Apprentice',
-    location: 'Indore, MP',
-    appliedDate: '28 May 2025',
-    status: 'Shortlisted',
-    currentStage: 'Interview Scheduled (12 June)',
-    stipend: '₹13,500 / month',
-    steps: [
-      { name: 'Applied', done: true },
-      { name: 'Docs Match', done: true },
-      { name: 'Shortlisted', done: true },
-      { name: 'Interview', current: true },
-      { name: 'Offer Letter', future: true }
-    ]
-  },
-  {
-    id: 'app-3',
-    company: 'Amazon',
-    logoLetter: 'AM',
-    logoBg: 'from-amber-500 to-orange-500',
-    position: 'Logistics Apprentice',
-    location: 'Indore, MP',
-    appliedDate: '25 May 2025',
-    status: 'Applied',
-    currentStage: 'Resume Screening',
-    stipend: '₹14,000 / month',
-    steps: [
-      { name: 'Applied', current: true },
-      { name: 'Docs Match', future: true },
-      { name: 'Shortlisted', future: true },
-      { name: 'Interview', future: true },
-      { name: 'Offer Letter', future: true }
-    ]
+const getGradient = (name) => {
+  if (!name) return 'linear-gradient(135deg, #6D3BFF, #5C2FFF)';
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-];
+  const h1 = Math.abs(hash) % 360;
+  const h2 = (h1 + 35) % 360;
+  return `linear-gradient(135deg, hsl(${h1}, 70%, 55%), hsl(${h2}, 75%, 45%))`;
+};
 
-export default function CandidateApplications({ onSectionChange }) {
+function TrackingModal({ app, onClose }) {
+  if (!app) return null;
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return null;
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusColor = (status) => {
+    const s = String(status || '').toLowerCase().replace(/[^a-z]/g, '');
+    switch (s) {
+      case 'pending':
+        return 'border-amber-200 bg-amber-50/70 text-amber-700';
+      case 'reject':
+      case 'rejected':
+        return 'border-rose-200 bg-rose-50/70 text-rose-700';
+      case 'shortlisted':
+        return 'border-emerald-200 bg-emerald-50/70 text-emerald-700';
+      case 'interview':
+        return 'border-orange-200 bg-orange-50/70 text-orange-700';
+      case 'applied':
+        return 'border-violet-200 bg-violet-50/70 text-violet-700';
+      case 'underreview':
+        return 'border-blue-200 bg-blue-50/70 text-blue-700';
+      case 'offered':
+      case 'offer':
+        return 'border-sky-200 bg-sky-50/70 text-sky-700';
+      default:
+        return 'border-slate-200 bg-slate-50/70 text-slate-700';
+    }
+  };
+
+  const stages = [
+    {
+      name: 'Application Submitted',
+      description: 'Your application was received by the employer.',
+      date: app.appliedDate,
+      active: true,
+      done: true
+    },
+    {
+      name: 'Under Review',
+      description: 'The hiring team is screening your profile.',
+      date: app.status !== 'Applied' ? 'Completed Stage' : null,
+      active: app.status !== 'Applied',
+      done: app.status !== 'Applied'
+    },
+    {
+      name: 'Shortlisted',
+      description: 'You have been selected for the next round.',
+      date: formatDate(app.shortlistedAt),
+      active: ['Shortlisted', 'Interview', 'Offered', 'Rejected'].includes(app.status),
+      done: ['Shortlisted', 'Interview', 'Offered', 'Rejected'].includes(app.status)
+    },
+    {
+      name: 'Interview Process',
+      description: app.interviewScheduledAt 
+        ? `Interview scheduled (${app.interviewMode || 'Online'}). Feedback: ${app.interviewFeedback || 'Pending'}` 
+        : 'Interviews are scheduled by the employer.',
+      date: formatDate(app.interviewScheduledAt),
+      active: ['Interview', 'Offered', 'Rejected'].includes(app.status),
+      done: ['Interview', 'Offered', 'Rejected'].includes(app.status)
+    },
+    {
+      name: 'Offer / Reject Status',
+      description: app.status === 'Offered' 
+        ? 'Congratulations! You received an apprenticeship offer.' 
+        : app.status === 'Rejected' 
+          ? 'Application not selected by the employer.' 
+          : 'Final decision pending.',
+      date: app.status === 'Offered' || app.status === 'Rejected' ? 'Finalized' : null,
+      active: ['Offered', 'Rejected'].includes(app.status),
+      done: ['Offered', 'Rejected'].includes(app.status)
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[500] animate-fade-in text-left">
+      <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden animate-scale-up">
+        
+        {/* Modal Header */}
+        <div className="p-5 border-b border-slate-100 flex items-start justify-between">
+          <div className="space-y-1">
+            <h3 className="text-base font-black text-slate-900 tracking-tight">{app.position}</h3>
+            <p className="text-xs text-slate-500 font-bold">{app.company} • {app.location}</p>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition flex items-center justify-center border border-slate-200/50 cursor-pointer"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="p-6 overflow-y-auto space-y-6">
+          <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl p-4">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Current Status</span>
+            <span className={`px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${getStatusColor(app.status)}`}>
+              {app.status}
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider pl-0.5">Application Timeline</h4>
+            <div className="relative pl-6 border-l border-slate-200 space-y-6">
+              {stages.map((stage, idx) => (
+                <div key={idx} className="relative">
+                  {/* Timeline bullet dot */}
+                  <div className={`absolute -left-[31px] top-0.5 w-2.5 h-2.5 rounded-full border-2 transition-all duration-300 ${
+                    stage.done 
+                      ? 'bg-emerald-500 border-emerald-500 ring-4 ring-emerald-100' 
+                      : stage.active 
+                        ? 'bg-[#6D3BFF] border-[#6D3BFF] ring-4 ring-violet-100' 
+                        : 'bg-white border-slate-300'
+                  }`} />
+                  
+                  {/* Timeline detail */}
+                  <div className="space-y-0.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h5 className={`text-xs font-black ${stage.active ? 'text-slate-800' : 'text-slate-400'}`}>
+                        {stage.name}
+                      </h5>
+                      {stage.date && (
+                        <span className="text-[9px] font-bold text-slate-450 font-sans shrink-0">
+                          {stage.date}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-[10px] leading-relaxed ${stage.active ? 'text-slate-500 font-semibold' : 'text-slate-400'}`}>
+                      {stage.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-end">
+          <button 
+            onClick={onClose} 
+            className="px-5 py-2 bg-slate-900 hover:bg-slate-850 text-white rounded-xl text-xs font-black shadow-md shadow-slate-900/10 transition cursor-pointer"
+          >
+            Close Tracker
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+export default function CandidateApplications({ onSectionChange, user }) {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [trackingApp, setTrackingApp] = useState(null);
+  const [modalConfig, setModalConfig] = useState(null);
+
+  const fetchApplications = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/candidate/applications`, {
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+      if (!res.ok) throw new Error('Failed to retrieve applications');
+      const data = await res.json();
+      setApplications(data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWithdraw = async (appId) => {
+    setModalConfig({
+      type: 'confirm',
+      title: 'Withdraw Application',
+      message: 'Are you sure you want to withdraw this application? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${API}/candidate/applications/${appId}/withdraw`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${user?.token}`
+            }
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to withdraw application');
+          
+          setModalConfig({
+            type: 'success',
+            title: 'Application Withdrawn',
+            message: 'Your application has been withdrawn successfully.',
+            onConfirm: () => {
+              fetchApplications();
+            }
+          });
+        } catch (err) {
+          setModalConfig({
+            type: 'error',
+            title: 'Operation Failed',
+            message: err.message
+          });
+        }
+      }
+    });
+  };
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
 
   const filteredApps = useMemo(() => {
-    return MOCK_APPLICATIONS.filter(app => {
+    return applications.filter(app => {
       const matchesSearch = app.company.toLowerCase().includes(search.toLowerCase()) || 
                             app.position.toLowerCase().includes(search.toLowerCase());
-      if (filter === 'All') return matchesSearch;
-      return app.status === filter && matchesSearch;
+      if (!matchesSearch) return false;
+      if (filter === 'All') return true;
+      if (filter === 'Offer / Reject') return app.status === 'Offered' || app.status === 'Rejected';
+      return app.status === filter;
     });
-  }, [filter, search]);
+  }, [applications, filter, search]);
 
   return (
     <div className="space-y-6">
+      {trackingApp && <TrackingModal app={trackingApp} onClose={() => setTrackingApp(null)} />}
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">
@@ -153,8 +337,12 @@ export default function CandidateApplications({ onSectionChange }) {
       {/* Filter and Search Bar Dashboard */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
         <div className="flex overflow-x-auto gap-2 no-scrollbar pb-1 md:pb-0">
-          {['All', 'Applied', 'Under Review', 'Shortlisted'].map((tab) => {
-            const count = tab === 'All' ? MOCK_APPLICATIONS.length : MOCK_APPLICATIONS.filter(a => a.status === tab).length;
+          {['All', 'Applied', 'Under Review', 'Shortlisted', 'Interview', 'Offer / Reject'].map((tab) => {
+            const count = tab === 'All' 
+              ? applications.length 
+              : tab === 'Offer / Reject' 
+                ? applications.filter(a => a.status === 'Offered' || a.status === 'Rejected').length
+                : applications.filter(a => a.status === tab).length;
             const isActive = filter === tab;
             return (
               <button
@@ -225,53 +413,63 @@ export default function CandidateApplications({ onSectionChange }) {
             return (
               <div 
                 key={app.id} 
-                className={`rounded-3xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md border-l-4 ${getLeftBorderColor(app.status)} transition-all duration-300 text-left flex flex-col xl:flex-row gap-4 justify-between items-stretch xl:items-center hover:-translate-y-0.5`}
+                className={`rounded-3xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md border-l-4 ${getLeftBorderColor(app.status)} transition-all duration-350 text-left flex flex-col xl:flex-row gap-5 justify-between items-stretch xl:items-center hover:-translate-y-0.5`}
               >
                 
                 {/* Left Profile Info details */}
-                <div className="space-y-3 min-w-0 flex-1">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-black text-xs flex items-center justify-center select-none shrink-0 shadow-inner">
+                <div className="space-y-3.5 min-w-0 flex-1">
+                  <div className="flex items-center gap-3.5">
+                    <div 
+                      className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-xs select-none shrink-0 shadow-xs border border-white/10 tracking-wider"
+                      style={{ background: getGradient(app.company) }}
+                    >
                       {app.logoLetter}
                     </div>
-                    <div className="min-w-0 space-y-0.5">
+                    <div className="min-w-0 space-y-1">
                       <h3 className="text-sm font-black text-slate-800 leading-tight tracking-tight truncate">{app.position}</h3>
                       <p className="text-[11px] text-slate-500 font-bold flex flex-wrap items-center gap-x-3 gap-y-0.5">
                         <span className="text-slate-700 font-black">{app.company}</span>
-                        <span className="flex items-center gap-0.5 text-slate-450 font-semibold font-sans">
+                        <span className="flex items-center gap-0.5 text-slate-400 font-semibold">
                           <MapPin size={11} className="text-slate-400" /> {app.location}
                         </span>
                       </p>
                     </div>
                   </div>
  
-                  <div className="flex items-center flex-nowrap gap-x-3 text-[8.5px] font-bold text-slate-500 bg-slate-50/80 border border-slate-100 rounded-xl py-1.5 px-2.5 whitespace-nowrap overflow-x-auto no-scrollbar max-w-fit">
-                    <span className="flex items-center gap-1 shrink-0"><Calendar size={11} className="text-slate-400" /> Applied: <span className="text-slate-700 font-sans">{app.appliedDate}</span></span>
-                    <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
-                    <span className="flex items-center gap-1 shrink-0"><Clock size={11} className="text-slate-400" /> Stage: <span className="text-slate-700">{app.currentStage}</span></span>
-                    <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
-                    <span className="flex items-center gap-1 text-[#6D3BFF] font-black shrink-0"><CheckSquare size={11} /> Stipend: <span className="font-sans">{app.stipend}</span></span>
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-bold text-slate-600">
+                      <Calendar size={11} className="text-slate-400" />
+                      Applied: <span className="text-slate-850 font-sans">{app.appliedDate}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-bold text-slate-600">
+                      <Clock size={11} className="text-slate-400" />
+                      Stage: <span className="text-slate-850">{app.currentStage}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 bg-violet-50 border border-violet-100 rounded-lg text-[9px] font-black text-[#6D3BFF]">
+                      <CheckSquare size={11} className="text-[#6D3BFF]" />
+                      Stipend: <span className="font-sans">{app.stipend}</span>
+                    </span>
                   </div>
                 </div>
 
                 {/* Progress Steps Timeline Tracker */}
-                <div className="w-full xl:w-auto min-w-[280px] xl:min-w-[350px] px-1 py-2 border-t border-b border-dashed border-slate-100 xl:border-0 my-0.5 xl:my-0">
+                <div className="w-full xl:w-auto min-w-[280px] xl:min-w-[360px] px-1 py-2 border-t border-b border-dashed border-slate-100 xl:border-0 my-0.5 xl:my-0">
                   <div className="relative flex items-center justify-between">
                     
                     {/* Background Progress track bar */}
                     <div 
-                      className="absolute top-2 h-0.5 bg-slate-100 rounded-full" 
+                      className="absolute top-2.5 h-0.5 bg-slate-100 rounded-full" 
                       style={{ left: `${trackOffsetPct}%`, right: `${trackOffsetPct}%` }}
                     />
                     <div 
-                      className="absolute top-2 h-0.5 bg-gradient-to-r from-emerald-500 to-[#6D3BFF] rounded-full transition-all duration-700" 
+                      className="absolute top-2.5 h-0.5 bg-gradient-to-r from-emerald-500 to-[#6D3BFF] rounded-full transition-all duration-700" 
                       style={{ left: `${trackOffsetPct}%`, width: `${progressPct}%` }}
                     />
                     
                     {app.steps.map((step, idx) => (
                       <div key={idx} className="flex-1 flex flex-col items-center relative">
                         {/* Circle Dot indicator */}
-                        <div className={`w-[18px] h-[18px] rounded-full flex items-center justify-center text-[7px] font-black z-10 transition-all duration-300 shadow-sm ${
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black z-10 transition-all duration-350 shadow-sm ${
                           step.done 
                             ? 'bg-emerald-500 text-white' 
                             : step.current 
@@ -282,7 +480,7 @@ export default function CandidateApplications({ onSectionChange }) {
                         </div>
 
                         {/* Step tag name label */}
-                        <span className={`text-[7.5px] font-black mt-1.5 whitespace-nowrap text-center ${
+                        <span className={`text-[7.5px] font-black mt-2 whitespace-nowrap text-center ${
                           step.done 
                             ? 'text-emerald-600' 
                             : step.current 
@@ -297,19 +495,29 @@ export default function CandidateApplications({ onSectionChange }) {
                 </div>
 
                 {/* Right Status badge and CTA actions */}
-                <div className="flex xl:flex-col items-center xl:items-end justify-between w-full xl:w-auto gap-3 pt-2 xl:pt-0 shrink-0">
-                  <span className={`px-2.5 py-0.5 rounded-lg border text-[8px] font-black uppercase tracking-wider select-none ${getStatusColor(app.status)}`}>
+                <div className="flex xl:flex-col items-center xl:items-stretch justify-between w-full xl:w-[130px] gap-2.5 pt-2 xl:pt-0 shrink-0">
+                  <span className={`px-2.5 py-0.5 rounded-lg border text-[8px] font-black uppercase tracking-wider select-none text-center ${getStatusColor(app.status)}`}>
                     {app.status}
                   </span>
 
                   <button
                     type="button"
-                    onClick={() => alert(`Opening tracking detail console for ${app.company} Application...`)}
-                    className="flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 hover:border-violet-300 hover:text-[#6D3BFF] bg-white px-3.5 text-[11px] font-black text-slate-650 shadow-xs hover:bg-violet-50/10 transition duration-200 cursor-pointer select-none active:scale-95 shrink-0"
+                    onClick={() => setTrackingApp(app)}
+                    className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-violet-200 hover:border-violet-300 hover:text-[#6D3BFF] bg-violet-50/50 hover:bg-violet-50 px-4 text-xs font-black text-[#6D3BFF] shadow-xs transition duration-250 cursor-pointer select-none active:scale-95 shrink-0"
                   >
                     <span>Track Status</span>
                     <ChevronRight size={11} />
                   </button>
+
+                  {app.status !== 'Withdrawn' && app.status !== 'Rejected' && (
+                    <button
+                      type="button"
+                      onClick={() => handleWithdraw(app.id)}
+                      className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-rose-200 hover:border-rose-300 hover:text-rose-700 bg-white hover:bg-rose-50/20 px-4 text-xs font-black text-rose-600 shadow-xs transition duration-250 cursor-pointer select-none active:scale-95 shrink-0"
+                    >
+                      <span>Withdraw</span>
+                    </button>
+                  )}
                 </div>
 
               </div>
@@ -317,6 +525,80 @@ export default function CandidateApplications({ onSectionChange }) {
           })
         )}
       </div>
+
+      {/* Custom Alert/Confirm Modal Popup */}
+      {modalConfig && (
+        <div className="fixed inset-0 z-[1000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 text-left">
+          {/* Backdrop click to close if it is not a pending confirm operation */}
+          <div 
+            className="absolute inset-0" 
+            onClick={() => {
+              if (modalConfig.type !== 'confirm') {
+                setModalConfig(null);
+              }
+            }} 
+          />
+
+          <div className="relative bg-white border border-slate-200 rounded-3xl w-full max-w-sm shadow-2xl p-6 flex flex-col items-center text-center space-y-4 animate-scale-up z-10">
+            {modalConfig.type === 'confirm' && (
+              <div className="p-3 bg-amber-50 text-amber-600 rounded-full border border-amber-100">
+                <AlertCircle className="w-10 h-10 text-amber-600 animate-pulse" />
+              </div>
+            )}
+            {modalConfig.type === 'success' && (
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
+                <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+              </div>
+            )}
+            {modalConfig.type === 'error' && (
+              <div className="p-3 bg-rose-50 text-rose-600 rounded-full border border-rose-100">
+                <AlertCircle className="w-10 h-10 text-rose-600" />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <h3 className="font-extrabold text-sm text-slate-800">{modalConfig.title}</h3>
+              <p className="text-[10px] text-slate-500 font-semibold leading-relaxed px-2">
+                {modalConfig.message}
+              </p>
+            </div>
+
+            {modalConfig.type === 'confirm' ? (
+              <div className="flex gap-2.5 w-full mt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalConfig(null)}
+                  className="flex-1 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold transition text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const action = modalConfig.onConfirm;
+                    setModalConfig(null);
+                    action();
+                  }}
+                  className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition shadow-md text-xs cursor-pointer"
+                >
+                  Yes, Withdraw
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (modalConfig.onConfirm) modalConfig.onConfirm();
+                  setModalConfig(null);
+                }}
+                className="w-full mt-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md text-xs cursor-pointer"
+              >
+                Okay
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

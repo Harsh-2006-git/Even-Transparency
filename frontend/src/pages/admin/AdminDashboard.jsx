@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Building2, Users, UserCheck, Briefcase, FileText, CreditCard,
   TrendingUp, TrendingDown, ChevronRight, Download, CalendarDays,
@@ -21,70 +21,16 @@ const B  = '#3B82F6';  // blue
 const IN = '#6366F1';  // indigo
 
 /* ─── Chart data ─────────────────────────────────────────── */
-const trendDays = ['7 Jun','8 Jun','9 Jun','10 Jun','11 Jun','12 Jun','13 Jun'];
-
-// Split into two datasets so scales don't clash
-const smallTrendData = trendDays.map((d, i) => ({
-  date: d,
-  New:       [320,410,380,520,445,490,389][i],
-  Completed: [1100,1130,1160,1195,1220,1240,1245][i],
-  Dropouts:  [42,48,51,62,58,71,74][i],
-}));
-
-const ongoingData = trendDays.map((d, i) => ({
-  date: d,
-  Ongoing: [14800,15020,15200,15420,15580,15640,15642][i],
-}));
-
-const stipendBars = [
-  { month: 'Jan', amt: 9.2  },
-  { month: 'Feb', amt: 10.1 },
-  { month: 'Mar', amt: 10.8 },
-  { month: 'Apr', amt: 12.5 },
-  { month: 'May', amt: 11.9 },
-  { month: 'Jun', amt: 12.48},
-];
-
-const donutData = [
-  { name: 'On-time',  value: 82, amount: '₹10.23 Cr', color: G  },
-  { name: 'Pending',  value: 11, amount: '₹1.45 Cr',  color: A  },
-  { name: 'Delayed',  value:  6, amount: '₹0.80 Cr',  color: R  },
-];
-
-const funnelRows = [
-  { label: 'Applications Received', count: 45768, pct: 100 },
-  { label: 'Under Review',          count: 18542, pct: 40  },
-  { label: 'Shortlisted',           count: 7856,  pct: 17  },
-  { label: 'Interview Scheduled',   count: 3256,  pct:  7  },
-  { label: 'Selected',              count: 1245,  pct:  3  },
-  { label: 'Joined',                count: 842,   pct:  2  },
-];
+const trendDays = [];
+const smallTrendData = [];
+const ongoingData = [];
+const stipendBars = [];
+const donutData = [];
+const funnelRows = [];
 const funnelColors = [P, '#7C3AED', PM, '#A78BFA', '#C4B5FD', '#DDD6FE'];
-
-const employers = [
-  { name: 'Blue Dart Express Ltd.', ap: 1245, op: 120, co: 1120, st: '₹1.24 Cr', g: '+12%' },
-  { name: 'Delhivery Ltd.',         ap: 980,  op: 95,  co: 870,  st: '₹98.60 L', g: '+9%'  },
-  { name: 'Amazon Logistics',       ap: 875,  op: 80,  co: 790,  st: '₹87.50 L', g: '+7%'  },
-  { name: 'DHL Supply Chain',       ap: 650,  op: 60,  co: 580,  st: '₹65.20 L', g: '+5%'  },
-  { name: 'TCI Express Ltd.',       ap: 540,  op: 45,  co: 480,  st: '₹54.10 L', g: '+4%'  },
-];
-
-const trades = [
-  { name: 'Warehouse Operations',     ap: 4562, op: 620, pct: 88 },
-  { name: 'Logistics & Supply Chain', ap: 3245, op: 410, pct: 72 },
-  { name: 'Delivery Operations',      ap: 2987, op: 380, pct: 65 },
-  { name: 'Maintenance Technician',   ap: 2145, op: 260, pct: 52 },
-  { name: 'Data Entry Operator',      ap: 1856, op: 210, pct: 45 },
-];
-
-const feed = [
-  { color: B,  Icon: Building2,  title: 'New employer registered',   sub: 'Blue Dart Express Ltd.',            time: '10 min ago' },
-  { color: G,  Icon: UserCheck,  title: 'Apprentice onboarded',      sub: 'Harsh Verma (Warehouse Apprentice)', time: '25 min ago' },
-  { color: P,  Icon: CreditCard, title: 'Stipend disbursed',         sub: '₹12,000 to 245 apprentices',       time: '1 hr ago'   },
-  { color: A,  Icon: FileText,   title: 'Contract approved',         sub: 'Delhivery Ltd. – 120 apprentices', time: '2 hrs ago'  },
-  { color: IN, Icon: Briefcase,  title: 'New opening published',     sub: 'Operations Apprentice – 30 roles', time: '3 hrs ago'  },
-  { color: G,  Icon: ShieldCheck,title: 'Compliance check passed',   sub: 'Amazon Logistics – Q2 audit',      time: '5 hrs ago'  },
-];
+const employers = [];
+const trades = [];
+const feed = [];
 
 /* ─── Shared Tooltip ─────────────────────────────────────── */
 function ChartTip({ active, payload, label, suffix = '' }) {
@@ -174,6 +120,46 @@ function MiniStat({ label, value, color, trend, up = true }) {
 export default function AdminDashboard({ adminUser }) {
   const [apFilter, setApFilter] = useState('Last 7 Days');
   const [stFilter, setStFilter] = useState('This Month');
+  const [stats, setStats] = useState({
+    totalEmployers: 0,
+    totalApprentices: 0,
+    totalCandidates: 0,
+    activeOpenings: 0,
+    activeContracts: 0,
+    totalStipendDisbursed: 0,
+    pendingApprovals: 0,
+    interviewsToday: 0,
+    complianceRate: 98.4,
+    systemHealth: 99.9
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const API = import.meta.env.VITE_API_BASE_URL;
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!adminUser?.token) return;
+      setLoading(true);
+      try {
+        const res = await fetch(`${API}/admin/dashboard-stats`, {
+          headers: {
+            Authorization: `Bearer ${adminUser.token}`
+          }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch dashboard metrics.');
+        setStats(data);
+      } catch (err) {
+        console.error('Failed to load admin stats:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [adminUser]);
 
   return (
     <div className="space-y-5 pb-8">
@@ -199,12 +185,12 @@ export default function AdminDashboard({ adminUser }) {
 
       {/* ── KPI Cards (6 across) ────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-        <KPI Icon={Building2}   label="Total Employers"         value="1,248"      growth="+8.6%"  iconColor={P}   iconBg={PL}       link="View all employers"   />
-        <KPI Icon={UserCheck}   label="Total Apprentices"       value="18,542"     growth="+12.4%" iconColor={G}   iconBg="#D1FAE5"  link="View all apprentices" />
-        <KPI Icon={Users}       label="Total Candidates"        value="45,768"     growth="+15.7%" iconColor={B}   iconBg="#DBEAFE"  link="View all candidates"  />
-        <KPI Icon={Briefcase}   label="Active Openings"         value="2,356"      growth="+9.3%"  iconColor={A}   iconBg="#FEF3C7"  link="View all openings"    />
-        <KPI Icon={FileText}    label="Active Contracts"        value="12,985"     growth="+10.1%" iconColor={IN}  iconBg="#EEF2FF"  link="View all contracts"   />
-        <KPI Icon={CreditCard}  label="Total Stipend Disbursed" value="₹12.48 Cr" growth="+18.2%" iconColor="#EC4899" iconBg="#FCE7F3" link="View stipend report" />
+        <KPI Icon={Building2}   label="Total Employers"         value={stats.totalEmployers.toString()}          growth="+0%"    iconColor={P}   iconBg={PL}       link="View all employers"   />
+        <KPI Icon={UserCheck}   label="Total Apprentices"       value={stats.totalApprentices.toString()}        growth="+0%"    iconColor={G}   iconBg="#D1FAE5"  link="View all apprentices" />
+        <KPI Icon={Users}       label="Total Candidates"        value={stats.totalCandidates.toString()}         growth="+0%"    iconColor={B}   iconBg="#DBEAFE"  link="View all candidates"  />
+        <KPI Icon={Briefcase}   label="Active Openings"         value={stats.activeOpenings.toString()}          growth="+0%"    iconColor={A}   iconBg="#FEF3C7"  link="View all openings"    />
+        <KPI Icon={FileText}    label="Active Contracts"        value={stats.activeContracts.toString()}         growth="+0%"    iconColor={IN}  iconBg="#EEF2FF"  link="View all contracts"   />
+        <KPI Icon={CreditCard}  label="Total Stipend Disbursed" value={`₹${(stats.totalStipendDisbursed || 0).toLocaleString('en-IN')}`} growth="+0%"    iconColor="#EC4899" iconBg="#FCE7F3" link="View stipend report" />
       </div>
 
       {/* ── Row 2: Overview | Funnel | Stipend ─────────── */}
@@ -219,10 +205,10 @@ export default function AdminDashboard({ adminUser }) {
           >
             {/* 4 mini stats in one row */}
             <div className="flex gap-2 mb-4">
-              <MiniStat label="New"       value="2,354"  color={P} trend="+11.2%" up />
-              <MiniStat label="Ongoing"   value="15,642" color={B} trend="+9.8%"  up />
-              <MiniStat label="Completed" value="1,245"  color={G} trend="+14.6%" up />
-              <MiniStat label="Dropouts"  value="356"    color={R} trend="+4.3%"  up={false} />
+              <MiniStat label="New"       value="0"      color={P} trend="+0%" up />
+              <MiniStat label="Ongoing"   value="0"      color={B} trend="+0%"  up />
+              <MiniStat label="Completed" value="0"      color={G} trend="+0%" up />
+              <MiniStat label="Dropouts"  value="0"      color={R} trend="+0%"  up={false} />
             </div>
 
             {/* Ongoing trend (separate scale) */}
@@ -300,7 +286,7 @@ export default function AdminDashboard({ adminUser }) {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-base font-black text-slate-800 leading-none">₹12.48 Cr</p>
+                <p className="text-base font-black text-slate-800 leading-none">₹{(stats.totalStipendDisbursed || 0).toLocaleString('en-IN')}</p>
                 <p className="text-[9px] font-semibold text-slate-400 mt-0.5">Total Disbursed</p>
               </div>
             </div>
@@ -469,10 +455,10 @@ export default function AdminDashboard({ adminUser }) {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y divide-slate-200">
                 {[
-                  { label: 'Total Disbursed (YTD)', value: '₹68.74 Cr', change: '+16.5% from last year', up: true,  Icon: TrendingUp,  color: G },
-                  { label: 'Avg Stipend/Apprentice', value: '₹8,432',   change: '+5.6% from last year',  up: true,  Icon: Award,       color: B },
-                  { label: 'Pending Disbursement',   value: '₹1.45 Cr', change: '-2.3% from last month', up: false, Icon: AlertCircle, color: R },
-                  { label: 'Total Transactions',     value: '1,24,578', change: '+12.8% from last month', up: true,  Icon: Activity,    color: P },
+                  { label: 'Total Disbursed (YTD)', value: `₹${(stats.totalStipendDisbursed || 0).toLocaleString('en-IN')}`, change: '+0.0% from last year', up: true,  Icon: TrendingUp,  color: G },
+                  { label: 'Avg Stipend/Apprentice', value: `₹${(stats.avgStipend || 0).toLocaleString('en-IN')}`,   change: '+0.0% from last year',  up: true,  Icon: Award,       color: B },
+                  { label: 'Pending Disbursement',   value: `₹${(stats.pendingDisbursement || 0).toLocaleString('en-IN')}`, change: '+0.0% from last month', up: false, Icon: AlertCircle, color: R },
+                  { label: 'Total Transactions',     value: (stats.totalTransactions || 0).toLocaleString('en-IN'), change: '+0.0% from last month', up: true,  Icon: Activity,    color: P },
                 ].map((s, i) => {
                   const Icon = s.Icon;
                   return (
@@ -522,10 +508,10 @@ export default function AdminDashboard({ adminUser }) {
         <div className="xl:col-span-9">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 h-full">
             {[
-              { label: 'Compliance Rate',   value: '98.4%', Icon: ShieldCheck,  color: G, bg: '#D1FAE5' },
-              { label: 'Interviews Today',  value: '142',   Icon: CalendarDays, color: B, bg: '#DBEAFE' },
-              { label: 'Pending Approvals', value: '37',    Icon: AlertCircle,  color: A, bg: '#FEF3C7' },
-              { label: 'System Health',     value: '99.9%', Icon: Zap,          color: P, bg: PL        },
+              { label: 'Compliance Rate',   value: `${stats.complianceRate || 98.4}%`, Icon: ShieldCheck,  color: G, bg: '#D1FAE5' },
+              { label: 'Interviews Today',  value: (stats.interviewsToday || 0).toString(),   Icon: CalendarDays, color: B, bg: '#DBEAFE' },
+              { label: 'Pending Approvals', value: (stats.pendingApprovals || 0).toString(),  Icon: AlertCircle,  color: A, bg: '#FEF3C7' },
+              { label: 'System Health',     value: `${stats.systemHealth || 99.9}%`, Icon: Zap,          color: P, bg: PL        },
             ].map((s, i) => {
               const Icon = s.Icon;
               return (

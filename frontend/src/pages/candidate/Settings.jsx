@@ -215,7 +215,7 @@ export default function CandidateSettings({ user, onSectionChange, onUserUpdate 
     }
     setModalType(null);
     setConfirmInput('');
-    alert('Your delete request has been filed. All personal data will be removed within 24 hours.');
+    triggerToast('Your delete request has been filed. All personal data will be removed within 24 hours.');
   };
 
   const handleRaiseTicket = (e) => {

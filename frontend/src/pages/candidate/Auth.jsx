@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { INDIA_STATES, INDIA_STATES_DATA } from '../../utils/indiaStates.js';
 import { 
   AlertTriangle, 
   ArrowLeft, 
@@ -210,6 +211,10 @@ export default function CandidateAuth({ onAuthSuccess, onBackToLogin, resumeSess
   const [loading, setLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [customDistrict, setCustomDistrict] = useState(false);
+  const [customCity, setCustomCity] = useState(false);
+  const [customCourse, setCustomCourse] = useState(false);
+  const [customSpecialization, setCustomSpecialization] = useState(false);
 
 
   const passwordChecks = useMemo(() => [
@@ -705,9 +710,96 @@ export default function CandidateAuth({ onAuthSuccess, onBackToLogin, resumeSess
         <Field label="Address Line 1"><Input value={form.address.address_line_1} onChange={(e) => update('address', 'address_line_1', e.target.value)} /></Field>
         <Field label="Address Line 2"><Input value={form.address.address_line_2} onChange={(e) => update('address', 'address_line_2', e.target.value)} /></Field>
         <Field label="Landmark"><Input value={form.address.landmark} onChange={(e) => update('address', 'landmark', e.target.value)} /></Field>
-        <Field label="City"><Input value={form.address.city} onChange={(e) => update('address', 'city', e.target.value)} /></Field>
-        <Field label="District"><Input value={form.address.district} onChange={(e) => update('address', 'district', e.target.value)} /></Field>
-        <Field label="State"><Input value={form.address.state} onChange={(e) => update('address', 'state', e.target.value)} /></Field>
+        
+        <Field label="State">
+          <Select
+            value={form.address.state}
+            onChange={(e) => {
+              const val = e.target.value;
+              setCustomDistrict(false);
+              setCustomCity(false);
+              setForm((prev) => ({
+                ...prev,
+                address: {
+                  ...prev.address,
+                  state: val,
+                  district: '',
+                  city: ''
+                }
+              }));
+            }}
+          >
+            <option value="">Select State / UT</option>
+            {INDIA_STATES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field label="District">
+          <Select
+            value={customDistrict ? 'custom_other' : form.address.district}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'custom_other') {
+                setCustomDistrict(true);
+                update('address', 'district', '');
+              } else {
+                setCustomDistrict(false);
+                update('address', 'district', val);
+              }
+            }}
+            disabled={!form.address.state}
+          >
+            <option value="">Select District</option>
+            {form.address.state && (INDIA_STATES_DATA[form.address.state]?.districts || []).map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+            {form.address.state && <option value="custom_other">Other (Type manually)</option>}
+          </Select>
+          {customDistrict && (
+            <Input
+              type="text"
+              value={form.address.district}
+              onChange={(e) => update('address', 'district', e.target.value)}
+              placeholder="Enter custom district name"
+              className="mt-2"
+            />
+          )}
+        </Field>
+
+        <Field label="City">
+          <Select
+            value={customCity ? 'custom_other' : form.address.city}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'custom_other') {
+                setCustomCity(true);
+                update('address', 'city', '');
+              } else {
+                setCustomCity(false);
+                update('address', 'city', val);
+              }
+            }}
+            disabled={!form.address.state}
+          >
+            <option value="">Select City / Town</option>
+            {form.address.state && (INDIA_STATES_DATA[form.address.state]?.cities || []).map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+            {form.address.state && <option value="custom_other">Other (Type manually)</option>}
+          </Select>
+          {customCity && (
+            <Input
+              type="text"
+              value={form.address.city}
+              onChange={(e) => update('address', 'city', e.target.value)}
+              placeholder="Enter custom city name"
+              className="mt-2"
+            />
+          )}
+        </Field>
+
         <Field label="Pincode"><Input value={form.address.pincode} onChange={(e) => update('address', 'pincode', e.target.value.replace(/\D/g, '').slice(0, 6))} /></Field>
       </div>
     );
@@ -723,12 +815,108 @@ export default function CandidateAuth({ onAuthSuccess, onBackToLogin, resumeSess
             <option>Postgraduate</option>
           </Select>
         </Field>
-        <Field label="Course Name"><Input value={form.education.course_name} onChange={(e) => update('education', 'course_name', e.target.value)} placeholder="e.g. Class 10, BCA" /></Field>
-        <Field label="Specialization"><Input value={form.education.specialization} onChange={(e) => update('education', 'specialization', e.target.value)} placeholder="e.g. Science, Computers" /></Field>
-        <Field label="Institution Name"><Input value={form.education.institution_name} onChange={(e) => update('education', 'institution_name', e.target.value)} /></Field>
-        <Field label="Board or University"><Input value={form.education.board_or_university} onChange={(e) => update('education', 'board_or_university', e.target.value)} /></Field>
-        <Field label="Passing Year"><Input value={form.education.passing_year} onChange={(e) => update('education', 'passing_year', e.target.value.replace(/\D/g, '').slice(0, 4))} /></Field>
-        <Field label="Percentage or CGPA"><Input value={form.education.percentage_or_cgpa} onChange={(e) => update('education', 'percentage_or_cgpa', e.target.value)} /></Field>
+
+        <Field label="Course Name">
+          <Select
+            value={customCourse ? 'custom_other' : form.education.course_name}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'custom_other') {
+                setCustomCourse(true);
+                update('education', 'course_name', '');
+              } else {
+                setCustomCourse(false);
+                update('education', 'course_name', val);
+              }
+            }}
+          >
+            <option value="">Select Course Name</option>
+            <option>Class 10</option>
+            <option>Class 12</option>
+            <option>ITI (Fitter)</option>
+            <option>ITI (Electrician)</option>
+            <option>Diploma (Mechanical)</option>
+            <option>Diploma (Electrical)</option>
+            <option>B.A</option>
+            <option>B.Sc</option>
+            <option>B.Com</option>
+            <option>B.Tech</option>
+            <option>BCA</option>
+            <option>BBA</option>
+            <option>M.A</option>
+            <option>M.Sc</option>
+            <option>M.Com</option>
+            <option>MBA</option>
+            <option>MCA</option>
+            <option value="custom_other">Other (Type manually)</option>
+          </Select>
+          {customCourse && (
+            <Input
+              type="text"
+              value={form.education.course_name}
+              onChange={(e) => update('education', 'course_name', e.target.value)}
+              placeholder="Enter custom course name"
+              className="mt-2"
+            />
+          )}
+        </Field>
+
+        <Field label="Specialization">
+          <Select
+            value={customSpecialization ? 'custom_other' : form.education.specialization}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'custom_other') {
+                setCustomSpecialization(true);
+                update('education', 'specialization', '');
+              } else {
+                setCustomSpecialization(false);
+                update('education', 'specialization', val);
+              }
+            }}
+          >
+            <option value="">Select Specialization</option>
+            <option>General</option>
+            <option>Science</option>
+            <option>Commerce</option>
+            <option>Arts</option>
+            <option>Fitter</option>
+            <option>Electrician</option>
+            <option>Mechanical</option>
+            <option>Electrical</option>
+            <option>Computers</option>
+            <option>Finance</option>
+            <option>Marketing</option>
+            <option value="custom_other">Other (Type manually)</option>
+          </Select>
+          {customSpecialization && (
+            <Input
+              type="text"
+              value={form.education.specialization}
+              onChange={(e) => update('education', 'specialization', e.target.value)}
+              placeholder="Enter custom specialization"
+              className="mt-2"
+            />
+          )}
+        </Field>
+
+        <Field label="Institution Name"><Input value={form.education.institution_name} onChange={(e) => update('education', 'institution_name', e.target.value)} placeholder="e.g. Government ITI" /></Field>
+        <Field label="Board or University"><Input value={form.education.board_or_university} onChange={(e) => update('education', 'board_or_university', e.target.value)} placeholder="e.g. CBSE, State Board" /></Field>
+
+        <Field label="Passing Year">
+          <Select
+            value={form.education.passing_year}
+            onChange={(e) => update('education', 'passing_year', e.target.value)}
+          >
+            <option value="">Select Passing Year</option>
+            {Array.from({ length: 33 }, (_, i) => String(2027 - i)).map((yr) => (
+              <option key={yr} value={yr}>{yr}</option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field label="Percentage or CGPA"><Input value={form.education.percentage_or_cgpa} onChange={(e) => update('education', 'percentage_or_cgpa', e.target.value)} placeholder="e.g. 85% or 8.5 CGPA" /></Field>
+        
         <Field label="Currently Pursuing">
           <label className="h-10 flex items-center gap-2 rounded-lg border border-violet-250 px-3 bg-white cursor-pointer mt-1">
             <input type="checkbox" checked={form.education.currently_pursuing} onChange={(e) => update('education', 'currently_pursuing', e.target.checked)} />
@@ -871,9 +1059,9 @@ export default function CandidateAuth({ onAuthSuccess, onBackToLogin, resumeSess
 
   return (
     <div className="min-h-[100dvh] bg-white p-4 flex items-center justify-center">
-      <div className="w-full max-w-[1100px] overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-[0_18px_46px_rgba(76,29,149,0.10)]">
-        <div className="grid lg:grid-cols-[290px_1fr] min-h-[620px]">
-          <aside className="bg-gradient-to-br from-violet-100 via-fuchsia-100 to-violet-50 text-slate-900 p-5 flex flex-col border-r border-violet-200">
+      <div className="w-full max-w-[1100px] overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-[0_18px_46px_rgba(76,29,149,0.10)] lg:h-[88vh] lg:max-h-[780px] flex flex-col">
+        <div className="grid lg:grid-cols-[290px_1fr] flex-1 overflow-hidden">
+          <aside className="bg-gradient-to-br from-violet-100 via-fuchsia-100 to-violet-50 text-slate-900 p-5 flex flex-col border-r border-violet-200 overflow-y-auto">
             <div className="flex items-center gap-3"><img src="/logo.png" className="h-11 w-11 object-contain rounded-lg bg-white p-1 border border-violet-100" alt="Even Cargo" /><div><h1 className="text-xl font-bold"><span className="text-violet-700">Even</span> <span className="text-slate-900">Cargo</span></h1><p className="text-[10px] uppercase tracking-wider text-violet-500">Candidate flow</p></div></div>
             {phase === 'onboarding' ? (
               <div className="mt-6 space-y-2">
@@ -925,7 +1113,7 @@ export default function CandidateAuth({ onAuthSuccess, onBackToLogin, resumeSess
             )}
           </aside>
 
-          <main className="min-w-0 flex flex-col">
+          <main className="min-w-0 flex flex-col h-full overflow-hidden">
             {phase !== 'onboarding' ? (
               <div className="flex-1 flex items-center justify-center p-6">{renderAuthPhase()}</div>
             ) : (

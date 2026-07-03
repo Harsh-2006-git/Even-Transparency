@@ -26,6 +26,8 @@ import {
   updateEmployerApproval
 } from '../controllers/admin/employerController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { adminAuthMiddleware } from '../middlewares/adminAuthMiddleware.js';
+import { listGrievances, createGrievance, updateGrievanceStatus } from '../controllers/grievanceController.js';
 
 const router = Router();
 
@@ -67,5 +69,11 @@ router.put('/employer/job-postings/:id', authMiddleware, updateJobPosting);
 // Employer candidates routes
 router.get('/employer/candidates', authMiddleware, listEmployerCandidates);
 router.put('/employer/candidates/:id/status', authMiddleware, updateCandidateStatus);
+
+// Grievances routes (Employer & Admin)
+router.get('/employer/grievances', authMiddleware, listGrievances);
+router.post('/employer/grievances', authMiddleware, createGrievance);
+router.get('/admin/grievances', adminAuthMiddleware, listGrievances);
+router.put('/admin/grievances/:id/status', adminAuthMiddleware, updateGrievanceStatus);
 
 export default router;

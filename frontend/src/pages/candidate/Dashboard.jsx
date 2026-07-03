@@ -446,45 +446,44 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  <tr>
-                    <td className="py-3.5 flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-[8px] text-slate-600 select-none">BD</div>
-                      <span>Blue Dart</span>
-                    </td>
-                    <td className="py-3.5">Warehouse Apprentice</td>
-                    <td className="py-3.5 text-slate-500">Indore, MP</td>
-                    <td className="py-3.5">
-                      <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-[9px] font-black rounded-lg">Under Review</span>
-                    </td>
-                    <td className="py-3.5 text-slate-450 font-sans">30 May 2025</td>
-                    <td className="py-3.5 text-right"><MoreVertical size={14} className="text-slate-400 cursor-pointer inline" /></td>
-                  </tr>
-                  <tr>
-                    <td className="py-3.5 flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-[8px] text-slate-600 select-none">DV</div>
-                      <span>Delhivery</span>
-                    </td>
-                    <td className="py-3.5">Operations Apprentice</td>
-                    <td className="py-3.5 text-slate-500">Indore, MP</td>
-                    <td className="py-3.5">
-                      <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] font-black rounded-lg">Shortlisted</span>
-                    </td>
-                    <td className="py-3.5 text-slate-450 font-sans">28 May 2025</td>
-                    <td className="py-3.5 text-right"><MoreVertical size={14} className="text-slate-400 cursor-pointer inline" /></td>
-                  </tr>
-                  <tr>
-                    <td className="py-3.5 flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-[8px] text-slate-600 select-none font-sans">AM</div>
-                      <span>Amazon</span>
-                    </td>
-                    <td className="py-3.5">Logistics Apprentice</td>
-                    <td className="py-3.5 text-slate-500">Indore, MP</td>
-                    <td className="py-3.5">
-                      <span className="px-2 py-0.5 bg-sky-50 border border-sky-100 text-sky-700 text-[9px] font-black rounded-lg">Applied</span>
-                    </td>
-                    <td className="py-3.5 text-slate-450 font-sans">25 May 2025</td>
-                    <td className="py-3.5 text-right"><MoreVertical size={14} className="text-slate-400 cursor-pointer inline" /></td>
-                  </tr>
+                  {(!profile.applications || profile.applications.length === 0) ? (
+                    <tr>
+                      <td colSpan="6" className="py-6 text-center text-slate-400 font-bold">
+                        No applications submitted yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    profile.applications.map(app => {
+                      const job = app.EmployerJobPosting || {};
+                      const companyName = job.company_name || 'Even Cargo Partner';
+                      const position = job.job_role || job.job_title || 'Apprentice';
+                      const location = job.location || 'Indore, MP';
+                      const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending';
+                      return (
+                        <tr key={app.id}>
+                          <td className="py-3.5 flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-[8px] text-slate-600 select-none">
+                              {companyName.substring(0, 2).toUpperCase()}
+                            </div>
+                            <span>{companyName}</span>
+                          </td>
+                          <td className="py-3.5">{position}</td>
+                          <td className="py-3.5 text-slate-500">{location}</td>
+                          <td className="py-3.5">
+                            <span className={`px-2 py-0.5 text-[9px] font-black rounded-lg ${
+                              app.application_status === 'Rejected' ? 'bg-rose-50 border border-rose-100 text-rose-700' :
+                              app.application_status === 'Hired' || app.application_status === 'Selected' ? 'bg-emerald-50 border border-emerald-100 text-emerald-700' :
+                              'bg-blue-50 border border-blue-100 text-blue-700'
+                            }`}>
+                              {app.application_status || 'Applied'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 text-slate-450 font-sans">{formatDate(app.applied_at || app.created_at)}</td>
+                          <td className="py-3.5 text-right"><MoreVertical size={14} className="text-slate-400 cursor-pointer inline" /></td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -714,29 +713,41 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
 
             {/* Vertical timeline */}
             <div className="relative border-l border-slate-200 pl-4 ml-2.5 py-1 space-y-5 text-xs font-bold text-slate-650">
-              <div className="relative">
-                <div className="absolute w-2.5 h-2.5 bg-orange-500 rounded-full -left-5 top-1 border-2 border-white"></div>
-                <div className="flex justify-between">
-                  <span className="text-slate-450 uppercase text-[9px] tracking-wider font-extrabold">Today</span>
-                </div>
-                <p className="text-slate-800 mt-0.5">Complete your profile</p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute w-2.5 h-2.5 bg-blue-500 rounded-full -left-5 top-1 border-2 border-white"></div>
-                <div className="flex justify-between">
-                  <span className="text-slate-450 uppercase text-[9px] tracking-wider font-extrabold font-sans">Tomorrow</span>
-                </div>
-                <p className="text-slate-800 mt-0.5">Document verification</p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute w-2.5 h-2.5 bg-violet-600 rounded-full -left-5 top-1 border-2 border-white"></div>
-                <div className="flex justify-between">
-                  <span className="text-slate-450 uppercase text-[9px] tracking-wider font-extrabold font-sans">12 June 2025</span>
-                </div>
-                <p className="text-slate-800 mt-0.5">Interview with Blue Dart</p>
-              </div>
+              {(!profile.interviews || profile.interviews.filter(i => i.status === 'Upcoming').length === 0) ? (
+                <>
+                  {pct < 100 && (
+                    <div className="relative">
+                      <div className="absolute w-2.5 h-2.5 bg-orange-500 rounded-full -left-5 top-1 border-2 border-white"></div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-450 uppercase text-[9px] tracking-wider font-extrabold">Today</span>
+                      </div>
+                      <p className="text-slate-800 mt-0.5">Complete your profile</p>
+                    </div>
+                  )}
+                  {docsPct < 100 && (
+                    <div className="relative">
+                      <div className="absolute w-2.5 h-2.5 bg-blue-500 rounded-full -left-5 top-1 border-2 border-white"></div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-450 uppercase text-[9px] tracking-wider font-extrabold font-sans">Tomorrow</span>
+                      </div>
+                      <p className="text-slate-800 mt-0.5">Upload missing documents</p>
+                    </div>
+                  )}
+                  {pct === 100 && docsPct === 100 && (
+                    <p className="text-[11px] text-slate-400 font-bold text-center py-3">No upcoming activities</p>
+                  )}
+                </>
+              ) : (
+                profile.interviews.filter(i => i.status === 'Upcoming').slice(0, 3).map((item) => (
+                  <div key={item.id} className="relative">
+                    <div className="absolute w-2.5 h-2.5 bg-violet-600 rounded-full -left-5 top-1 border-2 border-white"></div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-450 uppercase text-[9px] tracking-wider font-extrabold font-sans">{item.date}</span>
+                    </div>
+                    <p className="text-slate-800 mt-0.5">Interview with {item.company}</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -748,35 +759,21 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-start gap-2.5 text-[11px] font-bold text-slate-600">
-                <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg shrink-0 mt-0.5">
-                  <Check size={12} strokeWidth={3} />
-                </div>
-                <div>
-                  <p className="text-slate-850">Your profile has been approved</p>
-                  <p className="text-[9px] text-slate-400 font-semibold font-sans mt-0.5">2 hours ago</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5 text-[11px] font-bold text-slate-600">
-                <div className="p-1.5 bg-violet-50 text-violet-650 rounded-lg shrink-0 mt-0.5">
-                  <Briefcase size={12} />
-                </div>
-                <div>
-                  <p className="text-slate-850">New apprenticeship opportunity available</p>
-                  <p className="text-[9px] text-slate-400 font-semibold font-sans mt-0.5">1 day ago</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5 text-[11px] font-bold text-slate-600">
-                <div className="p-1.5 bg-sky-50 text-sky-650 rounded-lg shrink-0 mt-0.5">
-                  <FileText size={12} />
-                </div>
-                <div>
-                  <p className="text-slate-850">Document verification completed</p>
-                  <p className="text-[9px] text-slate-400 font-semibold font-sans mt-0.5">2 days ago</p>
-                </div>
-              </div>
+              {(!profile.notifications || profile.notifications.length === 0) ? (
+                <p className="text-[11px] text-slate-400 font-bold text-center py-6">No new notifications</p>
+              ) : (
+                profile.notifications.slice(0, 3).map((notif) => (
+                  <div key={notif.id} className="flex items-start gap-2.5 text-[11px] font-bold text-slate-600">
+                    <div className="p-1.5 bg-violet-50 text-violet-650 rounded-lg shrink-0 mt-0.5">
+                      <Briefcase size={12} />
+                    </div>
+                    <div>
+                      <p className="text-slate-850">{notif.title || notif.message}</p>
+                      <p className="text-[9px] text-slate-400 font-semibold font-sans mt-0.5">{notif.time || notif.created_at}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             <div className="flex justify-center pt-3 border-t border-slate-100 mt-4">

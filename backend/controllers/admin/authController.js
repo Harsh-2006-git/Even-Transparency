@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../../models/index.js';
+import { generateTokenPair } from '../../services/tokenService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'even_cargo_secret_key';
 const DEFAULT_ADMIN_EMAIL = 'admin@evencargo.in';
@@ -68,11 +69,11 @@ export const login = async (req, res) => {
     admin.login_attempts = 0;
     await admin.save();
 
-    const token = jwt.sign({ id: admin.id, email: admin.email, type: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
+    const tokens = generateTokenPair({ id: admin.id, email: admin.email, type: 'admin' });
 
     return res.status(200).json({
       message: 'Login successful',
-      token,
+      ...tokens,
       id: admin.id,
       username: admin.full_name || admin.email,
       full_name: admin.full_name,

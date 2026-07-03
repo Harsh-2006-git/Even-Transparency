@@ -30,6 +30,32 @@ export default function EmployerOpenings({ user, onSectionChange, setEditingJob,
   const [statusFilter, setStatusFilter] = useState('All');
   const [isUpdating, setIsUpdating] = useState(null);
   const [selectedOpening, setSelectedOpening] = useState(null);
+  const [companyData, setCompanyData] = useState(null);
+  const [documents, setDocuments] = useState([]);
+
+  const fetchCompanyAndDocs = async () => {
+    if (!user?.token) return;
+    try {
+      const [companyRes, docsRes] = await Promise.all([
+        fetch(`${API}/employer/company`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        }),
+        fetch(`${API}/employer/documents`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        })
+      ]);
+      if (companyRes.ok) {
+        const cData = await companyRes.json();
+        if (cData.employer) setCompanyData(cData.employer);
+      }
+      if (docsRes.ok) {
+        const dData = await docsRes.json();
+        setDocuments(dData || []);
+      }
+    } catch (err) {
+      console.error('Failed to load company details or documents in openings page:', err);
+    }
+  };
 
   const fetchOpenings = async () => {
     if (!user?.token) return;
@@ -54,6 +80,7 @@ export default function EmployerOpenings({ user, onSectionChange, setEditingJob,
 
   useEffect(() => {
     fetchOpenings();
+    fetchCompanyAndDocs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.token]);
 
@@ -137,15 +164,52 @@ export default function EmployerOpenings({ user, onSectionChange, setEditingJob,
             Manage your drives from a clean table and open each record for complete details.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingJob?.(null);
-            onSectionChange?.('create-opening');
-          }}
-          className="h-10 px-5 bg-[#6D3BFF] hover:bg-[#5C2FFF] text-white rounded-xl text-xs font-black shadow-md shadow-violet-200 transition cursor-pointer flex items-center gap-2"
-        >
-          <Plus size={15} strokeWidth={3} /> Create Apprenticeship Drive
-        </button>
+        {(() => {
+          let score = 0;
+          const fields = [
+            'company_name', 'legal_entity_name', 'company_type', 'industry_sector',
+            'cin_number', 'gst_number', 'pan_number', 'website_url',
+            'official_email', 'official_phone_number', 'registered_address', 'naps_establishment_id'
+          ];
+          if (companyData) {
+            fields.forEach(f => {
+              if (companyData[f]) score += 1;
+            });
+          }
+          const pct = companyData ? Math.round((score / fields.length) * 100) : 0;
+
+          const requiredDocKeys = ['GST Certificate', 'PAN Card', 'Company Registration', 'Bank Verification'];
+          const uploadedRequiredCount = documents.filter(d => requiredDocKeys.includes(d.document_type)).length;
+          const docsPct = Math.round((uploadedRequiredCount / requiredDocKeys.length) * 100);
+          const isAllowed = pct === 100 && docsPct === 100;
+
+          return (
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <button
+                onClick={() => {
+                  if (!isAllowed) {
+                    showToast?.(`Please complete your profile details (current: ${pct}%) and upload all required documents (current: ${docsPct}%) to 100% before creating openings.`, 'warning');
+                    return;
+                  }
+                  setEditingJob?.(null);
+                  onSectionChange?.('create-opening');
+                }}
+                className={`h-10 px-5 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer flex items-center gap-2 ${
+                  isAllowed 
+                    ? 'bg-[#6D3BFF] hover:bg-[#5C2FFF] shadow-violet-200' 
+                    : 'bg-slate-400 hover:bg-slate-450 cursor-not-allowed opacity-75 shadow-none'
+                }`}
+              >
+                <Plus size={15} strokeWidth={3} /> Create Apprenticeship Drive
+              </button>
+              {!isAllowed && (
+                <span className="text-[10px] text-amber-600 font-extrabold flex items-center gap-1 select-none">
+                  ⚠️ Profile & documents must be 100% complete
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -217,124 +281,134 @@ export default function EmployerOpenings({ user, onSectionChange, setEditingJob,
           </p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden w-full">
-          <div className="overflow-hidden w-full">
-            <table className="w-full text-left border-collapse table-fixed">
-              <thead>
-                <tr className="bg-slate-50/90 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  <th className="py-3.5 px-4 w-[27%]">Opening</th>
-                  <th className="py-3.5 px-4 w-[17%]">Location</th>
-                  <th className="py-3.5 px-4 w-[16%]">Hiring</th>
-                  <th className="py-3.5 px-4 w-[13%]">Applications</th>
-                  <th className="py-3.5 px-4 w-[11%]">Status</th>
-                  <th className="py-3.5 px-4 w-[16%] text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.map((op) => {
-                  const numOpenings = Number(op.numberOfOpenings) || 0;
-                  const filled = Number(op.filledPositions) || 0;
-                  const fillRate = numOpenings > 0 ? Math.round((filled / numOpenings) * 100) : 0;
-                  const initials = (op.jobTitle || 'Opening')
-                    .split(/\s+/)
-                    .slice(0, 2)
-                    .map(part => part[0])
-                    .join('')
-                    .toUpperCase();
-
-                  return (
-                    <>
-                      <tr key={`${op.id}-main`} className="hover:bg-violet-50/25 transition-colors align-middle">
-                        <td className="px-4 pt-4 pb-2">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-blue-100 border border-violet-200 text-[#6D3BFF] flex items-center justify-center text-xs font-black shrink-0">
-                              {initials}
-                            </div>
-                            <div className="min-w-0">
-                              <button
-                                onClick={() => setSelectedOpening(op)}
-                                className="block text-left text-sm font-black text-slate-850 hover:text-[#6D3BFF] leading-snug cursor-pointer truncate max-w-full"
-                              >
-                                {op.jobTitle || 'Untitled Opening'}
-                              </button>
-                              <p className="mt-1 truncate text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                {op.tradeName || 'General Trade'} / {op.internalJobCode || op.napsTradeCode || 'NAPS'}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 pt-4 pb-2">
-                          <p className="flex items-start gap-1.5 text-[11px] font-bold text-slate-700 leading-snug truncate">
-                            <MapPin size={12} className="text-[#6D3BFF] shrink-0 mt-0.5" />
-                            {op.location || 'Flexible'}
-                          </p>
-                          <span className="inline-flex mt-2 text-[9px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-0.5 font-black">
-                            {op.workMode || '-'}
-                          </span>
-                        </td>
-                        <td className="px-4 pt-4 pb-2">
-                          <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-                            <span>Filled</span>
-                            <span className="text-slate-850 font-black">{filled} / {numOpenings} ({fillRate}%)</span>
-                          </div>
-                          <div className="h-2 bg-slate-100 border border-slate-200/50 rounded-full overflow-hidden w-full mt-2">
-                            <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all" style={{ width: `${Math.min(100, fillRate)}%` }} />
-                          </div>
-                        </td>
-                        <td className="px-4 pt-4 pb-2">
-                          <p className="text-base font-black text-slate-800 leading-none">{op.total_applications || 0}</p>
-                          <p className="mt-1.5 text-[9px] font-bold text-[#6D3BFF]">Shortlisted: {op.total_shortlisted || 0}</p>
-                        </td>
-                        <td className="px-4 pt-4 pb-2">{getStatusBadge(op.status)}</td>
-                        <td className="px-4 pt-4 pb-2">
-                          <div className="inline-flex max-w-full items-center justify-end gap-1 rounded-xl border border-slate-200 bg-slate-50/70 p-1 shadow-xs whitespace-nowrap">
-                            <button onClick={() => setSelectedOpening(op)} className="w-8 h-8 rounded-lg border border-violet-200 bg-white hover:bg-violet-50 text-[#6D3BFF] transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="View details">
-                              <Eye size={15} strokeWidth={2.5} />
-                            </button>
-                            <button onClick={() => handleEdit(op)} className="w-8 h-8 rounded-lg border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Edit opening">
-                              <Edit size={15} strokeWidth={2.5} />
-                            </button>
-                            {op.status === 'Draft' && (
-                              <button onClick={() => updateStatus(op.id, 'Open')} disabled={isUpdating === op.id} className="w-8 h-8 rounded-lg border border-emerald-200 bg-white hover:bg-emerald-50 text-emerald-700 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Publish opening">
-                                <Play size={14} fill="currentColor" strokeWidth={2.5} />
-                              </button>
-                            )}
-                            {op.status === 'Open' && (
-                              <button onClick={() => updateStatus(op.id, 'Paused')} disabled={isUpdating === op.id} className="w-8 h-8 rounded-lg border border-amber-200 bg-white hover:bg-amber-50 text-amber-700 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Pause opening">
-                                <Pause size={14} fill="currentColor" strokeWidth={2.5} />
-                              </button>
-                            )}
-                            {op.status === 'Paused' && (
-                              <button onClick={() => updateStatus(op.id, 'Open')} disabled={isUpdating === op.id} className="w-8 h-8 rounded-lg border border-emerald-200 bg-white hover:bg-emerald-50 text-emerald-700 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Resume opening">
-                                <Play size={14} fill="currentColor" strokeWidth={2.5} />
-                              </button>
-                            )}
-                            {op.status !== 'Closed' && (
-                              <button onClick={() => updateStatus(op.id, 'Closed')} disabled={isUpdating === op.id} className="w-8 h-8 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Close opening">
-                                <X size={15} strokeWidth={2.5} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                      <tr key={`${op.id}-details`} className="bg-gradient-to-r from-slate-50 via-white to-violet-50/30">
-                        <td colSpan="6" className="px-4 pb-4 pt-1">
-                          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5">
-                            <MiniInfo icon={Calendar} label="Deadline" value={fmtDate(op.applicationDeadline)} color="text-blue-600 bg-blue-50 border-blue-100" />
-                            <MiniInfo icon={IndianRupee} label="Stipend" value={`${fmtMoney(op.stipend)} / mo`} color="text-emerald-600 bg-emerald-50 border-emerald-100" />
-                            <MiniInfo icon={Clock} label="Duration" value={op.duration || '-'} color="text-amber-600 bg-amber-50 border-amber-100" />
-                            <MiniInfo icon={GraduationCap} label="Qualification" value={joinList(op.qualifications)} color="text-indigo-600 bg-indigo-50 border-indigo-100" />
-                            <MiniInfo icon={UserRoundCheck} label="Age" value={`${op.minAge || '-'} - ${op.maxAge || '-'}`} color="text-rose-600 bg-rose-50 border-rose-100" />
-                            <MiniInfo icon={Users} label="Hours" value={op.workingHours || '-'} color="text-cyan-600 bg-cyan-50 border-cyan-100" />
-                          </div>
-                        </td>
-                      </tr>
-                    </>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div className="space-y-4 w-full">
+          {/* Column headers (Desktop only) */}
+          <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-5 text-[10px] font-black text-slate-400 uppercase tracking-wider select-none">
+            <div className="lg:col-span-3">Opening</div>
+            <div className="lg:col-span-2">Location</div>
+            <div className="lg:col-span-2">Hiring Progress</div>
+            <div className="lg:col-span-2">Applications</div>
+            <div className="lg:col-span-1">Status</div>
+            <div className="lg:col-span-2 text-right">Actions</div>
           </div>
+
+          {/* Cards List */}
+          {filtered.map((op) => {
+            const numOpenings = Number(op.numberOfOpenings) || 0;
+            const filled = Number(op.filledPositions) || 0;
+            const fillRate = numOpenings > 0 ? Math.round((filled / numOpenings) * 100) : 0;
+            const initials = (op.jobTitle || 'Opening')
+              .split(/\s+/)
+              .slice(0, 2)
+              .map(part => part[0])
+              .join('')
+              .toUpperCase();
+
+            return (
+              <div 
+                key={op.id} 
+                className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-sm hover:border-violet-200 transition-all duration-200 flex flex-col gap-4 text-left"
+              >
+                {/* Top Row Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+                  {/* Column 1: Info */}
+                  <div className="lg:col-span-3 min-w-0 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-blue-100 border border-violet-200 text-[#6D3BFF] flex items-center justify-center text-xs font-black shrink-0">
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <button
+                        onClick={() => setSelectedOpening(op)}
+                        className="block text-left text-sm font-black text-slate-800 hover:text-[#6D3BFF] leading-snug cursor-pointer truncate max-w-full"
+                      >
+                        {op.jobTitle || 'Untitled Opening'}
+                      </button>
+                      <p className="mt-1 truncate text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        {op.tradeName || 'General Trade'} / {op.internalJobCode || op.napsTradeCode || 'NAPS'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Column 2: Location */}
+                  <div className="lg:col-span-2 min-w-0">
+                    <p className="flex items-start gap-1.5 text-[11px] font-bold text-slate-700 leading-snug truncate">
+                      <MapPin size={12} className="text-[#6D3BFF] shrink-0 mt-0.5" />
+                      {op.location || 'Flexible'}
+                    </p>
+                    <span className="inline-flex mt-1.5 text-[9px] text-blue-700 bg-blue-50/70 border border-blue-100 rounded-lg px-2 py-0.5 font-black">
+                      {op.workMode || '-'}
+                    </span>
+                  </div>
+
+                  {/* Column 3: Hiring */}
+                  <div className="lg:col-span-2 min-w-0">
+                    <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
+                      <span>Filled</span>
+                      <span className="text-slate-800 font-black">{filled} / {numOpenings} ({fillRate}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 border border-slate-200/50 rounded-full overflow-hidden w-full mt-1.5">
+                      <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all" style={{ width: `${Math.min(100, fillRate)}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Column 4: Applications */}
+                  <div className="lg:col-span-2 min-w-0">
+                    <p className="text-sm font-black text-slate-800 leading-none">{op.total_applications || 0}</p>
+                    <p className="mt-1.5 text-[9px] font-bold text-[#6D3BFF]">Shortlisted: {op.total_shortlisted || 0}</p>
+                  </div>
+
+                  {/* Column 5: Status */}
+                  <div className="lg:col-span-1 min-w-0">
+                    {getStatusBadge(op.status)}
+                  </div>
+
+                  {/* Column 6: Actions */}
+                  <div className="lg:col-span-2 flex justify-end">
+                    <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/70 p-1 shadow-xs whitespace-nowrap">
+                      <button onClick={() => setSelectedOpening(op)} className="w-8 h-8 rounded-lg border border-violet-200 bg-white hover:bg-violet-50 text-[#6D3BFF] transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="View details">
+                        <Eye size={15} strokeWidth={2.5} />
+                      </button>
+                      <button onClick={() => handleEdit(op)} className="w-8 h-8 rounded-lg border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Edit opening">
+                        <Edit size={15} strokeWidth={2.5} />
+                      </button>
+                      {op.status === 'Draft' && (
+                        <button onClick={() => updateStatus(op.id, 'Open')} disabled={isUpdating === op.id} className="w-8 h-8 rounded-lg border border-emerald-200 bg-white hover:bg-emerald-50 text-emerald-700 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Publish opening">
+                          <Play size={14} fill="currentColor" strokeWidth={2.5} />
+                        </button>
+                      )}
+                      {op.status === 'Open' && (
+                        <button onClick={() => updateStatus(op.id, 'Paused')} disabled={isUpdating === op.id} className="w-8 h-8 rounded-lg border border-amber-200 bg-white hover:bg-amber-50 text-amber-700 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Pause opening">
+                          <Pause size={14} fill="currentColor" strokeWidth={2.5} />
+                        </button>
+                      )}
+                      {op.status === 'Paused' && (
+                        <button onClick={() => updateStatus(op.id, 'Open')} disabled={isUpdating === op.id} className="w-8 h-8 rounded-lg border border-emerald-200 bg-white hover:bg-emerald-50 text-emerald-700 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Resume opening">
+                          <Play size={14} fill="currentColor" strokeWidth={2.5} />
+                        </button>
+                      )}
+                      {op.status !== 'Closed' && (
+                        <button onClick={() => updateStatus(op.id, 'Closed')} disabled={isUpdating === op.id} className="w-8 h-8 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 transition cursor-pointer inline-flex items-center justify-center shadow-xs" title="Close opening">
+                          <X size={15} strokeWidth={2.5} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Second Row: Details Grid */}
+                <div className="-mt-1.5">
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5">
+                    <MiniInfo icon={Calendar} label="Deadline" value={fmtDate(op.applicationDeadline)} color="text-blue-600 bg-blue-50 border-blue-100" />
+                    <MiniInfo icon={IndianRupee} label="Stipend" value={`${fmtMoney(op.stipend)} / mo`} color="text-emerald-600 bg-emerald-50 border-emerald-100" />
+                    <MiniInfo icon={Clock} label="Duration" value={op.duration || '-'} color="text-amber-600 bg-amber-50 border-amber-100" />
+                    <MiniInfo icon={GraduationCap} label="Qualification" value={joinList(op.qualifications)} color="text-indigo-600 bg-indigo-50 border-indigo-100" />
+                    <MiniInfo icon={UserRoundCheck} label="Age" value={`${op.minAge || '-'} - ${op.maxAge || '-'}`} color="text-rose-600 bg-rose-50 border-rose-100" />
+                    <MiniInfo icon={Users} label="Hours" value={op.workingHours || '-'} color="text-cyan-600 bg-cyan-50 border-cyan-100" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

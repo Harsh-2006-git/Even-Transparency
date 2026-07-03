@@ -33,7 +33,7 @@ export default function CompanyManagement({ adminUser, showToast }) {
   const [search, setSearch] = useState('');
   
   // Filters & Tabs State
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'approved' | 'rejected' | 'under_review' | 'all'
+  const [activeTab, setActiveTab] = useState('all'); // 'pending' | 'approved' | 'rejected' | 'under_review' | 'all'
   const [industryFilter, setIndustryFilter] = useState('');
   const [stateFilter, setStateFilter] = useState('');
   const [sizeFilter, setSizeFilter] = useState('');
@@ -185,18 +185,7 @@ export default function CompanyManagement({ adminUser, showToast }) {
 
   // Document formatting helper
   const getCompanyDocuments = (company) => {
-    const defaultDocs = [
-      { id: '1', document_type: 'Certificate of Incorporation', file_name: 'Incorporation_Cert.pdf', verification_status: 'verified' },
-      { id: '2', document_type: 'GST Certificate', file_name: `GST_${company.gst_number || '27ABCDE1234F'}.pdf`, verification_status: company.gst_number ? 'verified' : 'pending' },
-      { id: '3', document_type: 'PAN Card', file_name: `PAN_${company.pan_number || 'ABCDE1234F'}.pdf`, verification_status: company.pan_number ? 'verified' : 'pending' },
-      { id: '4', document_type: 'Company Address Proof', file_name: 'Utility_HQ_Bill.pdf', verification_status: 'pending' },
-      { id: '5', document_type: 'Apprenticeship Authorization Letter', file_name: 'NAPS_Auth_Letter.pdf', verification_status: 'pending' }
-    ];
-
-    if (company.EmployerDocuments && company.EmployerDocuments.length > 0) {
-      return company.EmployerDocuments;
-    }
-    return defaultDocs;
+    return company.EmployerDocuments || [];
   };
 
   // Verification actions
@@ -708,32 +697,38 @@ export default function CompanyManagement({ adminUser, showToast }) {
                   <span>Document Verification</span>
                 </div>
                 <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-                  {getCompanyDocuments(selectedCompany).map((doc) => {
-                    const isVerified = doc.verification_status === 'verified';
-                    return (
-                      <div key={doc.id} className="p-4 flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="text-xs font-extrabold text-slate-800 truncate">{doc.document_type}</p>
-                          <p className="text-[10px] text-slate-450 mt-0.5 truncate font-semibold">{doc.file_name || 'Uploaded_Document.pdf'}</p>
+                  {getCompanyDocuments(selectedCompany).length === 0 ? (
+                    <div className="p-5 text-center text-xs text-slate-400 font-bold">
+                      No documents uploaded yet.
+                    </div>
+                  ) : (
+                    getCompanyDocuments(selectedCompany).map((doc) => {
+                      const isVerified = doc.verification_status === 'verified';
+                      return (
+                        <div key={doc.id} className="p-4 flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-xs font-extrabold text-slate-800 truncate">{doc.document_type}</p>
+                            <p className="text-[10px] text-slate-450 mt-0.5 truncate font-semibold">{doc.file_name || 'Uploaded_Document.pdf'}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
+                              isVerified 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                                : 'bg-amber-50 text-amber-700 border border-amber-100'
+                            }`}>
+                              {doc.verification_status}
+                            </span>
+                            <button
+                              onClick={() => doc.file_url ? window.open(doc.file_url, '_blank') : doc.file_name ? window.open(`${API}/uploads/${doc.file_name}`, '_blank') : showToast('No document file uploaded', 'error')}
+                              className="text-[10px] font-extrabold text-[#6D3BFF] hover:underline cursor-pointer border border-violet-100 rounded-lg px-2 py-1 hover:bg-violet-50 transition"
+                            >
+                              View
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
-                            isVerified 
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
-                              : 'bg-amber-50 text-amber-700 border border-amber-100'
-                          }`}>
-                            {doc.verification_status}
-                          </span>
-                          <button
-                            onClick={() => alert(`Reviewing document: ${doc.file_name || 'Document'}`)}
-                            className="text-[10px] font-extrabold text-[#6D3BFF] hover:underline cursor-pointer border border-violet-100 rounded-lg px-2 py-1 hover:bg-violet-50 transition"
-                          >
-                            View
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -769,7 +764,11 @@ export default function CompanyManagement({ adminUser, showToast }) {
                 <p className="text-[10px] font-extrabold text-slate-450 uppercase tracking-widest block pl-0.5">About Company</p>
                 <div className="rounded-2xl border border-slate-200 p-5 bg-white text-xs font-semibold leading-relaxed text-slate-650 shadow-xs">
                   <p>
-                    {selectedCompany.company_name} is registered as a {selectedCompany.company_type || 'Pvt Ltd'} in the {selectedCompany.industry_sector || 'Logistics'} sector. Incorporating on {selectedCompany.incorporation_date ? new Date(selectedCompany.incorporation_date).toLocaleDateString() : 'N/A'}, the company maintains headquarters in {selectedCompany.headquarters_city}, {selectedCompany.headquarters_state}.
+                    {selectedCompany.onboarding_status === 'completed' ? (
+                      `${selectedCompany.company_name} is registered as a ${selectedCompany.company_type} in the ${selectedCompany.industry_sector} sector. Incorporated on ${selectedCompany.incorporation_date ? new Date(selectedCompany.incorporation_date).toLocaleDateString('en-IN') : 'N/A'}, the company maintains headquarters in ${selectedCompany.headquarters_city || 'N/A'}, ${selectedCompany.headquarters_state || 'N/A'}.`
+                    ) : (
+                      `The company "${selectedCompany.company_name}" has registered an account but has not yet completed their onboarding profile details.`
+                    )}
                   </p>
                   <div className="mt-3.5 grid grid-cols-3 gap-2 text-[10px] text-slate-550 uppercase tracking-wide font-extrabold border-t border-slate-100 pt-3.5">
                     <div>
@@ -815,7 +814,7 @@ export default function CompanyManagement({ adminUser, showToast }) {
               
               <button
                 type="button"
-                onClick={() => alert('Verification details saved.')}
+                onClick={() => showToast('Verification details saved.', 'success')}
                 className="h-10 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-650 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-white mr-auto ml-1 active:scale-95"
                 title="Save remarks as draft"
               >

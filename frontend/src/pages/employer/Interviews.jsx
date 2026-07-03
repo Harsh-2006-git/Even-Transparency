@@ -13,7 +13,7 @@ const INITIAL_OPENINGS = [
     id: 'opp-1',
     name: 'Frontend Developer Apprentice',
     code: 'TNV-APPR-2024-001',
-    candidatesCount: 18,
+    candidatesCount: 74,
     totalOpenings: 20,
     hired: 7,
     remaining: 13
@@ -793,38 +793,40 @@ export default function EmployerInterviews({ user, onSectionChange, showToast })
         <div className="xl:col-span-9 space-y-4 w-full">
           
           {/* Top Selected Opening Details Block */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-sm font-black text-slate-900 leading-none">{selectedOpening.name}</h2>
-                <span className="text-[9.5px] font-mono font-bold text-slate-400 bg-slate-50 border border-slate-150 px-2 py-0.5 rounded">
-                  {selectedOpening.code}
-                </span>
+          {selectedOpening && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-4.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm font-black text-slate-900 leading-none">{selectedOpening.name}</h2>
+                  <span className="text-[9.5px] font-mono font-bold text-slate-400 bg-slate-50 border border-slate-150 px-2 py-0.5 rounded">
+                    {selectedOpening.code}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4.5 mt-3 text-[10px] font-bold text-slate-500">
+                  <span className="flex items-center gap-1 text-slate-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-600"></span>
+                    <strong>{selectedOpening.totalOpenings}</strong> Openings
+                  </span>
+                  <span className="flex items-center gap-1 text-emerald-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                    <strong>{selectedOpening.hired}</strong> Hired
+                  </span>
+                  <span className="flex items-center gap-1 text-slate-550">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                    <strong>{selectedOpening.remaining}</strong> Remaining
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-4.5 mt-3 text-[10px] font-bold text-slate-500">
-                <span className="flex items-center gap-1 text-slate-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-violet-600"></span>
-                  <strong>{selectedOpening.totalOpenings}</strong> Openings
-                </span>
-                <span className="flex items-center gap-1 text-emerald-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                  <strong>{selectedOpening.hired}</strong> Hired
-                </span>
-                <span className="flex items-center gap-1 text-slate-550">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                  <strong>{selectedOpening.remaining}</strong> Remaining
-                </span>
-              </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => showToast?.(`Navigating to details for ${selectedOpening.name}...`, 'info')}
-              className="h-8.5 px-3.5 border border-slate-250 hover:border-slate-350 text-slate-700 bg-white rounded-xl text-[10px] font-black transition cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0 self-start md:self-center"
-            >
-              Opening Details <ArrowUpRight size={12} className="text-slate-400" />
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => showToast?.(`Navigating to details for ${selectedOpening.name}...`, 'info')}
+                className="h-8.5 px-3.5 border border-slate-250 hover:border-slate-350 text-slate-700 bg-white rounded-xl text-[10px] font-black transition cursor-pointer flex items-center gap-1.5 shadow-xs shrink-0 self-start md:self-center"
+              >
+                Opening Details <ArrowUpRight size={12} className="text-slate-400" />
+              </button>
+            </div>
+          )}
 
           {/* ── Pipeline Tabs ── */}
           <div className="border-b border-slate-200 flex overflow-x-auto scrollbar-none gap-2 select-none">

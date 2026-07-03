@@ -2,12 +2,13 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../../models/index.js';
 import { recalculateProfileCompletion } from '../../utils/profileCompletion.js';
+import { generateTokenPair } from '../../services/tokenService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'even_cargo_secret_key';
 
-const buildCandidateResponse = (candidate, token) => ({
+const buildCandidateResponse = (candidate, tokens) => ({
   message: 'Login successful',
-  token,
+  ...tokens,
   id: candidate.id,
   username: candidate.full_name || candidate.email,
   full_name: candidate.full_name,
@@ -128,15 +129,11 @@ export const register = async (req, res) => {
           return res.status(401).json({ error: 'This number is already registered. The password you entered is incorrect.' });
         }
         // Password matches – issue a fresh token and tell the frontend to show onboarding
-        const token = jwt.sign(
-          { id: existing.id, mobile_number: existing.mobile_number, type: 'candidate' },
-          JWT_SECRET,
-          { expiresIn: '7d' }
-        );
+        const tokens = generateTokenPair({ id: existing.id, email: existing.email, type: 'candidate' });
         return res.status(200).json({
           message: 'Account already exists. Please complete your onboarding.',
           onboarding_incomplete: true,
-          token,
+          ...tokens,
           id: existing.id,
           username: existing.full_name || existing.mobile_number,
           full_name: existing.full_name,
@@ -164,13 +161,13 @@ export const register = async (req, res) => {
       password_hash
     });
 
-    const token = jwt.sign({ id: candidate.id, mobile_number: candidate.mobile_number, type: 'candidate' }, JWT_SECRET, { expiresIn: '7d' });
+    const tokens = generateTokenPair({ id: candidate.id, email: candidate.email, type: 'candidate' });
 
     await recalculateProfileCompletion(candidate);
 
     return res.status(201).json({
       message: 'Candidate registered successfully.',
-      token,
+      ...tokens,
       id: candidate.id,
       username: candidate.full_name || candidate.mobile_number,
       full_name: candidate.full_name,
@@ -583,11 +580,243 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Incorrect password. Please try again.' });
     }
 
-    const token = jwt.sign({ id: candidate.id, email: candidate.email, type: 'candidate' }, JWT_SECRET, { expiresIn: '7d' });
+    const tokens = generateTokenPair({ id: candidate.id, email: candidate.email, type: 'candidate' });
     await recalculateProfileCompletion(candidate);
-    return res.status(200).json(buildCandidateResponse(candidate, token));
+    return res.status(200).json(buildCandidateResponse(candidate, tokens));
   } catch (error) {
     console.error('Candidate login error:', error);
     return res.status(500).json({ error: 'Failed to log in candidate.' });
+  }
+};
+
+export const listCandidateJobs = async (req, res) => {
+  try {
+    const jobs = await db.EmployerJobPosting.findAll({
+      where: { status: 'Open' },
+      include: [{ model: db.Employer, attributes: ['company_name', 'industry_sector'] }],
+      order: [['created_at', 'DESC']]
+    });
+
+    const formatted = jobs.map(j => {
+      let jd = { jobSummary: '', responsibilities: '', learningOutcomes: '', trainingPlan: '', careerGrowth: '', uniformProvided: false, mealsProvided: false, medicalSupport: false };
+      if (j.job_description) {
+        try { jd = { ...jd, ...JSON.parse(j.job_description) }; }
+        catch (e) { jd.jobSummary = j.job_description; }
+      }
+
+      const splitLines = (str) => (str || '').split('\n').map(s => s.trim().replace(/^[•\-*]\s*/, '')).filter(Boolean);
+      const companyName = j.Employer?.company_name || 'Even Cargo Partner';
+      const sector = j.Employer?.industry_sector || j.sector || '';
+
+      return {
+        // IDs
+        id: j.id,
+        // Role info
+        role: j.job_title || '',
+        tradeName: j.trade_name || '',
+        napsTradeCode: j.naps_trade_code || '',
+        sector,
+        internalJobCode: j.job_code || '',
+        status: j.status,
+        // Company
+        company: companyName,
+        logo: companyName.slice(0, 2).toUpperCase(),
+        // Location & schedule
+        location: j.location || '',
+        workMode: j.work_mode || '',
+        workingHours: j.working_hours || '',
+        weeklyOffs: j.weekly_offs || '',
+        womenOnly: !!j.women_only_role,
+        // Compensation
+        stipend: `₹${(j.stipend_amount || 0).toLocaleString('en-IN')}/Month`,
+        stipendAmount: j.stipend_amount || 0,
+        incentive: j.incentive_amount ? `₹${j.incentive_amount.toLocaleString('en-IN')}/Month` : null,
+        // Duration & dates
+        duration: `${j.apprenticeship_duration_months || 0} Months`,
+        startDate: j.start_date ? new Date(j.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+        deadline: j.application_deadline ? new Date(j.application_deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+        // Requirements
+        openings: j.number_of_openings || 0,
+        filledPositions: j.filled_positions || 0,
+        qualification: j.qualification_required || '',
+        minAge: j.minimum_age || 18,
+        maxAge: j.maximum_age || 35,
+        skills: j.skills_required ? j.skills_required.split(',').map(s => s.trim()).filter(Boolean) : [],
+        languages: j.language_requirements ? j.language_requirements.split(',').map(s => s.trim()).filter(Boolean) : [],
+        preferredCriteria: j.preferred_criteria || '',
+        // Job description sections
+        description: jd.jobSummary || '',
+        responsibilities: splitLines(jd.responsibilities),
+        learningOutcomes: splitLines(jd.learningOutcomes),
+        trainingPlan: jd.trainingPlan || '',
+        careerGrowth: jd.careerGrowth || '',
+        // Support & facilities
+        transportSupport: j.transport_support || '',
+        hostelSupport: j.hostel_support || '',
+        safetyMeasures: j.safety_measures || '',
+        uniformProvided: !!jd.uniformProvided,
+        mealsProvided: !!jd.mealsProvided,
+        medicalSupport: !!jd.medicalSupport,
+        // Benefits (array of benefit IDs from employer form)
+        benefits: Array.isArray(j.benefits) ? j.benefits : [],
+        // Stats
+        totalApplications: j.total_applications || 0,
+        totalViews: j.total_views || 0,
+      };
+    });
+
+    return res.status(200).json(formatted);
+  } catch (error) {
+    console.error('listCandidateJobs error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve jobs' });
+  }
+};
+
+export const applyForJob = async (req, res) => {
+  try {
+    const candidateId = req.candidate.id;
+    const { jobPostingId } = req.body;
+
+    if (!jobPostingId) {
+      return res.status(400).json({ error: 'Job posting ID is required' });
+    }
+
+    const job = await db.EmployerJobPosting.findByPk(jobPostingId);
+    if (!job) {
+      return res.status(404).json({ error: 'Apprenticeship drive not found' });
+    }
+
+    const existing = await db.CandidateApplication.findOne({
+      where: { candidate_id: candidateId, job_posting_id: jobPostingId }
+    });
+    if (existing) {
+      return res.status(400).json({ error: 'You have already applied for this apprenticeship' });
+    }
+
+    const application = await db.CandidateApplication.create({
+      candidate_id: candidateId,
+      job_posting_id: jobPostingId,
+      application_status: 'Applied',
+      applied_at: new Date(),
+      current_stage: 'Applied'
+    });
+
+    await job.increment('total_applications', { by: 1 });
+
+    return res.status(201).json({
+      message: 'Application submitted successfully',
+      application
+    });
+  } catch (error) {
+    console.error('applyForJob error:', error);
+    return res.status(500).json({ error: 'Failed to submit application' });
+  }
+};
+
+export const listMyApplications = async (req, res) => {
+  try {
+    const candidateId = req.candidate.id;
+
+    // Permanently destroy any legacy Withdrawn applications
+    await db.CandidateApplication.destroy({
+      where: { application_status: 'Withdrawn' }
+    });
+
+    const applications = await db.CandidateApplication.findAll({
+      where: { candidate_id: candidateId },
+      include: [{
+        model: db.EmployerJobPosting,
+        include: [{
+          model: db.Employer,
+          attributes: ['company_name']
+        }]
+      }],
+      order: [['applied_at', 'DESC']]
+    });
+
+    const formatted = applications.map(app => {
+      const j = app.EmployerJobPosting || {};
+      const companyName = j.Employer?.company_name || 'Even Cargo partner';
+      const appliedDateFmt = app.applied_at ? new Date(app.applied_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+
+      const statusMap = {
+        'Applied': 'Applied',
+        'Under Review': 'Under Review',
+        'shortlisted': 'Shortlisted',
+        'Shortlisted': 'Shortlisted',
+        'interview': 'Interview',
+        'Interview Scheduled': 'Interview',
+        'Interview Completed': 'Interview',
+        'Selected': 'Offered',
+        'Joined': 'Offered',
+        'offered': 'Offered',
+        'Offered': 'Offered',
+        'rejected': 'Rejected',
+        'Rejected': 'Rejected',
+        'Withdrawn': 'Withdrawn'
+      };
+
+      const status = statusMap[app.application_status] || app.application_status || 'Applied';
+
+      return {
+        id: app.id,
+        jobPostingId: j.id,
+        position: j.job_title || 'Warehouse Apprentice',
+        company: companyName,
+        location: j.location || 'On-site',
+        appliedDate: appliedDateFmt,
+        currentStage: app.current_stage || 'Applied',
+        stipend: `₹${j.stipend_amount || 0}/Month`,
+        logoLetter: companyName.slice(0, 2).toUpperCase(),
+        status: status,
+        shortlistedAt: app.shortlisted_at,
+        interviewScheduledAt: app.interview_scheduled_at,
+        interviewMode: app.interview_mode,
+        interviewFeedback: app.interview_feedback,
+        steps: [
+          { name: 'Applied', done: true, current: status === 'Applied' },
+          { name: 'Under Review', done: status !== 'Applied', current: status === 'Under Review' },
+          { name: 'Shortlisted', done: ['Shortlisted', 'Interview', 'Offered', 'Rejected'].includes(status), current: status === 'Shortlisted' },
+          { name: 'Interview', done: ['Interview', 'Offered', 'Rejected'].includes(status), current: status === 'Interview' },
+          { name: 'Offer / Reject', done: ['Offered', 'Rejected'].includes(status), current: ['Offered', 'Rejected'].includes(status) }
+        ]
+      };
+    });
+
+    return res.status(200).json(formatted);
+  } catch (error) {
+    console.error('listMyApplications error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve applications' });
+  }
+};
+
+export const withdrawApplication = async (req, res) => {
+  try {
+    const candidateId = req.candidate.id;
+    const { id } = req.params;
+
+    const application = await db.CandidateApplication.findOne({
+      where: { id, candidate_id: candidateId }
+    });
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    const jobPostingId = application.job_posting_id;
+
+    await application.destroy();
+
+    const job = await db.EmployerJobPosting.findByPk(jobPostingId);
+    if (job && job.total_applications > 0) {
+      await job.decrement('total_applications', { by: 1 });
+    }
+
+    return res.status(200).json({
+      message: 'Application withdrawn and deleted successfully'
+    });
+  } catch (error) {
+    console.error('withdrawApplication error:', error);
+    return res.status(500).json({ error: 'Failed to withdraw application' });
   }
 };

@@ -1114,7 +1114,10 @@ export default function EmployerOnboarding({ onOnboardingSuccess, onCancel }) {
                       type="text"
                       name="esic_registration_number"
                       value={formData.esic_registration_number}
-                      onChange={(e) => handleInputChange({ target: { ...e.target, value: e.target.value.replace(/\D/g, '') } })}
+                      onChange={(e) => {
+                        e.target.value = e.target.value.replace(/\D/g, '');
+                        handleInputChange(e);
+                      }}
                       placeholder="ESIC ID if registered"
                       maxLength={17}
                       pattern="[0-9]{17}"

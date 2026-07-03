@@ -260,18 +260,20 @@ export const listEmployerCandidates = async (req, res) => {
       return res.status(400).json({ error: 'User is not associated with any employer account' });
     }
 
-    // Seed mock data if database is currently empty
-    await seedMockApplicationsIfNeeded(employerId);
+    // Only retrieve actual applications from the database without seeding mock entries
+
 
     const applications = await db.CandidateApplication.findAll({
       include: [
         {
           model: db.Candidate,
-          attributes: ['id', 'full_name', 'email', 'mobile_number', 'gender', 'age'],
           include: [
             { model: db.CandidateEducation },
             { model: db.CandidateWorkExperience },
-            { model: db.CandidateSkill }
+            { model: db.CandidateSkill },
+            { model: db.CandidateAddress },
+            { model: db.CandidateBankAccount },
+            { model: db.CandidateDocument }
           ]
         },
         {
@@ -291,6 +293,25 @@ export const listEmployerCandidates = async (req, res) => {
       const highestEdu = cand?.CandidateEducations?.find(e => e.is_highest) || cand?.CandidateEducations?.[0];
       const workExp = cand?.CandidateWorkExperiences?.[0];
       const skills = cand?.CandidateSkills?.map(s => s.skill_name) || [];
+      const addr = cand?.CandidateAddresses?.[0];
+      const location = addr ? `${addr.city || ''}, ${addr.state || ''}`.trim().replace(/^,|,$/g, '') : '';
+      const bank = cand?.CandidateBankAccounts?.[0];
+
+      const getExperienceDisplay = (w) => {
+        if (!w) return 'Fresher';
+        if (w.company_name === 'None' || w.company_name === 'None (Fresher)' || !w.company_name) return 'Fresher';
+        if (w.start_date) {
+          const start = new Date(w.start_date);
+          const end = w.currently_working || !w.end_date ? new Date() : new Date(w.end_date);
+          const diffTime = Math.abs(end - start);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          const months = Math.round(diffDays / 30.4);
+          if (months < 12) return `${months} Months`;
+          const years = (months / 12).toFixed(1);
+          return `${years} Years`;
+        }
+        return '1 Year';
+      };
 
       return {
         id: app.id,
@@ -298,15 +319,59 @@ export const listEmployerCandidates = async (req, res) => {
         name: cand?.full_name || 'Anonymous Candidate',
         email: cand?.email || '',
         phone: cand?.mobile_number || '',
+        location: location || 'Flexible',
         appliedFor: job?.job_title || 'General Opening',
         jobCode: job?.job_code || '',
-        qualification: highestEdu ? `${highestEdu.specialization || highestEdu.qualification_level}` : '10th Pass',
-        passingYear: highestEdu?.year_of_passing || '',
-        experience: workExp?.total_experience_years || 'Fresh',
+        qualification: highestEdu ? `${highestEdu.qualification_level} (${highestEdu.specialization || highestEdu.course_name || ''})` : '10th Pass',
+        passingYear: highestEdu?.passing_year || '',
+        institute: highestEdu?.institution_name || '',
+        percentage: highestEdu?.percentage_or_cgpa || '',
+        experience: getExperienceDisplay(workExp),
+        previousCompany: workExp?.company_name || '',
+        previousRole: workExp?.designation || '',
         appliedAt: app.applied_at || app.created_at,
         status: app.application_status || 'Under Review',
         currentStage: app.current_stage || 'Application Review',
-        skills
+        skills,
+        languages: cand?.preferred_language ? cand.preferred_language.split(',').map(l => l.trim()) : [],
+        certifications: [],
+        dob: cand?.date_of_birth || '',
+        gender: cand?.gender || '',
+        aadhar: cand?.aadhaar_last_4 || '',
+        pan: cand?.pan_number || '',
+        napsId: cand?.naps_candidate_id || '',
+        profileCompletion: cand?.profile_completion_percentage || 0,
+        onboardingStatus: cand?.onboarding_status || 'pending',
+        verificationStatus: cand?.verification_status || 'pending',
+        availabilityStatus: cand?.availability_status || 'available',
+        addressDetails: addr ? {
+          addressType: addr.address_type || '',
+          addressLine1: addr.address_line_1 || '',
+          addressLine2: addr.address_line_2 || '',
+          landmark: addr.landmark || '',
+          city: addr.city || '',
+          district: addr.district || '',
+          state: addr.state || '',
+          pincode: addr.pincode || ''
+        } : null,
+        courseName: highestEdu?.course_name || '',
+        boardUniversity: highestEdu?.board_or_university || '',
+        currentlyPursuing: highestEdu?.currently_pursuing || false,
+        workExperience: workExp ? {
+          companyName: workExp.company_name || '',
+          designation: workExp.designation || '',
+          startDate: workExp.start_date || '',
+          endDate: workExp.end_date || '',
+          currentlyWorking: workExp.currently_working || false,
+          responsibilities: workExp.responsibilities || ''
+        } : null,
+        resumeUrl: cand?.CandidateDocuments?.find(d => d.document_type === 'Resume / CV')?.file_url || cand?.resume_url || '',
+        bankDetails: bank ? {
+          bankName: bank.bank_name || '',
+          accountHolder: bank.account_holder_name || '',
+          accountNumber: bank.account_number || '',
+          ifsc: bank.ifsc_code || ''
+        } : null
       };
     });
 
@@ -338,10 +403,19 @@ export const updateCandidateStatus = async (req, res) => {
       return res.status(404).json({ error: 'Candidate application not found' });
     }
 
-    await application.update({
+    const updateData = {
       application_status: status || application.application_status,
       current_stage: currentStage || application.current_stage
-    });
+    };
+
+    if (status === 'Shortlisted') {
+      updateData.shortlisted_at = new Date();
+    } else if (status === 'Interview Scheduled') {
+      updateData.interview_scheduled_at = new Date();
+      updateData.interview_mode = 'Online';
+    }
+
+    await application.update(updateData);
 
     return res.status(200).json({
       message: 'Candidate application updated successfully',

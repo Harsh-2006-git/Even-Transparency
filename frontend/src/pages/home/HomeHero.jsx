@@ -142,7 +142,7 @@ export default function HomeHero({ onNavigate }) {
           src="/ChatgptImageJul3202611_07_16Amphotoroom11.png"
           className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-full w-auto object-contain object-bottom pointer-events-none select-none z-0 block origin-bottom transition-all duration-[1200ms] ease-out delay-[300ms] transform ${
             isLoaded 
-              ? 'opacity-[0.6] scale-100 translate-y-0 lg:opacity-[0.6] lg:scale-100 max-lg:opacity-[0.95] max-lg:scale-[1.45] max-lg:-translate-y-2' 
+              ? 'opacity-[0.6] scale-100 translate-y-0 lg:opacity-[0.6] lg:scale-100 max-lg:opacity-[0.95] max-lg:scale-[1.22] max-lg:-translate-y-1' 
               : 'opacity-0 scale-[0.85]'
           }`}
           alt="Background Map"
@@ -153,7 +153,7 @@ export default function HomeHero({ onNavigate }) {
           src="/ChatgptImageJul3202611_08_32Am1.png"
           className={`h-full w-auto object-contain object-bottom relative z-20 block origin-bottom transition-all duration-[1200ms] ease-out delay-[450ms] transform ${
             isLoaded 
-              ? 'opacity-100 scale-100 translate-y-4 lg:scale-100 lg:translate-y-4 max-lg:scale-[1.25] max-lg:translate-y-2' 
+              ? 'opacity-100 scale-100 translate-y-4 lg:scale-100 lg:translate-y-4 max-lg:scale-[1.08] max-lg:translate-y-1' 
               : 'opacity-0 scale-95 translate-y-24'
           }`}
           alt="Women Apprentices"

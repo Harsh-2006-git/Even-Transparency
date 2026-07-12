@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { cancelRegistration, checkPhone, completeOnboarding, getProfile, login, register, updateProfile, listCandidateJobs, applyForJob, listMyApplications, withdrawApplication } from '../controllers/candidate/authController.js';
 import { deleteCandidate, listCandidatesForApproval, updateCandidate, updateCandidateApproval } from '../controllers/admin/candidateController.js';
-import { confirmDocumentUpload, getCandidateDocumentViewUrl, listCandidateDocuments, requestDocumentUpload } from '../controllers/candidate/documentController.js';
+import { confirmDocumentUpload, getCandidateDocumentViewUrl, listCandidateDocuments, requestDocumentUpload, pdfProxy } from '../controllers/candidate/documentController.js';
 import { sendCandidateOTP, verifyCandidateOTP } from '../controllers/candidate/otpController.js';
 import { candidateAuthMiddleware } from '../middlewares/candidateAuthMiddleware.js';
 import { listGrievances, createGrievance } from '../controllers/grievanceController.js';
+import { getContract, acceptContract } from '../controllers/contractController.js';
+import { listNotifications, markOneRead, markAllRead } from '../controllers/notificationController.js';
 
 const router = Router();
 
@@ -22,14 +24,22 @@ router.get('/candidate/jobs', candidateAuthMiddleware, listCandidateJobs);
 router.post('/candidate/jobs/apply', candidateAuthMiddleware, applyForJob);
 router.get('/candidate/applications', candidateAuthMiddleware, listMyApplications);
 router.post('/candidate/applications/:id/withdraw', candidateAuthMiddleware, withdrawApplication);
+router.get('/candidate/applications/:applicationId/contract', candidateAuthMiddleware, getContract);
+router.post('/candidate/applications/:id/contract/accept', candidateAuthMiddleware, acceptContract);
 
 router.get('/candidate/documents', candidateAuthMiddleware, listCandidateDocuments);
 router.get('/candidate/documents/:id/view-url', candidateAuthMiddleware, getCandidateDocumentViewUrl);
 router.post('/candidate/documents/upload-request', candidateAuthMiddleware, requestDocumentUpload);
 router.post('/candidate/documents/confirm', candidateAuthMiddleware, confirmDocumentUpload);
+router.get('/candidate/documents/:id/stream', candidateAuthMiddleware, pdfProxy);
+router.get('/documents/stream', pdfProxy); // open proxy for employer side (url as query param)
 
 router.get('/candidate/grievances', candidateAuthMiddleware, listGrievances);
 router.post('/candidate/grievances', candidateAuthMiddleware, createGrievance);
+
+router.get('/candidate/notifications', candidateAuthMiddleware, listNotifications);
+router.patch('/candidate/notifications/:id/read', candidateAuthMiddleware, markOneRead);
+router.patch('/candidate/notifications/read-all', candidateAuthMiddleware, markAllRead);
 
 router.get('/admin/candidates', listCandidatesForApproval);
 router.put('/admin/candidates/:id', updateCandidate);

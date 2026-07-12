@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import db from '../../models/index.js';
 import { sendOTP, verifyOTP } from '../../services/otpService.js';
 import { generateTokenPair } from '../../services/tokenService.js';
+import { notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'even_cargo_secret_key';
 
@@ -409,6 +410,21 @@ export const register = async (req, res) => {
 
       const tokens = generateTokenPair({ id: user.id, email: user.email, type: 'employer' });
 
+      // Notify employer and admin on registration
+      notifyEmployer({
+        employerId: employer.id,
+        type: 'registration',
+        title: 'Welcome to Even Cargo! 🎉',
+        message: 'Your employer account has been created. Complete your company profile to start posting apprenticeship openings.'
+      });
+      notifyAdmin({
+        type: 'new_employer',
+        title: 'New Employer Registered',
+        message: `A new employer pre-registered with mobile ${cleanMobile}. Awaiting onboarding completion.`,
+        entityType: 'Employer',
+        entityId: employer.id
+      });
+
       return res.status(201).json({
         message: 'Employer pre-registered successfully.',
         onboarding_incomplete: true,
@@ -551,6 +567,21 @@ export const completeOnboarding = async (req, res) => {
     }
 
     await transaction.commit();
+
+    // Notify employer: onboarding complete
+    notifyEmployer({
+      employerId: req.user.employer_id,
+      type: 'onboarding',
+      title: 'Company Profile Submitted ✅',
+      message: 'Your company onboarding profile has been submitted and is under review by the admin team.'
+    });
+    notifyAdmin({
+      type: 'employer_onboarded',
+      title: 'Employer Onboarding Submitted',
+      message: `An employer has completed their onboarding profile. Verification required.`,
+      entityType: 'Employer',
+      entityId: req.user.employer_id
+    });
 
     return res.status(200).json({
       message: 'Employer onboarding completed successfully.',

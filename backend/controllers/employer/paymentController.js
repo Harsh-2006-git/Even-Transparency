@@ -1,6 +1,7 @@
 import db from '../../models/index.js';
 import { createAuditLog } from '../../services/auditService.js';
 import { createPaymentReference, validateStipendAmount } from '../../services/razorpayService.js';
+import { notifyCandidate, notifyEmployer } from '../../services/notificationService.js';
 
 export const confirmStipendPayment = async (req, res) => {
   try {
@@ -40,6 +41,28 @@ export const confirmStipendPayment = async (req, res) => {
       actionType: 'stipend_confirmed',
       newValues: stipend.toJSON(),
       req
+    });
+
+    // Notify candidate: stipend paid
+    if (req.body.candidate_id) {
+      notifyCandidate({
+        candidateId: req.body.candidate_id,
+        type: 'stipend',
+        title: 'Stipend Credited 💰',
+        message: `Your stipend of ₹${validation.amount.toLocaleString('en-IN')} for ${req.body.payment_month || 'this month'} has been processed.`,
+        entityType: 'EmployerStipendPayment',
+        entityId: stipend.id
+      });
+    }
+
+    // Notify employer: stipend confirmed
+    notifyEmployer({
+      employerId: employer.id,
+      type: 'stipend',
+      title: 'Stipend Payment Confirmed',
+      message: `Stipend of ₹${validation.amount.toLocaleString('en-IN')} for ${req.body.payment_month || 'this month'} has been marked as confirmed.`,
+      entityType: 'EmployerStipendPayment',
+      entityId: stipend.id
     });
 
     return res.status(201).json({

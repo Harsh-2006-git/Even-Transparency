@@ -36,6 +36,9 @@ const getStatusColor = (status) => {
     case 'offered':
     case 'offer':
       return 'border-sky-200 bg-sky-50/70 text-sky-700';
+    case 'hired':
+    case 'activeapprentice':
+      return 'border-emerald-300 bg-emerald-50 text-emerald-700';
     case 'withdrawn':
       return 'border-slate-200 bg-slate-100 text-slate-500';
     default:
@@ -62,6 +65,9 @@ const getLeftBorderColor = (status) => {
     case 'offered':
     case 'offer':
       return 'border-l-sky-500';
+    case 'hired':
+    case 'activeapprentice':
+      return 'border-l-emerald-600';
     case 'withdrawn':
       return 'border-l-slate-350';
     default:
@@ -113,10 +119,16 @@ function TrackingModal({ app, onClose }) {
       case 'offered':
       case 'offer':
         return 'border-sky-200 bg-sky-50/70 text-sky-700';
+      case 'hired':
+      case 'activeapprentice':
+        return 'border-emerald-300 bg-emerald-50 text-emerald-700';
       default:
         return 'border-slate-200 bg-slate-50/70 text-slate-700';
     }
   };
+
+  const isHired = app.status === 'Hired';
+  const isActive = isHired && app.contractStatus === 'active';
 
   const stages = [
     {
@@ -137,8 +149,8 @@ function TrackingModal({ app, onClose }) {
       name: 'Shortlisted',
       description: 'You have been selected for the next round.',
       date: formatDate(app.shortlistedAt),
-      active: ['Shortlisted', 'Interview', 'Offered', 'Rejected'].includes(app.status),
-      done: ['Shortlisted', 'Interview', 'Offered', 'Rejected'].includes(app.status)
+      active: ['Shortlisted', 'Interview', 'Offered', 'Hired', 'Rejected'].includes(app.status),
+      done: ['Shortlisted', 'Interview', 'Offered', 'Hired', 'Rejected'].includes(app.status)
     },
     {
       name: 'Interview Process',
@@ -146,19 +158,34 @@ function TrackingModal({ app, onClose }) {
         ? `Interview scheduled (${app.interviewMode || 'Online'}). Feedback: ${app.interviewFeedback || 'Pending'}` 
         : 'Interviews are scheduled by the employer.',
       date: formatDate(app.interviewScheduledAt),
-      active: ['Interview', 'Offered', 'Rejected'].includes(app.status),
-      done: ['Interview', 'Offered', 'Rejected'].includes(app.status)
+      active: ['Interview', 'Offered', 'Hired', 'Rejected'].includes(app.status),
+      done: ['Interview', 'Offered', 'Hired', 'Rejected'].includes(app.status)
     },
     {
-      name: 'Offer / Reject Status',
-      description: app.status === 'Offered' 
-        ? 'Congratulations! You received an apprenticeship offer.' 
-        : app.status === 'Rejected' 
-          ? 'Application not selected by the employer.' 
-          : 'Final decision pending.',
-      date: app.status === 'Offered' || app.status === 'Rejected' ? 'Finalized' : null,
-      active: ['Offered', 'Rejected'].includes(app.status),
-      done: ['Offered', 'Rejected'].includes(app.status)
+      name: 'Offer / Contract',
+      description: isHired
+        ? (app.contractStatus === 'Sent'
+            ? 'Offer letter sent! Please review and sign from your Applications page.'
+            : app.contractStatus === 'active'
+              ? 'You have signed the contract. Welcome aboard!'
+              : 'Offer extended. Awaiting contract to be sent.')
+        : app.status === 'Offered'
+          ? 'Congratulations! You received an apprenticeship offer.'
+          : app.status === 'Rejected'
+            ? 'Application not selected by the employer.'
+            : 'Final decision pending.',
+      date: isHired || app.status === 'Offered' || app.status === 'Rejected' ? 'Finalized' : null,
+      active: ['Offered', 'Hired', 'Rejected'].includes(app.status),
+      done: ['Offered', 'Hired', 'Rejected'].includes(app.status)
+    },
+    {
+      name: 'Active Apprentice',
+      description: isActive
+        ? 'You are now an active apprentice. Your journey has begun!'
+        : 'Complete contract signing to become an active apprentice.',
+      date: isActive ? 'Activated' : null,
+      active: isActive,
+      done: isActive
     }
   ];
 
@@ -184,8 +211,8 @@ function TrackingModal({ app, onClose }) {
         <div className="p-6 overflow-y-auto space-y-6">
           <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl p-4">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Current Status</span>
-            <span className={`px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${getStatusColor(app.status)}`}>
-              {app.status}
+            <span className={`px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${getStatusColor(isActive ? 'activeapprentice' : app.status)}`}>
+              {isActive ? 'Active Apprentice' : app.status}
             </span>
           </div>
 
@@ -240,12 +267,132 @@ function TrackingModal({ app, onClose }) {
   );
 }
 
+function OfferLetterModal({ app, onClose, onAccept, API, user }) {
+  const [signature, setSignature] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!agreed) {
+      setError('You must agree to the contract terms.');
+      return;
+    }
+    if (!signature.trim()) {
+      setError('Please type your full name to sign.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API}/candidate/applications/${app.id}/contract/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ signature })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to sign contract.');
+      onAccept();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-[500] animate-fade-in text-left">
+      <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden animate-scale-up">
+        
+        {/* Modal Header */}
+        <div className="p-5 border-b border-slate-100 flex items-start justify-between">
+          <div className="space-y-1">
+            <h3 className="text-base font-black text-slate-900 tracking-tight">Apprenticeship Offer & Contract</h3>
+            <p className="text-xs text-slate-500 font-bold">{app.company} • {app.position}</p>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition flex items-center justify-center border border-slate-200/50 cursor-pointer"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+          {error && (
+            <div className="bg-rose-50 border border-rose-100 text-rose-600 rounded-xl p-3.5 text-[11px] font-bold">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider pl-0.5">Offer Letter Document</h4>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-slate-700 font-semibold text-xs leading-relaxed whitespace-pre-wrap font-sans max-h-[300px] overflow-y-auto scrollbar-thin">
+              {app.contractContent || 'Offer letter details are pending.'}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                id="agreeContract"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 rounded border-slate-350 text-[#6D3BFF] focus:ring-[#6D3BFF]/10 cursor-pointer"
+              />
+              <label htmlFor="agreeContract" className="text-[11px] text-slate-655 font-bold cursor-pointer select-none leading-normal">
+                I hereby accept the offer and agree to start my apprenticeship on the designated date.
+              </label>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider pl-0.5">Digital Signature (Type Full Name)</label>
+              <input
+                type="text"
+                value={signature}
+                onChange={(e) => setSignature(e.target.value)}
+                placeholder="Type your full name as signature"
+                className="w-full h-11 px-4 rounded-xl border border-slate-250 bg-slate-50/50 text-xs font-semibold text-slate-800 outline-none focus:border-[#6D3BFF] focus:bg-white transition-all shadow-inner"
+              />
+            </div>
+            
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold transition text-xs cursor-pointer"
+              >
+                Decline
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 h-10 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl transition shadow-md text-xs cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                {submitting ? 'Signing...' : 'Accept & Sign Contract'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export default function CandidateApplications({ onSectionChange, user }) {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [trackingApp, setTrackingApp] = useState(null);
+  const [signingApp, setSigningApp] = useState(null);
   const [modalConfig, setModalConfig] = useState(null);
 
   const fetchApplications = async () => {
@@ -311,6 +458,7 @@ export default function CandidateApplications({ onSectionChange, user }) {
       if (!matchesSearch) return false;
       if (filter === 'All') return true;
       if (filter === 'Offer / Reject') return app.status === 'Offered' || app.status === 'Rejected';
+      if (filter === 'Hired') return app.status === 'Hired';
       return app.status === filter;
     });
   }, [applications, filter, search]);
@@ -318,6 +466,25 @@ export default function CandidateApplications({ onSectionChange, user }) {
   return (
     <div className="space-y-6">
       {trackingApp && <TrackingModal app={trackingApp} onClose={() => setTrackingApp(null)} />}
+      {signingApp && (
+        <OfferLetterModal
+          app={signingApp}
+          onClose={() => setSigningApp(null)}
+          onAccept={() => {
+            setSigningApp(null);
+            setModalConfig({
+              type: 'success',
+              title: 'Apprenticeship Activated!',
+              message: 'Congratulations! You have signed the contract and are now an active apprentice.',
+              onConfirm: () => {
+                fetchApplications();
+              }
+            });
+          }}
+          API={API}
+          user={user}
+        />
+      )}
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">
@@ -337,7 +504,7 @@ export default function CandidateApplications({ onSectionChange, user }) {
       {/* Filter and Search Bar Dashboard */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
         <div className="flex overflow-x-auto gap-2 no-scrollbar pb-1 md:pb-0">
-          {['All', 'Applied', 'Under Review', 'Shortlisted', 'Interview', 'Offer / Reject'].map((tab) => {
+          {['All', 'Applied', 'Under Review', 'Shortlisted', 'Interview', 'Offer / Reject', 'Hired'].map((tab) => {
             const count = tab === 'All' 
               ? applications.length 
               : tab === 'Offer / Reject' 
@@ -453,63 +620,82 @@ export default function CandidateApplications({ onSectionChange, user }) {
                 </div>
 
                 {/* Progress Steps Timeline Tracker */}
-                <div className="w-full xl:w-auto min-w-[280px] xl:min-w-[360px] px-1 py-2 border-t border-b border-dashed border-slate-100 xl:border-0 my-0.5 xl:my-0">
-                  <div className="relative flex items-center justify-between">
-                    
-                    {/* Background Progress track bar */}
-                    <div 
-                      className="absolute top-2.5 h-0.5 bg-slate-100 rounded-full" 
-                      style={{ left: `${trackOffsetPct}%`, right: `${trackOffsetPct}%` }}
-                    />
-                    <div 
-                      className="absolute top-2.5 h-0.5 bg-gradient-to-r from-emerald-500 to-[#6D3BFF] rounded-full transition-all duration-700" 
-                      style={{ left: `${trackOffsetPct}%`, width: `${progressPct}%` }}
-                    />
-                    
-                    {app.steps.map((step, idx) => (
-                      <div key={idx} className="flex-1 flex flex-col items-center relative">
-                        {/* Circle Dot indicator */}
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black z-10 transition-all duration-350 shadow-sm ${
-                          step.done 
-                            ? 'bg-emerald-500 text-white' 
-                            : step.current 
-                              ? 'bg-[#6D3BFF] text-white border border-violet-100 ring-2 ring-violet-200 ring-offset-0.5' 
-                              : 'bg-slate-200 text-slate-400'
-                        }`}>
-                          {step.done ? '✓' : idx + 1}
-                        </div>
+                {app.status !== 'Rejected' && app.status !== 'Withdrawn' ? (
+                  <div className="w-full xl:w-auto min-w-[280px] xl:min-w-[360px] px-1 py-2 border-t border-b border-dashed border-slate-100 xl:border-0 my-0.5 xl:my-0">
+                    <div className="relative flex items-center justify-between">
+                      
+                      {/* Background Progress track bar */}
+                      <div 
+                        className="absolute top-2.5 h-0.5 bg-slate-100 rounded-full" 
+                        style={{ left: `${trackOffsetPct}%`, right: `${trackOffsetPct}%` }}
+                      />
+                      <div 
+                        className="absolute top-2.5 h-0.5 bg-gradient-to-r from-emerald-500 to-[#6D3BFF] rounded-full transition-all duration-700" 
+                        style={{ left: `${trackOffsetPct}%`, width: `${progressPct}%` }}
+                      />
+                      
+                      {app.steps.map((step, idx) => (
+                        <div key={idx} className="flex-1 flex flex-col items-center relative">
+                          {/* Circle Dot indicator */}
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black z-10 transition-all duration-350 shadow-sm ${
+                            step.done 
+                              ? 'bg-emerald-500 text-white' 
+                              : step.current 
+                                ? 'bg-[#6D3BFF] text-white border border-violet-100 ring-2 ring-violet-200 ring-offset-0.5' 
+                                : 'bg-slate-200 text-slate-400'
+                          }`}>
+                            {step.done ? '✓' : idx + 1}
+                          </div>
 
-                        {/* Step tag name label */}
-                        <span className={`text-[7.5px] font-black mt-2 whitespace-nowrap text-center ${
-                          step.done 
-                            ? 'text-emerald-600' 
-                            : step.current 
-                              ? 'text-[#6D3BFF]' 
-                              : 'text-slate-400'
-                        }`}>
-                          {step.name}
-                        </span>
-                      </div>
-                    ))}
+                          {/* Step tag name label */}
+                          <span className={`text-[7.5px] font-black mt-2 whitespace-nowrap text-center ${
+                            step.done 
+                              ? 'text-emerald-600' 
+                              : step.current 
+                                ? 'text-[#6D3BFF]' 
+                                : 'text-slate-400'
+                          }`}>
+                            {step.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="w-full xl:w-auto flex items-center justify-center min-w-[280px] xl:min-w-[360px] py-4">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider italic select-none">
+                      Timeline unavailable for {app.status.toLowerCase()} applications
+                    </span>
+                  </div>
+                )}
 
                 {/* Right Status badge and CTA actions */}
                 <div className="flex xl:flex-col items-center xl:items-stretch justify-between w-full xl:w-[130px] gap-2.5 pt-2 xl:pt-0 shrink-0">
                   <span className={`px-2.5 py-0.5 rounded-lg border text-[8px] font-black uppercase tracking-wider select-none text-center ${getStatusColor(app.status)}`}>
-                    {app.status}
+                    {app.status === 'Hired' && app.contractStatus === 'active' ? 'Active Apprentice' : app.status}
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={() => setTrackingApp(app)}
-                    className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-violet-200 hover:border-violet-300 hover:text-[#6D3BFF] bg-violet-50/50 hover:bg-violet-50 px-4 text-xs font-black text-[#6D3BFF] shadow-xs transition duration-250 cursor-pointer select-none active:scale-95 shrink-0"
-                  >
-                    <span>Track Status</span>
-                    <ChevronRight size={11} />
-                  </button>
+                  {app.status === 'Hired' && app.contractStatus === 'Sent' ? (
+                    <button
+                      type="button"
+                      onClick={() => setSigningApp(app)}
+                      className="flex h-9 items-center justify-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-755 text-white px-4 text-xs font-black shadow-md shadow-violet-100 hover:shadow-lg transition duration-250 cursor-pointer select-none active:scale-95 shrink-0"
+                    >
+                      <span>Review & Sign</span>
+                      <ArrowRight size={11} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setTrackingApp(app)}
+                      className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-violet-200 hover:border-violet-300 hover:text-[#6D3BFF] bg-violet-50/50 hover:bg-violet-50 px-4 text-xs font-black text-[#6D3BFF] shadow-xs transition duration-250 cursor-pointer select-none active:scale-95 shrink-0"
+                    >
+                      <span>Track Status</span>
+                      <ChevronRight size={11} />
+                    </button>
+                  )}
 
-                  {app.status !== 'Withdrawn' && app.status !== 'Rejected' && (
+                  {app.status !== 'Withdrawn' && app.status !== 'Rejected' && app.status !== 'Hired' && (
                     <button
                       type="button"
                       onClick={() => handleWithdraw(app.id)}

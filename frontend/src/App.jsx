@@ -22,6 +22,18 @@ import Candidates from './pages/admin/Candidates';
 import CompanyManagement from './pages/admin/CompanyManagement';
 import AdminSettings from './pages/admin/Settings';
 import AdminGrievances from './pages/admin/Grievances';
+import AdminApprentices from './pages/admin/Apprentices';
+import AdminOpenings from './pages/admin/Openings';
+import AdminApplications from './pages/admin/Applications';
+import AdminInterviews from './pages/admin/Interviews';
+import AdminContracts from './pages/admin/Contracts';
+import AdminStipend from './pages/admin/Stipend';
+import AdminReports from './pages/admin/Reports';
+import AdminCompliance from './pages/admin/Compliance';
+import AdminCommunications from './pages/admin/Communications';
+import AdminUserManagement from './pages/admin/UserManagement';
+import AdminAuditLogs from './pages/admin/AuditLogs';
+import AdminSupport from './pages/admin/Support';
 import EmployerCompanyManagement from './pages/employer/CompanyManagement';
 import EmployerDashboard from './pages/employer/Dashboard';
 import EmployerDocuments from './pages/employer/Documents';
@@ -33,13 +45,16 @@ import EmployerOpenings from './pages/employer/Openings';
 import EmployerCandidates from './pages/employer/Candidates';
 import EmployerInterviews from './pages/employer/Interviews';
 import EmployerApprentices from './pages/employer/Apprentices';
+import EmployerContracts from './pages/employer/Contracts';
+import HomeLanding from './pages/home/HomeLanding';
 import { db } from './db/indexedDB';
 import { RefreshCw, Clock, AlertCircle, Check, CheckCircle, Edit, X } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
 const getAuthViewFromPath = () => {
-  const path = window.location.pathname.replace(/\/+$/, '') || '/candidate';
+  const path = window.location.pathname.replace(/\/+$/, '');
+  if (path === '' || path === '/') return 'home';
   if (path === '/candidate/register') return 'candidate-auth';
   if (path === '/candidate') return 'candidate';
   if (path === '/employer/onboarding') return 'employer-onboarding';
@@ -115,11 +130,13 @@ function App() {
   };
 
   const handleSectionChange = (sectionId) => {
+    if (sectionId === 'notifications') setUnreadNotifCount(0);
     window.location.hash = '/' + sectionId;
   };
 
   const navigateAuth = (path) => {
-    window.history.pushState({}, '', path);
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    window.history.pushState({}, '', cleanPath);
     setAuthView(getAuthViewFromPath());
   };
 
@@ -214,6 +231,31 @@ function App() {
   // Custom Toast and Confirmation engine
   const [toasts, setToasts] = useState([]);
   const [confirmModal, setConfirmModal] = useState(null);
+
+  // Unread notification count for sidebar badge
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  const fetchUnreadNotifCount = async (currentUser) => {
+    if (!currentUser) return;
+    try {
+      const token = currentUser.token || '';
+      const isCandidate = currentUser.userType === 'Candidate';
+      const isEmployer = currentUser.userType === 'Employer';
+      const endpoint = isCandidate
+        ? '/candidate/notifications?limit=100'
+        : isEmployer
+        ? '/employer/notifications?limit=100'
+        : null;
+      if (!endpoint) return;
+      const res = await fetch(`${API}${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = data.notifications || data || [];
+      setUnreadNotifCount(data.unreadCount ?? list.filter(n => !n.is_read).length);
+    } catch { /* silent */ }
+  };
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random().toString(36).substr(2, 9);
@@ -395,6 +437,14 @@ function App() {
     const interval = setInterval(fetchUnsyncedCandidates, 2000);
     return () => clearInterval(interval);
   }, []);
+
+  // Poll unread notification count every 60 seconds
+  useEffect(() => {
+    if (!user || !isOnline) return;
+    fetchUnreadNotifCount(user);
+    const interval = setInterval(() => fetchUnreadNotifCount(user), 60000);
+    return () => clearInterval(interval);
+  }, [user, isOnline]);
 
   // Sync data to backend
   const triggerSync = async () => {
@@ -607,11 +657,13 @@ function App() {
 
   // Global fetch interceptor for handling 401 status and auto-refresh/logout
   useEffect(() => {
+    if (window.fetch.__isDecorated) return;
+
     const originalFetch = window.fetch;
     let isRefreshing = false;
     let refreshQueue = [];
 
-    window.fetch = async (input, init) => {
+    const decoratedFetch = async (input, init) => {
       const url = typeof input === 'string' ? input : input?.url || '';
       
       // Determine if it is a backend API request that requires authentication
@@ -677,8 +729,18 @@ function App() {
 
         if (!refreshToken) {
           console.warn('Unauthorized error (401) received and no refresh token found. Logging out.');
-          handleLogout();
-          showToast?.('Session expired. Please log in again.', 'error');
+          localStorage.removeItem('evencargo_session');
+          setUser(null);
+          if (window.location.pathname.includes('/employer')) {
+            window.history.pushState({}, '', '/employer');
+            setAuthView('employer');
+          } else if (window.location.pathname.includes('/candidate')) {
+            window.history.pushState({}, '', '/candidate');
+            setAuthView('candidate');
+          } else {
+            window.history.pushState({}, '', '/employer');
+            setAuthView('employer');
+          }
           return response;
         }
 
@@ -775,16 +837,36 @@ function App() {
             console.error('Refresh token request failed with status:', refreshRes.status);
             isRefreshing = false;
             refreshQueue = [];
-            handleLogout();
-            showToast?.('Session expired. Please log in again.', 'error');
+            localStorage.removeItem('evencargo_session');
+            setUser(null);
+            if (window.location.pathname.includes('/employer')) {
+              window.history.pushState({}, '', '/employer');
+              setAuthView('employer');
+            } else if (window.location.pathname.includes('/candidate')) {
+              window.history.pushState({}, '', '/candidate');
+              setAuthView('candidate');
+            } else {
+              window.history.pushState({}, '', '/employer');
+              setAuthView('employer');
+            }
             return response;
           }
         } catch (refreshErr) {
           console.error('Network error during token refresh:', refreshErr);
           isRefreshing = false;
           refreshQueue = [];
-          handleLogout();
-          showToast?.('Session expired. Please log in again.', 'error');
+          localStorage.removeItem('evencargo_session');
+          setUser(null);
+          if (window.location.pathname.includes('/employer')) {
+            window.history.pushState({}, '', '/employer');
+            setAuthView('employer');
+          } else if (window.location.pathname.includes('/candidate')) {
+            window.history.pushState({}, '', '/candidate');
+            setAuthView('candidate');
+          } else {
+            window.history.pushState({}, '', '/employer');
+            setAuthView('employer');
+          }
           return response;
         }
       }
@@ -792,10 +874,13 @@ function App() {
       return response;
     };
 
+    decoratedFetch.__isDecorated = true;
+    window.fetch = decoratedFetch;
+
     return () => {
       window.fetch = originalFetch;
     };
-  }, [setUser, handleLogout]);
+  }, [setUser]);
 
   const handleCandidateAdded = (newCandidate) => {
     setCandidates(prev => [newCandidate, ...prev]);
@@ -821,6 +906,13 @@ function App() {
 
   // If not logged in, render the secure Login gate
   if (!user) {
+    if (authView === 'home') {
+      return (
+        <HomeLanding
+          onNavigate={navigateAuth}
+        />
+      );
+    }
     if (authView === 'employer-onboarding') {
       return (
         <EmployerOnboarding
@@ -912,6 +1004,7 @@ function App() {
             isOpen={sidebarOpen}
             toggleSidebar={setSidebarOpen}
             isCollapsed={desktopCollapsed}
+            notificationBadge={unreadNotifCount > 0 ? unreadNotifCount : null}
           />
         )}
 
@@ -937,6 +1030,18 @@ function App() {
                 {activeSection === 'settings' && <AdminSettings adminUser={user} onUserUpdate={handleUserUpdate} showToast={showToast} />}
                 {activeSection === 'company-management' && canAccessCompanyManagement(user) && <CompanyManagement adminUser={user} showToast={showToast} />}
                 {activeSection === 'grievances' && <AdminGrievances adminUser={user} showToast={showToast} />}
+                {activeSection === 'apprentices' && <AdminApprentices adminUser={user} showToast={showToast} />}
+                {activeSection === 'openings' && <AdminOpenings adminUser={user} showToast={showToast} />}
+                {activeSection === 'applications' && <AdminApplications adminUser={user} showToast={showToast} />}
+                {activeSection === 'interviews' && <AdminInterviews adminUser={user} showToast={showToast} />}
+                {activeSection === 'contracts' && <AdminContracts adminUser={user} showToast={showToast} />}
+                {activeSection === 'stipend' && <AdminStipend adminUser={user} showToast={showToast} />}
+                {activeSection === 'reports' && <AdminReports adminUser={user} showToast={showToast} />}
+                {activeSection === 'compliance' && <AdminCompliance adminUser={user} showToast={showToast} />}
+                {activeSection === 'communications' && <AdminCommunications adminUser={user} showToast={showToast} />}
+                {activeSection === 'user-management' && <AdminUserManagement adminUser={user} showToast={showToast} />}
+                {activeSection === 'audit-logs' && <AdminAuditLogs adminUser={user} showToast={showToast} />}
+                {activeSection === 'support' && <AdminSupport adminUser={user} showToast={showToast} />}
               </>
             ) : user.userType === 'Employer' ? (
               <>
@@ -1015,7 +1120,13 @@ function App() {
                     showToast={showToast} 
                   />
                 )}
-                {!['overview', 'company-management', 'profile', 'documents', 'settings', 'notifications', 'grievances', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices'].includes(activeSection) && (
+                {activeSection === 'contracts' && (
+                  <EmployerContracts 
+                    user={user} 
+                    onSectionChange={handleSectionChange} 
+                  />
+                )}
+                {!['overview', 'company-management', 'profile', 'documents', 'settings', 'notifications', 'grievances', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'contracts'].includes(activeSection) && (
                   <EmployerDashboard 
                     user={user} 
                     onSectionChange={handleSectionChange} 

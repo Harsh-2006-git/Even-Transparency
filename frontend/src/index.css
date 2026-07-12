@@ -14,6 +14,10 @@ html, body, #root {
 
 @theme {
   --font-sans: "Inter", sans-serif;
+  --font-dMSerifDisplay: "DM Serif Display", serif;
+  --font-inter: "Inter", sans-serif;
+  --font-manrope: "Manrope", sans-serif;
+  --font-plusJakartaSans: "Plus Jakarta Sans", sans-serif;
   --color-violet-650: #6D3BFF;
   --color-violet-655: #5C2FFF;
   --color-violet-750: #5C2FFF;

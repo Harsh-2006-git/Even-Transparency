@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import db from '../../models/index.js';
 import { recalculateProfileCompletion } from '../../utils/profileCompletion.js';
 import { generateTokenPair } from '../../services/tokenService.js';
+import { notifyCandidate, notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'even_cargo_secret_key';
 
@@ -165,6 +166,21 @@ export const register = async (req, res) => {
 
     await recalculateProfileCompletion(candidate);
 
+    // Fire welcome notification to candidate + admin alert
+    notifyCandidate({
+      candidateId: candidate.id,
+      type: 'registration',
+      title: 'Welcome to Even Cargo! 🎉',
+      message: 'Your account has been created. Complete your profile to apply for apprenticeships.'
+    });
+    notifyAdmin({
+      type: 'new_candidate',
+      title: 'New Candidate Registered',
+      message: `A new candidate registered with mobile ${cleanMobile}.`,
+      entityType: 'Candidate',
+      entityId: candidate.id
+    });
+
     return res.status(201).json({
       message: 'Candidate registered successfully.',
       ...tokens,
@@ -321,6 +337,14 @@ export const completeOnboarding = async (req, res) => {
     await req.candidate.reload();
     await recalculateProfileCompletion(req.candidate);
     await req.candidate.reload();
+
+    // Notify candidate that onboarding is complete
+    notifyCandidate({
+      candidateId: req.candidate.id,
+      type: 'profile_update',
+      title: 'Profile Submitted Successfully ✅',
+      message: 'Your onboarding profile has been submitted. You can now browse and apply for apprenticeship openings.'
+    });
 
     return res.status(200).json({
       message: 'Candidate onboarding completed and profile approved.',
@@ -503,6 +527,14 @@ export const updateProfile = async (req, res) => {
       include: getProfileIncludes()
     });
 
+    // Notify candidate that profile was updated
+    notifyCandidate({
+      candidateId: req.candidate.id,
+      type: 'profile_update',
+      title: 'Profile Updated',
+      message: 'Your profile information has been updated successfully.'
+    });
+
     return res.status(200).json({
       message: 'Candidate profile updated successfully.',
       candidate: buildProfilePayload(candidate)
@@ -593,7 +625,14 @@ export const listCandidateJobs = async (req, res) => {
   try {
     const jobs = await db.EmployerJobPosting.findAll({
       where: { status: 'Open' },
-      include: [{ model: db.Employer, attributes: ['company_name', 'industry_sector'] }],
+      include: [
+        { model: db.Employer, attributes: ['company_name', 'industry_sector'] },
+        {
+          model: db.EmployerApprenticeshipContract,
+          attributes: ['id', 'contract_status'],
+          required: false
+        }
+      ],
       order: [['created_at', 'DESC']]
     });
 
@@ -607,6 +646,11 @@ export const listCandidateJobs = async (req, res) => {
       const splitLines = (str) => (str || '').split('\n').map(s => s.trim().replace(/^[•\-*]\s*/, '')).filter(Boolean);
       const companyName = j.Employer?.company_name || 'Even Cargo Partner';
       const sector = j.Employer?.industry_sector || j.sector || '';
+
+      const contracts = j.EmployerApprenticeshipContracts || [];
+      const filledCount = contracts.filter(c =>
+        ['active', 'completed'].includes((c.contract_status || '').toLowerCase())
+      ).length;
 
       return {
         // IDs
@@ -637,7 +681,7 @@ export const listCandidateJobs = async (req, res) => {
         deadline: j.application_deadline ? new Date(j.application_deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
         // Requirements
         openings: j.number_of_openings || 0,
-        filledPositions: j.filled_positions || 0,
+        filledPositions: filledCount,
         qualification: j.qualification_required || '',
         minAge: j.minimum_age || 18,
         maxAge: j.maximum_age || 35,
@@ -696,12 +740,34 @@ export const applyForJob = async (req, res) => {
     const application = await db.CandidateApplication.create({
       candidate_id: candidateId,
       job_posting_id: jobPostingId,
-      application_status: 'Applied',
+      application_status: 'Under Review',
       applied_at: new Date(),
-      current_stage: 'Applied'
+      current_stage: 'Under Review'
     });
 
     await job.increment('total_applications', { by: 1 });
+
+    // Notify candidate: application submitted
+    notifyCandidate({
+      candidateId,
+      type: 'application',
+      title: 'Application Submitted 📋',
+      message: `Your application for "${job.job_title || 'Apprenticeship'}" has been submitted successfully and is now under review.`,
+      entityType: 'CandidateApplication',
+      entityId: application.id
+    });
+
+    // Notify employer: new application received
+    if (job.employer_id) {
+      notifyEmployer({
+        employerId: job.employer_id,
+        type: 'application',
+        title: 'New Application Received 📋',
+        message: `${req.candidate.full_name || 'A candidate'} has applied for your job opening "${job.job_title}".`,
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+    }
 
     return res.status(201).json({
       message: 'Application submitted successfully',
@@ -734,6 +800,11 @@ export const listMyApplications = async (req, res) => {
       order: [['applied_at', 'DESC']]
     });
 
+    // Fetch all contracts for this candidate to attach contract details
+    const contracts = await db.EmployerApprenticeshipContract.findAll({
+      where: { candidate_id: candidateId }
+    });
+
     const formatted = applications.map(app => {
       const j = app.EmployerJobPosting || {};
       const companyName = j.Employer?.company_name || 'Even Cargo partner';
@@ -748,15 +819,17 @@ export const listMyApplications = async (req, res) => {
         'Interview Scheduled': 'Interview',
         'Interview Completed': 'Interview',
         'Selected': 'Offered',
-        'Joined': 'Offered',
+        'Joined': 'Hired',
         'offered': 'Offered',
         'Offered': 'Offered',
+        'Hired': 'Hired',
         'rejected': 'Rejected',
         'Rejected': 'Rejected',
         'Withdrawn': 'Withdrawn'
       };
 
       const status = statusMap[app.application_status] || app.application_status || 'Applied';
+      const contract = contracts.find(c => c.job_posting_id === j.id);
 
       return {
         id: app.id,
@@ -773,12 +846,16 @@ export const listMyApplications = async (req, res) => {
         interviewScheduledAt: app.interview_scheduled_at,
         interviewMode: app.interview_mode,
         interviewFeedback: app.interview_feedback,
+        contractStatus: contract ? contract.contract_status : null,
+        contractId: contract ? contract.id : null,
+        contractContent: contract ? contract.agreement_document_url : null,
         steps: [
           { name: 'Applied', done: true, current: status === 'Applied' },
           { name: 'Under Review', done: status !== 'Applied', current: status === 'Under Review' },
-          { name: 'Shortlisted', done: ['Shortlisted', 'Interview', 'Offered', 'Rejected'].includes(status), current: status === 'Shortlisted' },
-          { name: 'Interview', done: ['Interview', 'Offered', 'Rejected'].includes(status), current: status === 'Interview' },
-          { name: 'Offer / Reject', done: ['Offered', 'Rejected'].includes(status), current: ['Offered', 'Rejected'].includes(status) }
+          { name: 'Shortlisted', done: ['Shortlisted', 'Interview', 'Offered', 'Hired', 'Rejected'].includes(status), current: status === 'Shortlisted' },
+          { name: 'Interview', done: ['Interview', 'Offered', 'Hired', 'Rejected'].includes(status), current: status === 'Interview' },
+          { name: 'Offer / Contract', done: ['Offered', 'Hired', 'Rejected'].includes(status), current: status === 'Offered' || (status === 'Hired' && contract?.contract_status === 'Sent') },
+          { name: 'Apprentice', done: status === 'Hired' && contract?.contract_status === 'active', current: status === 'Hired' && contract?.contract_status === 'active' }
         ]
       };
     });
@@ -810,6 +887,24 @@ export const withdrawApplication = async (req, res) => {
     const job = await db.EmployerJobPosting.findByPk(jobPostingId);
     if (job && job.total_applications > 0) {
       await job.decrement('total_applications', { by: 1 });
+    }
+
+    // Notify candidate: withdrawal confirmed
+    notifyCandidate({
+      candidateId,
+      type: 'application',
+      title: 'Application Withdrawn',
+      message: `Your application for "${job?.job_title || 'the apprenticeship'}" has been withdrawn successfully.`
+    });
+
+    // Notify employer: candidate withdrew application
+    if (job && job.employer_id) {
+      notifyEmployer({
+        employerId: job.employer_id,
+        type: 'application',
+        title: 'Application Withdrawn ⚠️',
+        message: `${req.candidate.full_name || 'A candidate'} has withdrawn their application for "${job.job_title}".`
+      });
     }
 
     return res.status(200).json({

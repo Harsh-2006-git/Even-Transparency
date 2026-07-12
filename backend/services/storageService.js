@@ -73,7 +73,9 @@ export const deleteFile = async (s3Key) => {
   if (!s3Key) return;
   
   let key = s3Key;
+  let isRaw = String(s3Key).endsWith('.pdf') && !String(s3Key).includes('/image/upload/');
   if (String(s3Key).startsWith('http://') || String(s3Key).startsWith('https://')) {
+    isRaw = String(s3Key).includes('/raw/upload/');
     const uploadIndex = s3Key.indexOf('/upload/');
     if (uploadIndex !== -1) {
       key = s3Key.substring(uploadIndex + 8);
@@ -89,7 +91,7 @@ export const deleteFile = async (s3Key) => {
     }
   }
 
-  const resourceType = String(key).endsWith('.pdf') ? 'raw' : 'image';
+  const resourceType = isRaw ? 'raw' : 'image';
   const publicId = resourceType === 'image' 
     ? String(key).replace(/\.[^/.]+$/, "") 
     : key;
@@ -106,7 +108,9 @@ export const fileExists = async (s3Key) => {
   if (!s3Key) return false;
   
   let key = s3Key;
+  let isRaw = String(s3Key).endsWith('.pdf') && !String(s3Key).includes('/image/upload/');
   if (String(s3Key).startsWith('http://') || String(s3Key).startsWith('https://')) {
+    isRaw = String(s3Key).includes('/raw/upload/');
     const uploadIndex = s3Key.indexOf('/upload/');
     if (uploadIndex !== -1) {
       key = s3Key.substring(uploadIndex + 8);
@@ -120,7 +124,7 @@ export const fileExists = async (s3Key) => {
     }
   }
 
-  const resourceType = String(key).endsWith('.pdf') ? 'raw' : 'image';
+  const resourceType = isRaw ? 'raw' : 'image';
   const publicId = resourceType === 'image' 
     ? String(key).replace(/\.[^/.]+$/, "") 
     : key;

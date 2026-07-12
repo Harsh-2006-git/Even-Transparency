@@ -1,4 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+
+const API = import.meta.env.VITE_API_BASE_URL;
 import {
   Users, UserCheck, Clock, FileText, CheckCircle2, ShieldCheck,
   Search, ChevronDown, Calendar, Star, MoreVertical, X,
@@ -20,9 +22,6 @@ const INITIAL_KPI_STATS = {
   attendanceAverage: '92%',
   completionRate: '88%'
 };
-
-// Openings
-const OPENINGS = [];
 
 // Mock database of apprentices (12 mock entries representing pagination pages)
 const INITIAL_APPRENTICES = [
@@ -472,11 +471,121 @@ export default function EmployerApprentices({ user, onSectionChange, showToast }
     completionRate: '0%'
   });
   const [apprentices, setApprentices] = useState([]);
-  const [selectedOpeningId, setSelectedOpeningId] = useState(''); // default focused job empty
+  const [selectedOpeningId, setSelectedOpeningId] = useState('all'); // default to all
 
   // Right slide-over profile drawer state
   const [selectedApprentice, setSelectedApprentice] = useState(null);
   const [drawerTab, setDrawerTab] = useState('Overview'); // 'Overview' | 'Contract' | 'Performance' | 'Stipend' | 'Documents'
+
+  // Dynamically compute list of openings based on active apprentices
+  const OPENINGS = useMemo(() => {
+    const uniqueOpenings = [...new Set(apprentices.map(a => a.opening).filter(Boolean))];
+    return [
+      { id: 'all', name: 'All Openings' },
+      ...uniqueOpenings.map((name, index) => {
+        const joinedCount = apprentices.filter(a => a.opening === name).length;
+        return {
+          id: `opening-${index}`,
+          name: name,
+          code: `NAPS-OP-${String(index + 1).padStart(3, '0')}`,
+          positions: Math.max(10, joinedCount + 5),
+          joined: joinedCount,
+          vacant: Math.max(0, Math.max(10, joinedCount + 5) - joinedCount)
+        };
+      })
+    ];
+  }, [apprentices]);
+
+  const fetchApprentices = async () => {
+    try {
+      const res = await fetch(`${API}/employer/contracts`, {
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+      if (!res.ok) throw new Error('Failed to retrieve contracts');
+      const data = await res.json();
+      
+      // Filter for active contracts
+      const activeContracts = data.filter(c => ['active', 'signed'].includes(String(c.contract_status).toLowerCase()));
+      
+      const dbApprentices = activeContracts.map(c => {
+        const edu = c.Candidate?.CandidateEducations?.find(e => e.is_highest) || c.Candidate?.CandidateEducations?.[0];
+        const qual = edu ? `${edu.qualification_level} ${edu.specialization ? `(${edu.specialization})` : edu.course_name ? `(${edu.course_name})` : ''}`.trim() : '12th Pass';
+
+        return {
+          id: c.contract_number || `APR-${c.id.slice(0, 4).toUpperCase()}`,
+          name: c.Candidate?.full_name || 'Anonymous Apprentice',
+          email: c.Candidate?.email || '',
+          avatar: (c.Candidate?.full_name || 'AA').split(' ').map(n => n[0]).join('').toUpperCase(),
+          opening: c.trade_name || 'Apprentice Trainee',
+          qualification: qual,
+        joiningDate: c.contract_start_date ? new Date(c.contract_start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending',
+        attendance: '100%',
+        performance: '5.0/5',
+        contract: 'Active',
+        stipendStatus: 'Pending',
+        status: 'Active',
+        dob: c.Candidate?.date_of_birth ? new Date(c.Candidate.date_of_birth).toLocaleDateString('en-IN') : 'N/A',
+        gender: c.Candidate?.gender || 'N/A',
+        department: 'Operations',
+        skills: 'NAPS Apprentice',
+        address: 'N/A',
+        contractDetails: {
+          contractNumber: c.contract_number || 'N/A',
+          startDate: c.contract_start_date ? new Date(c.contract_start_date).toLocaleDateString('en-IN') : 'N/A',
+          endDate: c.contract_end_date ? new Date(c.contract_end_date).toLocaleDateString('en-IN') : 'N/A',
+          duration: '12 Months',
+          contractStatus: 'Active'
+        },
+        performanceDetails: {
+          attendance: '100%',
+          rating: '5.0/5',
+          feedback: 'Excellent work ethics.',
+          progress: 100
+        },
+        stipendDetails: {
+          monthlyStipend: `₹ ${c.stipend_amount || '12,000'}`,
+          lastPaid: '—',
+          paymentStatus: 'Pending',
+          bankVerification: 'Verified'
+        },
+        documents: [
+          { name: 'Contract Agreement', status: 'Signed' }
+        ]
+      };
+    });
+
+      setApprentices(dbApprentices);
+
+      const totalContractsCount = data.length;
+      const activeContractsCount = activeContracts.length;
+      const pendingOnboardingCount = data.filter(c => ['draft', 'sent', 'pending'].includes(String(c.contract_status).toLowerCase())).length;
+
+      setKpiStats({
+        totalApprentices: totalContractsCount,
+        activeApprentices: activeContractsCount,
+        onboardingPending: pendingOnboardingCount,
+        contractsActive: activeContractsCount,
+        attendanceAverage: activeContractsCount > 0 ? '100%' : '0%',
+        completionRate: activeContractsCount > 0 ? '100%' : '0%'
+      });
+
+    } catch (err) {
+      console.error('fetchApprentices error:', err);
+      setApprentices([]);
+      setKpiStats({
+        totalApprentices: 0,
+        activeApprentices: 0,
+        onboardingPending: 0,
+        contractsActive: 0,
+        attendanceAverage: '0%',
+        completionRate: '0%'
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchApprentices();
+  }, [user?.token]);
 
   // Filter and Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -494,8 +603,8 @@ export default function EmployerApprentices({ user, onSectionChange, showToast }
 
   // Opening summary compute
   const selectedOpening = useMemo(() => {
-    return OPENINGS.find(o => o.id === selectedOpeningId) || OPENINGS[1];
-  }, [selectedOpeningId]);
+    return OPENINGS.find(o => o.id === selectedOpeningId) || null;
+  }, [OPENINGS, selectedOpeningId]);
 
   // Filtering Logic
   const filteredApprentices = useMemo(() => {
@@ -510,9 +619,9 @@ export default function EmployerApprentices({ user, onSectionChange, showToast }
       }
 
       // 2. Opening filter
-      if (selectedOpeningId !== 'all') {
+      if (selectedOpeningId && selectedOpeningId !== 'all') {
         const selectedOpeningName = OPENINGS.find(o => o.id === selectedOpeningId)?.name;
-        if (app.opening !== selectedOpeningName) return false;
+        if (selectedOpeningName && app.opening !== selectedOpeningName) return false;
       }
 
       // 3. Department filter
@@ -901,82 +1010,56 @@ export default function EmployerApprentices({ user, onSectionChange, showToast }
           ) : (
             <div className="bg-white border border-slate-200/85 rounded-2xl shadow-xs overflow-hidden w-full relative">
               <div className="w-full overflow-x-auto scrollbar-thin">
-                <table className="w-full text-left border-collapse min-w-[1100px]">
+                <table className="w-full text-left border-collapse min-w-[900px] table-fixed">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-wider select-none">
-                      <th className="py-4 px-4 w-[40px] text-center">
-                        <input
-                          type="checkbox"
-                          onChange={handleSelectAll}
-                          checked={paginatedApprentices.length > 0 && selectedIds.length === paginatedApprentices.length}
-                          className="rounded border-slate-300 text-violet-650 focus:ring-violet-650/10 cursor-pointer"
-                        />
-                      </th>
-                      <th className="py-4 px-4">Apprentice</th>
-                      <th className="py-4 px-4">Apprentice ID</th>
-                      <th className="py-4 px-4">Opening</th>
-                      <th className="py-4 px-4">Qualification</th>
-                      <th className="py-4 px-4">Joining Date</th>
-                      <th className="py-4 px-4">Attendance</th>
-                      <th className="py-4 px-4">Performance</th>
-                      <th className="py-4 px-4">Contract</th>
-                      <th className="py-4 px-4">Stipend Status</th>
-                      <th className="py-4 px-4">Status</th>
-                      <th className="py-4 px-4 text-center">Actions</th>
+                      <th className="py-4 px-4 w-[24%]">Apprentice</th>
+                      <th className="py-4 px-4 w-[24%]">Apprentice ID / Opening</th>
+                      <th className="py-4 px-4 w-[18%]">Qualification</th>
+                      <th className="py-4 px-4 w-[11%]">Joining Date</th>
+                      <th className="py-4 px-4 w-[11%]">Attendance / Performance</th>
+                      <th className="py-4 px-4 w-[6%] text-center">Contract</th>
+                      <th className="py-4 px-4 w-[6%] text-center">Stipend</th>
+                      <th className="py-4 px-4 w-[4%] text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {paginatedApprentices.map((app) => {
-                      const isSelected = selectedIds.includes(app.id);
                       const isFocused = selectedApprentice?.id === app.id;
 
                       return (
                         <tr
                           key={app.id}
-                          className={`hover:bg-slate-50/30 transition-colors cursor-pointer ${isFocused ? 'bg-violet-50/20' : isSelected ? 'bg-slate-50/40' : ''
+                          className={`hover:bg-slate-50/30 transition-colors cursor-pointer ${isFocused ? 'bg-violet-50/20' : ''
                             }`}
                           onClick={() => handleOpenDrawer(app)}
                         >
-                          {/* Checkbox */}
-                          <td className="py-4 px-4 text-center" onClick={e => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleSelectRow(app.id)}
-                              className="rounded border-slate-300 text-violet-650 focus:ring-violet-650/10 cursor-pointer"
-                            />
-                          </td>
-
                           {/* Apprentice Profile Card */}
-                          <td className="py-3.5 px-4 font-semibold">
+                          <td className="py-3.5 px-4 font-semibold truncate">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full font-black text-[10px] flex items-center justify-center shrink-0 border select-none ${isFocused ? 'bg-[#6D3BFF] text-white border-[#6D3BFF]' : 'bg-violet-50 text-violet-650 border-violet-150'
                                 }`}>
                                 {app.avatar}
                               </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-black text-slate-800 leading-none hover:underline cursor-pointer">
+                              <div className="min-w-0 truncate">
+                                <p className="text-xs font-black text-slate-800 leading-none hover:underline cursor-pointer truncate">
                                   {app.name}
                                 </p>
-                                <p className="text-[9px] text-slate-400 font-bold mt-1.5 select-all">
+                                <p className="text-[9px] text-slate-400 font-bold mt-1.5 select-all truncate">
                                   {app.email}
                                 </p>
                               </div>
                             </div>
                           </td>
 
-                          {/* ID */}
-                          <td className="py-3.5 px-4 text-xs font-mono font-bold text-slate-650">
-                            {app.id}
-                          </td>
-
-                          {/* Opening */}
-                          <td className="py-3.5 px-4 text-xs font-semibold text-slate-700">
-                            {app.opening}
+                          {/* ID / Opening */}
+                          <td className="py-3.5 px-4 font-semibold">
+                            <div className="text-xs font-mono font-bold text-slate-800">{app.id}</div>
+                            <div className="text-[10px] text-slate-450 font-bold mt-1 truncate">{app.opening}</div>
                           </td>
 
                           {/* Qualification */}
-                          <td className="py-3.5 px-4 text-xs font-bold text-slate-550">
+                          <td className="py-3.5 px-4 text-xs font-bold text-slate-550 truncate">
                             {app.qualification}
                           </td>
 
@@ -985,34 +1068,25 @@ export default function EmployerApprentices({ user, onSectionChange, showToast }
                             {app.joiningDate}
                           </td>
 
-                          {/* Attendance */}
-                          <td className="py-3.5 px-4">
-                            <span className="text-xs font-black text-slate-800">
+                          {/* Attendance / Performance */}
+                          <td className="py-3.5 px-4 font-semibold">
+                            <div className="text-xs font-black text-slate-850">
                               {app.attendance}
-                            </span>
-                          </td>
-
-                          {/* Performance Rating */}
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs font-black text-slate-700">{app.performance}</span>
-                              <Star size={11} className="text-amber-500 fill-amber-500 shrink-0" />
+                            </div>
+                            <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-slate-450">
+                              <span>{app.performance}</span>
+                              <Star size={9} className="text-amber-500 fill-amber-500 shrink-0" />
                             </div>
                           </td>
 
                           {/* Contract */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 text-center">
                             {getContractStatusBadge(app.contract)}
                           </td>
 
                           {/* Stipend status */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 text-center">
                             {getStipendStatusBadge(app.stipendStatus)}
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-3.5 px-4">
-                            {getApprenticeStatusBadge(app.status)}
                           </td>
 
                           {/* Actions */}
@@ -1023,16 +1097,9 @@ export default function EmployerApprentices({ user, onSectionChange, showToast }
                                 onClick={() => handleOpenDrawer(app)}
                                 className={`w-7 h-7 rounded-lg flex items-center justify-center transition cursor-pointer ${isFocused ? 'bg-[#6D3BFF] text-white' : 'hover:bg-violet-50 text-slate-400 hover:text-[#6D3BFF]'
                                   }`}
-                                title="View Quick Profile"
+                                title="View Details"
                               >
-                                <Eye size={13.5} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => showToast?.(`More actions drawer for ${app.name}`, 'info')}
-                                className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-650 flex items-center justify-center transition cursor-pointer"
-                              >
-                                <MoreVertical size={13.5} />
+                                <Eye size={12} />
                               </button>
                             </div>
                           </td>

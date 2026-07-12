@@ -1,7 +1,7 @@
 import db from '../../models/index.js';
 import { recalculateProfileCompletion } from '../../utils/profileCompletion.js';
 import { createAuditLog } from '../../services/auditService.js';
-import { notifyCandidate } from '../../services/notificationService.js';
+import { notifyCandidate, notifyAdmin } from '../../services/notificationService.js';
 import { fileExists, generateUploadUrl, generateViewUrl, cloudinaryUrls, deleteFile } from '../../services/storageService.js';
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -123,8 +123,18 @@ export const confirmDocumentUpload = async (req, res) => {
     });
     await notifyCandidate({
       candidateId: req.candidate.id,
-      title: 'Document uploaded',
-      message: `${document_type} was uploaded and verified successfully.`
+      type: 'document',
+      title: 'Document Uploaded 📄',
+      message: `Your ${document_type} has been uploaded and is pending verification.`,
+      entityType: 'CandidateDocument',
+      entityId: document.id
+    });
+    notifyAdmin({
+      type: 'document_upload',
+      title: 'Candidate Document Uploaded',
+      message: `A candidate uploaded their ${document_type}. Review required.`,
+      entityType: 'CandidateDocument',
+      entityId: document.id
     });
 
     return res.status(201).json({
@@ -222,5 +232,62 @@ export const uploadProxy = async (req, res) => {
   } catch (error) {
     console.error('Cloudinary proxy upload error:', error);
     return res.status(500).json({ error: 'Failed to upload file to storage.' });
+  }
+};
+
+export const pdfProxy = async (req, res) => {
+  try {
+    let fileUrl = req.query.url;
+
+    // Look up by document id when using /candidate/documents/:id/stream
+    if (!fileUrl && req.params?.id) {
+      const where = { id: req.params.id };
+      if (req.candidate?.id) where.candidate_id = req.candidate.id;
+      const document = await db.CandidateDocument.findOne({ where });
+      if (!document) return res.status(404).json({ error: 'Document not found.' });
+      fileUrl = document.file_url;
+    }
+
+    if (!fileUrl) return res.status(400).json({ error: 'No file URL provided.' });
+
+    // Detect content type from extension
+    const ext = (fileUrl.split('?')[0].split('.').pop() || '').toLowerCase();
+    const contentTypeMap = {
+      pdf: 'application/pdf',
+      jpg: 'image/jpeg', jpeg: 'image/jpeg',
+      png: 'image/png', webp: 'image/webp',
+      gif: 'image/gif', svg: 'image/svg+xml'
+    };
+    const contentType = contentTypeMap[ext] || 'application/octet-stream';
+
+    // Use global fetch (Node 18+) — it follows redirects automatically
+    const upstream = await fetch(fileUrl);
+
+    if (!upstream.ok) {
+      console.error(`[pdfProxy] Upstream returned ${upstream.status} for ${fileUrl}`);
+      return res.status(upstream.status || 502).json({ error: 'Failed to fetch file from storage.' });
+    }
+
+    // Set response headers so browser renders inline
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    const cl = upstream.headers.get('content-length');
+    if (cl) res.setHeader('Content-Length', cl);
+
+    // Stream body to client
+    const { Readable } = await import('stream');
+    const nodeStream = Readable.fromWeb(upstream.body);
+    nodeStream.pipe(res);
+    nodeStream.on('error', (err) => {
+      console.error('[pdfProxy] stream error:', err);
+      if (!res.headersSent) res.status(500).json({ error: 'Stream error.' });
+    });
+
+  } catch (error) {
+    console.error('[pdfProxy] error:', error);
+    if (!res.headersSent) res.status(500).json({ error: 'Proxy error.' });
   }
 };

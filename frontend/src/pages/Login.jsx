@@ -324,6 +324,7 @@ export default function Login({ onLoginSuccess, onSwitchToEmployer, deferredProm
           </div>
         </div>
       </div>
+    </div>
 
       {/* Install PWA Guide Modal */}
       {showInstallModal && (

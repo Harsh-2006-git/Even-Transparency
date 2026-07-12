@@ -1,4 +1,5 @@
 import db from '../../models/index.js';
+import { notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
 
 export const getOnboardingDetails = async (req, res) => {
   try {
@@ -78,6 +79,21 @@ export const updateOnboardingDetails = async (req, res) => {
       onboarding_completed_at: new Date()
     });
 
+    // Notify employer and admin
+    notifyEmployer({
+      employerId: employer.id,
+      type: 'onboarding',
+      title: 'Onboarding Details Updated 🏢',
+      message: 'Your onboarding company details have been updated successfully.'
+    });
+    notifyAdmin({
+      type: 'employer_update',
+      title: 'Employer Onboarding Updated',
+      message: `Employer ${employer.company_name} updated their onboarding details.`,
+      entityType: 'Employer',
+      entityId: employer.id
+    });
+
     return res.status(200).json({
       message: 'Onboarding details updated successfully',
       employer
@@ -146,6 +162,21 @@ export const updateMyCompany = async (req, res) => {
     });
 
     await employer.update(payload);
+
+    // Notify employer and admin
+    notifyEmployer({
+      employerId: employer.id,
+      type: 'employer_update',
+      title: 'Company Profile Updated 🏢',
+      message: 'Your company profile was updated successfully.'
+    });
+    notifyAdmin({
+      type: 'employer_update',
+      title: 'Employer Profile Updated',
+      message: `Employer ${employer.company_name} updated their company profile details.`,
+      entityType: 'Employer',
+      entityId: employer.id
+    });
 
     return res.status(200).json({
       message: 'Company profile updated successfully.',

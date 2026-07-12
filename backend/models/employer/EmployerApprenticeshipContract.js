@@ -57,7 +57,7 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING
     },
     agreement_document_url: {
-      type: DataTypes.STRING
+      type: DataTypes.TEXT
     },
     candidate_signed_at: {
       type: DataTypes.DATE

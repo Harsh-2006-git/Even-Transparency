@@ -12,7 +12,8 @@ import {
   createJobPosting,
   listJobPostings,
   getJobPosting,
-  updateJobPosting
+  updateJobPosting,
+  listAdminJobPostings
 } from '../controllers/employer/jobPostingController.js';
 import {
   listEmployerCandidates,
@@ -28,6 +29,16 @@ import {
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { adminAuthMiddleware } from '../middlewares/adminAuthMiddleware.js';
 import { listGrievances, createGrievance, updateGrievanceStatus } from '../controllers/grievanceController.js';
+import { getEmployerDashboardStats } from '../controllers/employer/dashboardController.js';
+import { getContract, sendContract, listEmployerContracts, sendContractById, listAdminContracts } from '../controllers/contractController.js';
+import { listNotifications, markOneRead, markAllRead } from '../controllers/notificationController.js';
+import {
+  listAdminApplications,
+  listAdminInterviews,
+  listAdminStipends,
+  listAdminAuditLogs,
+  listAdminUsers
+} from '../controllers/admin/adminDataController.js';
 
 const router = Router();
 
@@ -45,6 +56,13 @@ router.post('/admin/employers', createEmployer);
 router.put('/admin/employers/:id', updateEmployer);
 router.delete('/admin/employers/:id', deleteEmployer);
 router.patch('/admin/employers/:id/approval', updateEmployerApproval);
+router.get('/admin/contracts', adminAuthMiddleware, listAdminContracts);
+router.get('/admin/job-postings', adminAuthMiddleware, listAdminJobPostings);
+router.get('/admin/applications', adminAuthMiddleware, listAdminApplications);
+router.get('/admin/interviews', adminAuthMiddleware, listAdminInterviews);
+router.get('/admin/stipends', adminAuthMiddleware, listAdminStipends);
+router.get('/admin/audit-logs', adminAuthMiddleware, listAdminAuditLogs);
+router.get('/admin/users', adminAuthMiddleware, listAdminUsers);
 
 // Protected onboarding routes
 router.get('/employer/onboarding', authMiddleware, getOnboardingDetails);
@@ -53,6 +71,7 @@ router.post('/employer/complete-onboarding', authMiddleware, completeOnboarding)
 router.get('/employer/company', authMiddleware, getMyCompany);
 router.put('/employer/company', authMiddleware, updateMyCompany);
 router.post('/employer/stipends/confirm', authMiddleware, confirmStipendPayment);
+router.get('/employer/dashboard-stats', authMiddleware, getEmployerDashboardStats);
 
 // Employer documents routes
 router.get('/employer/documents', authMiddleware, listEmployerDocuments);
@@ -69,11 +88,20 @@ router.put('/employer/job-postings/:id', authMiddleware, updateJobPosting);
 // Employer candidates routes
 router.get('/employer/candidates', authMiddleware, listEmployerCandidates);
 router.put('/employer/candidates/:id/status', authMiddleware, updateCandidateStatus);
+router.get('/employer/candidates/:applicationId/contract', authMiddleware, getContract);
+router.post('/employer/candidates/:id/contract/send', authMiddleware, sendContract);
+router.get('/employer/contracts', authMiddleware, listEmployerContracts);
+router.post('/employer/contracts/:id/send', authMiddleware, sendContractById);
 
 // Grievances routes (Employer & Admin)
 router.get('/employer/grievances', authMiddleware, listGrievances);
 router.post('/employer/grievances', authMiddleware, createGrievance);
 router.get('/admin/grievances', adminAuthMiddleware, listGrievances);
 router.put('/admin/grievances/:id/status', adminAuthMiddleware, updateGrievanceStatus);
+
+// Employer notifications
+router.get('/employer/notifications', authMiddleware, listNotifications);
+router.patch('/employer/notifications/:id/read', authMiddleware, markOneRead);
+router.patch('/employer/notifications/read-all', authMiddleware, markAllRead);
 
 export default router;

@@ -1,4 +1,5 @@
 import db from '../../models/index.js';
+import { notifyCandidate, notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
 
 // Helper to seed mock candidate applications if table is empty
 const seedMockApplicationsIfNeeded = async (employerId) => {
@@ -285,10 +286,24 @@ export const listEmployerCandidates = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
+    // Fetch all contracts for this employer's candidates to avoid N+1 queries
+    const jobPostingIds = [...new Set(applications.map(a => a.job_posting_id).filter(Boolean))];
+    const candidateIds = [...new Set(applications.map(a => a.Candidate?.id).filter(Boolean))];
+    const contracts = await db.EmployerApprenticeshipContract.findAll({
+      where: {
+        employer_id: employerId
+      }
+    });
+
     // Format the response nicely for the frontend tabular view
     const formatted = applications.map(app => {
       const cand = app.Candidate;
       const job = app.EmployerJobPosting;
+
+      // Find associated contract for this application
+      const contract = contracts.find(
+        c => c.candidate_id === cand?.id && c.job_posting_id === job?.id
+      );
 
       const highestEdu = cand?.CandidateEducations?.find(e => e.is_highest) || cand?.CandidateEducations?.[0];
       const workExp = cand?.CandidateWorkExperiences?.[0];
@@ -332,6 +347,9 @@ export const listEmployerCandidates = async (req, res) => {
         appliedAt: app.applied_at || app.created_at,
         status: app.application_status || 'Under Review',
         currentStage: app.current_stage || 'Application Review',
+        interviewScheduledAt: app.interview_scheduled_at,
+        interviewMode: app.interview_mode,
+        interviewFeedback: app.interview_feedback,
         skills,
         languages: cand?.preferred_language ? cand.preferred_language.split(',').map(l => l.trim()) : [],
         certifications: [],
@@ -371,7 +389,10 @@ export const listEmployerCandidates = async (req, res) => {
           accountHolder: bank.account_holder_name || '',
           accountNumber: bank.account_number || '',
           ifsc: bank.ifsc_code || ''
-        } : null
+        } : null,
+        contractId: contract?.id || null,
+        contractStatus: contract?.contract_status || null,
+        contractContent: contract?.agreement_document_url || null
       };
     });
 
@@ -416,6 +437,114 @@ export const updateCandidateStatus = async (req, res) => {
     }
 
     await application.update(updateData);
+
+    // Fire status-specific notifications
+    const candidateId = application.candidate_id;
+    if (status === 'Shortlisted') {
+      notifyCandidate({
+        candidateId,
+        type: 'status_change',
+        title: 'Application Shortlisted 🌟',
+        message: `Congratulations! Your application has been shortlisted. Keep an eye out for next steps.`,
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+      notifyEmployer({
+        employerId,
+        type: 'applications',
+        title: 'Candidate Shortlisted 🌟',
+        message: 'You have successfully shortlisted a candidate.',
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+    } else if (status === 'Rejected') {
+      notifyCandidate({
+        candidateId,
+        type: 'status_change',
+        title: 'Application Update',
+        message: 'Your application was not selected at this time. Don\'t give up — keep applying!',
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+      notifyEmployer({
+        employerId,
+        type: 'applications',
+        title: 'Application Rejected',
+        message: 'You have marked a candidate application as rejected.',
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+    } else if (status === 'Interview Scheduled') {
+      notifyCandidate({
+        candidateId,
+        type: 'interview',
+        title: 'Interview Scheduled 📅',
+        message: 'Your interview has been scheduled. Check your Interviews section for details.',
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+      notifyEmployer({
+        employerId,
+        type: 'interview',
+        title: 'Interview Scheduled 📅',
+        message: 'You have successfully scheduled an interview for the candidate.',
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+    } else if (status === 'Hired') {
+      notifyCandidate({
+        candidateId,
+        type: 'hired',
+        title: 'You\'ve Been Selected! 🎉',
+        message: 'You have been selected for the apprenticeship. An offer letter will be sent to you shortly.',
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+      notifyEmployer({
+        employerId,
+        type: 'candidate_hired',
+        title: 'Candidate Selected & Hired 🎉',
+        message: 'Candidate has been selected. A draft contract has been created.',
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+      notifyAdmin({
+        type: 'candidate_hired',
+        title: 'Candidate Hired',
+        message: `A candidate has been hired by an employer. Contract draft created.`,
+        entityType: 'CandidateApplication',
+        entityId: application.id
+      });
+    }
+
+    // Auto-create a draft contract if candidate status is updated to 'Hired'
+    if (status === 'Hired') {
+      const existingContract = await db.EmployerApprenticeshipContract.findOne({
+        where: {
+          candidate_id: application.candidate_id,
+          job_posting_id: application.job_posting_id
+        }
+      });
+
+      if (!existingContract) {
+        const job = application.EmployerJobPosting || {};
+        const stipendAmount = parseFloat(job.stipend_amount) || 12000;
+        const tradeName = job.job_title || 'Apprentice';
+
+        await db.EmployerApprenticeshipContract.create({
+          employer_id: employerId,
+          candidate_id: application.candidate_id,
+          job_posting_id: application.job_posting_id,
+          contract_number: `EAC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          trade_name: tradeName,
+          stipend_amount: stipendAmount,
+          contract_start_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // starts in 7 days
+          contract_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year duration
+          probation_period_days: 30,
+          contract_status: 'Draft'
+        });
+      }
+    }
 
     return res.status(200).json({
       message: 'Candidate application updated successfully',

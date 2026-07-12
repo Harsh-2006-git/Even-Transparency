@@ -1,4 +1,5 @@
 import db from '../../models/index.js';
+import { notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
 import { createAuditLog } from '../../services/auditService.js';
 import { fileExists, generateUploadUrl, generateViewUrl, cloudinaryUrls, deleteFile } from '../../services/storageService.js';
 
@@ -124,6 +125,23 @@ export const confirmDocumentUpload = async (req, res) => {
       actionType: 'document_uploaded',
       newValues: document.toJSON(),
       req
+    });
+
+    // Notify employer and admin
+    notifyEmployer({
+      employerId,
+      type: 'document_upload',
+      title: 'Document Uploaded 📄',
+      message: `Your ${document_type} has been uploaded and verified.`,
+      entityType: 'EmployerDocument',
+      entityId: document.id
+    });
+    notifyAdmin({
+      type: 'document_upload',
+      title: 'Employer Document Uploaded',
+      message: `An employer uploaded their ${document_type}. Review required.`,
+      entityType: 'EmployerDocument',
+      entityId: document.id
     });
 
     return res.status(201).json({

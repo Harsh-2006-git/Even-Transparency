@@ -49,6 +49,14 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
     setTimeout(() => setToast(null), 4000);
   };
 
+  const handleClosePreview = () => {
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedPreviewDoc(null);
+    setPreviewUrl(null);
+  };
+
   const handlePreviewDocument = async (doc) => {
     setPreviewLoading(true);
     setPreviewUrl(null);
@@ -60,7 +68,19 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to retrieve document view link.');
       if (data.viewUrl) {
-        setPreviewUrl(data.viewUrl);
+        const isPdf = data.viewUrl.toLowerCase().includes('.pdf') || 
+                      (doc.file_name && doc.file_name.toLowerCase().endsWith('.pdf')) ||
+                      (doc.document_type && doc.document_type.includes('Resume'));
+                      
+        if (isPdf) {
+          const fileRes = await fetch(data.viewUrl);
+          const fileBlob = await fileRes.blob();
+          const pdfBlob = new Blob([fileBlob], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(pdfBlob);
+          setPreviewUrl(blobUrl);
+        } else {
+          setPreviewUrl(data.viewUrl);
+        }
       }
     } catch (err) {
       triggerToast(err.message, 'error');
@@ -856,7 +876,7 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
         <>
           <div
             className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-xs animate-fade-in"
-            onClick={() => { setSelectedPreviewDoc(null); setPreviewUrl(null); }}
+            onClick={handleClosePreview}
           />
           <div className="fixed top-0 right-0 h-full w-full max-w-lg bg-white border-l border-slate-200 shadow-2xl z-[160] flex flex-col justify-between animate-slide-in text-left">
 
@@ -867,7 +887,7 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
                 <h3 className="text-sm font-black text-slate-800 mt-0.5">{selectedPreviewDoc.document_type}</h3>
               </div>
               <button
-                onClick={() => { setSelectedPreviewDoc(null); setPreviewUrl(null); }}
+                onClick={handleClosePreview}
                 className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition cursor-pointer"
               >
                 <X size={15} />
@@ -903,7 +923,7 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
                   previewUrl.toLowerCase().includes('.pdf') ? (
                     <div className="w-full h-[360px] border border-slate-100 rounded-xl overflow-hidden">
                       <iframe
-                        src={`https://docs.google.com/gview?url=${encodeURIComponent(previewUrl)}&embedded=true`}
+                        src={previewUrl}
                         className="w-full h-full"
                         title="Document PDF Preview"
                       />

@@ -1,4 +1,5 @@
 import db from '../../models/index.js';
+import { notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
 
 /**
  * Helper to serialize form job details for database saving
@@ -127,6 +128,23 @@ export const createJobPosting = async (req, res) => {
     const payload = serializePosting(req.body, employerId);
     const posting = await db.EmployerJobPosting.create(payload);
 
+    // Notify employer and admin
+    notifyEmployer({
+      employerId,
+      type: 'jobs',
+      title: 'Apprenticeship Opening Created 📋',
+      message: `Your apprenticeship opening "${posting.job_title}" has been created successfully.`,
+      entityType: 'EmployerJobPosting',
+      entityId: posting.id
+    });
+    notifyAdmin({
+      type: 'new_job_posting',
+      title: 'New Apprenticeship Opening Posted',
+      message: `Employer posted a new opening: "${posting.job_title}". Approval required.`,
+      entityType: 'EmployerJobPosting',
+      entityId: posting.id
+    });
+
     return res.status(201).json({
       message: 'Apprenticeship drive created successfully',
       posting: deserializePosting(posting)
@@ -137,7 +155,7 @@ export const createJobPosting = async (req, res) => {
   }
 };
 
-// List all postings for authenticated employer
+// List all postings for authenticated employer (with live application & fill counts)
 export const listJobPostings = async (req, res) => {
   try {
     const employerId = req.user.employer_id;
@@ -147,16 +165,56 @@ export const listJobPostings = async (req, res) => {
 
     const postings = await db.EmployerJobPosting.findAll({
       where: { employer_id: employerId },
+      include: [
+        {
+          model: db.CandidateApplication,
+          attributes: ['id', 'application_status', 'current_stage'],
+          required: false
+        },
+        {
+          model: db.EmployerApprenticeshipContract,
+          attributes: ['id', 'contract_status'],
+          required: false
+        }
+      ],
       order: [['created_at', 'DESC']]
     });
 
-    const formatted = postings.map(deserializePosting);
+    const formatted = postings.map(p => {
+      const form = deserializePosting(p);
+
+      const applications = p.CandidateApplications || [];
+      const contracts = p.EmployerApprenticeshipContracts || [];
+
+      const totalApplications = applications.length;
+      const shortlisted = applications.filter(a =>
+        ['shortlisted', 'interview_scheduled', 'offered', 'hired'].includes(
+          (a.application_status || '').toLowerCase()
+        )
+      ).length;
+      const offered = applications.filter(a =>
+        ['offered', 'hired'].includes((a.application_status || '').toLowerCase())
+      ).length;
+      const filledCount = contracts.filter(c =>
+        ['active', 'completed'].includes((c.contract_status || '').toLowerCase())
+      ).length;
+
+      return {
+        ...form,
+        total_applications: totalApplications,
+        total_shortlisted: shortlisted,
+        total_offered: offered,
+        filledPositions: String(filledCount)
+      };
+    });
+
     return res.status(200).json(formatted);
   } catch (error) {
     console.error('listJobPostings error:', error);
     return res.status(500).json({ error: 'Failed to retrieve apprenticeship openings' });
   }
 };
+
 
 // Get single job posting details
 export const getJobPosting = async (req, res) => {
@@ -165,14 +223,30 @@ export const getJobPosting = async (req, res) => {
     const employerId = req.user.employer_id;
 
     const posting = await db.EmployerJobPosting.findOne({
-      where: { id, employer_id: employerId }
+      where: { id, employer_id: employerId },
+      include: [
+        {
+          model: db.EmployerApprenticeshipContract,
+          attributes: ['id', 'contract_status'],
+          required: false
+        }
+      ]
     });
 
     if (!posting) {
       return res.status(404).json({ error: 'Apprenticeship opening not found' });
     }
 
-    return res.status(200).json(deserializePosting(posting));
+    const form = deserializePosting(posting);
+    const contracts = posting.EmployerApprenticeshipContracts || [];
+    const filledCount = contracts.filter(c =>
+      ['active', 'completed'].includes((c.contract_status || '').toLowerCase())
+    ).length;
+
+    return res.status(200).json({
+      ...form,
+      filledPositions: String(filledCount)
+    });
   } catch (error) {
     console.error('getJobPosting error:', error);
     return res.status(500).json({ error: 'Failed to retrieve apprenticeship details' });
@@ -199,6 +273,23 @@ export const updateJobPosting = async (req, res) => {
 
     await posting.update(payload);
 
+    // Notify employer and admin
+    notifyEmployer({
+      employerId,
+      type: 'jobs',
+      title: 'Apprenticeship Opening Updated 📝',
+      message: `Your apprenticeship opening "${posting.job_title}" has been updated successfully.`,
+      entityType: 'EmployerJobPosting',
+      entityId: posting.id
+    });
+    notifyAdmin({
+      type: 'job_posting_update',
+      title: 'Apprenticeship Opening Updated',
+      message: `Employer updated their opening: "${posting.job_title}".`,
+      entityType: 'EmployerJobPosting',
+      entityId: posting.id
+    });
+
     return res.status(200).json({
       message: 'Apprenticeship drive updated successfully',
       posting: deserializePosting(posting)
@@ -208,3 +299,72 @@ export const updateJobPosting = async (req, res) => {
     return res.status(500).json({ error: 'Failed to update apprenticeship drive' });
   }
 };
+
+/**
+ * GET /api/admin/job-postings
+ * Retrieve all job postings across all employers (Admin role only)
+ * Includes live-counted application stats and filled positions from contracts.
+ */
+export const listAdminJobPostings = async (req, res) => {
+  try {
+    const postings = await db.EmployerJobPosting.findAll({
+      include: [
+        {
+          model: db.Employer,
+          attributes: ['id', 'company_name', 'official_email', 'headquarters_city']
+        },
+        {
+          model: db.CandidateApplication,
+          attributes: ['id', 'application_status', 'current_stage'],
+          required: false
+        },
+        {
+          model: db.EmployerApprenticeshipContract,
+          attributes: ['id', 'contract_status'],
+          required: false
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    const formatted = postings.map(p => {
+      const form = deserializePosting(p);
+
+      // Live-counted stats from joined records
+      const applications = p.CandidateApplications || [];
+      const contracts = p.EmployerApprenticeshipContracts || [];
+
+      const totalApplications = applications.length;
+      const shortlisted = applications.filter(a =>
+        ['shortlisted', 'interview_scheduled', 'offered', 'hired'].includes(
+          (a.application_status || '').toLowerCase()
+        )
+      ).length;
+      const offered = applications.filter(a =>
+        ['offered', 'hired'].includes((a.application_status || '').toLowerCase())
+      ).length;
+      // Filled = active/completed contracts for this posting
+      const filledCount = contracts.filter(c =>
+        ['active', 'completed'].includes((c.contract_status || '').toLowerCase())
+      ).length;
+
+      return {
+        ...form,
+        // Override with live counts
+        total_applications: totalApplications,
+        total_shortlisted: shortlisted,
+        total_offered: offered,
+        filledPositions: String(filledCount),
+        companyName: p.Employer?.company_name || 'N/A',
+        companyEmail: p.Employer?.official_email || 'N/A',
+        companyCity: p.Employer?.headquarters_city || 'N/A'
+      };
+    });
+
+    return res.status(200).json(formatted);
+  } catch (error) {
+    console.error('listAdminJobPostings error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve all job postings.' });
+  }
+};
+

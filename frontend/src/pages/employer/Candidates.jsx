@@ -87,6 +87,13 @@ export default function EmployerCandidates({ user, onSectionChange, showToast })
         // Update the selected candidate in drawer too
         setSelectedCandidate(prev => prev?.id === appId ? { ...prev, status: newStatus, currentStage: newStage } : prev);
         showToast?.(`Candidate status updated to ${newStatus}.`, 'success');
+        
+        if (newStatus === 'Shortlisted') {
+          setSelectedCandidate(null);
+          setTimeout(() => {
+            onSectionChange?.('interviews');
+          }, 400);
+        }
       } else {
         showToast?.('Failed to update candidate status.', 'error');
       }
@@ -149,6 +156,38 @@ export default function EmployerCandidates({ user, onSectionChange, showToast })
         {status}
       </span>
     );
+  };
+
+  const hasCandidateExperience = (cand) => {
+    const experience = String(cand.experience || '').trim().toLowerCase();
+    return Boolean(
+      cand.workExperience ||
+      cand.previousCompany ||
+      cand.previousRole ||
+      (experience && !['fresher', 'none', 'no experience', '0', '0 years'].includes(experience))
+    );
+  };
+
+  const getCandidateCapability = (cand) => {
+    if (hasCandidateExperience(cand)) {
+      const role = cand.workExperience?.designation || cand.previousRole || '';
+      const company = cand.workExperience?.companyName || cand.previousCompany || '';
+      const duration = cand.experience && cand.experience !== 'Fresher' ? cand.experience : '';
+      const detail = [role, company].filter(Boolean).join(' at ');
+
+      return {
+        label: 'Experience',
+        value: detail || duration || 'Experienced candidate',
+        meta: detail && duration ? duration : ''
+      };
+    }
+
+    const skills = Array.isArray(cand.skills) ? cand.skills.filter(Boolean) : [];
+    return {
+      label: skills.length ? 'Skills' : 'Experience',
+      value: skills.length ? skills.slice(0, 3).join(', ') : 'Fresher',
+      meta: skills.length > 3 ? `+${skills.length - 3} more` : 'No prior experience'
+    };
   };
 
   return (
@@ -360,6 +399,7 @@ export default function EmployerCandidates({ user, onSectionChange, showToast })
                 return { label, color };
               };
               const qualBadge = getQualBadge(cand.qualification);
+              const capability = getCandidateCapability(cand);
 
               return (
                 <div
@@ -407,13 +447,27 @@ export default function EmployerCandidates({ user, onSectionChange, showToast })
                       </div>
                     </div>
 
-                    {/* Column 3: Experience + Date */}
+                    {/* Column 3: Experience / Skills + Date */}
                     <div className="lg:col-span-2 min-w-0 space-y-1">
-                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                        <Briefcase size={11} className="text-[#6D3BFF] shrink-0" />
-                        <span>{cand.experience || 'Fresher'}</span>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[9px] font-black uppercase tracking-wider ${
+                          capability.label === 'Experience'
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                            : 'bg-violet-50 border-violet-100 text-violet-700'
+                        }`}>
+                          {capability.label === 'Experience' ? <Briefcase size={9} /> : <Star size={9} />}
+                          {capability.label}
+                        </span>
+                        <span className="text-[10.5px] font-extrabold text-slate-700 leading-snug max-w-full truncate" title={capability.value}>
+                          {capability.value}
+                        </span>
+                        {capability.meta && (
+                          <span className="text-[9px] text-slate-400 font-bold leading-none">
+                            {capability.meta}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                      <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium pt-0.5">
                         <Calendar size={10} className="shrink-0" />
                         <span>{fmtDate}</span>
                       </div>
@@ -435,50 +489,60 @@ export default function EmployerCandidates({ user, onSectionChange, showToast })
                           <Eye size={14} strokeWidth={2.5} />
                         </button>
 
-                        <div className="relative dropdown-trigger-container">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveDropdown(isDropdownActive ? null : cand.id);
-                            }}
-                            className="w-8 h-8 rounded-lg border border-slate-250 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer"
-                          >
-                            <MoreVertical size={14} strokeWidth={2.5} />
-                          </button>
+                        {cand.status === 'Under Review' ? (
+                          <>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleStatusUpdate(cand.id, 'Shortlisted', 'Shortlisted'); }}
+                              className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black transition cursor-pointer flex items-center gap-1 shadow-xs border border-transparent"
+                              title="Shortlist Candidate"
+                            >
+                              <CheckCircle2 size={12} /> Shortlist
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleStatusUpdate(cand.id, 'Rejected', 'Rejected'); }}
+                              className="h-8 px-3 rounded-lg border border-rose-250 bg-white hover:bg-rose-50 text-rose-600 text-[10px] font-black transition cursor-pointer flex items-center gap-1 shadow-xs"
+                              title="Reject Candidate"
+                            >
+                              <XCircle size={12} /> Reject
+                            </button>
+                          </>
+                        ) : (
+                          <div className="relative dropdown-trigger-container">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveDropdown(isDropdownActive ? null : cand.id);
+                              }}
+                              className="w-8 h-8 rounded-lg border border-slate-250 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer"
+                            >
+                              <MoreVertical size={14} strokeWidth={2.5} />
+                            </button>
 
-                          {isDropdownActive && (
-                            <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-[150] text-left animate-fade-in">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (cand.resumeUrl) { window.open(cand.resumeUrl, '_blank'); }
-                                  else { showToast?.('No resume uploaded by this candidate.', 'error'); }
-                                  setActiveDropdown(null);
-                                }}
-                                className="w-full px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:text-[#6D3BFF] flex items-center gap-2 cursor-pointer"
-                              >
-                                <FileText size={12} /> View Resume
-                              </button>
-                              <div className="h-px bg-slate-100 my-1" />
-                              <button onClick={(e) => { e.stopPropagation(); handleStatusUpdate(cand.id, 'Shortlisted', 'Shortlisted'); }} className="w-full px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:text-[#6D3BFF] flex items-center gap-2 cursor-pointer">
-                                <CheckCircle2 size={12} className="text-emerald-500" /> Shortlist Candidate
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleStatusUpdate(cand.id, 'Interview Scheduled', 'Interview Scheduled'); }} className="w-full px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:text-[#6D3BFF] flex items-center gap-2 cursor-pointer">
-                                <Calendar size={12} className="text-blue-500" /> Schedule Interview
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleStatusUpdate(cand.id, 'Selected', 'Selected'); }} className="w-full px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:text-[#6D3BFF] flex items-center gap-2 cursor-pointer">
-                                <BadgeCheck size={12} className="text-teal-500" /> Move to Offer
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleStatusUpdate(cand.id, 'Joined', 'Joined'); }} className="w-full px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:text-[#6D3BFF] flex items-center gap-2 cursor-pointer">
-                                <Award size={12} className="text-indigo-500" /> Mark as Joined
-                              </button>
-                              <div className="h-px bg-slate-100 my-1" />
-                              <button onClick={(e) => { e.stopPropagation(); handleStatusUpdate(cand.id, 'Rejected', 'Rejected'); }} className="w-full px-3 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer">
-                                <XCircle size={12} /> Reject Candidate
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                            {isDropdownActive && (
+                              <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-[150] text-left animate-fade-in">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (cand.resumeUrl) { window.open(cand.resumeUrl, '_blank'); }
+                                    else { showToast?.('No resume uploaded by this candidate.', 'error'); }
+                                    setActiveDropdown(null);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-[11px] font-bold text-slate-650 hover:bg-slate-50 hover:text-[#6D3BFF] flex items-center gap-2 cursor-pointer"
+                                >
+                                  <FileText size={12} /> View Resume
+                                </button>
+                                {cand.status !== 'Rejected' && (
+                                  <>
+                                    <div className="h-px bg-slate-100 my-1" />
+                                    <button onClick={(e) => { e.stopPropagation(); handleStatusUpdate(cand.id, 'Rejected', 'Rejected'); }} className="w-full px-3 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 cursor-pointer">
+                                      <XCircle size={12} /> Reject Candidate
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -818,115 +882,78 @@ function CandidateDetailDrawer({ candidate: cand, onClose, getStatusBadge, onSta
             )}
           </div>
 
-          {/* Recruitment Pipeline — interactive, click any stage to advance/rewind */}
-          <div className="px-5 py-4 border-b border-slate-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                <Shield size={10} className="text-[#6D3BFF]" /> Recruitment Pipeline
+          {/* Candidate Status Action / Banner */}
+          {cand.status === 'Under Review' && (
+            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1.5">
+                <CheckCircle2 size={10} className="text-[#6D3BFF]" /> Application Action
               </h3>
-              <span className="text-[8px] font-black text-slate-400 bg-slate-50 border border-slate-200 rounded-full px-2 py-0.5">
-                Click a stage to update
-              </span>
-            </div>
-
-            <div className="relative">
-              {/* Vertical connector line behind the dots */}
-              <div className="absolute left-[13px] top-5 bottom-5 w-0.5 bg-slate-100 rounded-full" />
-
-              <div className="space-y-1">
-                {pipeline.map((stage, idx) => {
-                  const isDone        = currentPipelineIndex >= idx;
-                  const isCurrent     = currentPipelineIndex === idx;
-                  const isClickable   = !isUpdating;
-
-                  return (
-                    <button
-                      key={stage.key}
-                      type="button"
-                      disabled={!isClickable}
-                      onClick={() => {
-                        // If clicking the already-active stage → move BACK one step
-                        // (demote to the previous stage, or "Under Review" if already first)
-                        if (isCurrent && idx > 0) {
-                          const prev = pipeline[idx - 1];
-                          onStatusUpdate(cand.id, prev.key, prev.label);
-                        } else {
-                          onStatusUpdate(cand.id, stage.key, stage.label);
-                        }
-                      }}
-                      className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all group relative
-                        ${ isClickable ? 'cursor-pointer' : 'cursor-not-allowed opacity-70' }
-                        ${ isCurrent
-                            ? 'bg-violet-50 border border-violet-200 shadow-sm'
-                            : isDone
-                              ? 'hover:bg-slate-50'
-                              : 'hover:bg-slate-50/70'
-                        }`}
-                    >
-                      {/* Stage dot / checkmark */}
-                      <div
-                        className={`w-[26px] h-[26px] rounded-full flex items-center justify-center shrink-0 z-10 border-2 transition-all duration-300
-                          ${ isDone
-                              ? `${stage.filledColor} border-transparent shadow-sm`
-                              : 'bg-white border-slate-200 group-hover:border-slate-300'
-                          }`}
-                      >
-                        {isDone ? (
-                          // Checkmark SVG
-                          <svg viewBox="0 0 10 10" className="w-3 h-3" fill="none">
-                            <polyline points="1.5,5.5 4,8 8.5,2" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        ) : (
-                          <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-slate-300 transition-colors" />
-                        )}
-                      </div>
-
-                      {/* Label + tags */}
-                      <div className="flex-1 min-w-0 text-left">
-                        <span className={`text-[11px] font-black leading-none block
-                          ${ isDone ? 'text-slate-800' : 'text-slate-400 group-hover:text-slate-600' }`}
-                        >
-                          {stage.label}
-                        </span>
-                        {isCurrent && (
-                          <span className="mt-0.5 inline-block text-[8px] font-black text-[#6D3BFF] bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                            Current Stage
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Right-side hint arrow */}
-                      {!isUpdating && (
-                        <ChevronRight
-                          size={13}
-                          className={`shrink-0 transition-opacity ${
-                            isCurrent
-                              ? 'opacity-40 text-[#6D3BFF]'
-                              : isDone
-                                ? 'opacity-0 group-hover:opacity-30'
-                                : 'opacity-0 group-hover:opacity-40 text-slate-400'
-                          }`}
-                        />
-                      )}
-
-                      {/* Spinner while updating this stage */}
-                      {isUpdating && isCurrent && (
-                        <RefreshCw size={12} className="shrink-0 animate-spin text-[#6D3BFF]" />
-                      )}
-                    </button>
-                  );
-                })}
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => onStatusUpdate(cand.id, 'Shortlisted', 'Shortlisted')}
+                  disabled={isUpdating}
+                  className="w-full flex items-center justify-center gap-2 h-9.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition cursor-pointer disabled:opacity-50"
+                >
+                  <CheckCircle2 size={13} /> Shortlist Candidate
+                </button>
+                <button
+                  onClick={() => onStatusUpdate(cand.id, 'Rejected', 'Rejected')}
+                  disabled={isUpdating}
+                  className="w-full flex items-center justify-center gap-2 h-9.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-black transition cursor-pointer disabled:opacity-50"
+                >
+                  <XCircle size={13} /> Reject Candidate
+                </button>
               </div>
             </div>
+          )}
 
-            {/* Rejected special row */}
-            {cand.status === 'Rejected' && (
-              <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-rose-50 border border-rose-200 rounded-xl">
-                <XCircle size={14} className="text-rose-500 shrink-0" />
-                <span className="text-[11px] font-black text-rose-700">Candidate Rejected</span>
+          {cand.status === 'Shortlisted' && (
+            <div className="px-5 py-4.5 border-b border-slate-100 bg-emerald-50/30">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-250">
+                  <CheckCircle2 size={15} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-emerald-800 leading-tight">Candidate Shortlisted</h4>
+                  <p className="text-[10.5px] text-slate-500 font-bold mt-1 leading-relaxed">
+                    This candidate is shortlisted! You can schedule their interview and manage offers on the <span className="text-[#6D3BFF] font-black underline cursor-pointer hover:text-violet-850" onClick={() => { onClose(); onSectionChange('interviews'); }}>Interviews page</span>.
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {cand.status === 'Rejected' && (
+            <div className="px-5 py-4.5 border-b border-slate-100 bg-rose-50/30">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-750 flex items-center justify-center shrink-0 border border-rose-200">
+                  <XCircle size={15} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-rose-800 leading-tight">Candidate Rejected</h4>
+                  <p className="text-[10.5px] text-slate-500 font-bold mt-1 leading-relaxed">
+                    This application was rejected.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {cand.status !== 'Under Review' && cand.status !== 'Shortlisted' && cand.status !== 'Rejected' && (
+            <div className="px-5 py-4.5 border-b border-slate-100 bg-violet-50/30">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-violet-100 text-[#6D3BFF] flex items-center justify-center shrink-0 border border-violet-200">
+                  <TrendingUp size={15} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-[#6D3BFF] leading-tight">Active Pipeline Stage ({cand.status})</h4>
+                  <p className="text-[10.5px] text-slate-500 font-bold mt-1 leading-relaxed">
+                    This candidate is in the interviewing pipeline. Track evaluations and hiring status on the <span className="text-[#6D3BFF] font-black underline cursor-pointer hover:text-violet-850" onClick={() => { onClose(); onSectionChange('interviews'); }}>Interviews page</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Notes / Remarks */}
           {cand.notes && (
@@ -937,19 +964,6 @@ function CandidateDetailDrawer({ candidate: cand, onClose, getStatusBadge, onSta
               <p className="text-[11px] font-semibold text-slate-700 leading-relaxed bg-slate-50 border border-slate-100 rounded-xl p-3">
                 {cand.notes}
               </p>
-            </div>
-          )}
-
-          {/* Reject action (separate, destructive — kept out of pipeline) */}
-          {cand.status !== 'Rejected' && (
-            <div className="px-5 py-4">
-              <button
-                onClick={() => onStatusUpdate(cand.id, 'Rejected', 'Rejected')}
-                disabled={isUpdating}
-                className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-[11px] font-black transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <XCircle size={13} /> Reject This Candidate
-              </button>
             </div>
           )}
         </div>

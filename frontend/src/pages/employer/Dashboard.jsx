@@ -27,16 +27,77 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showReadinessInfo, setShowReadinessInfo] = useState(false);
+  const [stats, setStats] = useState({
+    metrics: {
+      activeOpenings: 0,
+      applicationsReceived: 0,
+      interviewsScheduled: 0,
+      activeApprentices: 0,
+      activeOpeningsTrend: '+0 new this week',
+      applicationsReceivedTrend: '+0% vs last week',
+      interviewsScheduledTrend: '+0 this week',
+      activeApprenticesTrend: '+0 new this month'
+    },
+    funnel: {
+      Applied: 0,
+      Screening: 0,
+      Shortlisted: 0,
+      Interview: 0,
+      Selected: 0,
+      Joined: 0
+    },
+    openings: [],
+    recentApplications: [],
+    upcomingInterviews: [],
+    activeApprenticesList: [],
+    contractsSummary: {
+      Generated: 0,
+      Approved: 0,
+      PendingSignature: 0,
+      Expired: 0
+    }
+  });
+
+  const [shortlistTarget, setShortlistTarget] = useState(null);
+
+  const handleShortlistCandidate = async (appId) => {
+    try {
+      const res = await fetch(`${API}/employer/candidates/${appId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          status: 'Shortlisted',
+          currentStage: 'Shortlisted'
+        })
+      });
+      if (res.ok) {
+        showToast?.('Candidate successfully shortlisted!', 'success');
+        fetchDashboardData(); // Refresh metrics and dashboard lists
+      } else {
+        showToast?.('Failed to shortlist candidate.', 'error');
+      }
+    } catch (err) {
+      console.error('Error shortlisting candidate from dashboard:', err);
+      showToast?.('Connection error.', 'error');
+    }
+    setShortlistTarget(null);
+  };
 
   const fetchDashboardData = async () => {
     if (!user?.token) return;
     setLoading(true);
     try {
-      const [companyRes, docsRes] = await Promise.all([
+      const [companyRes, docsRes, statsRes] = await Promise.all([
         fetch(`${API}/employer/company`, {
           headers: { Authorization: `Bearer ${user.token}` }
         }),
         fetch(`${API}/employer/documents`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        }),
+        fetch(`${API}/employer/dashboard-stats`, {
           headers: { Authorization: `Bearer ${user.token}` }
         })
       ]);
@@ -49,8 +110,12 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
         const docsData = await docsRes.json();
         setDocuments(docsData || []);
       }
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData || stats);
+      }
     } catch (err) {
-      console.error('Failed to load company details or documents in dashboard:', err);
+      console.error('Failed to load company details, documents or stats in dashboard:', err);
     } finally {
       setLoading(false);
     }
@@ -64,13 +129,6 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
   // Derived values from real database record or fallback to defaults
   const companyName = companyData?.company_name || user?.employer?.company_name || 'Blue Dart Express Ltd.';
   const employerId = companyData?.employer_code || user?.employer?.employer_code || 'EMP10024';
-
-  const [tasks, setTasks] = useState([
-    { id: 1, text: 'Review 15 Candidates', count: 15, done: false },
-    { id: 2, text: 'Schedule 3 Interviews', count: 3, done: false },
-    { id: 3, text: 'Approve 2 Contracts', count: 2, done: false },
-    { id: 4, text: 'Upload NAPS Certificate', count: null, done: false }
-  ]);
 
   const toggleTask = (id) => {
     setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
@@ -128,6 +186,23 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
   // Readiness Score
   const readinessScore = Math.round((pct * 0.35) + (docsPct * 0.35) + (compliancePct * 0.15) + (policiesPct * 0.15));
 
+  const [tasks, setTasks] = useState([
+    { id: 1, text: 'Review Pending Candidates', count: stats.funnel.Applied || 0, done: false },
+    { id: 2, text: 'Schedule Interviews for Shortlisted Candidates', count: stats.funnel.Shortlisted || 0, done: false },
+    { id: 3, text: 'Approve Pending Contracts', count: stats.contractsSummary.PendingSignature || 0, done: false },
+    { id: 4, text: 'Complete NAPS Verification Document Upload', count: isNapsVerified ? null : 1, done: isNapsVerified }
+  ]);
+
+  // Keep tasks synced with stats
+  useEffect(() => {
+    setTasks([
+      { id: 1, text: 'Review Pending Candidates', count: stats.funnel.Applied || 0, done: false },
+      { id: 2, text: 'Schedule Interviews for Shortlisted Candidates', count: stats.funnel.Shortlisted || 0, done: false },
+      { id: 3, text: 'Approve Pending Contracts', count: stats.contractsSummary.PendingSignature || 0, done: false },
+      { id: 4, text: 'Complete NAPS Verification Document Upload', count: isNapsVerified ? null : 1, done: isNapsVerified }
+    ]);
+  }, [stats.funnel.Applied, stats.funnel.Shortlisted, stats.contractsSummary.PendingSignature, isNapsVerified]);
+
   return (
     <div className="space-y-6 animate-fade-in pb-12 selection:bg-violet-100 selection:text-violet-950">
 
@@ -166,37 +241,37 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
             {[
               {
                 label: 'Active Openings',
-                value: '0',
+                value: String(stats.metrics.activeOpenings),
                 icon: Briefcase,
                 link: 'openings',
-                trend: '+0 new this week',
+                trend: stats.metrics.activeOpeningsTrend,
                 iconColor: 'text-[#6D3BFF]',
                 iconBg: 'bg-[#F4EFFF]'
               },
               {
                 label: 'Applications Received',
-                value: '0',
+                value: String(stats.metrics.applicationsReceived),
                 icon: Users,
                 link: 'candidates',
-                trend: '+0% vs last week',
+                trend: stats.metrics.applicationsReceivedTrend,
                 iconColor: 'text-[#FF8A00]',
                 iconBg: 'bg-[#FFF4E5]'
               },
               {
                 label: 'Interviews Scheduled',
-                value: '0',
+                value: String(stats.metrics.interviewsScheduled),
                 icon: Calendar,
                 link: 'interviews',
-                trend: '+0 this week',
+                trend: stats.metrics.interviewsScheduledTrend,
                 iconColor: 'text-[#2F80ED]',
                 iconBg: 'bg-[#EBF3FF]'
               },
               {
                 label: 'Active Apprentices',
-                value: '0',
+                value: String(stats.metrics.activeApprentices),
                 icon: UserCheck,
                 link: 'apprentices',
-                trend: '+0 new this month',
+                trend: stats.metrics.activeApprenticesTrend,
                 iconColor: 'text-[#27AE60]',
                 iconBg: 'bg-[#EEFBF3]'
               }
@@ -229,7 +304,7 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
           <div className="bg-white border border-slate-200 rounded-[20px] p-4 shadow-xs space-y-3">
             <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block pl-0.5">Quick Actions</h4>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-               {[
+              {[
                 {
                   label: ' New Opening',
                   icon: Plus,
@@ -287,12 +362,12 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
               {/* Responsive funnel rows wrapping automatically (NO scrollbar) */}
               <div className="flex flex-wrap gap-2.5 items-center justify-start text-xs font-bold w-full">
                 {[
-                  { label: 'Applied', count: 0, bg: 'bg-indigo-50/50 text-indigo-800 border-indigo-200/60' },
-                  { label: 'Screening', count: 0, bg: 'bg-blue-50/50 text-blue-800 border-blue-200/60' },
-                  { label: 'Shortlisted', count: 0, bg: 'bg-violet-50/50 text-[#6D3BFF] border-violet-200/60' },
-                  { label: 'Interview', count: 0, bg: 'bg-amber-50/50 text-amber-800 border-amber-200/60' },
-                  { label: 'Selected', count: 0, bg: 'bg-teal-50/50 text-teal-800 border-teal-200/60' },
-                  { label: 'Joined', count: 0, bg: 'bg-emerald-50 text-emerald-800 border-emerald-200/60' }
+                  { label: 'Applied', count: stats.funnel.Applied, bg: 'bg-indigo-50/50 text-indigo-800 border-indigo-200/60' },
+                  { label: 'Screening', count: stats.funnel.Screening, bg: 'bg-blue-50/50 text-blue-800 border-blue-200/60' },
+                  { label: 'Shortlisted', count: stats.funnel.Shortlisted, bg: 'bg-violet-50/50 text-[#6D3BFF] border-violet-200/60' },
+                  { label: 'Interview', count: stats.funnel.Interview, bg: 'bg-amber-50/50 text-amber-800 border-amber-200/60' },
+                  { label: 'Selected', count: stats.funnel.Selected, bg: 'bg-teal-50/50 text-teal-800 border-teal-200/60' },
+                  { label: 'Joined', count: stats.funnel.Joined, bg: 'bg-emerald-50 text-emerald-800 border-emerald-200/60' }
                 ].map((step) => (
                   <div key={step.label} className={`rounded-xl border p-2.5 flex-1 min-w-[75px] max-w-[120px] shadow-xs flex flex-col justify-between h-14 ${step.bg}`}>
                     <span className="text-[8px] uppercase tracking-wider text-slate-400 leading-none">{step.label}</span>
@@ -303,7 +378,12 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
 
               <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-[10px] text-slate-500 font-bold flex items-start gap-2 leading-relaxed">
                 <CheckCircle2 size={13} className="text-[#6D3BFF] shrink-0 mt-0.5" />
-                <span>No candidates have transitioned to Joined this month. Onboarding details are synchronized with NAPS.</span>
+                <span>
+                  {stats.funnel.Joined > 0
+                    ? `${stats.funnel.Joined} candidate(s) have transitioned to Joined this month. Onboarding details are synchronized with NAPS.`
+                    : 'No candidates have transitioned to Joined this month. Onboarding details are synchronized with NAPS.'
+                  }
+                </span>
               </div>
             </div>
           </div>
@@ -323,14 +403,53 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
               </button>
             </div>
 
-            <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 font-bold text-xs">
-              No openings published yet. Publish an opening to start hiring.
-            </div>
+            {stats.openings && stats.openings.length > 0 ? (
+              <div className="space-y-2.5">
+                {stats.openings.map(job => (
+                  <div key={job.id} className="p-3.5 rounded-xl border border-slate-200 hover:border-violet-300 transition-colors flex items-center justify-between gap-3 text-left">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-[13px] md:text-sm font-bold text-slate-800 truncate">{job.jobTitle || 'General Opening'}</p>
+                      <div className="flex items-center gap-2 flex-wrap text-[11px] md:text-xs text-slate-500 font-semibold mt-1">
+                        <span className="flex items-center gap-1 shrink-0">
+                          <MapPin size={12} className="text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[120px]">{job.location || 'Flexible'}</span>
+                        </span>
+                        <span className="text-slate-350 select-none">•</span>
+                        <span className="flex items-center gap-1 shrink-0">
+                          <Briefcase size={12} className="text-slate-400 shrink-0" />
+                          <span>{job.workMode || 'On-Site'}</span>
+                        </span>
+                        <span className="text-slate-350 select-none">•</span>
+                        <span className="flex items-center gap-0.5 text-slate-700 font-extrabold shrink-0">
+                          <span className="text-[#27AE60]">₹</span>
+                          <span>{job.stipend ? parseFloat(job.stipend).toLocaleString('en-IN') : '0'}/mo</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className={`px-2.5 py-0.5 rounded-lg border text-[9px] md:text-[10px] font-black uppercase tracking-wider ${job.status === 'Open' || job.status === 'open'
+                          ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                          : 'bg-slate-50 border-slate-200 text-slate-600'
+                        }`}>
+                        {job.status || 'Draft'}
+                      </span>
+                      <p className="text-[10px] md:text-[11px] text-slate-400 font-bold mt-1.5">
+                        {job.filledPositions || 0}/{job.numberOfOpenings || 0} filled
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 font-bold text-xs">
+                No openings published yet. Publish an opening to start hiring.
+              </div>
+            )}
           </div>
 
           {/* ROW 2: (Recent Applications & Upcoming Interviews) */}
 
-          {/* Recent Applications Cards (NO horizontal scrollbar) */}
+          {/* Recent Applications Cards */}
           <div className="bg-white border border-slate-200 rounded-[20px] p-5 shadow-xs flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -345,14 +464,43 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
               </button>
             </div>
 
-            <div className="space-y-3 flex-grow overflow-y-auto">
-              <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 font-bold text-xs">
-                No new applications received yet.
-              </div>
+            <div className="space-y-2.5 flex-grow">
+              {stats.recentApplications && stats.recentApplications.length > 0 ? (
+                stats.recentApplications.map(app => (
+                  <div key={app.id} className="p-3.5 rounded-xl border border-slate-200 hover:border-violet-300 transition-colors flex items-center justify-between gap-3 text-left">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <p className="text-[13px] md:text-sm font-bold text-slate-800 truncate">{app.name}</p>
+                      <p className="text-[11px] md:text-xs text-slate-500 font-semibold mt-0.5">Applied for {app.appliedFor} • {new Date(app.appliedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {(app.status === 'Under Review' || app.status === 'Applied') && (
+                        <button
+                          onClick={() => setShortlistTarget(app)}
+                          className="h-7 px-2.5 rounded-lg bg-emerald-650 hover:bg-emerald-700 text-white text-[9.5px] font-black transition cursor-pointer flex items-center gap-1 shadow-xs border border-transparent"
+                          title="Shortlist Candidate"
+                        >
+                          <CheckCircle2 size={11} /> Shortlist
+                        </button>
+                      )}
+                      <span className={`px-2.5 py-0.5 border text-[9px] md:text-[10px] font-black rounded-full uppercase tracking-wider ${app.status === 'Shortlisted' ? 'bg-emerald-50 text-emerald-700 border-emerald-250/50' :
+                          app.status === 'Selected' ? 'bg-teal-50 text-teal-700 border-teal-200/80' :
+                            app.status === 'Rejected' ? 'bg-rose-50 text-rose-700 border-rose-250/80' :
+                              'bg-amber-50 text-amber-700 border-amber-200/80'
+                        }`}>
+                        {app.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 font-bold text-xs">
+                  No new applications received.
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Upcoming Interviews Cards (NO horizontal scrollbar) */}
+          {/* Upcoming Interviews Cards */}
           <div className="bg-white border border-slate-200 rounded-[20px] p-5 shadow-xs flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -367,16 +515,37 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
               </button>
             </div>
 
-            <div className="space-y-3 flex-grow overflow-y-auto">
-              <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 font-bold text-xs">
-                No interviews scheduled.
-              </div>
+            <div className="space-y-2.5 flex-grow">
+              {stats.upcomingInterviews && stats.upcomingInterviews.length > 0 ? (
+                stats.upcomingInterviews.map(int => (
+                  <div key={int.id} className="p-3.5 rounded-xl border border-slate-200 hover:border-violet-300 transition-colors flex items-center justify-between gap-3 text-left">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-[13px] md:text-sm font-bold text-slate-800 truncate">{int.candidateName}</p>
+                      <p className="text-[11px] md:text-xs text-slate-500 font-semibold mt-0.5">{int.jobTitle} • {new Date(int.scheduledAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="px-2.5 py-0.5 rounded-lg border border-blue-100 bg-blue-50 text-blue-700 text-[9px] md:text-[10px] font-black uppercase tracking-wider">
+                        {int.interviewMode}
+                      </span>
+                      {int.meetingLink && (
+                        <a href={int.meetingLink} target="_blank" rel="noreferrer" className="block text-[9px] md:text-[10px] text-[#6D3BFF] hover:underline font-bold mt-1.5 flex items-center justify-end gap-0.5">
+                          Join <ExternalLink size={10} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 font-bold text-xs">
+                  No interviews scheduled.
+                </div>
+              )}
             </div>
           </div>
 
           {/* ROW 3: (Active Apprentices & Contracts Summary) */}
 
-          {/* Active Apprentices Cards (NO horizontal scrollbar) */}
+          {/* Active Apprentices Cards */}
           <div className="bg-white border border-slate-200 rounded-[20px] p-5 shadow-xs flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -391,10 +560,24 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
               </button>
             </div>
 
-            <div className="space-y-3 flex-grow overflow-y-auto">
-              <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 font-bold text-xs">
-                No active apprentices currently.
-              </div>
+            <div className="space-y-2.5 flex-grow">
+              {stats.activeApprenticesList && stats.activeApprenticesList.length > 0 ? (
+                stats.activeApprenticesList.map(app => (
+                  <div key={app.id} className="p-3.5 rounded-xl border border-slate-200 hover:border-violet-300 transition-colors flex items-center justify-between gap-3 text-left">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-[13px] md:text-sm font-bold text-slate-800 truncate">{app.name}</p>
+                      <p className="text-[11px] md:text-xs text-slate-500 font-semibold mt-0.5">{app.trade} • Contract: {app.contractNumber}</p>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-700 text-[9px] md:text-[10px] font-black uppercase tracking-wider shrink-0">
+                      Active
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 font-bold text-xs">
+                  No active apprentices currently.
+                </div>
+              )}
             </div>
           </div>
 
@@ -415,10 +598,10 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
 
             <div className="flex-grow grid grid-cols-2 md:grid-cols-4 gap-3 py-1">
               {[
-                { label: 'Generated', val: 0, style: 'bg-indigo-50/50 border-indigo-150 text-indigo-755' },
-                { label: 'Approved', val: 0, style: 'bg-emerald-50/50 border-emerald-150 text-emerald-755' },
-                { label: 'Pending Signature', val: 0, style: 'bg-amber-50/50 border-amber-150 text-amber-755' },
-                { label: 'Expired', val: 0, style: 'bg-rose-50/50 border-rose-150 text-rose-755' }
+                { label: 'Generated', val: stats.contractsSummary.Generated, style: 'bg-indigo-50/50 border-indigo-150 text-indigo-755' },
+                { label: 'Approved', val: stats.contractsSummary.Approved, style: 'bg-emerald-50/50 border-emerald-150 text-emerald-755' },
+                { label: 'Pending Signature', val: stats.contractsSummary.PendingSignature, style: 'bg-amber-50/50 border-amber-150 text-amber-755' },
+                { label: 'Expired', val: stats.contractsSummary.Expired, style: 'bg-rose-50/50 border-rose-150 text-rose-755' }
               ].map((stat, i) => (
                 <div key={i} className={`rounded-xl border p-3 flex flex-col justify-between shadow-xs ${stat.style}`}>
                   <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 leading-snug">{stat.label}</span>
@@ -542,8 +725,8 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
                   <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50/40 border border-slate-200/80">
                     <span className="text-slate-600 font-semibold">{doc.label}</span>
                     <span className={`px-2 py-0.5 rounded-lg border text-[8px] font-black uppercase ${isUploaded
-                        ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
-                        : 'bg-rose-50 border-rose-100 text-rose-700'
+                      ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                      : 'bg-rose-50 border-rose-100 text-rose-700'
                       }`}>
                       {isUploaded ? 'Uploaded' : 'Missing'}
                     </span>
@@ -577,11 +760,49 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
               No new notifications.
             </div>
           </div>
-
+      {shortlistTarget && (
+        <div className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div
+            className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 text-left"
+            style={{ animation: 'zoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}
+          >
+            <h3 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+              <CheckCircle2 size={16} className="text-emerald-600" /> Confirm Candidate Shortlist
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold mt-3 leading-relaxed">
+              Are you sure you want to shortlist <span className="font-black text-slate-700">{shortlistTarget.name}</span>?
+            </p>
+            <p className="text-[11px] text-slate-450 font-bold mt-1.5 leading-relaxed">
+              This will update their application status to <span className="text-emerald-600 font-black">Shortlisted</span> and move them to the interviewing pipeline, where they will be visible for interview scheduling.
+            </p>
+            <div className="flex items-center justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => setShortlistTarget(null)}
+                className="px-3.5 h-8 border border-slate-200 hover:border-slate-350 text-slate-700 rounded-lg text-xs font-black transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleShortlistCandidate(shortlistTarget.id)}
+                className="px-4 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black transition cursor-pointer shadow-sm shadow-emerald-100"
+              >
+                Confirm &amp; Shortlist
+              </button>
+            </div>
+          </div>
         </div>
+      )}
 
+      <style>{`
+        @keyframes zoomIn {
+          from { transform: scale(0.95); opacity: 0; }
+          to   { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
+        </div>
       </div>
-
     </div>
   );
 }

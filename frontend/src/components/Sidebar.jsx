@@ -24,7 +24,7 @@ import {
   HeadphonesIcon
 } from 'lucide-react';
 
-export default function Sidebar({ user, activeSection, onSectionChange, isOpen, toggleSidebar, isCollapsed }) {
+export default function Sidebar({ user, activeSection, onSectionChange, isOpen, toggleSidebar, isCollapsed, notificationBadge }) {
   const isCandidate = user?.userType === 'Candidate';
 
   const canAccessCompanyManagement = () => {
@@ -67,11 +67,11 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
           { id: 'apprentices', label: 'Apprentices', icon: UserCheck },
 
           { id: 'contracts', label: 'Contracts', icon: FileText },
-          { id: 'reports', label: 'Reports', icon: Settings2 },
+
           { id: 'notifications', label: 'Notifications', icon: Bell },
           { id: 'grievances', label: 'Grievances', icon: Scale },
           { id: 'settings', label: 'Settings', icon: Settings2 },
-          { id: 'support', label: 'Support', icon: HelpCircle }
+
         ];
       case 'Candidate':
         return [
@@ -96,7 +96,11 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
     }
   };
 
-  const menuItems = getSidebarItems();
+  const menuItems = getSidebarItems().map(item =>
+    item.id === 'notifications' && notificationBadge
+      ? { ...item, badge: notificationBadge }
+      : item
+  );
 
   return (
     <>
@@ -150,6 +154,9 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
                     <span className="px-1.5 py-0.5 rounded-full bg-violet-600 text-white text-[8px] font-black leading-none">
                       {item.badge}
                     </span>
+                  )}
+                  {item.badge && isCollapsed && item.id === 'notifications' && (
+                    <span className="hidden md:block absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   )}
                   {isActive && <ChevronRight className={`w-3.5 h-3.5 text-white ${isCollapsed ? 'md:hidden' : ''}`} strokeWidth={2.5} />}
                 </div>

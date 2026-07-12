@@ -402,8 +402,8 @@ export default function EmployerOpenings({ user, onSectionChange, setEditingJob,
                     <MiniInfo icon={IndianRupee} label="Stipend" value={`${fmtMoney(op.stipend)} / mo`} color="text-emerald-600 bg-emerald-50 border-emerald-100" />
                     <MiniInfo icon={Clock} label="Duration" value={op.duration || '-'} color="text-amber-600 bg-amber-50 border-amber-100" />
                     <MiniInfo icon={GraduationCap} label="Qualification" value={joinList(op.qualifications)} color="text-indigo-600 bg-indigo-50 border-indigo-100" />
-                    <MiniInfo icon={UserRoundCheck} label="Age" value={`${op.minAge || '-'} - ${op.maxAge || '-'}`} color="text-rose-600 bg-rose-50 border-rose-100" />
-                    <MiniInfo icon={Users} label="Hours" value={op.workingHours || '-'} color="text-cyan-600 bg-cyan-50 border-cyan-100" />
+                    <MiniInfo icon={Users} label="Applications" value={`${op.total_applications || 0} Applied`} color="text-cyan-600 bg-cyan-50 border-cyan-100" />
+                    <MiniInfo icon={UserRoundCheck} label="Shortlisted" value={`${op.total_shortlisted || 0} Shortlisted`} color="text-violet-600 bg-violet-50 border-violet-100" />
                   </div>
                 </div>
               </div>
@@ -446,8 +446,10 @@ function OpeningDetailsDrawer({ opening, onClose, onEdit, getStatusBadge }) {
           <div className="grid grid-cols-2 gap-3">
             <Metric label="Location" value={opening.location || 'Flexible'} />
             <Metric label="Work Mode" value={opening.workMode || '-'} />
-            <Metric label="Openings" value={`${opening.filledPositions || 0} / ${opening.numberOfOpenings || 0} filled`} />
-            <Metric label="Applications" value={`${opening.total_applications || 0} applied`} />
+            <Metric label="Positions (Filled)" value={`${opening.filledPositions || 0} / ${opening.numberOfOpenings || 0} filled`} />
+            <Metric label="Total Applications" value={`${opening.total_applications || 0} applied`} />
+            <Metric label="Shortlisted" value={`${opening.total_shortlisted || 0} candidates`} />
+            <Metric label="Offered / Hired" value={`${opening.total_offered || 0} candidates`} />
             <Metric label="Stipend" value={`${fmtMoney(opening.stipend)} / mo`} />
             <Metric label="Deadline" value={fmtDate(opening.applicationDeadline)} />
           </div>

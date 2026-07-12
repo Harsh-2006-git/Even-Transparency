@@ -10,7 +10,7 @@ export default function HomeHero({ onNavigate }) {
   }, []);
 
   return (
-    <section className="relative mt-[80px] h-[calc(100vh-80px)] flex flex-col justify-start lg:justify-between items-center bg-white overflow-hidden w-full">
+    <section className="relative mt-[80px] h-[calc(100vh-80px)] flex flex-col justify-between items-center bg-white overflow-hidden w-full">
       
       {/* Desktop-only absolute floating badges (untouched original desktop style, hidden on mobile) */}
       {/* Top-Left: Handshake */}

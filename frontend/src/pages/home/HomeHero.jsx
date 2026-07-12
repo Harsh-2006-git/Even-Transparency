@@ -59,7 +59,7 @@ export default function HomeHero({ onNavigate }) {
       />
 
       {/* 1. Content: Title, Subtitle, Buttons, Mobile Badges */}
-      <div className="relative z-10 text-center max-w-[1140px] px-6 pt-6 sm:pt-8 lg:pt-14 shrink-0">
+      <div className="relative z-10 text-center max-w-[1140px] px-6 pt-4 sm:pt-8 lg:pt-14 shrink-0">
         
         {/* Desktop-only Title: strictly 2 lines */}
         <h1 className={`hidden lg:block text-[#010101] font-dMSerifDisplay lg:text-[56px] lg:leading-[70px] tracking-tight transition-all duration-[1000ms] ease-out delay-100 transform ${
@@ -79,14 +79,14 @@ export default function HomeHero({ onNavigate }) {
         </h1>
 
         {/* Subtitle */}
-        <p className={`mt-4 text-[#434656] font-inter text-xs sm:text-base lg:text-[18px] lg:leading-[28px] max-w-[850px] mx-auto opacity-[87%] font-medium transition-all duration-[1000ms] ease-out delay-[250ms] transform ${
+        <p className={`mt-2.5 sm:mt-4 text-[#434656] font-inter text-xs sm:text-base lg:text-[18px] lg:leading-[28px] max-w-[850px] mx-auto opacity-[87%] font-medium transition-all duration-[1000ms] ease-out delay-[250ms] transform ${
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}>
           Connecting women candidates with verified employers across India - with full NAPS compliance, stipend protection, and safety at every step.
         </p>
 
         {/* Buttons */}
-        <div className={`mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 transition-all duration-[1000ms] ease-out delay-[400ms] transform ${
+        <div className={`mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 transition-all duration-[1000ms] ease-out delay-[400ms] transform ${
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}>
           <button
@@ -104,7 +104,7 @@ export default function HomeHero({ onNavigate }) {
         </div>
 
         {/* Mobile-only Badges Row (fades in & scales, hidden on desktop) */}
-        <div className={`mt-6 flex lg:hidden items-center justify-center gap-3 sm:gap-4 flex-wrap transition-all duration-[1000ms] ease-out delay-[550ms] transform ${
+        <div className={`mt-4 flex lg:hidden items-center justify-center gap-3 sm:gap-4 flex-wrap transition-all duration-[1000ms] ease-out delay-[550ms] transform ${
           isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
         }`}>
           <img
@@ -136,13 +136,13 @@ export default function HomeHero({ onNavigate }) {
       </div>
 
       {/* 2. Interactive Image Collage (Margins and Heights completely separate for desktop and mobile) */}
-      <div className="relative w-full max-w-[1250px] flex justify-center items-end z-10 overflow-hidden mt-0 max-lg:-mt-10 lg:-mt-44 h-[340px] sm:h-[480px] lg:h-[620px] xl:h-[680px] shrink-0">
+      <div className="relative w-full max-w-[1250px] flex justify-center items-end z-10 overflow-hidden mt-0 max-lg:mt-0 max-lg:flex-1 lg:-mt-44 lg:h-[620px] xl:h-[680px] lg:shrink-0">
         {/* India map background */}
         <img
           src="/ChatgptImageJul3202611_07_16Amphotoroom11.png"
           className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-full w-auto object-contain object-bottom pointer-events-none select-none z-0 block origin-bottom transition-all duration-[1200ms] ease-out delay-[300ms] transform ${
             isLoaded 
-              ? 'opacity-[0.6] scale-100 translate-y-0 lg:opacity-[0.6] lg:scale-100 max-lg:opacity-[0.95] max-lg:scale-[1.4] max-lg:-translate-y-6' 
+              ? 'opacity-[0.6] scale-100 translate-y-0 lg:opacity-[0.6] lg:scale-100 max-lg:opacity-[0.95] max-lg:scale-[1.45] max-lg:-translate-y-2' 
               : 'opacity-0 scale-[0.85]'
           }`}
           alt="Background Map"
@@ -153,7 +153,7 @@ export default function HomeHero({ onNavigate }) {
           src="/ChatgptImageJul3202611_08_32Am1.png"
           className={`h-full w-auto object-contain object-bottom relative z-20 block origin-bottom transition-all duration-[1200ms] ease-out delay-[450ms] transform ${
             isLoaded 
-              ? 'opacity-100 scale-100 translate-y-4 lg:scale-100 lg:translate-y-4 max-lg:scale-[1.2] max-lg:translate-y-6' 
+              ? 'opacity-100 scale-100 translate-y-4 lg:scale-100 lg:translate-y-4 max-lg:scale-[1.25] max-lg:translate-y-2' 
               : 'opacity-0 scale-95 translate-y-24'
           }`}
           alt="Women Apprentices"

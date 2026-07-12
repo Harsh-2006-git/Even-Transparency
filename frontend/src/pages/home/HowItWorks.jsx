@@ -149,44 +149,44 @@ export default function HowItWorks({ onNavigate }) {
   ];
 
   return (
-    <section ref={sectionRef} id="how-it-works" className="py-14 md:py-18 bg-white flex flex-col items-center">
+    <section ref={sectionRef} id="how-it-works" className="py-12 md:py-18 bg-white flex flex-col items-center">
       
       {/* Title */}
-      <h2 className="text-[#000] font-dMSerifDisplay text-3xl sm:text-4xl lg:text-[44px] lg:leading-[56px] text-center mb-10 md:mb-12 tracking-tight">
+      <h2 className="text-[#000] font-dMSerifDisplay text-2xl sm:text-4xl lg:text-[44px] lg:leading-[56px] text-center mb-8 md:mb-12 tracking-tight">
         How It Works
       </h2>
 
       {/* Two columns grid wrapper */}
-      <div className="w-full max-w-[1200px] px-6 grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+      <div className="w-full max-w-[1200px] px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         
         {/* Left Timeline: Candidates */}
-        <div className="bg-[#FFF] border border-slate-200 rounded-3xl p-5 sm:p-8 shadow-[0_4px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <div className="bg-[#FFF] border border-slate-200 rounded-3xl p-4 sm:p-8 shadow-[0_4px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between">
           <div>
             {/* Header */}
-            <div className="flex items-center gap-3.5 border-b border-b-[#C3C5D9]/40 pb-4 mb-6">
-              <div className="flex justify-center items-center rounded-xl bg-[#010101] w-12 h-12 shrink-0 shadow-md">
-                <svg width="18" height="10" viewBox="0 0 20 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div className="flex items-center gap-3 border-b border-b-[#C3C5D9]/40 pb-3 mb-5">
+              <div className="flex justify-center items-center rounded-xl bg-[#010101] w-11 h-11 shrink-0 shadow-md">
+                <svg width="16" height="9" viewBox="0 0 20 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M1.4 12L0 10.6L7.4 3.15L11.4 7.15L16.6 2H14V0H20V6H18V3.4L11.4 10L7.4 6L1.4 12Z" fill="white" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-[#010101] font-inter text-xl sm:text-2xl font-bold tracking-tight">
+                <h3 className="text-[#010101] font-inter text-lg sm:text-2xl font-bold tracking-tight">
                   For Candidates
                 </h3>
-                <p className="text-[#434656] font-inter text-xs sm:text-sm mt-0.5 opacity-[70%] font-medium">
+                <p className="text-[#434656] font-inter text-[11px] sm:text-sm mt-0.5 opacity-[70%] font-medium">
                   Accelerate your professional journey
                 </p>
               </div>
             </div>
 
             {/* Vertical timeline items */}
-            <div className="relative pl-11 sm:pl-12 space-y-6">
+            <div className="relative pl-11 sm:pl-16 space-y-5 sm:space-y-6">
               {/* Vertical line connector (Base track) */}
-              <div className="absolute top-4 bottom-4 left-[16px] w-0.5 bg-[#010101]/20"></div>
+              <div className="absolute top-4 bottom-4 left-[22px] sm:left-[32px] w-0.5 bg-[#010101]/20"></div>
               {/* Animated Progress Bar moving down */}
               <div 
-                className="absolute top-4 left-[16px] w-0.5 bg-[#010101] transition-all duration-[2000ms] ease-in-out origin-top"
-                style={{ height: hasAnimated ? 'calc(100% - 24px)' : '0%' }}
+                className="absolute top-4 left-[22px] sm:left-[32px] w-0.5 bg-[#010101] transition-all duration-[2000ms] ease-in-out origin-top"
+                style={{ height: hasAnimated ? 'calc(100% - 20px)' : '0%' }}
               ></div>
 
               {candidateSteps.map((step) => (
@@ -201,7 +201,7 @@ export default function HowItWorks({ onNavigate }) {
                 >
                   {/* Step number button anchor */}
                   <div 
-                    className={`absolute -left-[32px] top-0 flex justify-center items-center rounded-full border-2 border-[#010101] bg-[#FFF] w-8 h-8 z-10 font-inter text-xs font-bold text-[#010101] transition-all duration-500 transform ${
+                    className={`absolute -left-[36px] sm:-left-[48px] top-0.5 flex justify-center items-center rounded-full border-2 border-[#010101] bg-[#FFF] w-7 h-7 sm:w-8 sm:h-8 z-10 font-inter text-[11px] sm:text-xs font-bold text-[#010101] transition-all duration-500 transform ${
                       hasAnimated ? 'scale-100' : 'scale-0'
                     }`}
                     style={{ transitionDelay: `${step.num * 150}ms` }}
@@ -210,13 +210,13 @@ export default function HowItWorks({ onNavigate }) {
                   </div>
 
                   {/* Content details */}
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="shrink-0 scale-90 origin-left">{step.icon}</span>
-                    <h4 className="text-[#010101] font-inter text-sm sm:text-base font-extrabold tracking-wide uppercase">
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    <span className="shrink-0 scale-[0.8] origin-left">{step.icon}</span>
+                    <h4 className="text-[#010101] font-inter text-[13px] sm:text-base font-bold tracking-wide uppercase">
                       {step.title}
                     </h4>
                   </div>
-                  <p className="text-[#434656] font-inter text-xs sm:text-sm leading-relaxed">
+                  <p className="text-[#434656] font-inter text-[12px] sm:text-sm leading-relaxed">
                     {step.desc}
                   </p>
                 </div>
@@ -225,47 +225,56 @@ export default function HowItWorks({ onNavigate }) {
           </div>
 
           {/* Action button */}
-          <div className="mt-8 pt-5 border-t border-slate-100">
+          <div className="mt-6 pt-4 border-t border-slate-100">
             <button
               onClick={() => onNavigate('candidate')}
-              className="cursor-pointer w-full py-3 px-5 justify-center items-center gap-2 rounded-xl bg-[#010101] hover:bg-[#212121] text-white font-inter text-base font-bold transition flex items-center shadow-md justify-center"
+              className="cursor-pointer w-full py-2.5 px-4 justify-center items-center gap-2 rounded-xl bg-[#010101] hover:bg-[#212121] text-white font-inter text-sm sm:text-base font-bold transition flex items-center shadow-md justify-center"
             >
               <span>Start Your Application</span>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12.175 9H0V7H12.175L6.575 1.4L8 0L16 8L8 16L6.575 14.6L12.175 9Z" fill="white" />
               </svg>
             </button>
+
+            {/* SOS Emergency Action Info Callout */}
+            <div className="mt-3.5 p-2.5 rounded-xl bg-[#EFF1FF]/70 border border-[#0142C8]/10 flex items-start gap-2 text-left">
+              <span className="bg-[#0142C8] text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider shrink-0 mt-0.5 uppercase">SOS</span>
+              <div>
+                <span className="text-[#010101] font-inter text-[12px] sm:text-[13px] font-bold block leading-none mb-0.5">SOS Emergency Action</span>
+                <span className="text-[#434656]/90 font-inter text-[11px] sm:text-[12px] leading-snug block">Quick-access safety button directly on your dashboard for immediate assistance.</span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Right Timeline: Employers */}
-        <div className="bg-[#FFF] border border-slate-200 rounded-3xl p-5 sm:p-8 shadow-[0_4px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <div className="bg-[#FFF] border border-slate-200 rounded-3xl p-4 sm:p-8 shadow-[0_4px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between">
           <div>
             {/* Header */}
-            <div className="flex items-center gap-3.5 border-b border-b-[#C3C5D9]/40 pb-4 mb-6">
-              <div className="flex justify-center items-center rounded-xl bg-[#0041C8] w-12 h-12 shrink-0 shadow-md">
+            <div className="flex items-center gap-3 border-b border-b-[#C3C5D9]/40 pb-3 mb-5">
+              <div className="flex justify-center items-center rounded-xl bg-[#0041C8] w-11 h-11 shrink-0 shadow-md">
                 <svg width="18" height="17" viewBox="0 0 20 19" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M2 19C1.45 19 0.979167 18.8042 0.5875 18.4125C0.195833 18.0208 0 17.55 0 17V13H7V15H13V13H20V17C20 17.55 19.8042 18.8042 19.4125 18.4125C19.0208 18.8042 18.55 19 18 19H2ZM9 13V11H11V13H9ZM0 11V6C0 5.45 0.195833 4.97917 0.5875 4.5875C0.979167 4.19583 1.45 4 2 4H6V2C6 1.45 6.19583 0.979167 6.5875 0.5875C6.97917 0.195833 7.45 0 8 0H12C12.55 0 13.0208 0.195833 13.4125 0.5875C13.8042 0.979167 14 1.45 14 2V4H18C18.55 4 19.0208 4.19583 19.4125 4.5875C19.8042 4.97917 20 5.45 20 6V11H13V9H7V11H0ZM8 4H12V2H8V4Z" fill="white" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-[#0041C8] font-inter text-xl sm:text-2xl font-bold tracking-tight">
+                <h3 className="text-[#0041C8] font-inter text-lg sm:text-2xl font-bold tracking-tight">
                   For Employers
                 </h3>
-                <p className="text-[#434656] font-inter text-xs sm:text-sm mt-0.5 opacity-[70%] font-medium">
+                <p className="text-[#434656] font-inter text-[11px] sm:text-sm mt-0.5 opacity-[70%] font-medium">
                   Optimized talent procurement
                 </p>
               </div>
             </div>
 
             {/* Vertical timeline items */}
-            <div className="relative pl-11 sm:pl-12 space-y-6">
+            <div className="relative pl-11 sm:pl-16 space-y-5 sm:space-y-6">
               {/* Vertical line connector (Base track) */}
-              <div className="absolute top-4 bottom-4 left-[16px] w-0.5 bg-[#0142C8]/20"></div>
+              <div className="absolute top-4 bottom-4 left-[22px] sm:left-[32px] w-0.5 bg-[#0142C8]/20"></div>
               {/* Animated Progress Bar moving down */}
               <div 
-                className="absolute top-4 left-[16px] w-0.5 bg-[#0142C8] transition-all duration-[2000ms] ease-in-out origin-top"
-                style={{ height: hasAnimated ? 'calc(100% - 24px)' : '0%' }}
+                className="absolute top-4 left-[22px] sm:left-[32px] w-0.5 bg-[#0142C8] transition-all duration-[2000ms] ease-in-out origin-top"
+                style={{ height: hasAnimated ? 'calc(100% - 20px)' : '0%' }}
               ></div>
 
               {employerSteps.map((step) => (
@@ -280,7 +289,7 @@ export default function HowItWorks({ onNavigate }) {
                 >
                   {/* Step number button anchor */}
                   <div 
-                    className={`absolute -left-[32px] top-0 flex justify-center items-center rounded-full border-2 border-[#0142C8] bg-[#FFF] w-8 h-8 z-10 font-inter text-xs font-bold text-[#0142C8] transition-all duration-500 transform ${
+                    className={`absolute -left-[36px] sm:-left-[48px] top-0.5 flex justify-center items-center rounded-full border-2 border-[#0142C8] bg-[#FFF] w-7 h-7 sm:w-8 sm:h-8 z-10 font-inter text-[11px] sm:text-xs font-bold text-[#0142C8] transition-all duration-500 transform ${
                       hasAnimated ? 'scale-100' : 'scale-0'
                     }`}
                     style={{ transitionDelay: `${step.num * 150}ms` }}
@@ -289,13 +298,13 @@ export default function HowItWorks({ onNavigate }) {
                   </div>
 
                   {/* Content details */}
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="shrink-0 scale-90 origin-left">{step.icon}</span>
-                    <h4 className="text-[#0142C8] font-inter text-sm sm:text-base font-extrabold tracking-wide uppercase">
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    <span className="shrink-0 scale-[0.8] origin-left">{step.icon}</span>
+                    <h4 className="text-[#0142C8] font-inter text-[13px] sm:text-base font-bold tracking-wide uppercase">
                       {step.title}
                     </h4>
                   </div>
-                  <p className="text-[#434656] font-inter text-xs sm:text-sm leading-relaxed">
+                  <p className="text-[#434656] font-inter text-[12px] sm:text-sm leading-relaxed">
                     {step.desc}
                   </p>
                 </div>
@@ -304,16 +313,25 @@ export default function HowItWorks({ onNavigate }) {
           </div>
 
           {/* Action button */}
-          <div className="mt-8 pt-5 border-t border-slate-100">
+          <div className="mt-6 pt-4 border-t border-slate-100">
             <button
               onClick={() => onNavigate('employer')}
-              className="cursor-pointer w-full py-3 px-5 justify-center items-center gap-2 rounded-xl bg-[#0142C8] hover:bg-[#0135A0] text-white font-inter text-base font-bold transition flex items-center shadow-md justify-center"
+              className="cursor-pointer w-full py-2.5 px-4 justify-center items-center gap-2 rounded-xl bg-[#0142C8] hover:bg-[#0135A0] text-white font-inter text-sm sm:text-base font-bold transition flex items-center shadow-md justify-center"
             >
-              <span>Register Your Company</span>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <span>Hire Apprentices</span>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12.175 9H0V7H12.175L6.575 1.4L8 0L16 8L8 16L6.575 14.6L12.175 9Z" fill="white" />
               </svg>
             </button>
+
+            {/* Employer CSR Callout */}
+            <div className="mt-3.5 p-2.5 rounded-xl bg-[#EFF1FF]/70 border border-[#0142C8]/10 flex items-start gap-2 text-left">
+              <span className="bg-[#0142C8] text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider shrink-0 mt-0.5 uppercase">NEW</span>
+              <div>
+                <span className="text-[#0142C8] font-inter text-[12px] sm:text-[13px] font-bold block leading-none mb-0.5">CSR Optimization</span>
+                <span className="text-[#434656]/90 font-inter text-[11px] sm:text-[12px] leading-snug block">Join 200+ companies already optimizing their CSR via Even Cargo.</span>
+              </div>
+            </div>
           </div>
         </div>
 

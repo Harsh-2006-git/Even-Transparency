@@ -136,9 +136,9 @@ export default function KeyFeatures({ onNavigate }) {
   ];
 
   return (
-    <section id="candidates" className="py-20 bg-[#F5F6FF] flex flex-col items-center">
+    <section id="candidates" className="py-12 sm:py-20 bg-[#F5F6FF] flex flex-col items-center">
       {/* Title */}
-      <h2 className="text-[#000] font-dMSerifDisplay text-3xl sm:text-4xl lg:text-[44px] lg:leading-[56px] text-center mb-16 tracking-tight select-none">
+      <h2 className="text-[#000] font-dMSerifDisplay text-2xl sm:text-4xl lg:text-[44px] lg:leading-[56px] text-center mb-8 sm:mb-16 tracking-tight select-none">
         Key Features
       </h2>
 
@@ -146,37 +146,37 @@ export default function KeyFeatures({ onNavigate }) {
       <div className="w-full max-w-[1200px] px-6 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         
         {/* Left Side: Candidates */}
-        <div className="flex p-6 sm:p-8 flex-col items-start gap-6 rounded-2xl border border-[#C3C5D9] bg-white shadow-[0_4px_30px_rgba(0,0,0,0.02)] w-full">
+        <div className="flex p-4 sm:p-8 flex-col items-start gap-6 rounded-2xl border border-[#C3C5D9] bg-white shadow-[0_4px_30px_rgba(0,0,0,0.02)] w-full">
           {/* Header */}
-          <div className="flex pb-6 items-center gap-4 border-b border-b-[rgba(195,197,217,0.50)] w-full">
-            <div className="flex justify-center items-center rounded-xl bg-[#010101] w-14 h-14 shrink-0 shadow-md">
+          <div className="flex pb-4 sm:pb-6 items-center gap-4 border-b border-b-[rgba(195,197,217,0.50)] w-full">
+            <div className="flex justify-center items-center rounded-xl bg-[#010101] w-12 h-12 sm:w-14 sm:h-14 shrink-0 shadow-md">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="white" />
               </svg>
             </div>
             <div>
-              <h3 className="text-[#010101] font-inter text-2xl font-bold tracking-tight">
+              <h3 className="text-[#010101] font-inter text-xl sm:text-2xl font-bold tracking-tight text-left">
                 For Candidates
               </h3>
-              <p className="text-[#434656] font-inter text-sm sm:text-base mt-0.5 opacity-[70%] font-medium">
+              <p className="text-[#434656] font-inter text-xs sm:text-base mt-0.5 opacity-[70%] font-medium text-left">
                 Accelerate your professional journey
               </p>
             </div>
           </div>
 
           {/* Sub-grid of Features */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full">
             {candidateFeatures.map((feat, idx) => (
-              <div key={idx} className="flex p-4 flex-col items-start gap-3 rounded-xl border border-[#C3C5D9]/40 bg-[#F8F9FF] hover:border-[#0142C8]/50 hover:bg-[#EFF1FF]/40 transition-all min-h-[145px]">
-                <div className="w-10 h-10 rounded-xl bg-[#EFF1FF] flex items-center justify-center shrink-0 border border-[#0142C8]/15 shadow-2xs">
+              <div key={idx} className="flex p-3 sm:p-4 flex-row sm:flex-col items-start gap-3.5 sm:gap-3 rounded-xl border border-[#C3C5D9]/40 bg-[#F8F9FF] hover:border-[#0142C8]/50 hover:bg-[#EFF1FF]/40 transition-all w-full">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#EFF1FF] flex items-center justify-center shrink-0 border border-[#0142C8]/15 shadow-2xs">
                   {feat.icon}
                 </div>
-                <div>
-                  <h4 className="text-[#010101] font-inter text-sm font-bold leading-5 tracking-tight flex items-center gap-1.5">
+                <div className="flex-1 text-left">
+                  <h4 className="text-[#010101] font-inter text-[13px] sm:text-sm font-bold leading-5 tracking-tight flex items-center gap-1.5">
                     <span className="text-[#0142C8]/45 font-black text-xs font-mono">{idx + 1}</span>
                     {feat.title}
                   </h4>
-                  <p className="text-[#434656] font-inter text-xs leading-relaxed mt-1 opacity-[85%]">
+                  <p className="text-[#434656] font-inter text-[11px] sm:text-xs leading-relaxed mt-0.5 sm:mt-1 opacity-[85%]">
                     {feat.desc}
                   </p>
                 </div>
@@ -198,17 +198,17 @@ export default function KeyFeatures({ onNavigate }) {
 
           {/* SOS emergency notice */}
           <div className="w-full mt-2 pt-4 border-t border-slate-100">
-            <div className="flex p-4 items-center gap-4 rounded-xl border border-[#0142C8]/20 bg-[#EFF1FF]/50 w-full text-left">
-              <div className="w-10 h-10 rounded-full bg-[#0142C8] flex items-center justify-center text-white shrink-0 shadow-sm animate-pulse">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div className="flex p-3 sm:p-4 items-center gap-4 rounded-xl border border-[#0142C8]/20 bg-[#EFF1FF]/50 w-full text-left">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#0142C8] flex items-center justify-center text-white shrink-0 shadow-sm animate-pulse">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="white" />
                 </svg>
               </div>
               <div>
-                <h5 className="text-[#0142C8] font-inter text-sm font-extrabold tracking-wide uppercase">
+                <h5 className="text-[#0142C8] font-inter text-xs sm:text-sm font-extrabold tracking-wide uppercase">
                   SOS Emergency Action
                 </h5>
-                <p className="text-[#0142C8]/90 font-inter text-xs mt-0.5 leading-relaxed font-semibold">
+                <p className="text-[#0142C8]/90 font-inter text-[11px] sm:text-xs mt-0.5 leading-relaxed font-semibold">
                   Quick-access safety button directly on your dashboard for immediate assistance.
                 </p>
               </div>
@@ -217,37 +217,37 @@ export default function KeyFeatures({ onNavigate }) {
         </div>
 
         {/* Right Side: Employers */}
-        <div className="flex p-6 sm:p-8 flex-col items-start gap-6 rounded-2xl border border-[#C3C5D9] bg-white shadow-[0_4px_30px_rgba(0,0,0,0.02)] w-full">
+        <div className="flex p-4 sm:p-8 flex-col items-start gap-6 rounded-2xl border border-[#C3C5D9] bg-white shadow-[0_4px_30px_rgba(0,0,0,0.02)] w-full">
           {/* Header */}
-          <div className="flex pb-6 items-center gap-4 border-b border-b-[rgba(195,197,217,0.50)] w-full">
-            <div className="flex justify-center items-center rounded-xl bg-[#0142C8] w-14 h-14 shrink-0 shadow-md">
+          <div className="flex pb-4 sm:pb-6 items-center gap-4 border-b border-b-[rgba(195,197,217,0.50)] w-full">
+            <div className="flex justify-center items-center rounded-xl bg-[#0142C8] w-12 h-12 sm:w-14 sm:h-14 shrink-0 shadow-md">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 7V3H2v18h20V7H12zm-2 12H4v-2h6v2zm0-4H4v-2h6v2zm0-4H4V9h6v2zm0-4H4V5h6v2zm10 12h-8v-2h8v2zm0-4h-8v-2h8v2zm0-4h-8V9h8v2zm0-4h-8V5h8v2z" fill="white" />
               </svg>
             </div>
             <div>
-              <h3 className="text-[#0142C8] font-inter text-2xl font-bold tracking-tight">
+              <h3 className="text-[#0142C8] font-inter text-xl sm:text-2xl font-bold tracking-tight text-left">
                 For Employers
               </h3>
-              <p className="text-[#434656] font-inter text-sm sm:text-base mt-0.5 opacity-[70%] font-medium">
+              <p className="text-[#434656] font-inter text-xs sm:text-base mt-0.5 opacity-[70%] font-medium text-left">
                 Optimized talent procurement
               </p>
             </div>
           </div>
 
           {/* Sub-grid of Features */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full">
             {employerFeatures.map((feat, idx) => (
-              <div key={idx} className="flex p-4 flex-col items-start gap-3 rounded-xl border border-[#C3C5D9]/40 bg-[#F8F9FF] hover:border-[#0142C8]/50 hover:bg-[#EFF1FF]/40 transition-all min-h-[145px]">
-                <div className="w-10 h-10 rounded-xl bg-[#EFF1FF] flex items-center justify-center shrink-0 border border-[#0142C8]/15 shadow-2xs">
+              <div key={idx} className="flex p-3 sm:p-4 flex-row sm:flex-col items-start gap-3.5 sm:gap-3 rounded-xl border border-[#C3C5D9]/40 bg-[#F8F9FF] hover:border-[#0142C8]/50 hover:bg-[#EFF1FF]/40 transition-all w-full">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#EFF1FF] flex items-center justify-center shrink-0 border border-[#0142C8]/15 shadow-2xs">
                   {feat.icon}
                 </div>
-                <div>
-                  <h4 className="text-[#010101] font-inter text-sm font-bold leading-5 tracking-tight flex items-center gap-1.5">
+                <div className="flex-1 text-left">
+                  <h4 className="text-[#010101] font-inter text-[13px] sm:text-sm font-bold leading-5 tracking-tight flex items-center gap-1.5">
                     <span className="text-[#0142C8]/45 font-black text-xs font-mono">{idx + 1}</span>
                     {feat.title}
                   </h4>
-                  <p className="text-[#434656] font-inter text-xs leading-relaxed mt-1 opacity-[85%]">
+                  <p className="text-[#434656] font-inter text-[11px] sm:text-xs leading-relaxed mt-0.5 sm:mt-1 opacity-[85%]">
                     {feat.desc}
                   </p>
                 </div>
@@ -269,11 +269,11 @@ export default function KeyFeatures({ onNavigate }) {
 
           {/* Callout Notice */}
           <div className="w-full mt-2 pt-4 border-t border-slate-100">
-            <div className="flex p-4 items-center gap-4 rounded-xl border border-[#0142C8]/20 bg-[#EFF1FF]/50 w-full text-left">
-              <div className="py-1 px-3.5 rounded-full bg-[#0142C8] text-white shrink-0 font-inter text-xs font-black tracking-wide">
+            <div className="flex p-3 sm:p-4 items-center gap-4 rounded-xl border border-[#0142C8]/20 bg-[#EFF1FF]/50 w-full text-left">
+              <div className="py-0.5 px-2.5 sm:py-1 sm:px-3.5 rounded-full bg-[#0142C8] text-white shrink-0 font-inter text-[10px] sm:text-xs font-black tracking-wide">
                 NEW
               </div>
-              <p className="text-[#0142C8] font-inter text-xs sm:text-sm font-bold leading-relaxed">
+              <p className="text-[#0142C8] font-inter text-[11px] sm:text-sm font-bold leading-relaxed">
                 Join 200+ companies already optimizing their CSR via Even Cargo.
               </p>
             </div>

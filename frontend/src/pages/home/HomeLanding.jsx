@@ -58,7 +58,7 @@ export default function HomeLanding({ onNavigate }) {
   return (
     <div 
       id="scroll-container"
-      className="w-full h-screen overflow-y-auto bg-white text-slate-800 font-sans selection:bg-[#0142C8]/10 selection:text-[#0142C8] scroll-smooth"
+      className="w-full h-screen h-[100dvh] overflow-y-auto bg-white text-slate-800 font-sans selection:bg-[#0142C8]/10 selection:text-[#0142C8] scroll-smooth"
     >
       {/* Scroll Reveal Style Sheet */}
       <style dangerouslySetInnerHTML={{ __html: `

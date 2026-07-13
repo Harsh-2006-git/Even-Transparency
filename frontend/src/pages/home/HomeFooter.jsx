@@ -120,7 +120,7 @@ export default function HomeFooter({ onNavigate }) {
       </div>
 
       {/* Copyright row */}
-      <div className="w-full max-w-[1200px] mx-auto mt-8 pt-4 border-t border-[#010101]/10 flex justify-center font-inter text-base font-bold text-[#010101]">
+      <div className="w-full max-w-[1200px] mx-auto mt-8 pt-4 border-t border-[#010101]/10 flex justify-center font-inter text-xs md:text-sm font-semibold text-[#010101]/60">
         <p className="text-center">
           &copy; {currentYear} Even Cargo. All Rights Reserved.
         </p>

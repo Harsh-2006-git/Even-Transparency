@@ -10,7 +10,7 @@ export default function HomeHero({ onNavigate }) {
   }, []);
 
   return (
-    <section className="relative mt-[80px] h-[calc(100vh-80px)] flex flex-col justify-between items-center bg-white overflow-hidden w-full">
+    <section className="relative mt-[80px] h-[calc(100vh-80px)] max-lg:h-[calc(100dvh-136px)] flex flex-col justify-between items-center bg-white overflow-hidden w-full">
       
       {/* Desktop-only absolute floating badges (untouched original desktop style, hidden on mobile) */}
       {/* Top-Left: Handshake */}
@@ -70,7 +70,7 @@ export default function HomeHero({ onNavigate }) {
         </h1>
 
         {/* Mobile-only Title: strictly 3 lines */}
-        <h1 className={`lg:hidden text-[#010101] font-dMSerifDisplay text-[28px] leading-[35px] sm:text-5xl tracking-tight transition-all duration-[1000ms] ease-out delay-100 transform ${
+        <h1 className={`lg:hidden text-[#010101] font-dMSerifDisplay text-[32px] leading-[38px] sm:text-5xl tracking-tight transition-all duration-[1000ms] ease-out delay-100 transform ${
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}>
           India's First<br />
@@ -109,27 +109,27 @@ export default function HomeHero({ onNavigate }) {
         }`}>
           <img
             src="/ChatgptImageJul3202610_49_57Amphotoroom3.png"
-            className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-lg shadow-sm bg-white border border-[#0142C8]/10 p-1"
+            className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-xl shadow-sm bg-white border border-[#0142C8]/10 p-1.5"
             alt="Handshake"
           />
           <img
             src="/ChatgptImageJul3202610_49_57Amphotoroom2.png"
-            className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-lg shadow-sm bg-white border border-[#0142C8]/10 p-1"
+            className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-xl shadow-sm bg-white border border-[#0142C8]/10 p-1.5"
             alt="Safety Shield"
           />
           <img
             src="/ChatgptImageJul3202610_49_57Amphotoroom4.png"
-            className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-lg shadow-sm bg-white border border-[#0142C8]/10 p-1"
+            className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-xl shadow-sm bg-white border border-[#0142C8]/10 p-1.5"
             alt="Trend Chart"
           />
           <img
             src="/ChatgptImageJul3202610_49_57Amphotoroom2(1).png"
-            className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-lg shadow-sm bg-white border border-[#0142C8]/10 p-1"
+            className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-xl shadow-sm bg-white border border-[#0142C8]/10 p-1.5"
             alt="Briefcase"
           />
           <img
             src="/ChatgptImageJul3202610_38_32Amphotoroom1.png"
-            className="w-9 h-9 sm:w-10 sm:h-10 object-contain rounded-lg shadow-sm bg-white border border-[#0142C8]/10 p-1"
+            className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-xl shadow-sm bg-white border border-[#0142C8]/10 p-1.5"
             alt="Graduation Cap"
           />
         </div>
@@ -153,7 +153,7 @@ export default function HomeHero({ onNavigate }) {
           src="/ChatgptImageJul3202611_08_32Am1.png"
           className={`h-full w-auto object-contain object-bottom relative z-20 block origin-bottom transition-all duration-[1200ms] ease-out delay-[450ms] transform ${
             isLoaded 
-              ? 'opacity-100 scale-100 translate-y-4 lg:scale-100 lg:translate-y-4 max-lg:scale-[1.08] max-lg:translate-y-1' 
+              ? 'opacity-100 scale-100 translate-y-4 lg:scale-100 lg:translate-y-4 max-lg:scale-[1.12] max-lg:translate-y-1' 
               : 'opacity-0 scale-95 translate-y-24'
           }`}
           alt="Women Apprentices"

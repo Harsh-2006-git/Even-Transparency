@@ -31,7 +31,7 @@ export default function HomeFooter({ onNavigate }) {
 
         {/* Link Columns */}
         {/* Candidates Links */}
-        <div className="space-y-4">
+        <div className="space-y-4 hidden md:block">
           <h4 className="text-[#010101] font-inter text-base font-bold">
             Candidates
           </h4>
@@ -60,7 +60,7 @@ export default function HomeFooter({ onNavigate }) {
         </div>
 
         {/* Employers Links */}
-        <div className="space-y-4">
+        <div className="space-y-4 hidden md:block">
           <h4 className="text-[#010101] font-inter text-base font-bold">
             Employers
           </h4>
@@ -89,7 +89,7 @@ export default function HomeFooter({ onNavigate }) {
         </div>
 
         {/* Company Links */}
-        <div className="space-y-4">
+        <div className="space-y-4 hidden md:block">
           <h4 className="text-[#010101] font-inter text-base font-bold">
             Company
           </h4>

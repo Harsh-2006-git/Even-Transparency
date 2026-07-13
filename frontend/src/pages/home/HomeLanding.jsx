@@ -88,6 +88,12 @@ export default function HomeLanding({ onNavigate }) {
           100% { transform: translateX(-33.333%); }
         }
         @media (max-width: 767px) {
+          .reveal-element.mobile-no-reveal {
+            opacity: 1 !important;
+            transform: none !important;
+            filter: none !important;
+            transition: none !important;
+          }
           .animate-marquee {
             display: flex;
             width: max-content;
@@ -103,7 +109,7 @@ export default function HomeLanding({ onNavigate }) {
       <HomeHero onNavigate={onNavigate} />
 
       {/* 2b. Trust/Stats bar (Stripe) */}
-      <div className="reveal-element w-full bg-[#0142C8] py-3.5 overflow-hidden relative z-30 shadow-md">
+      <div className="reveal-element mobile-no-reveal w-full bg-[#0142C8] py-3.5 overflow-hidden relative z-30 shadow-md">
         <div className="flex flex-row md:justify-center w-full">
           {/* Marquee Track Container: Animated on mobile, regular flex-centered on desktop */}
           <div className="flex flex-row items-center gap-0 animate-marquee max-md:w-max">

@@ -121,8 +121,24 @@ export default function HomeHeader({ onNavigate }) {
         }`}
       >
         {/* Drawer Header */}
-        <div className="flex items-center justify-between pb-6 border-b border-slate-100">
-          <span className="font-manrope text-lg font-bold text-[#0142C8]">Menu</span>
+        <div className="flex items-center justify-between pb-6 border-b border-slate-100 gap-2">
+          <div 
+            onClick={() => {
+              setIsSidebarOpen(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="cursor-pointer flex items-center gap-1 sm:gap-2"
+          >
+            <img src="/logo.png" className="h-[32px] sm:h-[40px] w-auto object-contain" alt="Even Cargo Logo" />
+            <div className="flex flex-col text-left justify-center">
+              <span className="text-[#0142C8] font-manrope text-sm sm:text-base font-bold leading-tight tracking-tight">
+                Even Cargo
+              </span>
+              <span className="font-medium text-[#000]/65 text-[9px] sm:text-xs font-inter leading-none mt-0.5">
+                Apprenticeships
+              </span>
+            </div>
+          </div>
           <button 
             onClick={toggleSidebar}
             className="cursor-pointer p-1 rounded-lg hover:bg-slate-100 text-slate-500 transition"

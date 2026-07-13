@@ -9,9 +9,20 @@ export default function HomeFooter({ onNavigate }) {
         
         {/* Brand Info Column */}
         <div className="lg:col-span-2 space-y-6">
-          <h3 className="font-manrope text-2xl font-bold tracking-tight text-[#010101]">
-            Even Cargo <span className="text-[#0142C8]">Apprenticeships</span>
-          </h3>
+          <div 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="cursor-pointer flex items-center gap-1.5 sm:gap-2"
+          >
+            <img src="/logo.png" className="h-[36px] sm:h-[48px] w-auto object-contain" alt="Even Cargo Logo" />
+            <div className="flex flex-col text-left justify-center">
+              <span className="text-[#0142C8] font-manrope text-lg sm:text-xl md:text-[22px] font-bold leading-tight tracking-tight">
+                Even Cargo
+              </span>
+              <span className="font-medium text-[#000]/65 text-[11px] sm:text-xs md:text-[15px] font-inter leading-none mt-0.5">
+                Apprenticeships
+              </span>
+            </div>
+          </div>
           <p className="text-[#010101]/70 font-inter text-sm leading-relaxed max-w-[420px]">
             Connecting women candidates with verified employers across India through a safe, compliant, and technology-driven apprenticeship platform.
           </p>

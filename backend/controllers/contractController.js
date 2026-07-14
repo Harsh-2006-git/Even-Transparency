@@ -21,14 +21,24 @@ export const getContract = async (req, res) => {
       where: {
         candidate_id: application.candidate_id,
         job_posting_id: application.job_posting_id
-      }
+      },
+      include: [db.EmployerJobPosting]
     });
 
     if (!contract) {
       return res.status(404).json({ error: 'Contract not found.' });
     }
 
-    return res.status(200).json(contract);
+    const contractJson = contract.toJSON();
+    if (contract.contract_start_date && contract.EmployerJobPosting) {
+      const durationMonths = parseInt(contract.EmployerJobPosting.apprenticeship_duration_months) || 12;
+      const start = new Date(contract.contract_start_date);
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + durationMonths);
+      contractJson.contract_end_date = end;
+    }
+
+    return res.status(200).json(contractJson);
   } catch (error) {
     console.error('getContract error:', error);
     return res.status(500).json({ error: 'Failed to retrieve contract.' });
@@ -72,6 +82,11 @@ export const sendContract = async (req, res) => {
       const job = application.EmployerJobPosting || {};
       const stipendAmount = parseFloat(job.stipend_amount) || 12000;
       const tradeName = job.job_title || 'Apprentice';
+      const durationMonths = parseInt(job.apprenticeship_duration_months) || 12;
+
+      const startDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + durationMonths);
 
       contract = await db.EmployerApprenticeshipContract.create({
         employer_id: employerId,
@@ -80,8 +95,8 @@ export const sendContract = async (req, res) => {
         contract_number: `EAC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
         trade_name: tradeName,
         stipend_amount: stipendAmount,
-        contract_start_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        contract_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        contract_start_date: startDate,
+        contract_end_date: endDate,
         probation_period_days: 30,
         contract_status: 'Draft'
       });
@@ -256,6 +271,11 @@ export const listEmployerContracts = async (req, res) => {
         const job = app.EmployerJobPosting || {};
         const stipendAmount = parseFloat(job.stipend_amount) || 12000;
         const tradeName = job.job_title || 'Apprentice';
+        const durationMonths = parseInt(job.apprenticeship_duration_months) || 12;
+
+        const startDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + durationMonths);
 
         await db.EmployerApprenticeshipContract.create({
           employer_id: employerId,
@@ -264,8 +284,8 @@ export const listEmployerContracts = async (req, res) => {
           contract_number: `EAC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
           trade_name: tradeName,
           stipend_amount: stipendAmount,
-          contract_start_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          contract_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          contract_start_date: startDate,
+          contract_end_date: endDate,
           probation_period_days: 30,
           contract_status: 'Draft'
         });
@@ -286,13 +306,25 @@ export const listEmployerContracts = async (req, res) => {
         },
         {
           model: db.EmployerJobPosting,
-          attributes: ['id', 'job_title', 'stipend_amount']
+          attributes: ['id', 'job_title', 'stipend_amount', 'apprenticeship_duration_months']
         }
       ],
       order: [['created_at', 'DESC']]
     });
 
-    return res.status(200).json(contracts);
+    const formattedContracts = contracts.map(c => {
+      const contractJson = c.toJSON();
+      if (c.contract_start_date && c.EmployerJobPosting) {
+        const durationMonths = parseInt(c.EmployerJobPosting.apprenticeship_duration_months) || 12;
+        const start = new Date(c.contract_start_date);
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + durationMonths);
+        contractJson.contract_end_date = end;
+      }
+      return contractJson;
+    });
+
+    return res.status(200).json(formattedContracts);
   } catch (error) {
     console.error('listEmployerContracts error:', error);
     return res.status(500).json({ error: 'Failed to retrieve contracts.' });
@@ -394,18 +426,92 @@ export const listAdminContracts = async (req, res) => {
         },
         {
           model: db.EmployerJobPosting,
-          attributes: ['id', 'job_title', 'stipend_amount', 'location']
+          attributes: ['id', 'job_title', 'stipend_amount', 'location', 'apprenticeship_duration_months']
         }
       ],
       order: [['created_at', 'DESC']]
     });
 
-    return res.status(200).json(contracts);
+    const formattedContracts = contracts.map(c => {
+      const contractJson = c.toJSON();
+      if (c.contract_start_date && c.EmployerJobPosting) {
+        const durationMonths = parseInt(c.EmployerJobPosting.apprenticeship_duration_months) || 12;
+        const start = new Date(c.contract_start_date);
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + durationMonths);
+        contractJson.contract_end_date = end;
+      }
+      return contractJson;
+    });
+
+    return res.status(200).json(formattedContracts);
   } catch (error) {
     console.error('listAdminContracts error:', error);
     return res.status(500).json({ error: 'Failed to retrieve contracts.' });
   }
 };
+
+/**
+ * PUT /api/employer/contracts/:id/start-date
+ * Employer updates the contract's start date
+ */
+export const updateContractStartDate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { contract_start_date, contract_end_date } = req.body;
+    const employerId = req.user.employer_id;
+
+    if (!employerId) {
+      return res.status(400).json({ error: 'User is not associated with any employer account' });
+    }
+
+    if (!contract_start_date) {
+      return res.status(400).json({ error: 'Starting date is required.' });
+    }
+
+    const contract = await db.EmployerApprenticeshipContract.findOne({
+      where: { id, employer_id: employerId }
+    });
+
+    if (!contract) {
+      return res.status(404).json({ error: 'Contract not found or not owned by you.' });
+    }
+
+    const startDate = new Date(contract_start_date);
+    if (isNaN(startDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid starting date format.' });
+    }
+
+    const job = await db.EmployerJobPosting.findByPk(contract.job_posting_id);
+    const durationMonths = job ? (parseInt(job.apprenticeship_duration_months) || 12) : 12;
+
+    let endDate;
+    if (contract_end_date) {
+      endDate = new Date(contract_end_date);
+    } else {
+      endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + durationMonths);
+    }
+
+    if (isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid ending date format.' });
+    }
+
+    await contract.update({
+      contract_start_date: startDate,
+      contract_end_date: endDate
+    });
+
+    return res.status(200).json({
+      message: 'Contract start date updated successfully.',
+      contract
+    });
+  } catch (error) {
+    console.error('updateContractStartDate error:', error);
+    return res.status(500).json({ error: 'Failed to update contract start date.' });
+  }
+};
+
 
 
 

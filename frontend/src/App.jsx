@@ -46,6 +46,7 @@ import EmployerCandidates from './pages/employer/Candidates';
 import EmployerInterviews from './pages/employer/Interviews';
 import EmployerApprentices from './pages/employer/Apprentices';
 import EmployerContracts from './pages/employer/Contracts';
+import EmployerStipends from './pages/employer/Stipends';
 import HomeLanding from './pages/home/HomeLanding';
 import { db } from './db/indexedDB';
 import { RefreshCw, Clock, AlertCircle, Check, CheckCircle, Edit, X } from 'lucide-react';
@@ -105,7 +106,7 @@ function App() {
           'company-management', 'grievances'
         ];
       case 'Employer':
-        return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'reports', 'notifications', 'grievances', 'settings', 'support'];
+        return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'stipends', 'reports', 'notifications', 'grievances', 'settings', 'support'];
       case 'Candidate':
         return ['overview', 'profile', 'applications', 'jobs', 'documents', 'interviews', 'grievances', 'notifications', 'settings'];
       case 'Mobiliser':
@@ -1126,7 +1127,13 @@ function App() {
                     onSectionChange={handleSectionChange} 
                   />
                 )}
-                {!['overview', 'company-management', 'profile', 'documents', 'settings', 'notifications', 'grievances', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'contracts'].includes(activeSection) && (
+                {activeSection === 'stipends' && (
+                  <EmployerStipends 
+                    user={user} 
+                    showToast={showToast} 
+                  />
+                )}
+                {!['overview', 'company-management', 'profile', 'documents', 'settings', 'notifications', 'grievances', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'contracts', 'stipends'].includes(activeSection) && (
                   <EmployerDashboard 
                     user={user} 
                     onSectionChange={handleSectionChange} 

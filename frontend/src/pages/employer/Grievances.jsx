@@ -125,7 +125,7 @@ function GrievanceDrawer({ grievance, onClose }) {
           {/* Description */}
           <div className="bg-slate-50 rounded-xl p-4 space-y-1.5">
             <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Description</span>
-            <p className="text-xs text-slate-700 font-semibold leading-relaxed">{grievance.grievance_description}</p>
+            <p className="text-xs text-slate-700 font-semibold leading-relaxed whitespace-pre-wrap break-words">{grievance.grievance_description}</p>
           </div>
 
           {/* Progress */}
@@ -238,7 +238,7 @@ function GrievanceDrawer({ grievance, onClose }) {
                 <BadgeCheck size={14} className="text-emerald-600" />
                 <h4 className="text-xs font-black text-emerald-800">Resolution Summary</h4>
               </div>
-              <p className="text-[11px] text-emerald-700 font-semibold leading-relaxed">{grievance.resolution_notes}</p>
+              <p className="text-[11px] text-emerald-700 font-semibold leading-relaxed whitespace-pre-wrap break-words">{grievance.resolution_notes}</p>
               <div className="flex items-center justify-between pt-1">
                 <span className="text-[9px] font-black text-emerald-600">Resolved on {formatDate(grievance.resolved_at)}</span>
                 <a

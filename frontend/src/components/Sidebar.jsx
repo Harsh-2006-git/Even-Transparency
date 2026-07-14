@@ -67,7 +67,7 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
           { id: 'apprentices', label: 'Apprentices', icon: UserCheck },
 
           { id: 'contracts', label: 'Contracts', icon: FileText },
-
+          { id: 'stipends', label: 'Stipends & Payments', icon: CreditCard },
           { id: 'notifications', label: 'Notifications', icon: Bell },
           { id: 'grievances', label: 'Grievances', icon: Scale },
           { id: 'settings', label: 'Settings', icon: Settings2 },

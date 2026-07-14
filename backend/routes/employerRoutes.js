@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { onboard, login, checkPhone, sendEmployerOTP, verifyEmployerOTP, register, completeOnboarding } from '../controllers/employer/authController.js';
 import { getOnboardingDetails, updateOnboardingDetails, getMyCompany, updateMyCompany } from '../controllers/employer/onboardingController.js';
-import { confirmStipendPayment } from '../controllers/employer/paymentController.js';
+import { confirmStipendPayment, listEmployerStipends } from '../controllers/employer/paymentController.js';
 import {
   confirmDocumentUpload,
   getEmployerDocumentViewUrl,
@@ -30,7 +30,7 @@ import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { adminAuthMiddleware } from '../middlewares/adminAuthMiddleware.js';
 import { listGrievances, createGrievance, updateGrievanceStatus } from '../controllers/grievanceController.js';
 import { getEmployerDashboardStats } from '../controllers/employer/dashboardController.js';
-import { getContract, sendContract, listEmployerContracts, sendContractById, listAdminContracts } from '../controllers/contractController.js';
+import { getContract, sendContract, listEmployerContracts, sendContractById, listAdminContracts, updateContractStartDate } from '../controllers/contractController.js';
 import { listNotifications, markOneRead, markAllRead } from '../controllers/notificationController.js';
 import {
   listAdminApplications,
@@ -71,6 +71,7 @@ router.post('/employer/complete-onboarding', authMiddleware, completeOnboarding)
 router.get('/employer/company', authMiddleware, getMyCompany);
 router.put('/employer/company', authMiddleware, updateMyCompany);
 router.post('/employer/stipends/confirm', authMiddleware, confirmStipendPayment);
+router.get('/employer/stipends', authMiddleware, listEmployerStipends);
 router.get('/employer/dashboard-stats', authMiddleware, getEmployerDashboardStats);
 
 // Employer documents routes
@@ -92,6 +93,7 @@ router.get('/employer/candidates/:applicationId/contract', authMiddleware, getCo
 router.post('/employer/candidates/:id/contract/send', authMiddleware, sendContract);
 router.get('/employer/contracts', authMiddleware, listEmployerContracts);
 router.post('/employer/contracts/:id/send', authMiddleware, sendContractById);
+router.put('/employer/contracts/:id/start-date', authMiddleware, updateContractStartDate);
 
 // Grievances routes (Employer & Admin)
 router.get('/employer/grievances', authMiddleware, listGrievances);

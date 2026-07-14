@@ -33,8 +33,11 @@ export default (sequelize, DataTypes) => {
     severity_level: {
       type: DataTypes.STRING
     },
-    grievance_description: {
+    related_to: {
       type: DataTypes.STRING
+    },
+    grievance_description: {
+      type: DataTypes.TEXT
     },
     evidence_document_ids: {
       type: DataTypes.ARRAY(DataTypes.UUID)
@@ -55,7 +58,7 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.UUID
     },
     resolution_notes: {
-      type: DataTypes.STRING
+      type: DataTypes.TEXT
     },
     resolved_at: {
       type: DataTypes.DATE

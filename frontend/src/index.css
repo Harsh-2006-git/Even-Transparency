@@ -18,6 +18,10 @@ html, body, #root {
   --font-inter: "Inter", sans-serif;
   --font-manrope: "Manrope", sans-serif;
   --font-plusJakartaSans: "Plus Jakarta Sans", sans-serif;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 700;
   --color-violet-650: #6D3BFF;
   --color-violet-655: #5C2FFF;
   --color-violet-750: #5C2FFF;

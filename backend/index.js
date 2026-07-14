@@ -110,7 +110,8 @@ async function ensureDbColumnsExist() {
   if (grievancesTable) {
     const grievanceColumns = [
       ['filed_by', { type: sequelize.Sequelize.STRING, allowNull: true, defaultValue: 'Candidate' }],
-      ['evidence_urls', { type: sequelize.Sequelize.JSON, allowNull: true }]
+      ['evidence_urls', { type: sequelize.Sequelize.JSON, allowNull: true }],
+      ['related_to', { type: sequelize.Sequelize.STRING, allowNull: true }]
     ];
 
     for (const [columnName, definition] of grievanceColumns) {
@@ -118,6 +119,33 @@ async function ensureDbColumnsExist() {
         await queryInterface.addColumn('candidategrievances', columnName, definition);
         console.log(`Added missing candidategrievances.${columnName} column.`);
       }
+    }
+
+    // Alter grievance_description to TEXT if it's currently character varying
+    if (grievancesTable['grievance_description'] && grievancesTable['grievance_description'].type.toLowerCase().includes('varying')) {
+      await queryInterface.changeColumn('candidategrievances', 'grievance_description', {
+        type: sequelize.Sequelize.TEXT,
+        allowNull: true
+      });
+      console.log('Altered candidategrievances.grievance_description column to TEXT.');
+    }
+
+    // Alter resolution_notes to TEXT if it's currently character varying
+    if (grievancesTable['resolution_notes'] && grievancesTable['resolution_notes'].type.toLowerCase().includes('varying')) {
+      await queryInterface.changeColumn('candidategrievances', 'resolution_notes', {
+        type: sequelize.Sequelize.TEXT,
+        allowNull: true
+      });
+      console.log('Altered candidategrievances.resolution_notes column to TEXT.');
+    }
+
+    // Alter evidence_urls to JSON if it's currently character varying
+    if (grievancesTable['evidence_urls'] && grievancesTable['evidence_urls'].type.toLowerCase().includes('varying')) {
+      await queryInterface.changeColumn('candidategrievances', 'evidence_urls', {
+        type: sequelize.Sequelize.JSON,
+        allowNull: true
+      });
+      console.log('Altered candidategrievances.evidence_urls column to JSON.');
     }
   }
 }

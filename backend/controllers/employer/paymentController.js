@@ -74,3 +74,62 @@ export const confirmStipendPayment = async (req, res) => {
     return res.status(500).json({ error: 'Failed to confirm stipend payment.' });
   }
 };
+
+/**
+ * GET /api/employer/stipends
+ * Get list of stipend payments processed by the employer
+ */
+export const listEmployerStipends = async (req, res) => {
+  try {
+    const employerId = req.user.employer_id;
+    if (!employerId) {
+      return res.status(400).json({ error: 'User is not associated with any employer account' });
+    }
+
+    const payments = await db.EmployerStipendPayment.findAll({
+      where: { employer_id: employerId },
+      include: [
+        {
+          model: db.Employer,
+          attributes: ['id', 'company_name', 'official_email']
+        },
+        {
+          model: db.Candidate,
+          attributes: ['id', 'full_name', 'email']
+        },
+        {
+          model: db.EmployerApprenticeshipContract,
+          attributes: ['id', 'contract_number', 'trade_name', 'contract_status']
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    const formatted = payments.map(p => ({
+      id: p.id,
+      candidateName: p.Candidate?.full_name || 'Unknown',
+      candidateEmail: p.Candidate?.email || '',
+      companyName: p.Employer?.company_name || 'Unknown',
+      contractNumber: p.EmployerApprenticeshipContract?.contract_number || '',
+      tradeName: p.EmployerApprenticeshipContract?.trade_name || '',
+      paymentMonth: p.payment_month || '',
+      stipendAmount: p.stipend_amount || 0,
+      bonusAmount: p.bonus_amount || 0,
+      deductions: p.deductions || 0,
+      netAmount: p.net_amount || 0,
+      dueDate: p.due_date,
+      paymentDate: p.payment_date,
+      paymentStatus: p.payment_status || 'Pending',
+      transactionReference: p.transaction_reference || '',
+      paymentGateway: p.payment_gateway || '',
+      remarks: p.remarks || '',
+      createdAt: p.created_at
+    }));
+
+    return res.status(200).json(formatted);
+  } catch (error) {
+    console.error('listEmployerStipends error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve stipend payments.' });
+  }
+};
+

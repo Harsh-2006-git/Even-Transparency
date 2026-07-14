@@ -148,7 +148,7 @@ export default function AdminGrievances({ adminUser, showToast }) {
     return {
       total: grievances.length,
       open: grievances.filter(g => g.status === 'Open').length,
-      critical: grievances.filter(g => g.severity_level === 'Critical').length,
+      critical: grievances.filter(g => ['critical', 'high'].includes(String(g.severity_level || '').toLowerCase())).length,
       closed: grievances.filter(g => g.status === 'Closed' || g.status === 'Resolved').length
     };
   }, [grievances]);
@@ -292,6 +292,7 @@ export default function AdminGrievances({ adminUser, showToast }) {
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Ticket Code</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Type / Filed By</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Grievance Category</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Related To</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Severity</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">Registered On</th>
@@ -321,6 +322,7 @@ export default function AdminGrievances({ adminUser, showToast }) {
                         </div>
                       </td>
                       <td className="px-6 py-4 max-w-xs truncate">{g.grievance_category}</td>
+                      <td className="px-6 py-4 font-bold text-slate-700">{g.related_to || '—'}</td>
                       <td className="px-6 py-4">
                         <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border tracking-wide uppercase ${severityColor(g.severity_level)}`}>
                           {g.severity_level}
@@ -414,7 +416,11 @@ export default function AdminGrievances({ adminUser, showToast }) {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Related To</h4>
+                    <p className="mt-1.5 font-bold text-slate-800 break-words">{selectedGrievance.related_to || 'N/A'}</p>
+                  </div>
                   <div>
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Severity Priority</h4>
                     <span className={`inline-block mt-1 text-[9px] font-black px-2 py-0.5 rounded-full border uppercase ${severityColor(selectedGrievance.severity_level)}`}>

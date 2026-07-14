@@ -1,4 +1,9 @@
 const MSG91_BASE_URL = 'https://api.msg91.com/api/v5';
+
+// WARNING: localOtpStore is in-memory and will be wiped on every server restart.
+// On Render's free tier (which spins down after inactivity), OTPs stored here
+// will be lost. For production, configure MSG91 or use a persistent store (Redis/DB).
+// For temporary testing on production, set TEST_OTP env variable in Render dashboard.
 const localOtpStore = new Map();
 
 const normalizeMobile = (mobile) => String(mobile || '').replace(/\D/g, '').slice(-10);
@@ -11,14 +16,29 @@ export const sendOTP = async (mobile) => {
   }
 
   if (!hasMsg91Config()) {
-    const otp = process.env.NODE_ENV === 'production'
-      ? String(Math.floor(100000 + Math.random() * 900000))
-      : '123456';
+    // If TEST_OTP is set in env vars, use it (useful for production testing on Render).
+    // Otherwise use '123456' for local dev, or a random OTP for production.
+    let otp;
+    if (process.env.TEST_OTP) {
+      otp = String(process.env.TEST_OTP);
+    } else if (process.env.NODE_ENV === 'production') {
+      otp = String(Math.floor(100000 + Math.random() * 900000));
+    } else {
+      otp = '123456';
+    }
+
     localOtpStore.set(cleanMobile, {
       otp,
       expiresAt: Date.now() + Number(process.env.OTP_EXPIRY_MS || 10 * 60 * 1000)
     });
-    return { success: true, requestId: 'local-dev', devOtp: process.env.NODE_ENV === 'production' ? undefined : otp };
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    return {
+      success: true,
+      requestId: 'local-fallback',
+      // Only expose devOtp in non-production OR when TEST_OTP is explicitly set
+      devOtp: (!isProduction || process.env.TEST_OTP) ? otp : undefined
+    };
   }
 
   try {

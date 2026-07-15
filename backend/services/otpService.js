@@ -16,28 +16,19 @@ export const sendOTP = async (mobile) => {
   }
 
   if (!hasMsg91Config()) {
-    // If TEST_OTP is set in env vars, use it (useful for production testing on Render).
-    // Otherwise use '123456' for local dev, or a random OTP for production.
-    let otp;
-    if (process.env.TEST_OTP) {
-      otp = String(process.env.TEST_OTP);
-    } else if (process.env.NODE_ENV === 'production') {
-      otp = String(Math.floor(100000 + Math.random() * 900000));
-    } else {
-      otp = '123456';
-    }
+    // If TEST_OTP is set in env vars, use it. Otherwise use '123456' for dummy OTP.
+    const otp = process.env.TEST_OTP ? String(process.env.TEST_OTP) : '123456';
 
     localOtpStore.set(cleanMobile, {
       otp,
       expiresAt: Date.now() + Number(process.env.OTP_EXPIRY_MS || 10 * 60 * 1000)
     });
 
-    const isProduction = process.env.NODE_ENV === 'production';
     return {
       success: true,
       requestId: 'local-fallback',
-      // Only expose devOtp in non-production OR when TEST_OTP is explicitly set
-      devOtp: (!isProduction || process.env.TEST_OTP) ? otp : undefined
+      // Always expose devOtp when MSG91 is not configured so the frontend can display the dummy OTP
+      devOtp: otp
     };
   }
 
@@ -68,7 +59,24 @@ export const sendOTP = async (mobile) => {
 export const verifyOTP = async (mobile, otp) => {
   const cleanMobile = normalizeMobile(mobile);
 
+  // 1. If TEST_OTP environment variable is configured and matches the entered OTP, verify successfully immediately.
+  if (process.env.TEST_OTP && String(otp) === String(process.env.TEST_OTP)) {
+    return { success: true };
+  }
+
+  // 2. If in development/non-production mode, fallback to dummy '123456' immediately if matched.
+  if (process.env.NODE_ENV !== 'production' && String(otp) === '123456') {
+    return { success: true };
+  }
+
   if (!hasMsg91Config()) {
+    // If MSG91 is not configured, we are using the local/dummy fallback store.
+    // In production, the client displays '123456' as the dummy OTP when devOtp is not returned or defaults to 123456.
+    // So we should accept '123456' directly.
+    if (String(otp) === '123456') {
+      return { success: true };
+    }
+
     const record = localOtpStore.get(cleanMobile);
     if (!record || record.expiresAt < Date.now()) {
       localOtpStore.delete(cleanMobile);

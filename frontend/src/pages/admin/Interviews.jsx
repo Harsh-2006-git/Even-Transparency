@@ -115,47 +115,112 @@ export default function AdminInterviews({ adminUser, showToast }) {
           <p className="text-xs text-slate-400 mt-1">No interviews have been scheduled yet.</p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>{['Candidate', 'Company & Role', 'Mode', 'Scheduled At', 'Attendance', 'Decision', 'Score', 'Action'].map(h => (
-                  <th key={h} className="px-4 py-3 font-black text-[10px] text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtered.map(i => (
-                  <tr key={i.id} className="hover:bg-slate-50/60 transition">
-                    <td className="px-4 py-3">
-                      <p className="font-black text-slate-800">{i.candidateName}</p>
-                      <p className="text-[10px] text-slate-400">{i.candidateEmail}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-bold text-slate-700 flex items-center gap-1"><Building2 size={11} />{i.companyName}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{i.jobTitle}</p>
-                    </td>
-                    <td className="px-4 py-3"><Badge label={i.interviewMode || 'Unknown'} cls="bg-blue-50 text-blue-700 border-blue-200" /></td>
-                    <td className="px-4 py-3 text-[10.5px] text-slate-600 font-medium">{fmtDate(i.scheduledAt)}</td>
-                    <td className="px-4 py-3">
-                      <Badge label={i.attendanceStatus || 'Pending'} cls={
-                        i.attendanceStatus === 'Attended' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        i.attendanceStatus === 'No Show' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                        'bg-slate-100 text-slate-500 border-slate-200'} />
-                    </td>
-                    <td className="px-4 py-3"><Badge label={i.finalDecision || 'Pending'} cls={decisionColor(i.finalDecision)} /></td>
-                    <td className="px-4 py-3">
-                      {i.interviewScore != null ? (
-                        <span className="flex items-center gap-1 text-amber-600 font-black text-xs"><Star size={11} fill="currentColor" />{i.interviewScore}</span>
-                      ) : <span className="text-slate-400 text-xs">—</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => setSelected(i)} className="w-7 h-7 rounded-lg border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100 flex items-center justify-center cursor-pointer"><Eye size={13} /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="space-y-4">
+          {filtered.map(i => {
+            const initials = (i.candidateName || 'Candidate')
+              .split(/\s+/)
+              .slice(0, 2)
+              .map(part => part[0])
+              .join('')
+              .toUpperCase();
+
+            return (
+              <div key={i.id} className="bg-white border border-slate-200 rounded-2xl shadow-xs hover:shadow-md hover:border-indigo-200 transition text-left overflow-hidden">
+                {/* Main Content Area */}
+                <div className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  
+                  {/* Candidate Profile */}
+                  <div className="lg:w-[22%] shrink-0 min-w-0 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200 text-amber-800 flex items-center justify-center text-xs font-black shrink-0">
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-slate-800 leading-snug truncate">{i.candidateName}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 mt-0.5 truncate">{i.candidateEmail}</p>
+                      {i.candidatePhone && <p className="text-[9px] font-semibold text-slate-450 mt-0.5">{i.candidatePhone}</p>}
+                    </div>
+                  </div>
+
+                  {/* Company & Role */}
+                  <div className="lg:w-[22%] shrink-0 min-w-0 flex items-center gap-2">
+                    <Building2 size={13} className="text-indigo-500 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-slate-800 truncate">{i.companyName}</p>
+                      <p className="text-[10px] font-semibold text-slate-450 truncate mt-0.5">{i.jobTitle}</p>
+                    </div>
+                  </div>
+
+                  {/* Mode & Location */}
+                  <div className="lg:w-[15%] shrink-0 min-w-0">
+                    <span className={`inline-flex px-2 py-0.5 rounded-lg border text-[8.5px] font-black uppercase tracking-wider ${
+                      (i.interviewMode || '').toLowerCase() === 'online'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : 'bg-violet-50 text-violet-700 border-violet-200'
+                    }`}>
+                      {i.interviewMode || 'Online'}
+                    </span>
+                    {i.interviewLocation && (
+                      <p className="text-[9px] text-slate-400 mt-1 font-semibold truncate" title={i.interviewLocation}>{i.interviewLocation}</p>
+                    )}
+                  </div>
+
+                  {/* Scheduled Date/Time */}
+                  <div className="lg:w-[15%] shrink-0 min-w-0 flex items-center gap-1.5">
+                    <Calendar size={13} className="text-amber-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10.5px] font-bold text-slate-700">{fmtShort(i.scheduledAt)}</p>
+                      <p className="text-[9px] font-semibold text-slate-400 mt-0.5">
+                        {i.scheduledAt ? new Date(i.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Score & Evaluation */}
+                  <div className="lg:w-[12%] shrink-0 min-w-0">
+                    {i.interviewScore != null ? (
+                      <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-[10.5px] font-black">
+                        <Star size={11} fill="currentColor" className="text-amber-500" />
+                        <span>{i.interviewScore}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-bold italic">Unscored</span>
+                    )}
+                  </div>
+
+                  {/* Attendance & Decision */}
+                  <div className="lg:w-[10%] shrink-0 flex items-center gap-1.5">
+                    <Badge label={i.attendanceStatus || 'Pending'} cls={
+                      i.attendanceStatus === 'Attended' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      i.attendanceStatus === 'No Show' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                      'bg-slate-100 text-slate-500 border-slate-200'
+                    } />
+                  </div>
+
+                  {/* View Details CTA */}
+                  <div className="ml-auto shrink-0 flex items-center gap-1">
+                    <button
+                      onClick={() => setSelected(i)}
+                      title="View all notes"
+                      className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-550 transition cursor-pointer flex items-center justify-center shadow-xs"
+                    >
+                      <Eye size={14} />
+                    </button>
+                  </div>
+
+                </div>
+
+                {/* Inline Feedback Quote Section */}
+                {i.feedback && (
+                  <div className="px-5 pb-5 pt-0 border-t border-slate-100/60 bg-slate-50/30 flex items-start gap-2 text-xs">
+                    <div className="mt-2.5 shrink-0 text-slate-350 font-serif text-2xl leading-none">“</div>
+                    <div className="flex-1 mt-3 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-600 font-medium italic">
+                      {i.feedback}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -177,11 +242,14 @@ export default function AdminInterviews({ adminUser, showToast }) {
               ]} />
               <InfoBlock title="Outcome" rows={[
                 ['Attendance', selected.attendanceStatus || '—'], ['Final Decision', selected.finalDecision || '—'],
-                ['Score', selected.interviewScore != null ? `${selected.interviewScore}/10` : '—'],
+                ['Score', selected.interviewScore != null ? `${selected.interviewScore}` : '—'],
                 ['Feedback', selected.feedback || '—'],
               ]} />
               <InfoBlock title="Candidate Contact" rows={[
                 ['Email', selected.candidateEmail], ['Phone', selected.candidatePhone],
+              ]} />
+              <InfoBlock title="Employer Contact" rows={[
+                ['Company Name', selected.companyName], ['Official Email', selected.companyEmail || '—'],
               ]} />
             </div>
             <div className="p-4 border-t border-slate-200 bg-white">

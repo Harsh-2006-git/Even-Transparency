@@ -159,419 +159,11 @@ export default function Candidates({ adminUser, showToast }) {
     }
   };
 
-  if (detailedCandidate) {
-    const address = detailedCandidate.CandidateAddresses?.[0] || {};
-    const education = detailedCandidate.CandidateEducations?.[0] || {};
-    const skills = detailedCandidate.CandidateSkills || [];
-    const experiences = detailedCandidate.CandidateWorkExperiences || [];
-    const documents = detailedCandidate.CandidateDocuments || [];
-
-    return (
-      <div className="space-y-6 animate-fade-in pb-12">
-        {/* Breadcrumbs and Top Actions Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-          <nav className="flex items-center gap-1.5 text-[11px] font-bold select-none">
-            <span className="text-slate-400 cursor-pointer hover:text-slate-600" onClick={() => setDetailedCandidateId(null)}>Candidates</span>
-            <ChevronRight size={12} className="text-slate-300 shrink-0" />
-            <span className="text-slate-800">{detailedCandidate.full_name || 'Candidate Details'}</span>
-          </nav>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => setDeleteCandidateId(detailedCandidate.id)}
-              disabled={actionLoading === 'delete'}
-              className="h-10 px-4 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-xs font-black flex items-center gap-2 transition cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete Candidate
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditingCandidate(detailedCandidate)}
-              className="h-10 px-4 bg-[#6D3BFF] hover:bg-[#5C2FFF] text-white rounded-xl text-xs font-black shadow-md shadow-violet-200 flex items-center gap-2 transition cursor-pointer"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              Edit Profile
-            </button>
-            
-            {(detailedCandidate.verification_status || 'pending') === 'pending' ? (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateCandidateApproval(detailedCandidate.id, 'rejected')}
-                  disabled={actionLoading === 'rejected'}
-                  className="h-10 px-4 rounded-xl border border-rose-250 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60 cursor-pointer"
-                >
-                  Reject
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateCandidateApproval(detailedCandidate.id, 'approved')}
-                  disabled={actionLoading === 'approved'}
-                  className="h-10 px-4 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-60 cursor-pointer"
-                >
-                  Approve
-                </button>
-              </div>
-            ) : (
-              <span className={`h-10 px-4 flex items-center rounded-xl text-xs font-black border uppercase tracking-wider ${
-                detailedCandidate.verification_status === 'approved' 
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                  : 'bg-rose-50 text-rose-700 border-rose-100'
-              }`}>
-                {detailedCandidate.verification_status === 'approved' ? 'Approved' : 'Rejected'}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* TOP HERO PROFILE SECTION */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-xs">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            {/* Left: Avatar and Basic Meta */}
-            <div className="flex items-start sm:items-center gap-4.5">
-              <div className="h-18 w-18 shrink-0 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-xl font-black shadow-md border border-violet-100 relative">
-                {(detailedCandidate.full_name || 'CA').slice(0, 2).toUpperCase()}
-                <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">{detailedCandidate.full_name}</h2>
-                  <StatusBadge status={detailedCandidate.verification_status || 'pending'} />
-                </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-semibold text-slate-500 pt-0.5">
-                  <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" />{displayValue(detailedCandidate.mobile_number)}</span>
-                  <span className="inline-flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-slate-400" />{displayValue(detailedCandidate.email)}</span>
-                  <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" />{displayValue(address.city || address.state)}</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-2 pt-1.5 border-t border-slate-50">
-                  <span className="px-2 py-0.5 bg-slate-100 text-slate-650 rounded-md text-[10px] font-bold">{education.qualification_level || 'No Qualification'}</span>
-                  <span className="px-2 py-0.5 bg-slate-100 text-slate-650 rounded-md text-[10px] font-bold">{detailedCandidate.availability_status || 'Available'}</span>
-                  <span className="px-2 py-0.5 bg-slate-100 text-slate-650 rounded-md text-[10px] font-bold">{detailedCandidate.gender || 'Not specified'}</span>
-                  {detailedCandidate.age && <span className="px-2 py-0.5 bg-slate-100 text-slate-650 rounded-md text-[10px] font-bold">Age {detailedCandidate.age}</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* Middle: Onboarding and Progress metrics */}
-            <div className="flex items-center gap-4 flex-wrap border-t border-slate-100 lg:border-t-0 pt-4 lg:pt-0">
-              <div className="flex items-center gap-3 bg-slate-50/50 border border-slate-100 rounded-2xl px-4 py-3">
-                <div className="space-y-0.5 text-left">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Onboarding</p>
-                  <p className="text-xs font-extrabold text-emerald-600">{detailedCandidate.onboarding_status || 'Pending'}</p>
-                </div>
-                <ChevronRight size={14} className="text-slate-300" />
-                <div className="space-y-0.5 text-left">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Availability</p>
-                  <p className="text-xs font-extrabold text-indigo-600">{detailedCandidate.availability_status || 'Available'}</p>
-                </div>
-              </div>
-
-              {/* Circular Progress Wheel */}
-              {(() => {
-                const profilePercent = Number(detailedCandidate.profile_completion_percentage || 0);
-                return (
-                  <div className="flex items-center gap-3 bg-slate-50/50 border border-slate-100 rounded-2xl px-4 py-3">
-                    <div className="relative flex items-center justify-center shrink-0">
-                      <svg className="w-10 h-10 transform -rotate-90">
-                        <circle cx="20" cy="20" r="15" stroke="#E2E8F0" strokeWidth="2.5" fill="transparent" />
-                        <circle cx="20" cy="20" r="15" stroke="#6D3BFF" strokeWidth="2.5" fill="transparent"
-                          strokeDasharray={2 * Math.PI * 15}
-                          strokeDashoffset={2 * Math.PI * 15 - (profilePercent / 100) * (2 * Math.PI * 15)}
-                          strokeLinecap="round" />
-                      </svg>
-                      <span className="absolute text-[9px] font-black text-slate-800">{profilePercent}%</span>
-                    </div>
-                    <div className="text-left space-y-0.5">
-                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Completion</p>
-                      <p className="text-xs font-black text-slate-700">{profilePercent}% Complete</p>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div className="bg-slate-50/50 border border-slate-100 rounded-2xl px-4 py-3 text-left space-y-0.5">
-                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Registered On</p>
-                <p className="text-xs font-extrabold text-slate-700">{formatDate(detailedCandidate.registration_date)}</p>
-              </div>
-            </div>
-
-            {/* Right: Quick metadata card */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 min-w-[210px] text-xs font-semibold text-slate-700 space-y-2 text-left">
-              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">NAPS ID</span><span className="font-extrabold text-slate-850">{displayValue(detailedCandidate.naps_candidate_id)}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">PAN</span><span className="font-extrabold text-slate-850">{displayValue(detailedCandidate.pan_number)}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">Aadhaar (Last 4)</span><span className="font-extrabold text-slate-850">{detailedCandidate.aadhaar_last_4 ? `****${detailedCandidate.aadhaar_last_4}` : 'Not provided'}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">Status</span><span className="font-extrabold text-slate-850">{detailedCandidate.availability_status || 'Available'}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-450 font-bold uppercase text-[9px] tracking-wider">Onboarding</span><span className="font-extrabold text-slate-850">{detailedCandidate.onboarding_status || 'Approved'}</span></div>
-            </div>
-          </div>
-        </div>
-
-        {/* TAB NAVIGATION BAR */}
-        <div className="flex items-center gap-1.5 border-b border-slate-200 overflow-x-auto select-none no-scrollbar">
-          {[
-            { id: 'all', label: 'All Details', icon: Sparkles },
-            { id: 'overview', label: 'Overview', icon: UserCircle2 },
-            { id: 'education', label: 'Education', icon: BookOpen },
-            { id: 'skills', label: 'Skills', icon: Wrench },
-            { id: 'documents', label: 'Documents', icon: FileText },
-            { id: 'experience', label: 'Work Experience', icon: Clock }
-          ].map((t) => {
-            const Icon = t.icon;
-            const active = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setActiveTab(t.id)}
-                className={`flex items-center gap-2 px-5 py-3 border-b-2 text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                  active 
-                    ? 'border-[#6D3BFF] text-[#6D3BFF] font-black' 
-                    : 'border-transparent text-slate-500 hover:text-slate-850 hover:border-slate-300'
-                }`}
-              >
-                <Icon size={14} className={active ? 'text-[#6D3BFF]' : 'text-slate-400'} />
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* TWO-COLUMN CONTENT GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_310px] gap-6 items-start">
-          {/* Main Left Pane Content */}
-          <div className="space-y-6">
-            {activeTab === 'overview' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <DetailBox icon={UserCircle2} title="Personal Information" rows={[
-                  ['Name', detailedCandidate.full_name],
-                  ['Gender', detailedCandidate.gender],
-                  ['Date of Birth', formatDate(detailedCandidate.date_of_birth)],
-                  ['Age', detailedCandidate.age],
-                  ['Phone', detailedCandidate.mobile_number],
-                  ['Email', detailedCandidate.email],
-                  ['First Name', detailedCandidate.first_name],
-                  ['Last Name', detailedCandidate.last_name]
-                ]} />
-                <DetailBox icon={MapPin} title="Address Details" rows={[
-                  ['Address Type', address.address_type || 'Current'],
-                  ['Address', [address.address_line_1, address.address_line_2].filter(Boolean).join(', ')],
-                  ['Landmark', address.landmark],
-                  ['City', address.city],
-                  ['District', address.district],
-                  ['State', address.state],
-                  ['Pincode', address.pincode]
-                ]} />
-                <div className="md:col-span-2">
-                  <DetailBox icon={BadgeCheck} title="Identity Details" rows={[
-                    ['Aadhaar Last 4', detailedCandidate.aadhaar_last_4],
-                    ['PAN', detailedCandidate.pan_number],
-                    ['NAPS Establishment ID', detailedCandidate.naps_candidate_id],
-                    ['Onboarding Completion Status', detailedCandidate.onboarding_status],
-                    ['Verification Code', detailedCandidate.id]
-                  ]} />
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'education' && (
-              <DetailBox icon={GraduationCap} title="Education History" rows={[
-                ['Qualification Level', education.qualification_level],
-                ['Course / Degree', education.course_name],
-                ['Specialization', education.specialization],
-                ['Institution Name', education.institution_name],
-                ['Board / University', education.board_or_university],
-                ['Passing Year', education.passing_year],
-                ['Score / CGPA / Percentage', education.percentage_or_cgpa],
-                ['Currently Pursuing', education.currently_pursuing ? 'Yes' : 'No']
-              ]} />
-            )}
-
-            {activeTab === 'skills' && (
-              <SummaryList icon={Wrench} title="Skills Checklist" empty="No skills submitted.">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {skills.length === 0 ? (
-                    <div className="col-span-2 text-center text-xs font-bold text-slate-400 py-6">No skills submitted yet.</div>
-                  ) : (
-                    skills.map((skill) => (
-                      <div key={skill.id} className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-700">
-                        <div>
-                          <p className="font-extrabold text-slate-800 text-xs">{skill.skill_name}</p>
-                          <p className="text-[10px] text-slate-450 mt-0.5">{skill.skill_category || 'General'} • {skill.proficiency_level || 'Beginner'}</p>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded-lg text-[9px] uppercase tracking-wide font-black ${
-                          skill.certified 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
-                            : 'bg-slate-100 text-slate-500 border border-slate-200'
-                        }`}>
-                          {skill.certified ? 'Certified' : 'Not certified'}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </SummaryList>
-            )}
-
-            {activeTab === 'documents' && (
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-xs">
-                <div className="flex items-center gap-2 mb-5 pb-3 border-b border-slate-100">
-                  <FileText className="w-4.5 h-4.5 text-violet-600" />
-                  <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Uploaded Documents</h3>
-                </div>
-                {documents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50/50 border-2 border-dashed border-slate-200/80 rounded-2xl">
-                    <FileText className="w-12 h-12 text-slate-300 mb-3" />
-                    <p className="text-xs font-black text-slate-750">No documents submitted</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Candidate documents will appear here once uploaded.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {documents.map((doc) => (
-                      <div key={doc.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex flex-col justify-between hover:border-violet-300 hover:shadow-xs transition duration-300">
-                        <div>
-                          <div className="flex items-start justify-between gap-3">
-                            <span className="p-2.5 bg-violet-50 text-violet-650 rounded-xl border border-violet-100/50">
-                              <FileText size={18} />
-                            </span>
-                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
-                              (doc.verification_status || 'pending').toLowerCase() === 'approved' || (doc.verification_status || 'pending').toLowerCase() === 'verified'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                                : 'bg-amber-50 text-amber-700 border border-amber-100'
-                            }`}>
-                              {doc.verification_status || 'pending'}
-                            </span>
-                          </div>
-                          <p className="text-xs font-black text-slate-800 mt-3 truncate">{doc.document_type}</p>
-                          <p className="text-[10px] font-semibold text-slate-450 mt-0.5 truncate">{doc.file_name}</p>
-                        </div>
-                        <div className="flex items-center gap-2 border-t border-slate-100 pt-3 mt-4">
-                          <button
-                            type="button"
-                            onClick={() => doc.file_name ? window.open(`${API}/uploads/${doc.file_name}`, '_blank') : showToast('No file uploaded', 'error')}
-                            className="flex-1 py-1.5 border border-violet-100 hover:bg-violet-50 text-[10px] font-extrabold text-[#6D3BFF] rounded-lg transition cursor-pointer"
-                          >
-                            View
-                          </button>
-                          <a
-                            href={`${API}/uploads/${doc.file_name}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 py-1.5 bg-[#6D3BFF] hover:bg-[#5C2FFF] text-white text-[10px] font-extrabold text-center rounded-lg transition cursor-pointer block"
-                          >
-                            Download
-                          </a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'experience' && (
-              <SummaryList icon={Briefcase} title="Work Experience Timeline" empty="No work experience logs found.">
-                <div className="space-y-4">
-                  {experiences.length === 0 ? (
-                    <div className="text-center text-xs font-bold text-slate-400 py-6">No work experience submitted yet.</div>
-                  ) : (
-                    experiences.map((exp) => (
-                      <div key={exp.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-bold text-slate-700">
-                        <div className="flex items-start gap-3">
-                          <span className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100/50 shrink-0">
-                            <Briefcase size={16} />
-                          </span>
-                          <div>
-                            <p className="font-extrabold text-slate-800 text-xs">{exp.company_name}</p>
-                            <p className="text-slate-500 font-semibold text-[10px] mt-0.5">{exp.designation || 'Apprentice'} • {exp.employment_type || 'Full-time'}</p>
-                            {exp.responsibilities && <p className="text-[10px] font-medium text-slate-450 mt-1.5 max-w-xl leading-relaxed">{exp.responsibilities}</p>}
-                          </div>
-                        </div>
-                        <div className="text-left sm:text-right shrink-0">
-                          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
-                            exp.currently_working 
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
-                              : 'bg-slate-100 text-slate-500 border border-slate-200'
-                          }`}>
-                            {exp.currently_working ? 'Currently working' : 'Past role'}
-                          </span>
-                          <p className="text-[10px] text-slate-450 font-extrabold mt-1.5">{exp.start_date || 'N/A'} — {exp.currently_working ? 'Present' : exp.end_date || 'N/A'}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </SummaryList>
-            )}
-          </div>
-
-          {/* Right Pane Sidebar */}
-          <div className="space-y-5">
-            {/* Timeline Section */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs">
-              <div className="flex items-center gap-2 mb-5 pb-3 border-b border-slate-100">
-                <Clock className="w-4 h-4 text-violet-600" />
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Activity Timeline</h3>
-              </div>
-              <div className="relative border-l border-slate-100 pl-4 ml-2 space-y-6">
-                <div className="relative">
-                  <span className="absolute -left-[21px] top-0 h-2.5 w-2.5 rounded-full bg-violet-600 ring-4 ring-violet-50"></span>
-                  <p className="text-xs font-bold text-slate-850">Registered on portal</p>
-                  <p className="text-[10px] text-slate-450 mt-0.5">{formatDate(detailedCandidate.registration_date)}</p>
-                </div>
-                <div className="relative">
-                  <span className="absolute -left-[21px] top-0 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-4 ring-indigo-50"></span>
-                  <p className="text-xs font-bold text-slate-850">Profile completed {detailedCandidate.profile_completion_percentage || 0}%</p>
-                  <p className="text-[10px] text-slate-450 mt-0.5">{formatDate(detailedCandidate.updatedAt || detailedCandidate.registration_date)}</p>
-                </div>
-                <div className="relative">
-                  <span className="absolute -left-[21px] top-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></span>
-                  <p className="text-xs font-bold text-slate-850">Availability: {detailedCandidate.availability_status || 'available'}</p>
-                  <p className="text-[10px] text-slate-450 mt-0.5">Updated automatically</p>
-                </div>
-                <div className="relative">
-                  <span className="absolute -left-[21px] top-0 h-2.5 w-2.5 rounded-full bg-amber-500 ring-4 ring-amber-50"></span>
-                  <p className="text-xs font-bold text-slate-850">Onboarding status: {detailedCandidate.onboarding_status || 'Approved'}</p>
-                  <p className="text-[10px] text-slate-450 mt-0.5">Approved by administrator</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions List */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-3.5">
-              <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                <Sparkles className="w-4 h-4 text-violet-600" />
-                <h3 className="text-xs font-black text-slate-850 uppercase tracking-wider">Quick Actions</h3>
-              </div>
-              <div className="grid grid-cols-1 gap-2 text-xs font-bold text-slate-655">
-                <button
-                  onClick={() => window.open(`mailto:${detailedCandidate.email}`)}
-                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#6D3BFF] hover:text-[#6D3BFF] transition text-left cursor-pointer font-extrabold"
-                >
-                  <span>Send Email</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => showToast('Feature coming soon: Candidate Applications', 'info')}
-                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#6D3BFF] hover:text-[#6D3BFF] transition text-left cursor-pointer font-extrabold"
-                >
-                  <span>View Candidate Applications</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => showToast(`Reviewing documents of ${detailedCandidate.full_name}`, 'info')}
-                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#6D3BFF] hover:text-[#6D3BFF] transition text-left cursor-pointer font-extrabold"
-                >
-                  <span>Approve Documents</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const address = detailedCandidate?.CandidateAddresses?.[0] || {};
+  const education = detailedCandidate?.CandidateEducations?.[0] || {};
+  const skills = detailedCandidate?.CandidateSkills || [];
+  const experiences = detailedCandidate?.CandidateWorkExperiences || [];
+  const documents = detailedCandidate?.CandidateDocuments || [];
 
   return (
     <div className="space-y-6 animate-fade-in w-full min-h-0 flex flex-col">
@@ -734,6 +326,308 @@ export default function Candidates({ adminUser, showToast }) {
           </table>
         </div>
       </div>
+      {/* ── Slide-over Overlay Detail Drawer (Slide-in right overlay sidebar) ── */}
+      {detailedCandidate && (
+        <>
+          {/* Backdrop blur overlay */}
+          <div 
+            className="fixed inset-0 bg-slate-950/45 backdrop-blur-[4px] z-[90] transition-opacity duration-300 animate-fade-in"
+            onClick={() => setDetailedCandidateId(null)}
+          />
+          {/* Drawer container */}
+          <div className="fixed top-0 right-0 h-screen w-full sm:w-[380px] md:w-[410px] bg-slate-50 shadow-2xl border-l border-slate-200 z-[100] transition-transform duration-300 ease-in-out transform translate-x-0 overflow-hidden text-left font-sans">
+            <div className="flex flex-col h-full bg-slate-50">
+              
+              {/* Header */}
+              <div className="p-4 border-b border-slate-100 flex items-start justify-between bg-white rounded-t-2xl">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-sm font-black shadow-md border border-indigo-100">
+                    {(detailedCandidate.full_name || 'CA').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xs font-black text-slate-900 leading-tight truncate">{detailedCandidate.full_name}</h3>
+                    <p className="text-[9px] font-bold text-slate-400 mt-1 truncate">{detailedCandidate.email}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailedCandidateId(null)}
+                  className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-650 transition cursor-pointer shrink-0"
+                >
+                  <XCircle size={15} />
+                </button>
+              </div>
+
+              {/* Status Header Bar */}
+              <div className="px-4 py-2 border-b border-slate-100 bg-indigo-50/20 flex items-center justify-between text-[10px] font-bold text-slate-550 select-none">
+                <div className="flex items-center gap-2">
+                  <span>Verification:</span>
+                  <StatusBadge status={detailedCandidate.verification_status || 'pending'} />
+                </div>
+                <span className="text-indigo-650 font-black">{detailedCandidate.availability_status || 'Available'}</span>
+              </div>
+
+              {/* Scrollable Content Stack */}
+              <div className="flex-1 overflow-y-auto p-4.5 space-y-6 text-xs font-semibold text-slate-655 scrollbar-thin">
+                
+                {/* Onboarding Summary Box */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm text-left">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider">Onboarding status</span>
+                        <strong className="text-xs text-emerald-600 font-extrabold mt-0.5 block">{detailedCandidate.onboarding_status || 'Pending'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider">Registered On</span>
+                        <strong className="text-xs text-slate-800 font-black mt-0.5 block">{formatDate(detailedCandidate.registration_date)}</strong>
+                      </div>
+                    </div>
+
+                    {/* Circular Completion percentage */}
+                    {(() => {
+                      const profilePercent = Number(detailedCandidate.profile_completion_percentage || 0);
+                      return (
+                        <div className="relative flex items-center justify-center shrink-0 bg-slate-50 border border-slate-100 p-2 rounded-xl">
+                          <svg className="w-10 h-10 transform -rotate-90">
+                            <circle cx="20" cy="20" r="15" stroke="#E2E8F0" strokeWidth="2.5" fill="transparent" />
+                            <circle cx="20" cy="20" r="15" stroke="#6D3BFF" strokeWidth="2.5" fill="transparent"
+                              strokeDasharray={2 * Math.PI * 15}
+                              strokeDashoffset={2 * Math.PI * 15 - (profilePercent / 100) * (2 * Math.PI * 15)}
+                              strokeLinecap="round" />
+                          </svg>
+                          <span className="absolute text-[9px] font-black text-slate-800">{profilePercent}%</span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Actions Section */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <Sparkles size={13} className="text-indigo-500" /> Actions
+                  </h4>
+                  <div className="flex flex-col gap-2">
+                    {(detailedCandidate.verification_status || 'pending') === 'pending' && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateCandidateApproval(detailedCandidate.id, 'rejected')}
+                          disabled={actionLoading === 'rejected'}
+                          className="flex-1 h-9 rounded-xl border border-rose-250 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-black transition cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateCandidateApproval(detailedCandidate.id, 'approved')}
+                          disabled={actionLoading === 'approved'}
+                          className="flex-1 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black transition cursor-pointer flex items-center justify-center gap-1 shadow-sm"
+                        >
+                          Approve
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setEditingCandidate(detailedCandidate)}
+                      className="w-full h-9 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-[10px] font-black transition cursor-pointer flex items-center justify-center gap-1.5 border border-indigo-150"
+                    >
+                      <Pencil size={11} /> Edit Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteCandidateId(detailedCandidate.id)}
+                      className="w-full h-9 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-[10px] font-black transition cursor-pointer flex items-center justify-center gap-1.5 border border-rose-200"
+                    >
+                      <Trash2 size={11} /> Delete Candidate
+                    </button>
+                  </div>
+                </div>
+
+                {/* Personal Information */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <UserCircle2 size={13} className="text-indigo-500" /> Personal Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[10px]">
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Full Name</span>
+                      <span className="text-slate-800 font-bold">{detailedCandidate.full_name || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Mobile Number</span>
+                      <span className="text-slate-800 font-bold">{detailedCandidate.mobile_number || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">NAPS Candidate ID</span>
+                      <span className="text-slate-850 font-mono font-bold select-all">{detailedCandidate.naps_candidate_id || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">PAN Number</span>
+                      <span className="text-slate-850 font-mono font-bold select-all">{detailedCandidate.pan_number || '—'}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-[9px] text-slate-400 block font-medium">Aadhaar last 4</span>
+                      <span className="text-slate-850 font-mono font-bold">{detailedCandidate.aadhaar_last_4 ? `**** **** ${detailedCandidate.aadhaar_last_4}` : '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Date of Birth</span>
+                      <span className="text-slate-800 font-bold">{detailedCandidate.date_of_birth ? new Date(detailedCandidate.date_of_birth).toLocaleDateString('en-IN') : '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Gender</span>
+                      <span className="text-slate-800 font-bold">{detailedCandidate.gender || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address Details */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <MapPin size={13} className="text-indigo-500" /> Address Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[10px]">
+                    <div className="col-span-2">
+                      <span className="text-[9px] text-slate-400 block font-medium">Permanent Address</span>
+                      <p className="text-slate-855 font-bold leading-relaxed">{[address.address_line_1, address.address_line_2].filter(Boolean).join(', ') || '—'}</p>
+                    </div>
+                    {address.landmark && (
+                      <div className="col-span-2">
+                        <span className="text-[9px] text-slate-400 block font-medium">Landmark</span>
+                        <span className="text-slate-800 font-bold">{address.landmark}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">City</span>
+                      <span className="text-slate-800 font-bold">{address.city || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">District</span>
+                      <span className="text-slate-800 font-bold">{address.district || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">State</span>
+                      <span className="text-slate-800 font-bold">{address.state || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Pincode</span>
+                      <span className="text-slate-800 font-bold">{address.pincode || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Academic History */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <GraduationCap size={13} className="text-indigo-500" /> Academic Qualifications
+                  </h4>
+                  {detailedCandidate.CandidateEducations && detailedCandidate.CandidateEducations.length > 0 ? (
+                    <div className="space-y-3 divide-y divide-slate-100 text-left">
+                      {detailedCandidate.CandidateEducations.map((edu, idx) => (
+                        <div key={edu.id || idx} className="pt-2.5 first:pt-0 text-[10px] space-y-1">
+                          <div className="flex justify-between items-start">
+                            <strong className="text-slate-800">{edu.qualification_level} ({edu.course_name || 'General'})</strong>
+                            <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded text-[9px] font-black">{edu.passing_year}</span>
+                          </div>
+                          <p className="text-slate-550 font-bold text-[9.5px]">{edu.specialization || 'General Specialization'}</p>
+                          <p className="text-slate-450 font-medium text-[9px] leading-tight">{edu.institution_name}</p>
+                          <p className="text-slate-700 font-black text-[9.5px] mt-1">Score: {edu.percentage_or_cgpa || '—'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 font-bold italic pl-0.5">No academic profile submitted.</p>
+                  )}
+                </div>
+
+                {/* Work History */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <Briefcase size={13} className="text-indigo-500" /> Work Experiences
+                  </h4>
+                  {experiences && experiences.length > 0 ? (
+                    <div className="space-y-3 divide-y divide-slate-100 text-left">
+                      {experiences.map((exp, idx) => (
+                        <div key={exp.id || idx} className="pt-2.5 first:pt-0 text-[10px] space-y-1">
+                          <div className="flex justify-between items-start">
+                            <strong className="text-slate-800">{exp.job_title}</strong>
+                            <span className="text-[8.5px] text-slate-450 font-bold shrink-0">{exp.start_date ? new Date(exp.start_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : ''} - {exp.is_current ? 'Present' : exp.end_date ? new Date(exp.end_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : ''}</span>
+                          </div>
+                          <p className="text-slate-555 font-bold text-[9.5px]">{exp.company_name}</p>
+                          {exp.description && <p className="text-slate-400 text-[9px] font-medium leading-relaxed italic mt-1">{exp.description}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 font-bold italic pl-0.5">No work experiences registered.</p>
+                  )}
+                </div>
+
+                {/* Skills Profile */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <Wrench size={13} className="text-indigo-500" /> Key Skills Profile
+                  </h4>
+                  {skills && skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {skills.map((skill, idx) => (
+                        <span key={skill.id || idx} className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-150 text-indigo-700 rounded text-[9px] font-black transition">
+                          {skill.skill_name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 font-bold italic pl-0.5">No skills registered.</p>
+                  )}
+                </div>
+
+                {/* Uploaded Documents List */}
+                <div className="space-y-2 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <FileText size={13} className="text-indigo-500" /> Documents Checklist
+                  </h4>
+                  {documents && documents.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {documents.map((doc, idx) => (
+                        <div key={doc.id || idx} className="flex items-center justify-between border border-slate-150 p-2.5 rounded-xl hover:bg-slate-50 transition text-left">
+                          <div className="min-w-0">
+                            <strong className="text-slate-800 text-[10px] block truncate">{doc.document_type || 'Attached Document'}</strong>
+                            {doc.document_url ? (
+                              <a
+                                href={doc.document_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[9px] text-[#6D3BFF] hover:underline mt-0.5 inline-block font-extrabold"
+                              >
+                                View File attachment &rarr;
+                              </a>
+                            ) : (
+                              <span className="text-[9px] text-slate-400 block mt-0.5 font-medium">No uploaded attachment</span>
+                            )}
+                          </div>
+                          <span className={`px-2 py-0.5 border text-[9px] font-black rounded-md ${
+                            doc.verification_status === 'verified' 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                              : 'bg-amber-50 text-amber-700 border-amber-250'
+                          }`}>
+                            {doc.verification_status || 'pending'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 font-bold italic pl-0.5">No verification documents uploaded.</p>
+                  )}
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </>
+      )}
       <DeleteCandidateModal
         candidate={candidates.find((candidate) => candidate.id === deleteCandidateId)}
         loading={actionLoading === 'delete'}

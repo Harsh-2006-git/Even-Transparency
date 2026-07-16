@@ -295,6 +295,12 @@ export const listEmployerCandidates = async (req, res) => {
       }
     });
 
+    const interviews = await db.EmployerInterview.findAll({
+      where: {
+        employer_id: employerId
+      }
+    });
+
     // Format the response nicely for the frontend tabular view
     const formatted = applications.map(app => {
       const cand = app.Candidate;
@@ -303,6 +309,11 @@ export const listEmployerCandidates = async (req, res) => {
       // Find associated contract for this application
       const contract = contracts.find(
         c => c.candidate_id === cand?.id && c.job_posting_id === job?.id
+      );
+
+      // Find associated interview for this application
+      const interview = interviews.find(
+        i => i.candidate_id === cand?.id && i.job_posting_id === job?.id
       );
 
       const highestEdu = cand?.CandidateEducations?.find(e => e.is_highest) || cand?.CandidateEducations?.[0];
@@ -347,9 +358,10 @@ export const listEmployerCandidates = async (req, res) => {
         appliedAt: app.applied_at || app.created_at,
         status: app.application_status || 'Under Review',
         currentStage: app.current_stage || 'Application Review',
-        interviewScheduledAt: app.interview_scheduled_at,
-        interviewMode: app.interview_mode,
-        interviewFeedback: app.interview_feedback,
+        interviewScheduledAt: interview?.scheduled_at || app.interview_scheduled_at,
+        interviewMode: interview?.interview_mode || app.interview_mode,
+        interviewFeedback: interview?.feedback || app.interview_feedback,
+        interviewScore: interview?.interview_score,
         skills,
         languages: cand?.preferred_language ? cand.preferred_language.split(',').map(l => l.trim()) : [],
         certifications: [],
@@ -432,8 +444,66 @@ export const updateCandidateStatus = async (req, res) => {
     if (status === 'Shortlisted') {
       updateData.shortlisted_at = new Date();
     } else if (status === 'Interview Scheduled') {
-      updateData.interview_scheduled_at = new Date();
-      updateData.interview_mode = 'Online';
+      const scheduledAt = req.body.interviewScheduledAt ? new Date(req.body.interviewScheduledAt) : new Date();
+      updateData.interview_scheduled_at = scheduledAt;
+      updateData.interview_mode = req.body.interviewMode || 'Online';
+      updateData.interview_feedback = '';
+
+      // Create a real database interview slot
+      await db.EmployerInterview.create({
+        employer_id: employerId,
+        candidate_id: application.candidate_id,
+        job_posting_id: application.job_posting_id,
+        interviewer_name: 'Even Cargo HR',
+        interview_mode: req.body.interviewMode || 'Online',
+        interview_location: req.body.interviewMode === 'Online' ? 'Google Meet' : 'Office Premises',
+        meeting_link: req.body.meetingLink || 'https://meet.google.com/new',
+        scheduled_at: scheduledAt,
+        attendance_status: 'Pending',
+        final_decision: 'Pending',
+        feedback: '',
+        interview_score: null
+      });
+    }
+
+    // Capture score and feedback when final decision / evaluation is made
+    if (req.body.interviewScore !== undefined || req.body.interviewNotes !== undefined) {
+      const recentInterview = await db.EmployerInterview.findOne({
+        where: {
+          candidate_id: application.candidate_id,
+          job_posting_id: application.job_posting_id
+        },
+        order: [['created_at', 'DESC']]
+      });
+
+      if (recentInterview) {
+        const scoreVal = req.body.interviewScore !== null && req.body.interviewScore !== undefined ? parseFloat(req.body.interviewScore) : recentInterview.interview_score;
+        const notesVal = req.body.interviewNotes !== undefined ? req.body.interviewNotes : recentInterview.feedback;
+        
+        await recentInterview.update({
+          attendance_status: status === 'Interview Completed' || status === 'Selected' || status === 'Hired' ? 'Attended' : recentInterview.attendance_status,
+          interview_score: scoreVal,
+          feedback: notesVal || '',
+          final_decision: status === 'Selected' || status === 'Hired' ? 'Selected' : status === 'Rejected' ? 'Rejected' : recentInterview.final_decision
+        });
+
+        updateData.interview_feedback = notesVal || '';
+      }
+    }
+
+    if (status === 'Interview Completed') {
+      const recentInterview = await db.EmployerInterview.findOne({
+        where: {
+          candidate_id: application.candidate_id,
+          job_posting_id: application.job_posting_id
+        },
+        order: [['created_at', 'DESC']]
+      });
+      if (recentInterview) {
+        await recentInterview.update({
+          attendance_status: 'Attended'
+        });
+      }
     }
 
     await application.update(updateData);

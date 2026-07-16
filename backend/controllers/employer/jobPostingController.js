@@ -368,3 +368,75 @@ export const listAdminJobPostings = async (req, res) => {
   }
 };
 
+// Admin update job posting
+export const adminUpdateJobPosting = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const posting = await db.EmployerJobPosting.findByPk(id);
+    if (!posting) {
+      return res.status(404).json({ error: 'Apprenticeship opening not found' });
+    }
+
+    const payload = serializePosting(req.body, posting.employer_id);
+    delete payload.employer_id;
+
+    await posting.update(payload);
+
+    return res.status(200).json({
+      message: 'Apprenticeship opening updated successfully by Admin',
+      posting: deserializePosting(posting)
+    });
+  } catch (error) {
+    console.error('adminUpdateJobPosting error:', error);
+    return res.status(500).json({ error: 'Failed to update apprenticeship opening' });
+  }
+};
+
+// Admin delete job posting
+export const adminDeleteJobPosting = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const posting = await db.EmployerJobPosting.findByPk(id);
+    if (!posting) {
+      return res.status(404).json({ error: 'Apprenticeship opening not found' });
+    }
+
+    // Delete related CandidateApplications
+    await db.CandidateApplication.destroy({ where: { job_posting_id: id } });
+
+    await posting.destroy();
+
+    return res.status(200).json({
+      message: 'Apprenticeship opening deleted successfully'
+    });
+  } catch (error) {
+    console.error('adminDeleteJobPosting error:', error);
+    return res.status(500).json({ error: 'Failed to delete apprenticeship opening' });
+  }
+};
+
+// Admin toggle pause/resume job posting
+export const adminTogglePauseJobPosting = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const posting = await db.EmployerJobPosting.findByPk(id);
+    if (!posting) {
+      return res.status(404).json({ error: 'Apprenticeship opening not found' });
+    }
+
+    await posting.update({ status });
+
+    return res.status(200).json({
+      message: `Apprenticeship opening status updated to ${status} successfully`,
+      posting: deserializePosting(posting)
+    });
+  } catch (error) {
+    console.error('adminTogglePauseJobPosting error:', error);
+    return res.status(500).json({ error: 'Failed to update status' });
+  }
+};
+

@@ -7,6 +7,7 @@ import { candidateAuthMiddleware } from '../middlewares/candidateAuthMiddleware.
 import { listGrievances, createGrievance } from '../controllers/grievanceController.js';
 import { getContract, acceptContract } from '../controllers/contractController.js';
 import { listNotifications, markOneRead, markAllRead } from '../controllers/notificationController.js';
+import { getCandidateStipends } from '../controllers/employer/paymentController.js';
 
 const router = Router();
 
@@ -36,6 +37,8 @@ router.get('/documents/stream', pdfProxy); // open proxy for employer side (url 
 
 router.get('/candidate/grievances', candidateAuthMiddleware, listGrievances);
 router.post('/candidate/grievances', candidateAuthMiddleware, createGrievance);
+
+router.get('/candidate/stipends', candidateAuthMiddleware, getCandidateStipends);
 
 router.get('/candidate/notifications', candidateAuthMiddleware, listNotifications);
 router.patch('/candidate/notifications/:id/read', candidateAuthMiddleware, markOneRead);

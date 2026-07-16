@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { onboard, login, checkPhone, sendEmployerOTP, verifyEmployerOTP, register, completeOnboarding } from '../controllers/employer/authController.js';
 import { getOnboardingDetails, updateOnboardingDetails, getMyCompany, updateMyCompany } from '../controllers/employer/onboardingController.js';
-import { confirmStipendPayment, listEmployerStipends } from '../controllers/employer/paymentController.js';
+import { confirmStipendPayment, listEmployerStipends, getContractStipendSchedule } from '../controllers/employer/paymentController.js';
 import {
   confirmDocumentUpload,
   getEmployerDocumentViewUrl,
@@ -13,18 +13,28 @@ import {
   listJobPostings,
   getJobPosting,
   updateJobPosting,
-  listAdminJobPostings
+  listAdminJobPostings,
+  adminUpdateJobPosting,
+  adminDeleteJobPosting,
+  adminTogglePauseJobPosting
 } from '../controllers/employer/jobPostingController.js';
 import {
   listEmployerCandidates,
   updateCandidateStatus
 } from '../controllers/employer/candidateController.js';
 import {
+  listEmployerInterviews,
+  createEmployerInterview,
+  updateEmployerInterview
+} from '../controllers/employer/interviewController.js';
+import {
   createEmployer,
   deleteEmployer,
   listEmployersForApproval,
+  getEmployerDetails,
   updateEmployer,
-  updateEmployerApproval
+  updateEmployerApproval,
+  suspendEmployer
 } from '../controllers/admin/employerController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { adminAuthMiddleware } from '../middlewares/adminAuthMiddleware.js';
@@ -52,12 +62,17 @@ router.post('/auth/employer/register', register);
 
 // Admin employer approval routes
 router.get('/admin/employers', listEmployersForApproval);
+router.get('/admin/employers/:id', getEmployerDetails);
 router.post('/admin/employers', createEmployer);
 router.put('/admin/employers/:id', updateEmployer);
 router.delete('/admin/employers/:id', deleteEmployer);
 router.patch('/admin/employers/:id/approval', updateEmployerApproval);
+router.patch('/admin/employers/:id/suspend', suspendEmployer);
 router.get('/admin/contracts', adminAuthMiddleware, listAdminContracts);
 router.get('/admin/job-postings', adminAuthMiddleware, listAdminJobPostings);
+router.put('/admin/job-postings/:id', adminAuthMiddleware, adminUpdateJobPosting);
+router.delete('/admin/job-postings/:id', adminAuthMiddleware, adminDeleteJobPosting);
+router.patch('/admin/job-postings/:id/status', adminAuthMiddleware, adminTogglePauseJobPosting);
 router.get('/admin/applications', adminAuthMiddleware, listAdminApplications);
 router.get('/admin/interviews', adminAuthMiddleware, listAdminInterviews);
 router.get('/admin/stipends', adminAuthMiddleware, listAdminStipends);
@@ -72,6 +87,7 @@ router.get('/employer/company', authMiddleware, getMyCompany);
 router.put('/employer/company', authMiddleware, updateMyCompany);
 router.post('/employer/stipends/confirm', authMiddleware, confirmStipendPayment);
 router.get('/employer/stipends', authMiddleware, listEmployerStipends);
+router.get('/employer/stipends/schedule/:contractId', authMiddleware, getContractStipendSchedule);
 router.get('/employer/dashboard-stats', authMiddleware, getEmployerDashboardStats);
 
 // Employer documents routes
@@ -92,6 +108,11 @@ router.put('/employer/candidates/:id/status', authMiddleware, updateCandidateSta
 router.get('/employer/candidates/:applicationId/contract', authMiddleware, getContract);
 router.post('/employer/candidates/:id/contract/send', authMiddleware, sendContract);
 router.get('/employer/contracts', authMiddleware, listEmployerContracts);
+
+// Employer interviews routes
+router.get('/employer/interviews', authMiddleware, listEmployerInterviews);
+router.post('/employer/interviews', authMiddleware, createEmployerInterview);
+router.put('/employer/interviews/:id', authMiddleware, updateEmployerInterview);
 router.post('/employer/contracts/:id/send', authMiddleware, sendContractById);
 router.put('/employer/contracts/:id/start-date', authMiddleware, updateContractStartDate);
 
@@ -105,5 +126,10 @@ router.put('/admin/grievances/:id/status', adminAuthMiddleware, updateGrievanceS
 router.get('/employer/notifications', authMiddleware, listNotifications);
 router.patch('/employer/notifications/:id/read', authMiddleware, markOneRead);
 router.patch('/employer/notifications/read-all', authMiddleware, markAllRead);
+
+// Admin notifications
+router.get('/admin/notifications', adminAuthMiddleware, listNotifications);
+router.patch('/admin/notifications/:id/read', adminAuthMiddleware, markOneRead);
+router.patch('/admin/notifications/read-all', adminAuthMiddleware, markAllRead);
 
 export default router;

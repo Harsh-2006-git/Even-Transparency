@@ -3,8 +3,10 @@ import {
   Briefcase, Search, Users, ChevronDown, TrendingUp, MapPin, Calendar,
   ChevronRight, Eye, X, CheckCircle2, Clock, RefreshCw,
   Shield, Award, Heart, Coffee, Car, Home, GraduationCap,
-  IndianRupee, UserRoundCheck, Building2
+  IndianRupee, UserRoundCheck, Building2, Pencil, Trash2, XCircle, Play, Pause
 } from 'lucide-react';
+
+import EmployerCreateDrive from '../employer/CreateDrive';
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
@@ -30,6 +32,8 @@ export default function AdminOpenings({ adminUser, showToast }) {
   const [statusFilter, setStatusFilter] = useState('All');
   const [companyFilter, setCompanyFilter] = useState('All');
   const [selectedOpening, setSelectedOpening] = useState(null);
+  const [editingOpening, setEditingOpening] = useState(null);
+  const [deletingOpeningId, setDeletingOpeningId] = useState(null);
 
   const fetchOpenings = async () => {
     if (!adminUser?.token) return;
@@ -52,6 +56,73 @@ export default function AdminOpenings({ adminUser, showToast }) {
       showToast?.('Connection error. Please try again.', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTogglePause = async (op) => {
+    const newStatus = op.status === 'Paused' ? 'Open' : 'Paused';
+    try {
+      const res = await fetch(`${API}/admin/job-postings/${op.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-id': adminUser.id,
+          Authorization: `Bearer ${adminUser.token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update opening status.');
+      
+      setOpenings(prev => prev.map(o => o.id === op.id ? { ...o, status: newStatus } : o));
+      if (selectedOpening?.id === op.id) {
+        setSelectedOpening(prev => ({ ...prev, status: newStatus }));
+      }
+      showToast?.(`Opening status updated to ${newStatus} successfully.`, 'success');
+    } catch (err) {
+      showToast?.(err.message, 'error');
+    }
+  };
+
+  const handleDeleteOpening = async (id) => {
+    try {
+      const res = await fetch(`${API}/admin/job-postings/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-admin-id': adminUser.id,
+          Authorization: `Bearer ${adminUser.token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete opening.');
+      
+      setOpenings(prev => prev.filter(o => o.id !== id));
+      setDeletingOpeningId(null);
+      showToast?.('Opening deleted successfully.', 'success');
+    } catch (err) {
+      showToast?.(err.message, 'error');
+    }
+  };
+
+  const handleSaveEdit = async (updatedFields) => {
+    try {
+      const res = await fetch(`${API}/admin/job-postings/${updatedFields.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-id': adminUser.id,
+          Authorization: `Bearer ${adminUser.token}`
+        },
+        body: JSON.stringify(updatedFields)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update opening.');
+      
+      setOpenings(prev => prev.map(o => o.id === updatedFields.id ? data.posting : o));
+      setEditingOpening(null);
+      showToast?.('Opening updated successfully.', 'success');
+    } catch (err) {
+      showToast?.(err.message, 'error');
     }
   };
 
@@ -117,6 +188,31 @@ export default function AdminOpenings({ adminUser, showToast }) {
       </span>
     );
   };
+
+  if (editingOpening) {
+    return (
+      <div className="space-y-6 animate-fade-in pb-12 text-left font-sans">
+        {/* Header / Breadcrumb to go back */}
+        <nav className="flex items-center gap-1.5 text-[11px] font-bold select-none border-b border-slate-100 pb-4">
+          <span className="text-slate-400 cursor-pointer hover:text-slate-600" onClick={() => setEditingOpening(null)}>Apprenticeship Openings</span>
+          <ChevronRight size={12} className="text-slate-300 shrink-0" />
+          <span className="text-slate-800">Edit Opening: {editingOpening.jobTitle}</span>
+        </nav>
+        
+        <EmployerCreateDrive
+          user={adminUser}
+          editingJob={editingOpening}
+          setEditingJob={setEditingOpening}
+          isAdmin={true}
+          onSectionChange={(section) => {
+            fetchOpenings();
+            setEditingOpening(null);
+          }}
+          showToast={showToast}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-left selection:bg-indigo-100 selection:text-indigo-950 pb-12 w-full">
@@ -237,13 +333,13 @@ export default function AdminOpenings({ adminUser, showToast }) {
       ) : (
         <div className="space-y-4 w-full animate-fade-in">
           {/* Column headers (Desktop only) */}
-          <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-5 text-[10px] font-black text-slate-400 uppercase tracking-wider select-none">
-            <div className="lg:col-span-3">Opening Info</div>
-            <div className="lg:col-span-2.5">Company Partner</div>
-            <div className="lg:col-span-2">Location & Mode</div>
-            <div className="lg:col-span-2">Hiring Progress</div>
-            <div className="lg:col-span-1.5 text-center">Status</div>
-            <div className="lg:col-span-1 text-right">Action</div>
+          <div className="hidden lg:flex items-center gap-4 px-5 text-[10px] font-black text-slate-400 uppercase tracking-wider select-none">
+            <div className="w-[26%] shrink-0">Opening Info</div>
+            <div className="w-[20%] shrink-0">Company Partner</div>
+            <div className="w-[13%] shrink-0">Location &amp; Mode</div>
+            <div className="w-[15%] shrink-0">Hiring Progress</div>
+            <div className="w-[8%] shrink-0 text-center">Status</div>
+            <div className="ml-auto shrink-0 text-right pr-1">Actions</div>
           </div>
 
           {/* Cards List */}
@@ -261,80 +357,120 @@ export default function AdminOpenings({ adminUser, showToast }) {
             return (
               <div
                 key={op.id}
-                className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md hover:border-indigo-300 transition flex flex-col gap-4 text-left"
+                className="bg-white border border-slate-200 rounded-2xl shadow-xs hover:shadow-md hover:border-indigo-200 transition text-left overflow-hidden"
               >
-                {/* Main Row Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+                {/* Top data section */}
+                <div className="p-5 flex flex-col gap-4">
+                  {/* Main Row: data columns + status */}
+                  <div className="flex items-center gap-4">
 
-                  {/* Column 1: Info */}
-                  <div className="lg:col-span-3 min-w-0 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 border border-indigo-200 text-indigo-650 flex items-center justify-center text-xs font-black shrink-0">
-                      {initials}
+                    {/* Col 1: Job Info */}
+                    <div className="w-[26%] shrink-0 min-w-0 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 border border-indigo-200 text-indigo-700 flex items-center justify-center text-xs font-black shrink-0">
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <button
+                          onClick={() => setSelectedOpening(op)}
+                          className="block text-left text-sm font-black text-slate-800 hover:text-indigo-700 leading-snug cursor-pointer truncate max-w-full"
+                        >
+                          {op.jobTitle || 'Untitled Opening'}
+                        </button>
+                        <p className="mt-0.5 truncate text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">
+                          {op.tradeName || 'General Trade'} / {op.internalJobCode || op.napsTradeCode || 'NAPS'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <button
-                        onClick={() => setSelectedOpening(op)}
-                        className="block text-left text-sm font-black text-slate-800 hover:text-indigo-650 leading-snug cursor-pointer truncate max-w-full hover:underline"
-                      >
-                        {op.jobTitle || 'Untitled Opening'}
-                      </button>
-                      <p className="mt-1 truncate text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        {op.tradeName || 'General Trade'} / {op.internalJobCode || op.napsTradeCode || 'NAPS'}
+
+                    {/* Col 2: Company */}
+                    <div className="w-[20%] shrink-0 min-w-0 flex items-center gap-2">
+                      <Building2 size={13} className="text-indigo-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-800 truncate">{op.companyName}</p>
+                        <p className="text-[9px] font-semibold text-slate-400 truncate mt-0.5">{op.companyEmail}</p>
+                      </div>
+                    </div>
+
+                    {/* Col 3: Location */}
+                    <div className="w-[13%] shrink-0 min-w-0">
+                      <p className="flex items-start gap-0.5 text-[10px] font-bold text-slate-700 truncate">
+                        <MapPin size={10} className="text-indigo-500 shrink-0 mt-0.5" />
+                        <span className="truncate">{op.location || 'Flexible'}</span>
                       </p>
+                      <span className="inline-flex mt-0.5 text-[8px] text-blue-700 bg-blue-50 border border-blue-100 rounded-md px-1.5 py-0.5 font-black">
+                        {op.workMode || '-'}
+                      </span>
                     </div>
-                  </div>
 
-                  {/* Column 2: Company Info */}
-                  <div className="lg:col-span-2.5 min-w-0 flex items-center gap-2">
-                    <Building2 size={14} className="text-indigo-600 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-black text-slate-800 leading-snug truncate">{op.companyName}</p>
-                      <p className="text-[9.5px] font-semibold text-slate-400 truncate mt-0.5">{op.companyEmail}</p>
+                    {/* Col 4: Hiring Progress */}
+                    <div className="w-[15%] shrink-0 min-w-0">
+                      <div className="flex justify-between items-center text-[8px] font-bold text-slate-500 mb-1">
+                        <span>Progress</span>
+                        <span className="text-slate-800 font-black">{filled}/{numOpenings}</span>
+                      </div>
+                      <div className="h-1 bg-slate-100 border border-slate-200/60 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all" style={{ width: `${Math.min(100, fillRate)}%` }} />
+                      </div>
+                      <p className="text-[8px] text-slate-400 font-bold mt-0.5">{fillRate}% filled</p>
                     </div>
-                  </div>
 
-                  {/* Column 3: Location */}
-                  <div className="lg:col-span-2 min-w-0">
-                    <p className="flex items-start gap-1.5 text-[11px] font-bold text-slate-700 leading-snug truncate">
-                      <MapPin size={12} className="text-indigo-650 shrink-0 mt-0.5" />
-                      {op.location || 'Flexible'}
-                    </p>
-                    <span className="inline-flex mt-1.5 text-[9px] text-blue-700 bg-blue-50/70 border border-blue-100 rounded-lg px-2 py-0.5 font-black">
-                      {op.workMode || '-'}
-                    </span>
-                  </div>
-
-                  {/* Column 4: Hiring */}
-                  <div className="lg:col-span-2 min-w-0">
-                    <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-                      <span>Progress</span>
-                      <span className="text-slate-800 font-black">{filled} / {numOpenings} ({fillRate}%)</span>
+                    {/* Col 5: Status */}
+                    <div className="w-[8%] shrink-0 flex justify-center">
+                      {getStatusBadge(op.status)}
                     </div>
-                    <div className="h-1.5 bg-slate-100 border border-slate-200/50 rounded-full overflow-hidden w-full mt-1.5">
-                      <div className="h-full bg-gradient-to-r from-emerald-450 to-teal-500 rounded-full transition-all" style={{ width: `${Math.min(100, fillRate)}%` }} />
+
+                    {/* Col 6: Action buttons — grouped pill, icon-only, matches employer style */}
+                    <div className="ml-auto shrink-0">
+                      <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/70 p-1 shadow-xs">
+                        {/* View Details */}
+                        <button
+                          onClick={() => setSelectedOpening(op)}
+                          title="View details"
+                          className="w-8 h-8 rounded-lg border border-violet-200 bg-white hover:bg-violet-50 text-violet-600 transition cursor-pointer inline-flex items-center justify-center shadow-xs"
+                        >
+                          <Eye size={14} strokeWidth={2.5} />
+                        </button>
+                        {/* Edit */}
+                        <button
+                          onClick={() => setEditingOpening(op)}
+                          title="Edit opening"
+                          className="w-8 h-8 rounded-lg border border-indigo-200 bg-white hover:bg-indigo-50 text-indigo-600 transition cursor-pointer inline-flex items-center justify-center shadow-xs"
+                        >
+                          <Pencil size={14} strokeWidth={2.5} />
+                        </button>
+                        {/* Pause / Resume */}
+                        {op.status === 'Paused' ? (
+                          <button
+                            onClick={() => handleTogglePause(op)}
+                            title="Resume opening"
+                            className="w-8 h-8 rounded-lg border border-emerald-200 bg-white hover:bg-emerald-50 text-emerald-600 transition cursor-pointer inline-flex items-center justify-center shadow-xs"
+                          >
+                            <Play size={13} fill="currentColor" strokeWidth={2.5} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleTogglePause(op)}
+                            title="Pause opening"
+                            className="w-8 h-8 rounded-lg border border-amber-200 bg-white hover:bg-amber-50 text-amber-600 transition cursor-pointer inline-flex items-center justify-center shadow-xs"
+                          >
+                            <Pause size={13} fill="currentColor" strokeWidth={2.5} />
+                          </button>
+                        )}
+                        {/* Delete */}
+                        <button
+                          onClick={() => setDeletingOpeningId(op.id)}
+                          title="Delete opening"
+                          className="w-8 h-8 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 transition cursor-pointer inline-flex items-center justify-center shadow-xs"
+                        >
+                          <Trash2 size={14} strokeWidth={2.5} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Column 5: Status */}
-                  <div className="lg:col-span-1.5 text-center min-w-0">
-                    {getStatusBadge(op.status)}
-                  </div>
+                  </div>{/* end main flex row */}
 
-                  {/* Column 6: Actions */}
-                  <div className="lg:col-span-1 flex justify-end">
-                    <button
-                      onClick={() => setSelectedOpening(op)}
-                      className="w-8 h-8 rounded-lg border border-indigo-200 bg-white hover:bg-indigo-50 text-indigo-650 transition cursor-pointer flex items-center justify-center shadow-xs"
-                      title="View complete details"
-                    >
-                      <Eye size={15} strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Sub details row */}
-                <div className="-mt-1.5">
-                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5">
+                  {/* Mini info chips */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
                     <MiniInfo icon={Calendar} label="Deadline" value={fmtDate(op.applicationDeadline)} color="text-blue-600 bg-blue-50 border-blue-100" />
                     <MiniInfo icon={IndianRupee} label="Stipend" value={`${fmtMoney(op.stipend)} / mo`} color="text-emerald-600 bg-emerald-50 border-emerald-100" />
                     <MiniInfo icon={Clock} label="Duration" value={op.duration ? `${op.duration} Mos` : '-'} color="text-amber-600 bg-amber-50 border-amber-100" />
@@ -342,8 +478,8 @@ export default function AdminOpenings({ adminUser, showToast }) {
                     <MiniInfo icon={Users} label="Applications" value={`${op.total_applications || 0} Applied`} color="text-cyan-600 bg-cyan-50 border-cyan-100" />
                     <MiniInfo icon={UserRoundCheck} label="Shortlisted" value={`${op.total_shortlisted || 0} Shortlisted`} color="text-violet-600 bg-violet-50 border-violet-100" />
                   </div>
-                </div>
 
+                </div>{/* end p-5 */}
               </div>
             );
           })}
@@ -356,13 +492,33 @@ export default function AdminOpenings({ adminUser, showToast }) {
           opening={selectedOpening}
           onClose={() => setSelectedOpening(null)}
           getStatusBadge={getStatusBadge}
+          handleTogglePause={handleTogglePause}
+          setEditingOpening={setEditingOpening}
+          setDeletingOpeningId={setDeletingOpeningId}
+        />
+      )}
+
+
+      {/* Delete confirmation modal */}
+      {deletingOpeningId && (
+        <DeleteOpeningModal
+          opening={openings.find(o => o.id === deletingOpeningId)}
+          onCancel={() => setDeletingOpeningId(null)}
+          onConfirm={() => handleDeleteOpening(deletingOpeningId)}
         />
       )}
     </div>
   );
 }
 
-function OpeningDetailsDrawer({ opening, onClose, getStatusBadge }) {
+function OpeningDetailsDrawer({ 
+  opening, 
+  onClose, 
+  getStatusBadge, 
+  handleTogglePause, 
+  setEditingOpening, 
+  setDeletingOpeningId 
+}) {
   return (
     <div className="fixed inset-0 z-[120] bg-slate-900/35 backdrop-blur-sm flex justify-end">
       <aside className="h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl flex flex-col text-left animate-slide-in">
@@ -439,9 +595,41 @@ function OpeningDetailsDrawer({ opening, onClose, getStatusBadge }) {
         </div>
 
         {/* Drawer footer */}
-        <div className="p-4 border-t border-slate-200 bg-white flex justify-end gap-2 shrink-0">
-          <button onClick={onClose} className="h-9 px-4.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-black cursor-pointer">
-            Close
+        <div className="p-3 border-t border-slate-200 bg-white flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2">
+            {/* Pause / Resume */}
+            <button
+              onClick={() => handleTogglePause(opening)}
+              className={`h-8 px-3 rounded-xl text-[11px] font-black cursor-pointer transition flex items-center gap-1.5 border ${
+                opening.status === 'Paused'
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500 shadow-sm shadow-emerald-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              {opening.status === 'Paused'
+                ? <><Play size={12} strokeWidth={2.5} />Resume Opening</>
+                : <><Pause size={12} strokeWidth={2.5} />Pause Opening</>}
+            </button>
+            {/* Edit */}
+            <button
+              onClick={() => { setEditingOpening(opening); onClose(); }}
+              className="h-8 px-3 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-black cursor-pointer transition flex items-center gap-1.5"
+            >
+              <Pencil size={12} strokeWidth={2.5} /> Edit Opening
+            </button>
+            {/* Delete */}
+            <button
+              onClick={() => { setDeletingOpeningId(opening.id); onClose(); }}
+              className="h-8 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-black cursor-pointer transition flex items-center gap-1.5"
+            >
+              <Trash2 size={12} strokeWidth={2.5} /> Delete
+            </button>
+          </div>
+          <button
+            onClick={onClose}
+            className="h-8 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-[11px] font-black cursor-pointer transition flex items-center gap-1"
+          >
+            <X size={12} /> Close
           </button>
         </div>
       </aside>
@@ -522,5 +710,140 @@ function Download({ size, className }) {
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" x2="12" y1="15" y2="3" />
     </svg>
+  );
+}
+
+function DeleteOpeningModal({ opening, onCancel, onConfirm }) {
+  if (!opening) return null;
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-rose-100 bg-white p-5 shadow-2xl text-left font-sans">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100">
+            <XCircle size={20} />
+          </span>
+          <div>
+            <h3 className="text-base font-bold text-slate-950">Delete Opening?</h3>
+            <p className="mt-1 text-xs leading-5 text-slate-500 font-semibold">
+              This will permanently remove the apprenticeship opening <span className="font-bold text-slate-700">"{opening.jobTitle}"</span> and cancel any related candidate applications.
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2.5">
+          <button onClick={onCancel} className="h-9 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-black cursor-pointer">
+            Cancel
+          </button>
+          <button onClick={onConfirm} className="h-9 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black cursor-pointer shadow-md shadow-rose-200">
+            Delete Opening
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditOpeningModal({ opening, onCancel, onSave }) {
+  const [draft, setDraft] = useState(null);
+
+  useEffect(() => {
+    if (opening) setDraft({ ...opening });
+  }, [opening]);
+
+  if (!draft) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(draft);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl text-left font-sans overflow-hidden flex flex-col max-h-[90vh]">
+        <h3 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
+          <Briefcase className="text-indigo-600" size={18} /> Edit Apprenticeship Opening
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 pr-1.5 scrollbar-thin">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Job Title</label>
+              <input
+                type="text"
+                required
+                value={draft.jobTitle || ''}
+                onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Monthly Stipend (Rs)</label>
+              <input
+                type="number"
+                required
+                value={draft.stipend || ''}
+                onChange={(e) => setDraft({ ...draft, stipend: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Number of Openings</label>
+              <input
+                type="number"
+                required
+                value={draft.numberOfOpenings || ''}
+                onChange={(e) => setDraft({ ...draft, numberOfOpenings: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Duration (Months)</label>
+              <input
+                type="number"
+                required
+                value={draft.duration || ''}
+                onChange={(e) => setDraft({ ...draft, duration: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Application Deadline</label>
+              <input
+                type="date"
+                required
+                value={draft.applicationDeadline || ''}
+                onChange={(e) => setDraft({ ...draft, applicationDeadline: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-xs font-semibold"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Job Location</label>
+              <input
+                type="text"
+                required
+                value={draft.location || ''}
+                onChange={(e) => setDraft({ ...draft, location: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-xs font-semibold"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Job Summary</label>
+              <textarea
+                value={draft.jobSummary || ''}
+                onChange={(e) => setDraft({ ...draft, jobSummary: e.target.value })}
+                rows={3}
+                className="w-full p-3 rounded-xl border border-slate-200 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-xs font-semibold resize-none"
+              />
+            </div>
+          </div>
+          <div className="pt-3 border-t border-slate-100 flex justify-end gap-2.5">
+            <button type="button" onClick={onCancel} className="h-9 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-black cursor-pointer">
+              Cancel
+            </button>
+            <button type="submit" className="h-9 px-5 bg-[#6D3BFF] hover:bg-[#5C2FFF] text-white rounded-xl text-xs font-black cursor-pointer shadow-md shadow-violet-200">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

@@ -70,6 +70,7 @@ const buildEmployerPayload = (body, adminId) => {
   return payload;
 };
 
+// Light load: returns basic profiles without full documents/locations for speed
 export const listEmployersForApproval = async (req, res) => {
   try {
     if (!isAdminRequest(req)) {
@@ -80,9 +81,7 @@ export const listEmployersForApproval = async (req, res) => {
       where: { deleted_at: null },
       order: [['created_at', 'DESC']],
       include: [
-        { model: db.EmployerUser, attributes: { exclude: ['password_hash'] } },
-        { model: db.EmployerLocation },
-        { model: db.EmployerDocument }
+        { model: db.EmployerUser, attributes: { exclude: ['password_hash'] } }
       ]
     });
 
@@ -90,6 +89,34 @@ export const listEmployersForApproval = async (req, res) => {
   } catch (error) {
     console.error('List employers approval error:', error);
     return res.status(500).json({ error: 'Failed to fetch employer approval list.' });
+  }
+};
+
+// Complete details load: loads locations and documents on-demand for sidebar detail drawer
+export const getEmployerDetails = async (req, res) => {
+  try {
+    if (!isAdminRequest(req)) {
+      return res.status(403).json({ error: 'Admin access is required.' });
+    }
+
+    const { id } = req.params;
+    const employer = await db.Employer.findOne({
+      where: { id, deleted_at: null },
+      include: [
+        { model: db.EmployerUser, attributes: { exclude: ['password_hash'] } },
+        { model: db.EmployerLocation },
+        { model: db.EmployerDocument }
+      ]
+    });
+
+    if (!employer) {
+      return res.status(404).json({ error: 'Employer not found.' });
+    }
+
+    return res.status(200).json(employer);
+  } catch (error) {
+    console.error('Get employer details error:', error);
+    return res.status(500).json({ error: 'Failed to fetch employer details.' });
   }
 };
 
@@ -227,5 +254,46 @@ export const updateEmployerApproval = async (req, res) => {
     await transaction.rollback();
     console.error('Update employer approval error:', error);
     return res.status(500).json({ error: 'Failed to update employer approval.' });
+  }
+};
+
+export const suspendEmployer = async (req, res) => {
+  try {
+    if (!isAdminRequest(req)) {
+      return res.status(403).json({ error: 'Admin access is required.' });
+    }
+    const { id } = req.params;
+    const { suspend, reason } = req.body;
+
+    const employer = await db.Employer.findByPk(id);
+    if (!employer || employer.deleted_at) {
+      return res.status(404).json({ error: 'Employer not found.' });
+    }
+
+    await employer.update({
+      suspension_status: suspend ? 'suspended' : 'active',
+      suspension_reason: suspend ? (reason || 'Suspended by admin') : null
+    });
+
+    await db.EmployerUser.update(
+      { account_status: suspend ? 'suspended' : 'active' },
+      { where: { employer_id: id } }
+    );
+
+    const updatedEmployer = await db.Employer.findByPk(id, {
+      include: [
+        { model: db.EmployerUser, attributes: { exclude: ['password_hash'] } },
+        { model: db.EmployerLocation },
+        { model: db.EmployerDocument }
+      ]
+    });
+
+    return res.status(200).json({
+      message: suspend ? 'Employer suspended successfully.' : 'Employer unsuspended successfully.',
+      employer: updatedEmployer
+    });
+  } catch (error) {
+    console.error('Suspend employer error:', error);
+    return res.status(500).json({ error: 'Failed to update suspension status.' });
   }
 };

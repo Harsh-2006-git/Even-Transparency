@@ -727,7 +727,7 @@ function SuccessScreen({ form, onSectionChange, onCreateAnother }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 const API = import.meta.env.VITE_API_BASE_URL;
 
-export default function EmployerCreateDrive({ user, onSectionChange, editingJob, setEditingJob, showToast }) {
+export default function EmployerCreateDrive({ user, onSectionChange, editingJob, setEditingJob, showToast, isAdmin }) {
   const [step,      setStep]      = useState(1);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSaving,  setIsSaving]  = useState(false);
@@ -775,18 +775,25 @@ export default function EmployerCreateDrive({ user, onSectionChange, editingJob,
       const finalStatus = statusOverride || form.status || 'Draft';
       const payload = { ...form, status: finalStatus };
 
-      const url = editingJob?.id
-        ? `${API}/employer/job-postings/${editingJob.id}`
-        : `${API}/employer/job-postings`;
+      const url = isAdmin
+        ? `${API}/admin/job-postings/${editingJob.id}`
+        : editingJob?.id
+          ? `${API}/employer/job-postings/${editingJob.id}`
+          : `${API}/employer/job-postings`;
 
       const method = editingJob?.id ? 'PUT' : 'POST';
 
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${user.token}`
+      };
+      if (isAdmin) {
+        headers['x-admin-id'] = user.id;
+      }
+
       const res = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`
-        },
+        headers,
         body: JSON.stringify(payload)
       });
 

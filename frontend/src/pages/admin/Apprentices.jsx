@@ -4,7 +4,7 @@ import {
   Search, ChevronDown, Calendar, Star, MoreVertical, X,
   GraduationCap, Briefcase, MapPin, Mail, Phone, Info,
   TrendingUp, Award, ArrowUpRight, CreditCard, ChevronLeft, ChevronRight,
-  Download, FileSpreadsheet, Building2, Plus
+  Download, FileSpreadsheet, Building2, Plus, ShieldAlert
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
@@ -149,6 +149,7 @@ export default function AdminApprentices({ adminUser, showToast }) {
   const [loading, setLoading] = useState(false);
   const [selectedOpeningId, setSelectedOpeningId] = useState('all');
   const [selectedApprentice, setSelectedApprentice] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState('Overview');
 
   // KPI states
@@ -190,48 +191,64 @@ export default function AdminApprentices({ adminUser, showToast }) {
       if (data && data.length > 0) {
         const dbApprentices = data.map(c => {
           const edu = c.Candidate?.CandidateEducations?.find(e => e.is_highest) || c.Candidate?.CandidateEducations?.[0];
-          const qual = edu ? `${edu.qualification_level} ${edu.specialization ? `(${edu.specialization})` : edu.course_name ? `(${edu.course_name})` : ''}`.trim() : '12th Pass';
-          
+          const qual = edu ? `${edu.qualification_level} ${edu.specialization ? `(${edu.specialization})` : edu.course_name ? `(${edu.course_name})` : ''}`.trim() : '—';
+
           const stipend = parseFloat(c.stipend_amount) || 12000;
           const statusVal = ['active', 'signed'].includes(String(c.contract_status).toLowerCase()) ? 'Active' : 'Inactive';
+
+          // Authentic payment history
+          const paymentsList = c.EmployerStipendPayments || [];
+          const lastPayment = paymentsList.length > 0
+            ? [...paymentsList].sort((a, b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at))[0]
+            : null;
+
+          const lastPaidText = lastPayment
+            ? `${lastPayment.payment_month || ''} (${new Date(lastPayment.payment_date || lastPayment.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })})`
+            : 'Never processed';
+
+          const payoutStatus = lastPayment ? (lastPayment.payment_status || 'Pending') : 'Pending';
+          const stipendStatusVal = paymentsList.some(p => String(p.payment_status).toLowerCase() === 'paid') ? 'Paid' : 'Pending';
+
+          // Authentic bank details
+          const bankAcc = c.Candidate?.CandidateBankAccounts?.[0];
+          const bankInfoText = bankAcc
+            ? `${bankAcc.bank_name} (**** ${bankAcc.account_number_last_4 || ''})`
+            : 'Not registered';
+          const bankVerificationText = bankAcc?.verification_status || 'Pending';
 
           return {
             id: c.contract_number || `APR-${c.id.slice(0, 4).toUpperCase()}`,
             name: c.Candidate?.full_name || 'Anonymous Apprentice',
             email: c.Candidate?.email || '',
+            mobileNumber: c.Candidate?.mobile_number || '',
             avatar: (c.Candidate?.full_name || 'AA').split(' ').map(n => n[0]).join('').toUpperCase(),
             opening: c.EmployerJobPosting?.job_title || c.trade_name || 'Apprentice Trainee',
             companyName: c.Employer?.company_name || 'Even Cargo Partner',
             qualification: qual,
             joiningDate: c.contract_start_date ? new Date(c.contract_start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending',
-            attendance: '95%', // standard default attendance
-            performance: '4.6/5', // standard default rating
             contract: ['active', 'signed'].includes(String(c.contract_status).toLowerCase()) ? 'Active' : 'Pending',
-            stipendStatus: ['active', 'signed'].includes(String(c.contract_status).toLowerCase()) ? 'Paid' : 'Pending',
+            stipendStatus: stipendStatusVal,
             status: statusVal,
-            dob: c.Candidate?.date_of_birth ? new Date(c.Candidate.date_of_birth).toLocaleDateString('en-IN') : 'N/A',
-            gender: c.Candidate?.gender || 'N/A',
+            dob: c.Candidate?.date_of_birth ? new Date(c.Candidate.date_of_birth).toLocaleDateString('en-IN') : '—',
+            gender: c.Candidate?.gender || '—',
             department: c.EmployerJobPosting?.department || 'Operations',
-            skills: 'NAPS Apprentice',
-            address: 'N/A',
+            skills: c.Candidate?.skills || 'Apprentice',
+            address: '—',
+            supervisorName: c.supervisor_name || '',
+            supervisorContact: c.supervisor_contact || '',
             contractDetails: {
-              contractNumber: c.contract_number || 'N/A',
-              startDate: c.contract_start_date ? new Date(c.contract_start_date).toLocaleDateString('en-IN') : 'N/A',
-              endDate: c.contract_end_date ? new Date(c.contract_end_date).toLocaleDateString('en-IN') : 'N/A',
+              contractNumber: c.contract_number || '—',
+              startDate: c.contract_start_date ? new Date(c.contract_start_date).toLocaleDateString('en-IN') : '—',
+              endDate: c.contract_end_date ? new Date(c.contract_end_date).toLocaleDateString('en-IN') : '—',
               duration: '12 Months',
               contractStatus: c.contract_status || 'Draft'
             },
-            performanceDetails: {
-              attendance: '95%',
-              rating: '4.6/5',
-              feedback: 'Consistent and positive attitude.',
-              progress: 80
-            },
             stipendDetails: {
               monthlyStipend: `₹ ${stipend.toLocaleString('en-IN')}`,
-              lastPaid: '—',
-              paymentStatus: ['active', 'signed'].includes(String(c.contract_status).toLowerCase()) ? 'Paid' : 'Pending',
-              bankVerification: 'Verified'
+              lastPaid: lastPaidText,
+              paymentStatus: payoutStatus,
+              bankInfo: bankInfoText,
+              bankVerification: bankVerificationText
             },
             documents: [
               { name: 'Contract Agreement', status: c.contract_status === 'Signed' || c.contract_status === 'active' ? 'Signed' : 'Pending' }
@@ -242,15 +259,13 @@ export default function AdminApprentices({ adminUser, showToast }) {
         setApprentices(dbApprentices);
         calculateKpis(dbApprentices);
       } else {
-        // Use Mock data as safe fallback if database is empty so design looks perfect
-        setApprentices(MOCK_APPRENTICES);
-        calculateKpis(MOCK_APPRENTICES);
+        setApprentices([]);
+        calculateKpis([]);
       }
     } catch (err) {
       console.error('fetchApprentices error:', err);
-      // fallback to mock data on error so application functions cleanly
-      setApprentices(MOCK_APPRENTICES);
-      calculateKpis(MOCK_APPRENTICES);
+      setApprentices([]);
+      calculateKpis([]);
     } finally {
       setLoading(false);
     }
@@ -261,14 +276,14 @@ export default function AdminApprentices({ adminUser, showToast }) {
     const active = list.filter(a => a.status === 'Active').length;
     const pending = list.filter(a => a.contract === 'Pending').length;
     const activeContracts = list.filter(a => a.contract === 'Active').length;
-    
+
     // Average stipend calculation
     const stipendSum = list.reduce((sum, item) => {
       const amt = parseInt(item.stipendDetails?.monthlyStipend?.replace(/[^0-9]/g, '')) || 12000;
       return sum + amt;
     }, 0);
     const avg = total > 0 ? Math.round(stipendSum / total) : 0;
-    
+
     // Active companies count
     const companiesSet = new Set(list.map(a => a.companyName).filter(Boolean));
 
@@ -347,25 +362,9 @@ export default function AdminApprentices({ adminUser, showToast }) {
       // 6. General Status filter
       if (filterStatus !== 'All' && app.status !== filterStatus) return false;
 
-      // 7. Attendance threshold filter
-      if (filterAttendance !== 'All') {
-        const percentage = parseInt(app.attendance);
-        if (filterAttendance === 'High (95%+)' && percentage < 95) return false;
-        if (filterAttendance === 'Medium (90%-94%)' && (percentage < 90 || percentage >= 95)) return false;
-        if (filterAttendance === 'Low (<90%)' && percentage >= 90) return false;
-      }
-
-      // 8. Performance threshold filter
-      if (filterPerformance !== 'All') {
-        const rating = parseFloat(app.performance);
-        if (filterPerformance === 'High (4.5+)' && rating < 4.5) return false;
-        if (filterPerformance === 'Medium (4.0-4.4)' && (rating < 4.0 || rating >= 4.5)) return false;
-        if (filterPerformance === 'Low (<4.0)' && rating >= 4.0) return false;
-      }
-
       return true;
     });
-  }, [apprentices, searchQuery, selectedOpeningId, filterCompany, filterDept, filterContract, filterStatus, filterAttendance, filterPerformance, OPENINGS]);
+  }, [apprentices, searchQuery, selectedOpeningId, filterCompany, filterDept, filterContract, filterStatus, OPENINGS]);
 
   // Paginated selection
   const paginatedApprentices = useMemo(() => {
@@ -416,18 +415,19 @@ export default function AdminApprentices({ adminUser, showToast }) {
 
   const handleOpenDrawer = (apprentice) => {
     setSelectedApprentice(apprentice);
+    setDrawerOpen(true);
     setDrawerTab('Overview');
   };
 
   return (
     <div className="space-y-6 text-left selection:bg-indigo-100 selection:text-indigo-950 pb-12 w-full max-w-full overflow-hidden">
-      
+
       {/* Main Layout Wrapper */}
       <div className="flex w-full items-start relative gap-6 overflow-hidden">
-        
-        {/* Left main area (shrinks when drawer is open) */}
-        <div className={`flex-1 transition-all duration-300 min-w-0 space-y-6 ${selectedApprentice ? 'max-w-[calc(100%-410px)] xl:max-w-[calc(100%-440px)]' : 'w-full'}`}>
-          
+
+        {/* Left main area (always full width now) */}
+        <div className="flex-1 min-w-0 space-y-6 w-full">
+
           {/* Page Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/60 pb-5">
             <div>
@@ -482,7 +482,7 @@ export default function AdminApprentices({ adminUser, showToast }) {
           {/* Filters Bar */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-4 w-full">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
-              
+
               {/* Search input */}
               <div className="relative lg:col-span-3">
                 <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -499,8 +499,8 @@ export default function AdminApprentices({ adminUser, showToast }) {
               </div>
 
               {/* Filters dropdown list */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 lg:col-span-9 w-full select-none">
-                
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 lg:col-span-9 w-full select-none">
+
                 {/* Employer/Company Filter */}
                 <div className="space-y-0.5 text-left">
                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-wider block pl-0.5">Company</label>
@@ -511,7 +511,7 @@ export default function AdminApprentices({ adminUser, showToast }) {
                         setFilterCompany(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-750 outline-none focus:border-indigo-600 cursor-pointer appearance-none"
+                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-750 outline-none focus:border-indigo-650 cursor-pointer appearance-none"
                     >
                       <option value="All">All Partners</option>
                       {COMPANIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
@@ -530,7 +530,7 @@ export default function AdminApprentices({ adminUser, showToast }) {
                         setSelectedOpeningId(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-750 outline-none focus:border-indigo-650 cursor-pointer appearance-none"
+                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-755 outline-none focus:border-indigo-650 cursor-pointer appearance-none"
                     >
                       {OPENINGS.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                     </select>
@@ -548,7 +548,7 @@ export default function AdminApprentices({ adminUser, showToast }) {
                         setFilterDept(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-750 outline-none focus:border-indigo-600 cursor-pointer appearance-none"
+                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-750 outline-none focus:border-indigo-650 cursor-pointer appearance-none"
                     >
                       <option value="All">All Depts</option>
                       <option value="Operations">Operations</option>
@@ -569,7 +569,7 @@ export default function AdminApprentices({ adminUser, showToast }) {
                         setFilterContract(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-755 outline-none focus:border-indigo-600 cursor-pointer appearance-none"
+                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-755 outline-none focus:border-indigo-650 cursor-pointer appearance-none"
                     >
                       <option value="All">All Contracts</option>
                       <option value="Active">Active</option>
@@ -590,54 +590,12 @@ export default function AdminApprentices({ adminUser, showToast }) {
                         setFilterStatus(e.target.value);
                         setCurrentPage(1);
                       }}
-                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-755 outline-none focus:border-indigo-600 cursor-pointer appearance-none"
+                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-755 outline-none focus:border-indigo-650 cursor-pointer appearance-none"
                     >
                       <option value="All">All Status</option>
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                       <option value="Suspended">Suspended</option>
-                    </select>
-                    <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Attendance threshold */}
-                <div className="space-y-0.5 text-left">
-                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-wider block pl-0.5">Attendance</label>
-                  <div className="relative">
-                    <select
-                      value={filterAttendance}
-                      onChange={(e) => {
-                        setFilterAttendance(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-755 outline-none focus:border-indigo-600 cursor-pointer appearance-none"
-                    >
-                      <option value="All">All Rate</option>
-                      <option value="High (95%+)">&ge; 95%</option>
-                      <option value="Medium (90%-94%)">90% - 94%</option>
-                      <option value="Low (<90%)">&lt; 90%</option>
-                    </select>
-                    <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Performance rating filter */}
-                <div className="space-y-0.5 text-left">
-                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-wider block pl-0.5">Rating</label>
-                  <div className="relative">
-                    <select
-                      value={filterPerformance}
-                      onChange={(e) => {
-                        setFilterPerformance(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full h-8.5 rounded-lg border border-slate-250 bg-white px-2 pr-6 text-[9.5px] font-bold text-slate-755 outline-none focus:border-indigo-650 cursor-pointer appearance-none"
-                    >
-                      <option value="All">All Rating</option>
-                      <option value="High (4.5+)">&ge; 4.5</option>
-                      <option value="Medium (4.0-4.4)">4.0 - 4.4</option>
-                      <option value="Low (<4.0)">&lt; 4.0</option>
                     </select>
                     <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
@@ -699,16 +657,15 @@ export default function AdminApprentices({ adminUser, showToast }) {
           ) : (
             <div className="bg-white border border-slate-200/85 rounded-2xl shadow-xs overflow-hidden w-full relative">
               <div className="w-full overflow-x-auto scrollbar-thin">
-                <table className="w-full text-left border-collapse min-w-[1000px] table-fixed">
+                <table className="w-full text-left border-collapse min-w-[800px] table-fixed">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-wider select-none">
-                      <th className="py-4 px-4 w-[24%]">Apprentice</th>
-                      <th className="py-4 px-4 w-[22%]">Company / Department</th>
-                      <th className="py-4 px-4 w-[22%]">Apprenticeship Opening</th>
-                      <th className="py-4 px-4 w-[11%]">Joining Date</th>
-                      <th className="py-4 px-4 w-[11%]">Attendance / Performance</th>
-                      <th className="py-4 px-4 w-[5%] text-center">Contract</th>
-                      <th className="py-4 px-4 w-[5%] text-center">Stipend</th>
+                      <th className="py-4 px-4 w-[28%]">Apprentice & Sponsor</th>
+                      <th className="py-4 px-4 w-[28%]">Apprenticeship Opening</th>
+                      <th className="py-4 px-4 w-[16%]">Joining & Stipend</th>
+                      <th className="py-4 px-4 w-[11%] text-center">Contract</th>
+                      <th className="py-4 px-4 w-[11%] text-center">Stipend</th>
+                      <th className="py-4 px-4 w-[6%] text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -720,51 +677,42 @@ export default function AdminApprentices({ adminUser, showToast }) {
                           className={`hover:bg-slate-50/30 transition-colors cursor-pointer ${isFocused ? 'bg-indigo-50/20' : ''}`}
                           onClick={() => handleOpenDrawer(app)}
                         >
-                          {/* Apprentice info card */}
+                          {/* Apprentice & Sponsor */}
                           <td className="py-3.5 px-4 font-semibold truncate">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full font-black text-[10px] flex items-center justify-center shrink-0 border select-none ${isFocused ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-50 text-indigo-650 border-indigo-150'}`}>
                                 {app.avatar}
                               </div>
                               <div className="min-w-0 truncate">
-                                <p className="text-xs font-black text-slate-800 leading-none hover:underline cursor-pointer truncate">
+                                <p className="text-xs font-black text-slate-800 leading-none truncate">
                                   {app.name}
                                 </p>
-                                <p className="text-[9px] text-slate-400 font-bold mt-1.5 select-all truncate">
-                                  {app.email}
+                                <p className="text-[9px] text-slate-400 font-bold mt-1.5 truncate">
+                                  {app.email} {app.mobileNumber && `• ${app.mobileNumber}`}
                                 </p>
+                                <div className="text-[10px] text-slate-550 font-semibold mt-1 flex items-center gap-1">
+                                  <Building2 size={11} className="text-slate-400 shrink-0" />
+                                  <span className="truncate">{app.companyName}</span>
+                                </div>
                               </div>
                             </div>
                           </td>
 
-                          {/* Company / Department */}
+                          {/* Opening & ID */}
                           <td className="py-3.5 px-4 font-semibold truncate">
-                            <div className="text-xs font-black text-slate-800 flex items-center gap-1.5 truncate">
-                              <Building2 size={12} className="text-slate-400 shrink-0" />
-                              {app.companyName}
+                            <div className="text-xs font-black text-slate-800 truncate">
+                              {app.opening}
                             </div>
-                            <div className="text-[10px] text-slate-450 font-bold mt-1 truncate">{app.department}</div>
+                            <div className="text-[9.5px] text-slate-450 font-bold mt-1.5 truncate">{app.department}</div>
+                            <div className="text-[9px] font-mono font-bold text-indigo-700 mt-1">{app.id}</div>
                           </td>
 
-                          {/* Opening / ID */}
-                          <td className="py-3.5 px-4 font-semibold truncate">
-                            <div className="text-xs font-mono font-bold text-indigo-700">{app.id}</div>
-                            <div className="text-[10px] text-slate-450 font-bold mt-1 truncate">{app.opening}</div>
-                          </td>
-
-                          {/* Joining Date */}
+                          {/* Joining & Stipend */}
                           <td className="py-3.5 px-4 text-xs font-semibold text-slate-500 whitespace-nowrap">
-                            {app.joiningDate}
-                          </td>
-
-                          {/* Attendance & Rating */}
-                          <td className="py-3.5 px-4 font-semibold">
-                            <div className="text-xs font-black text-slate-800">
-                              {app.attendance}
-                            </div>
-                            <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-slate-450">
-                              <span>{app.performance}</span>
-                              <Star size={9} className="text-amber-500 fill-amber-500 shrink-0" />
+                            <div>{app.joiningDate}</div>
+                            <div className="text-[10px] font-extrabold text-slate-800 mt-1.5 flex items-center gap-1">
+                              <CreditCard size={11} className="text-[#6D3BFF]" />
+                              <span>{app.stipendDetails?.monthlyStipend || '—'}</span>
                             </div>
                           </td>
 
@@ -776,6 +724,20 @@ export default function AdminApprentices({ adminUser, showToast }) {
                           {/* Stipend Status badge */}
                           <td className="py-3.5 px-4 text-center">
                             {getStipendStatusBadge(app.stipendStatus)}
+                          </td>
+
+                          {/* Actions button */}
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDrawer(app);
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black transition cursor-pointer active:scale-95"
+                            >
+                              See More
+                            </button>
                           </td>
                         </tr>
                       );
@@ -827,123 +789,122 @@ export default function AdminApprentices({ adminUser, showToast }) {
           )}
         </div>
 
-        {/* ── Slide-over Detail Drawer ── */}
-        {selectedApprentice && (
-          <div className="w-[380px] xl:w-[410px] shrink-0 border border-slate-200 bg-white rounded-2xl shadow-xl flex flex-col h-[calc(100vh-140px)] sticky top-6 animate-slide-left z-20">
-            
-            {/* Header info */}
-            <div className="p-4 border-b border-slate-100 flex items-start justify-between bg-slate-50/50 rounded-t-2xl">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full font-black text-xs bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs border border-indigo-400">
-                  {selectedApprentice.avatar}
+        {/* ── Slide-over Overlay Detail Drawer (Slide-in right overlay sidebar) ── */}
+        {drawerOpen && (
+          <div
+            className="fixed inset-0 bg-slate-950/45 backdrop-blur-[4px] z-[90] transition-opacity duration-300 animate-fade-in"
+            onClick={() => {
+              setSelectedApprentice(null);
+              setDrawerOpen(false);
+            }}
+          />
+        )}
+
+        <div className={`fixed top-0 right-0 h-screen w-full sm:w-[380px] md:w-[400px] bg-slate-50 shadow-2xl border-l border-slate-200 z-[100] transition-transform duration-300 ease-in-out transform overflow-hidden ${drawerOpen && selectedApprentice ? 'translate-x-0' : 'translate-x-full'
+          }`}>
+          {selectedApprentice && (
+            <div className="flex flex-col h-full bg-slate-50">
+
+              {/* Header info */}
+              <div className="p-4 border-b border-slate-100 flex items-start justify-between bg-slate-50/50 rounded-t-2xl">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full font-black text-xs bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs border border-indigo-400">
+                    {selectedApprentice.avatar}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xs font-black text-slate-900 leading-tight truncate">{selectedApprentice.name}</h3>
+                    <p className="text-[10px] font-bold text-slate-500 mt-1 truncate">{selectedApprentice.companyName}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h3 className="text-xs font-black text-slate-900 leading-tight truncate">{selectedApprentice.name}</h3>
-                  <p className="text-[10px] font-bold text-slate-500 mt-1 truncate">{selectedApprentice.companyName}</p>
-                </div>
+                <button
+                  onClick={() => {
+                    setSelectedApprentice(null);
+                    setDrawerOpen(false);
+                  }}
+                  className="w-7 h-7 rounded-lg hover:bg-slate-200/60 flex items-center justify-center text-slate-400 hover:text-slate-650 transition cursor-pointer shrink-0"
+                >
+                  <X size={14} strokeWidth={2.5} />
+                </button>
               </div>
-              <button
-                onClick={() => setSelectedApprentice(null)}
-                className="w-7 h-7 rounded-lg hover:bg-slate-200/60 flex items-center justify-center text-slate-400 hover:text-slate-600 transition cursor-pointer shrink-0"
-              >
-                <X size={14} strokeWidth={2.5} />
-              </button>
-            </div>
 
-            {/* Quick action bar */}
-            <div className="px-4 py-2 border-b border-slate-100 bg-indigo-50/20 flex items-center justify-between text-[10px] font-bold text-slate-550 select-none">
-              <span>Status: {getApprenticeStatusBadge(selectedApprentice.status)}</span>
-              <button
-                onClick={() => showToast?.(`Flagging/messaging apprentice ${selectedApprentice.name}...`, 'info')}
-                className="text-[#6D3BFF] hover:underline flex items-center gap-0.5"
-              >
-                Send Message <ArrowUpRight size={10} />
-              </button>
-            </div>
+              {/* Quick action bar */}
+              <div className="px-4 py-2 border-b border-slate-100 bg-indigo-50/20 flex items-center justify-between text-[10px] font-bold text-slate-550 select-none">
+                <span>Status: {getApprenticeStatusBadge(selectedApprentice.status)}</span>
+                <button
+                  onClick={() => showToast?.(`Flagging/messaging apprentice ${selectedApprentice.name}...`, 'info')}
+                  className="text-[#6D3BFF] hover:underline flex items-center gap-0.5"
+                >
+                  Send Message <ArrowUpRight size={10} />
+                </button>
+              </div>
 
-            {/* Navigation tabs inside drawer */}
-            <div className="px-3 border-b border-slate-100 flex items-center justify-between select-none">
-              {['Overview', 'Contract', 'Performance', 'Stipend', 'Documents'].map((tab) => {
-                const isActive = drawerTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setDrawerTab(tab)}
-                    className={`py-2 px-1 border-b-2 font-black text-[9px] tracking-wide uppercase transition-all cursor-pointer ${isActive ? 'border-[#6D3BFF] text-[#6D3BFF]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                  >
-                    {tab}
-                  </button>
-                );
-              })}
-            </div>
+              {/* Scrollable Details panel containing all info stacked */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6 text-xs font-semibold text-slate-650 scrollbar-thin">
 
-            {/* Scrollable Tab panel */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-semibold text-slate-650 scrollbar-thin">
-              
-              {drawerTab === 'Overview' && (
-                <div className="space-y-4">
-                  {/* Basic Details */}
-                  <div className="space-y-2 border-b border-slate-100 pb-3">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
-                      <GraduationCap size={13} /> Personal Details
-                    </h4>
-                    <div className="grid grid-cols-2 gap-y-2.5 gap-x-2 text-[10px]">
-                      <div>
-                        <span className="text-[9px] text-slate-400 block font-medium">Email Address</span>
-                        <span className="text-slate-800 break-all select-all font-bold">{selectedApprentice.email}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 block font-medium">Department</span>
-                        <span className="text-slate-850 font-bold">{selectedApprentice.department}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 block font-medium">Date of Birth</span>
-                        <span className="text-slate-800 font-bold">{selectedApprentice.dob}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 block font-medium">Gender</span>
-                        <span className="text-slate-800 font-bold">{selectedApprentice.gender}</span>
-                      </div>
+                {/* Basic Personal Details */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <GraduationCap size={13} className="text-indigo-500" /> Personal Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[10px]">
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Email Address</span>
+                      <span className="text-slate-800 break-all select-all font-bold">{selectedApprentice.email}</span>
                     </div>
-                  </div>
-
-                  {/* Skills/Qualifications */}
-                  <div className="space-y-2 border-b border-slate-100 pb-3">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
-                      <Award size={13} /> Qualification & Skills
-                    </h4>
-                    <div className="text-[10px] space-y-2">
-                      <div>
-                        <span className="text-[9px] text-slate-400 block font-medium">Qualification</span>
-                        <p className="text-slate-800 font-bold leading-relaxed">{selectedApprentice.qualification}</p>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-slate-400 block font-medium">Key Skills</span>
-                        <p className="text-slate-800 font-bold leading-relaxed">{selectedApprentice.skills}</p>
-                      </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Mobile Number</span>
+                      <span className="text-slate-800 font-bold">{selectedApprentice.mobileNumber || 'N/A'}</span>
                     </div>
-                  </div>
-
-                  {/* Address */}
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
-                      <MapPin size={13} /> Address Details
-                    </h4>
-                    <div className="text-[10px]">
-                      <span className="text-[9px] text-slate-400 block font-medium">Permanent Address</span>
-                      <p className="text-slate-800 leading-relaxed font-bold mt-0.5">{selectedApprentice.address}</p>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Department</span>
+                      <span className="text-slate-850 font-bold">{selectedApprentice.department}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Date of Birth</span>
+                      <span className="text-slate-800 font-bold">{selectedApprentice.dob}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-[9px] text-slate-400 block font-medium">Gender</span>
+                      <span className="text-slate-800 font-bold">{selectedApprentice.gender}</span>
                     </div>
                   </div>
                 </div>
-              )}
 
-              {drawerTab === 'Contract' && selectedApprentice.contractDetails && (
-                <div className="space-y-4">
-                  <div className="space-y-2 border-b border-slate-100 pb-3">
+                {/* Skills/Qualifications */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <Award size={13} className="text-indigo-500" /> Qualification & Skills
+                  </h4>
+                  <div className="text-[10px] space-y-2.5">
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Qualification</span>
+                      <p className="text-slate-800 font-bold leading-relaxed">{selectedApprentice.qualification}</p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 block font-medium">Key Skills</span>
+                      <p className="text-slate-800 font-bold leading-relaxed">{selectedApprentice.skills}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <MapPin size={13} className="text-indigo-500" /> Address Details
+                  </h4>
+                  <div className="text-[10px]">
+                    <span className="text-[9px] text-slate-400 block font-medium">Permanent Address</span>
+                    <p className="text-slate-850 leading-relaxed font-bold mt-1">{selectedApprentice.address}</p>
+                  </div>
+                </div>
+
+                {/* Apprenticeship Contract */}
+                {selectedApprentice.contractDetails && (
+                  <div className="space-y-3 border-b border-slate-100 pb-4">
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
-                      <FileText size={13} /> Apprenticeship Contract
+                      <FileText size={13} className="text-indigo-500" /> Apprenticeship Contract
                     </h4>
-                    <div className="grid grid-cols-2 gap-y-2.5 gap-x-2 text-[10px]">
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[10px]">
                       <div>
                         <span className="text-[9px] text-slate-400 block font-medium">Contract Number</span>
                         <span className="text-slate-800 font-mono select-all font-bold">{selectedApprentice.contractDetails.contractNumber}</span>
@@ -954,124 +915,113 @@ export default function AdminApprentices({ adminUser, showToast }) {
                       </div>
                       <div>
                         <span className="text-[9px] text-slate-400 block font-medium">Start Date</span>
-                        <span className="text-slate-855 font-bold">{selectedApprentice.contractDetails.startDate}</span>
+                        <span className="text-slate-800 font-bold">{selectedApprentice.contractDetails.startDate}</span>
                       </div>
                       <div>
                         <span className="text-[9px] text-slate-400 block font-medium">End Date</span>
-                        <span className="text-slate-855 font-bold">{selectedApprentice.contractDetails.endDate}</span>
+                        <span className="text-slate-800 font-bold">{selectedApprentice.contractDetails.endDate}</span>
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Supervisor details */}
-                  <div className="space-y-2 text-[10px]">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
-                      <UserCheck size={13} /> Designated Supervisor
-                    </h4>
-                    <div className="grid grid-cols-2 gap-y-2">
+                {/* Supervisor details */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <UserCheck size={13} className="text-indigo-500" /> Designated Supervisor
+                  </h4>
+                  {selectedApprentice.supervisorName ? (
+                    <div className="grid grid-cols-2 gap-y-3 text-[10px]">
                       <div>
                         <span className="text-[9px] text-slate-400 block font-medium">Name</span>
-                        <span className="text-slate-800 font-bold">{selectedApprentice.supervisor_name || 'Raman Singh'}</span>
+                        <span className="text-slate-800 font-bold">{selectedApprentice.supervisorName}</span>
                       </div>
                       <div>
                         <span className="text-[9px] text-slate-400 block font-medium">Contact Number</span>
-                        <span className="text-slate-800 font-bold">{selectedApprentice.supervisor_contact || '+91 98765 43210'}</span>
+                        <span className="text-slate-800 font-bold">{selectedApprentice.supervisorContact || '—'}</span>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 font-bold italic pl-0.5">No supervisor designated yet.</p>
+                  )}
                 </div>
-              )}
 
-              {drawerTab === 'Performance' && selectedApprentice.performanceDetails && (
-                <div className="space-y-4">
-                  {/* Stats Row */}
-                  <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-                    <div className="bg-slate-50 border border-slate-200/60 p-2.5 rounded-xl">
-                      <span className="text-[8px] text-slate-450 block font-black uppercase">Attendance</span>
-                      <strong className="text-sm font-black text-slate-850 mt-1 block">{selectedApprentice.performanceDetails.attendance}</strong>
+                {/* Stipend Details */}
+                {selectedApprentice.stipendDetails && (
+                  <div className="space-y-3 border-b border-slate-100 pb-4">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <CreditCard size={13} className="text-indigo-500" /> Stipend Details
+                    </h4>
+                    <div className="bg-indigo-50/40 border border-indigo-100 p-3 rounded-xl text-left">
+                      <span className="text-[9px] text-indigo-700 font-black uppercase tracking-wider block">Monthly Stipend</span>
+                      <strong className="text-base font-black text-indigo-650 block mt-0.5">{selectedApprentice.stipendDetails.monthlyStipend}</strong>
+                      <div className="flex items-center gap-4 mt-2 text-[9px] font-bold text-slate-500 border-t border-slate-150/40 pt-1.5">
+                        <span>Last Paid: <strong className="text-slate-800">{selectedApprentice.stipendDetails.lastPaid}</strong></span>
+                      </div>
                     </div>
-                    <div className="bg-slate-50 border border-slate-200/60 p-2.5 rounded-xl">
-                      <span className="text-[8px] text-slate-455 block font-black uppercase">Rating</span>
-                      <strong className="text-sm font-black text-indigo-650 mt-1 block flex items-center justify-center gap-0.5">
-                        {selectedApprentice.performanceDetails.rating} <Star size={11} className="fill-amber-500 text-amber-500" />
-                      </strong>
+                    <div className="flex justify-between items-center py-1 text-[10px] border-b border-slate-100/50 pb-1.5">
+                      <span className="text-slate-550 font-medium">Payment Status</span>
+                      {getStipendStatusBadge(selectedApprentice.stipendDetails.paymentStatus)}
                     </div>
-                    <div className="bg-slate-50 border border-slate-200/60 p-2.5 rounded-xl">
-                      <span className="text-[8px] text-slate-455 block font-black uppercase">Progress</span>
-                      <strong className="text-sm font-black text-emerald-650 mt-1 block">{selectedApprentice.performanceDetails.progress}%</strong>
+                    <div className="flex justify-between items-center py-1 text-[10px] border-b border-slate-100/50 pb-1.5">
+                      <span className="text-slate-550 font-medium">Bank Account</span>
+                      <strong className="text-slate-800 text-[9.5px]">{selectedApprentice.stipendDetails.bankInfo}</strong>
+                    </div>
+                    <div className="flex justify-between items-center py-1 text-[10px]">
+                      <span className="text-slate-550 font-medium">Verification Status</span>
+                      <span className={`px-2 py-0.5 border text-[9px] font-black rounded-md ${selectedApprentice.stipendDetails.bankVerification === 'Verified' || selectedApprentice.stipendDetails.bankVerification === 'active'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                        {selectedApprentice.stipendDetails.bankVerification || 'Pending'}
+                      </span>
                     </div>
                   </div>
+                )}
 
-                  {/* Feedback comment */}
-                  <div className="space-y-2 text-[10px]">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                      <Info size={13} /> Performance Remarks
-                    </h4>
-                    <p className="text-slate-750 font-bold bg-slate-50 p-3 rounded-xl border border-slate-150 leading-relaxed italic">
-                      "{selectedApprentice.performanceDetails.feedback}"
+                {/* Performance Evaluation Log */}
+                <div className="space-y-2 border-b border-slate-100 pb-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                    <ShieldAlert size={13} className="text-indigo-500" /> Performance Status
+                  </h4>
+                  <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl text-center">
+                    <ShieldAlert size={16} className="text-amber-500 mx-auto mb-1.5" />
+                    <h5 className="text-[9px] font-black text-slate-800 uppercase tracking-wider">No Reviews Registered</h5>
+                    <p className="text-[9.5px] text-slate-500 leading-relaxed font-semibold mt-1">
+                      Evaluations will populate here once submitted by the employer.
                     </p>
                   </div>
                 </div>
-              )}
 
-              {drawerTab === 'Stipend' && selectedApprentice.stipendDetails && (
-                <div className="space-y-4">
-                  <div className="bg-indigo-50/30 border border-indigo-150 p-4 rounded-xl text-left">
-                    <span className="text-[9px] text-indigo-650 font-black uppercase tracking-wider block">Monthly Stipend</span>
-                    <strong className="text-xl font-black text-indigo-600 block mt-1">{selectedApprentice.stipendDetails.monthlyStipend}</strong>
-                    <div className="flex items-center gap-4 mt-3 text-[10px] font-bold text-slate-550 border-t border-slate-150/50 pt-2.5">
-                      <span>Verification: <strong className="text-emerald-700">{selectedApprentice.stipendDetails.bankVerification}</strong></span>
-                      <span>Last Paid: <strong className="text-slate-800">{selectedApprentice.stipendDetails.lastPaid}</strong></span>
-                    </div>
-                  </div>
-
-                  {/* Stipend Details summary */}
-                  <div className="space-y-2.5 text-[10px]">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                      <CreditCard size={13} /> Stipend Details
+                {/* Apprentice Documents Checklist */}
+                {selectedApprentice.documents && (
+                  <div className="space-y-3.5 text-[10px]">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                      <ShieldCheck size={13} className="text-indigo-500" /> Documents Verification
                     </h4>
-                    <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
-                      <span className="text-slate-455 font-medium">Monthly Amount</span>
-                      <strong className="text-slate-800">{selectedApprentice.stipendDetails.monthlyStipend}</strong>
-                    </div>
-                    <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
-                      <span className="text-slate-455 font-medium">Payment Status</span>
-                      {getStipendStatusBadge(selectedApprentice.stipendDetails.paymentStatus)}
-                    </div>
-                    <div className="flex justify-between items-center py-1.5">
-                      <span className="text-slate-455 font-medium">Bank Details Status</span>
-                      <strong className="text-emerald-700">Verified & Approved</strong>
+                    <div className="space-y-2">
+                      {selectedApprentice.documents.map((doc, index) => (
+                        <div key={index} className="flex items-center justify-between border border-slate-200/80 p-2.5 rounded-xl hover:bg-slate-50/50 transition">
+                          <div className="flex items-center gap-2">
+                            <FileText size={14} className="text-indigo-650 shrink-0" />
+                            <div>
+                              <strong className="text-slate-800 text-[10px] block">{doc.name}</strong>
+                              <span className="text-[8.5px] text-slate-400 block">PDF Document</span>
+                            </div>
+                          </div>
+                          <span className={`px-2 py-0.5 border text-[9px] font-black rounded-md ${doc.status === 'Verified' || doc.status === 'Signed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                            {doc.status}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {drawerTab === 'Documents' && selectedApprentice.documents && (
-                <div className="space-y-3.5 text-[10px]">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-2">
-                    <ShieldCheck size={13} /> Apprentice Documents
-                  </h4>
-                  {selectedApprentice.documents.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between border border-slate-200/80 p-3 rounded-xl hover:bg-slate-50/50 transition">
-                      <div className="flex items-center gap-2">
-                        <FileText size={15} className="text-indigo-650 shrink-0" />
-                        <div>
-                          <strong className="text-slate-800 text-[10.5px] block">{doc.name}</strong>
-                          <span className="text-[8.5px] text-slate-400 mt-0.5 block">Format: PDF</span>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-0.5 border text-[9px] font-black rounded-md ${doc.status === 'Verified' || doc.status === 'Signed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                        {doc.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
+              </div>
             </div>
-          </div>
-        )}
-
+          )}
+        </div>
       </div>
     </div>
   );

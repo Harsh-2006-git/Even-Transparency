@@ -27,15 +27,25 @@ const STATUS_CLS = {
   'Failed':    'bg-rose-50 text-rose-700 border-rose-200',
 };
 
-// Generates list of past months for processing (e.g. "July 2026", "June 2026")
-const getStipendMonthsList = () => {
+// Generates list of months for the entire duration of a contract (e.g. 12 months)
+const getContractMonthsList = (contract) => {
+  if (!contract || !contract.contract_start_date) return [];
   const months = [];
-  const date = new Date();
-  for (let i = 0; i < 6; i++) {
+  const start = new Date(contract.contract_start_date);
+  const end = contract.contract_end_date 
+    ? new Date(contract.contract_end_date) 
+    : new Date(start.getFullYear() + 1, start.getMonth(), start.getDate());
+  
+  let current = new Date(start.getFullYear(), start.getMonth(), 1);
+  const limit = new Date(end.getFullYear(), end.getMonth(), 1);
+  
+  let safety = 0;
+  while (current <= limit && safety < 120) {
     months.push(
-      date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+      current.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     );
-    date.setMonth(date.getMonth() - 1);
+    current.setMonth(current.getMonth() + 1);
+    safety++;
   }
   return months;
 };
@@ -62,7 +72,10 @@ export default function EmployerStipends({ user, showToast }) {
   // Detail View modal state
   const [selectedPayment, setSelectedPayment] = useState(null);
 
-  const monthsOptions = useMemo(() => getStipendMonthsList(), []);
+  const monthsOptions = useMemo(() => {
+    const active = contracts.find(c => ['active', 'signed'].includes(String(c.contract_status).toLowerCase()));
+    return active ? getContractMonthsList(active) : [];
+  }, [contracts]);
 
   const loadData = async () => {
     if (!user?.token) return;
@@ -79,7 +92,30 @@ export default function EmployerStipends({ user, showToast }) {
         const activeContracts = data.filter(c => 
           ['active', 'signed', 'sent'].includes(String(c.contract_status).toLowerCase())
         );
-        setContracts(activeContracts);
+
+        // Fetch schedule for each active contract
+        const enrichedContracts = await Promise.all(
+          activeContracts.map(async (c) => {
+            try {
+              const scheduleRes = await fetch(`${API}/employer/stipends/schedule/${c.id}`, {
+                headers: { Authorization: `Bearer ${user.token}` }
+              });
+              if (scheduleRes.ok) {
+                const scheduleData = await scheduleRes.json();
+                return {
+                  ...c,
+                  nextStipendDue: scheduleData.nextStipendDue,
+                  schedule: scheduleData.schedule
+                };
+              }
+            } catch (err) {
+              console.error('Error fetching schedule for contract:', c.id, err);
+            }
+            return c;
+          })
+        );
+
+        setContracts(enrichedContracts);
       } else {
         showToast?.('Failed to load active candidate contracts.', 'error');
       }
@@ -111,9 +147,6 @@ export default function EmployerStipends({ user, showToast }) {
 
   useEffect(() => {
     loadData();
-    if (monthsOptions.length > 0) {
-      setSelectedMonth(monthsOptions[0]);
-    }
   }, [user?.token]);
 
   // Compute stats
@@ -300,7 +333,7 @@ export default function EmployerStipends({ user, showToast }) {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  {['Candidate Info', 'Contract Code', 'Apprenticeship Role', 'Start Date', 'End Date', 'Monthly Stipend', 'Actions'].map(h => (
+                  {['Candidate Info', 'Contract Code', 'Apprenticeship Role', 'Start Date', 'Next Due Date', 'Monthly Stipend', 'Stipend Schedule', 'Actions'].map(h => (
                     <th key={h} className="px-4 py-3 font-bold text-[10px] text-slate-400 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -341,12 +374,52 @@ export default function EmployerStipends({ user, showToast }) {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-500 font-medium">{fmtDate(c.contract_end_date)}</td>
+                    <td className="px-4 py-3">
+                      {c.contract_start_date ? (
+                        c.nextStipendDue ? (
+                          <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold rounded-lg whitespace-nowrap">
+                            ⏳ {c.nextStipendDue}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-lg whitespace-nowrap">
+                            ✅ All Paid
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-slate-400 font-medium">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-slate-800">{fmtMoney(c.stipend_amount)}</td>
+                    <td className="px-4 py-3">
+                      {c.schedule && c.schedule.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-1 max-w-[150px]">
+                          {c.schedule.slice(-4).map((s, idx) => {
+                            const statusColor = s.status === 'paid' 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                              : s.status === 'pending' 
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-extrabold' 
+                              : 'bg-slate-50 text-slate-400 border-slate-150';
+                            return (
+                              <span 
+                                key={idx} 
+                                className={`px-1.5 py-0.5 rounded border text-[8px] font-black uppercase tracking-tighter cursor-help ${statusColor}`}
+                                title={`${s.month}: ${s.status.toUpperCase()}`}
+                              >
+                                {s.month.split(' ')[0].substring(0, 3)}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="text-slate-450">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <button 
                         onClick={() => {
                           setProcessingContract(c);
+                          const list = getContractMonthsList(c);
+                          setSelectedMonth(c.nextStipendDue || list[0] || '');
                         }}
                         disabled={!c.contract_start_date}
                         className={`h-7 px-3 rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-sm ${
@@ -502,9 +575,16 @@ export default function EmployerStipends({ user, showToast }) {
                   onChange={e => setSelectedMonth(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition"
                 >
-                  {monthsOptions.map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
+                  {getContractMonthsList(processingContract).map(m => {
+                    const isPaid = processingContract.schedule?.some(
+                      s => s.month.toLowerCase() === m.toLowerCase() && s.status === 'paid'
+                    );
+                    return (
+                      <option key={m} value={m} disabled={isPaid}>
+                        {m} {isPaid ? ' (Paid ✅)' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

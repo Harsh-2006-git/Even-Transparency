@@ -733,7 +733,9 @@ Even Cargo`
           contractId: c.contractId || null,
           contractContent: c.contractContent || null,
           interviewers,
-          interviewerInitials
+          interviewerInitials,
+          interviewScore: c.interviewScore != null ? c.interviewScore : null,
+          interviewFeedback: c.interviewFeedback || ''
         };
       });
 
@@ -2037,6 +2039,22 @@ Even Cargo`
                     <div className="flex justify-between text-xs py-0.5">
                       <span className="text-slate-500 font-bold">Interview Scheduled</span>
                       <span className="text-slate-800 font-extrabold">{viewingCandidate.interviewDate} at {viewingCandidate.interviewTime}</span>
+                    </div>
+                  )}
+                  {viewingCandidate.interviewScore !== undefined && viewingCandidate.interviewScore !== null && (
+                    <div className="flex justify-between text-xs py-0.5">
+                      <span className="text-slate-500 font-bold">Interview Score</span>
+                      <span className="text-amber-600 font-black flex items-center gap-1">
+                        <Star size={11} fill="currentColor" /> {viewingCandidate.interviewScore} / 100
+                      </span>
+                    </div>
+                  )}
+                  {viewingCandidate.interviewFeedback && (
+                    <div className="pt-2 text-xs text-left">
+                      <span className="text-slate-500 font-bold block mb-1">Evaluation Notes / Feedback</span>
+                      <p className="text-slate-650 bg-slate-50 border border-slate-200/60 rounded-xl p-2.5 font-medium leading-relaxed italic">
+                        &quot;{viewingCandidate.interviewFeedback}&quot;
+                      </p>
                     </div>
                   )}
                 </div>

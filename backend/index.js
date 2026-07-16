@@ -1,3 +1,10 @@
+// ─── Suppress pg-connection-string SSL deprecation warnings globally ──────────
+const _origEmit = process.emit.bind(process);
+process.emit = function (event, ...args) {
+  if (event === 'warning' && args[0]?.message?.includes('SSL modes')) return false;
+  return _origEmit(event, ...args);
+};
+
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
@@ -181,21 +188,42 @@ app.use('/api', employerRoutes);
 app.use('/api', candidateRoutes);
 app.use('/api', notificationRoutes);
 
-// Synchronize database models and start listening
-const startServer = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('Database connection successfully.');
-    await ensureDbColumnsExist();
-    await sequelize.sync();
-    console.log('All models synced successfully.');
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server / sync database:', error);
-  }
+// ─────────────────────────────────────────────────────────────────────────────
+// Server startup — clean terminal output with icons
+// ─────────────────────────────────────────────────────────────────────────────
+const startServer = () => {
+  app.listen(PORT, () => {
+    console.log('');
+    console.log(`  🚀  Even Cargo Backend`);
+    console.log(`  ⚡  Server running on port ${PORT}`);
+    console.log('');
+  });
+
+  // Database init runs in background — does not block server from accepting requests
+  (async () => {
+    try {
+      console.log('  🔌  Connecting to Aiven PostgreSQL...');
+      await sequelize.authenticate();
+      console.log('  ✅  Database connected successfully.');
+
+      // Ensure all dynamic columns exist (safe no-op if already present)
+      await ensureDbColumnsExist().catch(err => {
+        console.warn(`  ⚠️   Schema column check: ${err.message}`);
+      });
+
+      // Sync model definitions (CREATE TABLE IF NOT EXISTS)
+      await sequelize.sync().catch(err => {
+        console.warn(`  ⚠️   Schema sync: ${err.message}`);
+      });
+
+      console.log('  🗄️   Database schema ready.');
+      console.log('');
+    } catch (error) {
+      console.error(`  ❌  Database connection failed: ${error.message}`);
+      console.error('  💡  Check DATABASE_URL in your .env file.');
+      console.log('');
+    }
+  })();
 };
 
 startServer();
-// Trigger environment config reload

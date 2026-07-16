@@ -1,86 +1,63 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
-import net from 'net';
-import dns from 'dns/promises';
 
 dotenv.config();
 
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  console.error('DATABASE_URL environment variable is not defined.');
-}
-
-const dnsCache = {};
-
-class CustomSocket extends net.Socket {
-  connect(port, host, connectionListener) {
-    const customLookup = (hostname, options, callback) => {
-      if (typeof options === 'function') {
-        callback = options;
-        options = {};
-      }
-
-      // Bypass DNS lookups for local endpoints
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return callback(null, hostname, 4);
-      }
-
-      // Return cached DNS lookup immediately if available
-      if (dnsCache[hostname]) {
-        const ips = dnsCache[hostname];
-        if (options.all) {
-          return callback(null, ips.map(ip => ({ address: ip, family: 4 })));
-        } else {
-          return callback(null, ips[0], 4);
-        }
-      }
-
-      const r = new dns.Resolver();
-      r.setServers(['8.8.8.8', '1.1.1.1']);
-      r.resolve4(hostname)
-        .then(ips => {
-          if (ips && ips.length > 0) {
-            dnsCache[hostname] = ips; // Cache the resolved IPs
-          }
-          if (options.all) {
-            callback(null, ips.map(ip => ({ address: ip, family: 4 })));
-          } else {
-            callback(null, ips[0], 4);
-          }
-        })
-        .catch(err => {
-          callback(err);
-        });
-    };
-
-    if (typeof port === 'object') {
-      return super.connect({ lookup: customLookup, ...port }, host || connectionListener);
-    } else if (typeof host === 'string') {
-      return super.connect({ port, host, lookup: customLookup }, connectionListener);
-    } else {
-      return super.connect(port, host, connectionListener);
-    }
+// ─── Suppress the noisy pg-connection-string SSL deprecation warning ──────────
+// This warning fires because pg >= 8.x now treats sslmode=require as verify-full.
+// We handle SSL exclusively via dialectOptions.ssl, so the warning is irrelevant.
+const _originalEmit = process.emit.bind(process);
+process.emit = function (event, ...args) {
+  if (
+    event === 'warning' &&
+    args[0]?.message?.includes('SSL modes')
+  ) {
+    return false; // swallow the warning
   }
+  return _originalEmit(event, ...args);
+};
+
+const rawUrl = process.env.DATABASE_URL;
+
+if (!rawUrl) {
+  console.error('❌  DATABASE_URL environment variable is not defined.');
 }
+
+// Strip all SSL-related query params from the URL so pg-connection-string
+// cannot override our dialectOptions.ssl settings below.
+// We control SSL entirely through Sequelize dialectOptions.
+const databaseUrl = rawUrl
+  ? rawUrl
+      .replace(/[?&](sslmode|uselibpqcompat|channel_binding)=[^&]*/g, '')
+      .replace(/\?&/, '?')   // fix ?& → ?
+      .replace(/[?&]+$/, '') // trim trailing ? or &
+  : rawUrl;
+
+const isRemote =
+  rawUrl &&
+  !rawUrl.includes('localhost') &&
+  !rawUrl.includes('127.0.0.1');
 
 const sequelize = new Sequelize(databaseUrl, {
   dialect: 'postgres',
-  logging: false, // Turn on console.log if you want to see detailed SQL queries in the logs
+  logging: false, // Set to console.log to debug raw SQL
+  pool: {
+    max: 3,
+    min: 0,        // Do not hold warm connections in development
+    acquire: 30000,
+    idle: 5000,    // Evict idle connections after 5 seconds to free slots
+    evict: 2000    // Evict check interval
+  },
   dialectOptions: {
-    // Enable SSL if connecting to a non-local database (e.g. Supabase, Render, Heroku)
-    ssl: databaseUrl && !databaseUrl.includes('localhost') && !databaseUrl.includes('127.0.0.1')
-      ? { rejectUnauthorized: false }
-      : false,
-    // Custom socket stream to override DNS lookup for resolving Neon DB hostname
-    ...(databaseUrl && !databaseUrl.includes('localhost') && !databaseUrl.includes('127.0.0.1')
-      ? { stream: () => new CustomSocket() }
-      : {})
+    // rejectUnauthorized: false accepts Aiven's self-signed CA certificate.
+    // SSL is enabled for all remote (non-localhost) connections.
+    ssl: isRemote ? { rejectUnauthorized: false } : false,
+    keepAlive: true // TCP keep-alive prevents idle connection drops on cloud DBs
   }
 });
 
 /**
- * Health check helper to verify connection to PostgreSQL via Sequelize
+ * Health check helper to verify connection to PostgreSQL via Sequelize.
  * @returns {Promise<{success: boolean, message: string}>}
  */
 export const testConnection = async () => {

@@ -15,6 +15,7 @@ import CandidateInterviews from './pages/candidate/Interviews';
 import CandidateNotifications from './pages/candidate/Notifications';
 import CandidateSettings from './pages/candidate/Settings';
 import CandidateGrievances from './pages/candidate/Grievances';
+import CandidateStipends from './pages/candidate/Stipends';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Employers from './pages/admin/Employers';
@@ -101,14 +102,14 @@ function App() {
         return [
           'overview', 'employers', 'apprentices', 'candidates',
           'openings', 'applications', 'interviews', 'contracts',
-          'stipend', 'reports', 'compliance', 'communications',
-          'user-management', 'settings', 'audit-logs', 'support',
+          'stipend', 'reports', 'compliance',
+          'user-management', 'settings', 'audit-logs',
           'company-management', 'grievances'
         ];
       case 'Employer':
-        return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'stipends', 'reports', 'notifications', 'grievances', 'settings', 'support'];
+        return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'stipends', 'reports', 'notifications', 'grievances', 'settings'];
       case 'Candidate':
-        return ['overview', 'profile', 'applications', 'jobs', 'documents', 'interviews', 'grievances', 'notifications', 'settings'];
+        return ['overview', 'profile', 'applications', 'stipends', 'jobs', 'documents', 'interviews', 'grievances', 'notifications', 'settings'];
       case 'Mobiliser':
         return ['overview'];
       default:
@@ -1146,6 +1147,7 @@ function App() {
                 {activeSection === 'overview' && <CandidateDashboard user={user} onUserUpdate={handleUserUpdate} onSectionChange={handleSectionChange} />}
                 {activeSection === 'profile' && <CandidateProfile user={user} onUserUpdate={handleUserUpdate} />}
                 {activeSection === 'applications' && <CandidateApplications user={user} onSectionChange={handleSectionChange} />}
+                {activeSection === 'stipends' && <CandidateStipends user={user} showToast={showToast} />}
                 {activeSection === 'jobs' && <CandidateJobs user={user} />}
                 {activeSection === 'documents' && <CandidateDocuments user={user} onUserUpdate={handleUserUpdate} onSectionChange={handleSectionChange} />}
                 {activeSection === 'interviews' && <CandidateInterviews onSectionChange={handleSectionChange} />}

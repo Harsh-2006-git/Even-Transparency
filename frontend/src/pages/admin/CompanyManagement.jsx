@@ -22,7 +22,9 @@ import {
   X,
   FileText,
   AlertTriangle,
-  UserCheck
+  UserCheck,
+  ShieldAlert,
+  Trash2
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
@@ -41,17 +43,109 @@ export default function CompanyManagement({ adminUser, showToast }) {
 
   // Details Drawer State
   const [selectedCompanyId, setSelectedCompanyId] = useState(null);
+  const [selectedCompanyDetails, setSelectedCompanyDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!selectedCompanyId) {
+        setSelectedCompanyDetails(null);
+        return;
+      }
+      setLoadingDetails(true);
+      try {
+        const res = await fetch(`${API}/admin/employers/${selectedCompanyId}`, {
+          headers: {
+            'x-admin-id': adminUser.id,
+            Authorization: `Bearer ${adminUser.token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSelectedCompanyDetails(data);
+        } else {
+          showToast?.('Failed to load full company details.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingDetails(false);
+      }
+    };
+    if (drawerOpen) {
+      fetchDetails();
+    }
+  }, [selectedCompanyId, drawerOpen]);
 
   // Decision Modals State
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   
   // Decision form inputs
   const [adminRemarks, setAdminRemarks] = useState('');
   const [rejectionReason, setRejectionReason] = useState('Invalid Documents');
   const [rejectionComments, setRejectionComments] = useState('');
+  const [suspendReason, setSuspendReason] = useState('');
+
+  const handleDeleteEmployer = async () => {
+    if (!selectedCompanyId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${API}/admin/employers/${selectedCompanyId}`, {
+        method: 'DELETE',
+        headers: {
+          'x-admin-id': adminUser.id,
+          Authorization: `Bearer ${adminUser.token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete employer.');
+
+      showToast?.('Employer account deleted successfully.', 'success');
+      setDrawerOpen(false);
+      setShowDeleteModal(false);
+      setSelectedCompanyId(null);
+      await fetchCompanies();
+    } catch (err) {
+      showToast?.(err.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSuspendEmployer = async (suspend) => {
+    if (!selectedCompanyId) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${API}/admin/employers/${selectedCompanyId}/suspend`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-id': adminUser.id,
+          Authorization: `Bearer ${adminUser.token}`
+        },
+        body: JSON.stringify({ suspend, reason: suspendReason || 'Suspended by superadmin' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update suspension status.');
+
+      showToast?.(suspend ? 'Employer account suspended.' : 'Employer account unsuspended.', 'success');
+      setShowSuspendModal(false);
+      setSuspendReason('');
+      if (data.employer) {
+        setSelectedCompanyDetails(data.employer);
+      }
+      await fetchCompanies();
+    } catch (err) {
+      showToast?.(err.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const fetchCompanies = async () => {
     setLoading(true);
@@ -75,8 +169,8 @@ export default function CompanyManagement({ adminUser, showToast }) {
   }, []);
 
   const selectedCompany = useMemo(() => {
-    return companies.find((c) => c.id === selectedCompanyId) || null;
-  }, [companies, selectedCompanyId]);
+    return selectedCompanyDetails || companies.find((c) => c.id === selectedCompanyId) || null;
+  }, [selectedCompanyDetails, companies, selectedCompanyId]);
 
   // Dynamic values extracted from database records for dropdown filters
   const uniqueIndustries = useMemo(() => {
@@ -216,6 +310,9 @@ export default function CompanyManagement({ adminUser, showToast }) {
       setShowRejectModal(false);
       setAdminRemarks('');
       setRejectionComments('');
+      if (data.employer) {
+        setSelectedCompanyDetails(data.employer);
+      }
       await fetchCompanies();
     } catch (err) {
       showToast?.(err.message, 'error');
@@ -403,10 +500,8 @@ export default function CompanyManagement({ adminUser, showToast }) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 sticky top-0 z-10">
-                  <th className="py-4.5 px-5">Company</th>
-                  <th className="py-4.5 px-4">Industry</th>
-                  <th className="py-4.5 px-4">Location</th>
-                  <th className="py-4.5 px-4">Contact Person</th>
+                  <th className="py-4.5 px-5">Company & Details</th>
+                  <th className="py-4.5 px-4">Contact & Sector</th>
                   <th className="py-4.5 px-4">GST Status</th>
                   <th className="py-4.5 px-4">Verification Status</th>
                   <th className="py-4.5 px-4">Registration Date</th>
@@ -433,7 +528,7 @@ export default function CompanyManagement({ adminUser, showToast }) {
                         isRowSelected ? 'bg-violet-50/30' : ''
                       }`}
                     >
-                      {/* Company name & logo */}
+                      {/* Company name & logo (stacked name, email, location) */}
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
                           {renderInitials(c.company_name)}
@@ -444,27 +539,18 @@ export default function CompanyManagement({ adminUser, showToast }) {
                             }}>
                               {c.company_name || 'Untitled Company'}
                             </p>
-                            <p className="text-[10px] font-semibold text-slate-400 mt-0.5 truncate max-w-[180px]">
+                            <p className="text-[10px] font-semibold text-slate-400 mt-0.5 truncate max-w-[220px]">
                               {c.official_email || 'No email registered'}
                             </p>
+                            <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold mt-1">
+                              <MapPin size={11} className="text-[#6D3BFF] shrink-0" />
+                              <span className="truncate max-w-[180px]">{c.headquarters_city || 'HQ'}, {c.headquarters_state || 'India'}</span>
+                            </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* Industry */}
-                      <td className="py-4 px-4 font-semibold text-slate-600">
-                        {c.industry_sector || 'Logistics'}
-                      </td>
-
-                      {/* Location */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-1 text-slate-600 font-semibold">
-                          <MapPin size={12} className="text-slate-400 shrink-0" />
-                          <span>{c.headquarters_city || 'HQ'}, {c.headquarters_state || 'India'}</span>
-                        </div>
-                      </td>
-
-                      {/* Contact Person */}
+                      {/* Contact Person (stacked contact, phone, industry) */}
                       <td className="py-4 px-4">
                         <div className="min-w-[120px]">
                           <p className="font-bold text-slate-700">
@@ -473,6 +559,9 @@ export default function CompanyManagement({ adminUser, showToast }) {
                           <p className="text-[9px] font-semibold text-slate-400 mt-0.5">
                             {c.official_phone_number || 'No contact phone'}
                           </p>
+                          <span className="inline-block mt-1.5 px-1.5 py-0.5 bg-slate-50 text-slate-500 border border-slate-200 text-[8.5px] font-black uppercase rounded">
+                            {c.industry_sector || 'Logistics'}
+                          </span>
                         </div>
                       </td>
 
@@ -512,7 +601,7 @@ export default function CompanyManagement({ adminUser, showToast }) {
                               setSelectedCompanyId(c.id);
                               setDrawerOpen(true);
                             }}
-                            className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black transition cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-black transition cursor-pointer active:scale-95"
                           >
                             View Details
                           </button>
@@ -523,10 +612,10 @@ export default function CompanyManagement({ adminUser, showToast }) {
                                 setSelectedCompanyId(c.id);
                                 setShowApproveModal(true);
                               }}
-                              className="p-1.5 rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition cursor-pointer"
+                              className="h-7 w-7 rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition cursor-pointer flex items-center justify-center shadow-xs active:scale-95"
                               title="Approve Company"
                             >
-                              <Check size={14} strokeWidth={3} />
+                              <Check size={13} strokeWidth={3} />
                             </button>
                           )}
                           {c.verification_status !== 'rejected' && (
@@ -536,10 +625,10 @@ export default function CompanyManagement({ adminUser, showToast }) {
                                 setSelectedCompanyId(c.id);
                                 setShowRejectModal(true);
                               }}
-                              className="p-1.5 rounded-lg border border-rose-100 bg-rose-50 text-rose-700 hover:bg-rose-100 transition cursor-pointer"
+                              className="h-7 w-7 rounded-lg border border-rose-100 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white transition cursor-pointer flex items-center justify-center shadow-xs active:scale-95"
                               title="Reject Company"
                             >
-                              <X size={14} strokeWidth={3} />
+                              <X size={13} strokeWidth={3} />
                             </button>
                           )}
                         </div>
@@ -595,241 +684,282 @@ export default function CompanyManagement({ adminUser, showToast }) {
               </button>
             </div>
 
-            {/* Drawer Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-              
-              {/* Company Information Grid */}
-              <div className="space-y-3.5">
-                <div className="flex items-center gap-2 text-[10px] font-extrabold text-slate-450 uppercase tracking-widest pl-0.5">
-                  <Building2 size={13} className="text-[#6D3BFF]" />
-                  <span>Company Information</span>
+            {/* Drawer Scrollable Content with loading spinner wrapper */}
+            {loadingDetails || !selectedCompanyDetails ? (
+              <div className="flex-1 flex flex-col items-center justify-center space-y-3 bg-slate-50/50">
+                <RefreshCw className="w-7 h-7 text-[#6D3BFF] animate-spin" />
+                <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider">Loading detailed profile...</p>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
+                
+                {/* Company Information Grid */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2 text-[10px] font-extrabold text-slate-450 uppercase tracking-widest pl-0.5">
+                    <Building2 size={13} className="text-[#6D3BFF]" />
+                    <span>Company Information</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-4 rounded-2xl border border-slate-200 bg-white p-5 text-xs font-semibold text-slate-700 shadow-xs">
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Industry</p>
+                      <p className="mt-1 text-slate-800 font-extrabold">{selectedCompanyDetails.industry_sector || 'Logistics & Supply Chain'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Company Size</p>
+                      <p className="mt-1 text-slate-800 font-extrabold">{selectedCompanyDetails.company_size || 'Startup'}</p>
+                    </div>
+                    <div className="col-span-2 border-t border-slate-100 pt-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Website</p>
+                      {selectedCompanyDetails.website_url ? (
+                        <a 
+                          href={selectedCompanyDetails.website_url} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="mt-1 text-[#6D3BFF] hover:underline flex items-center gap-1 font-bold w-fit"
+                        >
+                          <span>{selectedCompanyDetails.website_url}</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      ) : (
+                        <p className="mt-1 text-slate-400 font-semibold">Not provided</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Official Email</p>
+                      <p className="mt-1 text-slate-850 font-extrabold break-all">{selectedCompanyDetails.official_email || 'Not registered'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Official Phone</p>
+                      <p className="mt-1 text-slate-850 font-extrabold">{selectedCompanyDetails.official_phone_number || 'Not registered'}</p>
+                    </div>
+                    <div className="border-t border-slate-100 pt-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">CIN / Registration No</p>
+                      <p className="mt-1 text-slate-800 font-bold font-mono">{selectedCompanyDetails.cin_number || 'N/A'}</p>
+                    </div>
+                    <div className="border-t border-slate-100 pt-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">GST Number</p>
+                      <p className="mt-1 text-slate-800 font-bold font-mono">{selectedCompanyDetails.gst_number || 'N/A'}</p>
+                    </div>
+                    <div className="border-t border-slate-100 pt-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">PAN Number</p>
+                      <p className="mt-1 text-slate-800 font-bold font-mono">{selectedCompanyDetails.pan_number || 'N/A'}</p>
+                    </div>
+                    <div className="border-t border-slate-100 pt-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">NAPS Establishment ID</p>
+                      <p className="mt-1 text-slate-800 font-bold font-mono">{selectedCompanyDetails.naps_establishment_id || 'N/A'}</p>
+                    </div>
+                    <div className="col-span-2 border-t border-slate-100 pt-3.5">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Registered Office Address</p>
+                      <p className="mt-1.5 text-slate-700 leading-relaxed font-semibold">
+                        {selectedCompanyDetails.registered_address || 'Not Provided'}
+                      </p>
+                      <p className="mt-2 text-[10px] text-slate-500 font-bold flex items-center gap-1.5">
+                        <MapPin size={11} className="text-[#6D3BFF]" />
+                        <span>{selectedCompanyDetails.headquarters_city}, {selectedCompanyDetails.headquarters_state} - {selectedCompanyDetails.headquarters_pincode}</span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-y-4 gap-x-4 rounded-2xl border border-slate-200 bg-white p-5 text-xs font-semibold text-slate-700 shadow-xs">
-                  <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Industry</p>
-                    <p className="mt-1 text-slate-800 font-extrabold">{selectedCompany.industry_sector || 'Logistics & Supply Chain'}</p>
+
+                {/* Contact Person Details */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2 text-[10px] font-extrabold text-slate-450 uppercase tracking-widest pl-0.5">
+                    <UserCheck size={13} className="text-[#6D3BFF]" />
+                    <span>Contact Person Details</span>
                   </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Company Size</p>
-                    <p className="mt-1 text-slate-800 font-extrabold">{selectedCompany.company_size || 'Startup'}</p>
+                  <div className="grid grid-cols-2 gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-xs font-semibold text-slate-700 shadow-xs">
+                    <div className="col-span-2">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Full Name</p>
+                      <p className="mt-1 text-slate-850 text-sm font-extrabold">
+                        {selectedCompanyDetails.EmployerUsers?.[0]?.full_name || 'Administrator'}
+                      </p>
+                    </div>
+                    <div className="border-t border-slate-100 pt-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Department</p>
+                      <p className="mt-1 text-slate-800 font-extrabold">{selectedCompanyDetails.EmployerUsers?.[0]?.department || 'Administration'}</p>
+                    </div>
+                    <div className="border-t border-slate-100 pt-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Role</p>
+                      <p className="mt-1 text-slate-800 font-extrabold uppercase tracking-widest text-[9px]">{selectedCompanyDetails.EmployerUsers?.[0]?.role || 'admin'}</p>
+                    </div>
                   </div>
-                  <div className="col-span-2 border-t border-slate-100 pt-3">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Website</p>
-                    {selectedCompany.website_url ? (
-                      <a 
-                        href={selectedCompany.website_url} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="mt-1 text-[#6D3BFF] hover:underline flex items-center gap-1 font-bold w-fit"
-                      >
-                        <span>{selectedCompany.website_url}</span>
-                        <ExternalLink size={12} />
-                      </a>
+                </div>
+
+                {/* Submitted Documents section */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2 text-[10px] font-extrabold text-slate-450 uppercase tracking-widest pl-0.5">
+                    <FileText size={13} className="text-[#6D3BFF]" />
+                    <span>Document Verification</span>
+                  </div>
+                  <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+                    {getCompanyDocuments(selectedCompanyDetails).length === 0 ? (
+                      <div className="p-5 text-center text-xs text-slate-400 font-bold">
+                        No documents uploaded yet.
+                      </div>
                     ) : (
-                      <p className="mt-1 text-slate-400 font-semibold">Not provided</p>
+                      getCompanyDocuments(selectedCompanyDetails).map((doc) => {
+                        const isVerified = doc.verification_status === 'verified';
+                        return (
+                          <div key={doc.id} className="p-4 flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <p className="text-xs font-extrabold text-slate-800 truncate">{doc.document_type}</p>
+                              <p className="text-[10px] text-slate-450 mt-0.5 truncate font-semibold">{doc.file_name || 'Uploaded_Document.pdf'}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
+                                isVerified 
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                                  : 'bg-amber-50 text-amber-700 border border-amber-100'
+                              }`}>
+                                {doc.verification_status}
+                              </span>
+                              <button
+                                onClick={() => doc.file_url ? window.open(doc.file_url, '_blank') : doc.file_name ? window.open(`${API}/uploads/${doc.file_name}`, '_blank') : showToast('No document file uploaded', 'error')}
+                                className="text-[10px] font-extrabold text-[#6D3BFF] hover:underline cursor-pointer border border-violet-100 rounded-lg px-2 py-1 hover:bg-violet-50 transition"
+                              >
+                                View
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Official Email</p>
-                    <p className="mt-1 text-slate-850 font-extrabold break-all">{selectedCompany.official_email || 'Not registered'}</p>
+                </div>
+
+                {/* Apprenticeship Readiness checklist */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-2 text-[10px] font-extrabold text-slate-450 uppercase tracking-widest pl-0.5">
+                    <CheckCircle2 size={13} className="text-[#6D3BFF]" />
+                    <span>Apprenticeship Readiness Checklist</span>
                   </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Official Phone</p>
-                    <p className="mt-1 text-slate-850 font-extrabold">{selectedCompany.official_phone_number || 'Not registered'}</p>
+                  <div className="grid grid-cols-2 gap-2.5 p-4 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold text-slate-600 shadow-xs">
+                    {[
+                      { label: 'GST Verified', done: !!selectedCompanyDetails.gst_number },
+                      { label: 'PAN Verified', done: !!selectedCompanyDetails.pan_number },
+                      { label: 'Registration Verified', done: !!selectedCompanyDetails.cin_number },
+                      { label: 'Documents Uploaded', done: getCompanyDocuments(selectedCompanyDetails).length > 0 },
+                      { label: 'Contact Verified', done: !!selectedCompanyDetails.EmployerUsers?.[0]?.full_name },
+                      { label: 'Address Verified', done: !!selectedCompanyDetails.registered_address }
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center gap-2.5 bg-slate-50 border border-slate-150 rounded-xl p-2.5">
+                        <span className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full ${
+                          item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
+                        }`}>
+                          {item.done ? <Check size={11} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
+                        </span>
+                        <span className="truncate text-slate-700">{item.label}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="border-t border-slate-100 pt-3">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">CIN / Registration No</p>
-                    <p className="mt-1 text-slate-800 font-bold font-mono">{selectedCompany.cin_number || 'N/A'}</p>
-                  </div>
-                  <div className="border-t border-slate-100 pt-3">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">GST Number</p>
-                    <p className="mt-1 text-slate-800 font-bold font-mono">{selectedCompany.gst_number || 'N/A'}</p>
-                  </div>
-                  <div className="border-t border-slate-100 pt-3">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">PAN Number</p>
-                    <p className="mt-1 text-slate-800 font-bold font-mono">{selectedCompany.pan_number || 'N/A'}</p>
-                  </div>
-                  <div className="border-t border-slate-100 pt-3">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">NAPS Establishment ID</p>
-                    <p className="mt-1 text-slate-800 font-bold font-mono">{selectedCompany.naps_establishment_id || 'N/A'}</p>
-                  </div>
-                  <div className="col-span-2 border-t border-slate-100 pt-3.5">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Registered Office Address</p>
-                    <p className="mt-1.5 text-slate-700 leading-relaxed font-semibold">
-                      {selectedCompany.registered_address || 'Not Provided'}
+                </div>
+
+                {/* About/Description Section */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-extrabold text-slate-450 uppercase tracking-widest block pl-0.5">About Company</p>
+                  <div className="rounded-2xl border border-slate-200 p-5 bg-white text-xs font-semibold leading-relaxed text-slate-650 shadow-xs">
+                    <p>
+                      {selectedCompanyDetails.onboarding_status === 'completed' ? (
+                        `${selectedCompanyDetails.company_name} is registered as a ${selectedCompanyDetails.company_type} in the ${selectedCompanyDetails.industry_sector} sector. Incorporated on ${selectedCompanyDetails.incorporation_date ? new Date(selectedCompanyDetails.incorporation_date).toLocaleDateString('en-IN') : 'N/A'}, the company maintains headquarters in ${selectedCompanyDetails.headquarters_city || 'N/A'}, ${selectedCompanyDetails.headquarters_state || 'N/A'}.`
+                      ) : (
+                        `The company "${selectedCompanyDetails.company_name}" has registered an account but has not yet completed their onboarding profile details.`
+                      )}
                     </p>
-                    <p className="mt-2 text-[10px] text-slate-500 font-bold flex items-center gap-1.5">
-                      <MapPin size={11} className="text-[#6D3BFF]" />
-                      <span>{selectedCompany.headquarters_city}, {selectedCompany.headquarters_state} - {selectedCompany.headquarters_pincode}</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Person Details */}
-              <div className="space-y-3.5">
-                <div className="flex items-center gap-2 text-[10px] font-extrabold text-slate-450 uppercase tracking-widest pl-0.5">
-                  <UserCheck size={13} className="text-[#6D3BFF]" />
-                  <span>Contact Person Details</span>
-                </div>
-                <div className="grid grid-cols-2 gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-xs font-semibold text-slate-700 shadow-xs">
-                  <div className="col-span-2">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Full Name</p>
-                    <p className="mt-1 text-slate-850 text-sm font-extrabold">
-                      {selectedCompany.EmployerUsers?.[0]?.full_name || 'Administrator'}
-                    </p>
-                  </div>
-                  <div className="border-t border-slate-100 pt-3">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Department</p>
-                    <p className="mt-1 text-slate-800 font-extrabold">{selectedCompany.EmployerUsers?.[0]?.department || 'Administration'}</p>
-                  </div>
-                  <div className="border-t border-slate-100 pt-3">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Role</p>
-                    <p className="mt-1 text-slate-800 font-extrabold uppercase tracking-widest text-[9px]">{selectedCompany.EmployerUsers?.[0]?.role || 'admin'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Submitted Documents section */}
-              <div className="space-y-3.5">
-                <div className="flex items-center gap-2 text-[10px] font-extrabold text-slate-450 uppercase tracking-widest pl-0.5">
-                  <FileText size={13} className="text-[#6D3BFF]" />
-                  <span>Document Verification</span>
-                </div>
-                <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-                  {getCompanyDocuments(selectedCompany).length === 0 ? (
-                    <div className="p-5 text-center text-xs text-slate-400 font-bold">
-                      No documents uploaded yet.
-                    </div>
-                  ) : (
-                    getCompanyDocuments(selectedCompany).map((doc) => {
-                      const isVerified = doc.verification_status === 'verified';
-                      return (
-                        <div key={doc.id} className="p-4 flex items-center justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-xs font-extrabold text-slate-800 truncate">{doc.document_type}</p>
-                            <p className="text-[10px] text-slate-450 mt-0.5 truncate font-semibold">{doc.file_name || 'Uploaded_Document.pdf'}</p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
-                              isVerified 
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
-                                : 'bg-amber-50 text-amber-700 border border-amber-100'
-                            }`}>
-                              {doc.verification_status}
-                            </span>
-                            <button
-                              onClick={() => doc.file_url ? window.open(doc.file_url, '_blank') : doc.file_name ? window.open(`${API}/uploads/${doc.file_name}`, '_blank') : showToast('No document file uploaded', 'error')}
-                              className="text-[10px] font-extrabold text-[#6D3BFF] hover:underline cursor-pointer border border-violet-100 rounded-lg px-2 py-1 hover:bg-violet-50 transition"
-                            >
-                              View
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* Apprenticeship Readiness checklist */}
-              <div className="space-y-3.5">
-                <div className="flex items-center gap-2 text-[10px] font-extrabold text-slate-450 uppercase tracking-widest pl-0.5">
-                  <CheckCircle2 size={13} className="text-[#6D3BFF]" />
-                  <span>Apprenticeship Readiness Checklist</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2.5 p-4 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold text-slate-600 shadow-xs">
-                  {[
-                    { label: 'GST Verified', done: !!selectedCompany.gst_number },
-                    { label: 'PAN Verified', done: !!selectedCompany.pan_number },
-                    { label: 'Registration Verified', done: !!selectedCompany.cin_number },
-                    { label: 'Documents Uploaded', done: true },
-                    { label: 'Contact Verified', done: !!selectedCompany.EmployerUsers?.[0]?.full_name },
-                    { label: 'Address Verified', done: !!selectedCompany.registered_address }
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center gap-2.5 bg-slate-50 border border-slate-150 rounded-xl p-2.5">
-                      <span className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full ${
-                        item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
-                      }`}>
-                        {item.done ? <Check size={11} strokeWidth={3} /> : <X size={11} strokeWidth={3} />}
-                      </span>
-                      <span className="truncate text-slate-700">{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* About/Description Section */}
-              <div className="space-y-3">
-                <p className="text-[10px] font-extrabold text-slate-450 uppercase tracking-widest block pl-0.5">About Company</p>
-                <div className="rounded-2xl border border-slate-200 p-5 bg-white text-xs font-semibold leading-relaxed text-slate-650 shadow-xs">
-                  <p>
-                    {selectedCompany.onboarding_status === 'completed' ? (
-                      `${selectedCompany.company_name} is registered as a ${selectedCompany.company_type} in the ${selectedCompany.industry_sector} sector. Incorporated on ${selectedCompany.incorporation_date ? new Date(selectedCompany.incorporation_date).toLocaleDateString('en-IN') : 'N/A'}, the company maintains headquarters in ${selectedCompany.headquarters_city || 'N/A'}, ${selectedCompany.headquarters_state || 'N/A'}.`
-                    ) : (
-                      `The company "${selectedCompany.company_name}" has registered an account but has not yet completed their onboarding profile details.`
-                    )}
-                  </p>
-                  <div className="mt-3.5 grid grid-cols-3 gap-2 text-[10px] text-slate-550 uppercase tracking-wide font-extrabold border-t border-slate-100 pt-3.5">
-                    <div>
-                      <span className="block text-slate-400 text-[8px]">Hired</span>
-                      <span className="block mt-0.5 text-slate-700 text-sm font-black">{selectedCompany.total_apprentices_hired || 0}</span>
-                    </div>
-                    <div>
-                      <span className="block text-slate-400 text-[8px]">Active</span>
-                      <span className="block mt-0.5 text-slate-700 text-sm font-black">{selectedCompany.active_apprentice_count || 0}</span>
-                    </div>
-                    <div>
-                      <span className="block text-slate-400 text-[8px]">Avg Stipend</span>
-                      <span className="block mt-0.5 text-slate-700 text-sm font-black">₹{selectedCompany.average_stipend || 0}</span>
+                    <div className="mt-3.5 grid grid-cols-3 gap-2 text-[10px] text-slate-550 uppercase tracking-wide font-extrabold border-t border-slate-100 pt-3.5">
+                      <div>
+                        <span className="block text-slate-400 text-[8px]">Hired</span>
+                        <span className="block mt-0.5 text-slate-700 text-sm font-black">{selectedCompanyDetails.total_apprentices_hired || 0}</span>
+                      </div>
+                      <div>
+                        <span className="block text-slate-400 text-[8px]">Active</span>
+                        <span className="block mt-0.5 text-slate-700 text-sm font-black">{selectedCompanyDetails.active_apprentice_count || 0}</span>
+                      </div>
+                      <div>
+                        <span className="block text-slate-400 text-[8px]">Avg Stipend</span>
+                        <span className="block mt-0.5 text-slate-700 text-sm font-black">₹{selectedCompanyDetails.average_stipend || 0}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Approval Decision / Admin Notes */}
-              <div className="space-y-3 pt-4 border-t border-slate-200/80">
-                <label className="text-[10px] font-extrabold text-slate-450 uppercase tracking-widest block pl-0.5">Admin Review Notes</label>
-                <textarea
-                  value={adminRemarks}
-                  onChange={(e) => setAdminRemarks(e.target.value)}
-                  placeholder="Enter review notes or verification logs..."
-                  rows={3}
-                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700 outline-none focus:border-[#6D3BFF] focus:ring-4 focus:ring-violet-100 transition resize-none font-semibold placeholder:text-slate-400 shadow-xs"
-                />
-              </div>
+                {/* Approval Decision / Admin Notes */}
+                <div className="space-y-3 pt-4 border-t border-slate-200/80">
+                  <label className="text-[10px] font-extrabold text-slate-450 uppercase tracking-widest block pl-0.5">Admin Review Notes</label>
+                  <textarea
+                    value={adminRemarks}
+                    onChange={(e) => setAdminRemarks(e.target.value)}
+                    placeholder="Enter review notes or verification logs..."
+                    rows={3}
+                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700 outline-none focus:border-[#6D3BFF] focus:ring-4 focus:ring-violet-100 transition resize-none font-semibold placeholder:text-slate-400 shadow-xs"
+                  />
+                </div>
 
-            </div>
+              </div>
+            )}
 
             {/* Drawer Bottom Actions */}
-            <div className="border-t border-slate-200 px-6 py-4 bg-white flex items-center justify-between gap-3 shadow-[0_-8px_24px_rgba(15,23,42,0.04)] shrink-0 z-10">
-              <button
-                type="button"
-                onClick={() => setShowRejectModal(true)}
-                className="h-10 px-4 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-white active:scale-95"
-              >
-                <XCircle size={14} />
-                <span>Reject Company</span>
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => showToast('Verification details saved.', 'success')}
-                className="h-10 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-650 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-white mr-auto ml-1 active:scale-95"
-                title="Save remarks as draft"
-              >
-                <span>Save Note</span>
-              </button>
+            {selectedCompanyDetails && (
+              <div className="border-t border-slate-200 px-6 py-4 bg-white flex items-center justify-between gap-3 shadow-[0_-8px_24px_rgba(15,23,42,0.04)] shrink-0 z-10">
+                {selectedCompanyDetails.verification_status !== 'approved' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowRejectModal(true)}
+                      className="h-10 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      <XCircle size={14} />
+                      <span>Reject Company</span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => showToast('Verification details saved.', 'success')}
+                      className="h-10 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-650 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-white mr-auto ml-1 active:scale-95"
+                      title="Save remarks as draft"
+                    >
+                      <span>Save Note</span>
+                    </button>
 
-              <button
-                type="button"
-                onClick={() => setShowApproveModal(true)}
-                className="h-10 px-5 rounded-xl bg-[#6D3BFF] hover:bg-[#5b2bf0] text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-violet-100 active:scale-95"
-              >
-                <CheckCircle2 size={14} />
-                <span>Approve Company</span>
-              </button>
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowApproveModal(true)}
+                      className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-100 active:scale-95"
+                    >
+                      <CheckCircle2 size={14} />
+                      <span>Approve Company</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteModal(true)}
+                      className="h-10 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 mr-auto"
+                    >
+                      <Trash2 size={14} />
+                      <span>Delete Employer</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowSuspendModal(true)}
+                      className={`h-10 px-5 rounded-xl text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                        selectedCompanyDetails.suspension_status === 'suspended'
+                          ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-100'
+                          : 'bg-amber-600 hover:bg-amber-700 shadow-md shadow-amber-100'
+                      }`}
+                    >
+                      <ShieldAlert size={14} />
+                      <span>
+                        {selectedCompanyDetails.suspension_status === 'suspended'
+                          ? 'Lift Suspension'
+                          : 'Suspend / Ban'}
+                      </span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
 
           </div>
         )}
@@ -936,9 +1066,123 @@ export default function CompanyManagement({ adminUser, showToast }) {
                 type="button"
                 onClick={() => handleApprovalSubmit('rejected')}
                 disabled={actionLoading || (rejectionReason === 'Other' && !rejectionComments.trim())}
-                className="h-10 px-5.5 rounded-xl bg-rose-650 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-60"
+                className="h-10 px-5.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-60"
               >
                 {actionLoading ? 'Rejecting...' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. DELETE EMPLOYER CONFIRMATION MODAL */}
+      {showDeleteModal && selectedCompany && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-[24px] shadow-2xl p-6 space-y-5">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center shrink-0">
+                <Trash2 size={24} />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="font-extrabold text-base text-slate-850">Delete Employer Profile</h3>
+                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                  Are you sure you want to delete <strong>{selectedCompany.company_name}</strong>? This will soft-delete their profile, block all their corporate users, and hide their apprenticeship openings.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50 rounded-xl p-3 border border-rose-100 text-[10px] text-rose-750 font-bold leading-relaxed">
+              ⚠️ This action is soft-deletable but will disrupt active contracts associated with this employer. Proceed with caution.
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={actionLoading}
+                className="h-10 px-4 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteEmployer}
+                disabled={actionLoading}
+                className="h-10 px-5.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-60"
+              >
+                {actionLoading ? 'Deleting...' : 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. SUSPEND / BAN EMPLOYER MODAL */}
+      {showSuspendModal && selectedCompany && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-[24px] shadow-2xl p-6 space-y-5">
+            <div className="flex items-start gap-4">
+              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                selectedCompany.suspension_status === 'suspended'
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                  : 'bg-amber-50 text-amber-600 border-amber-100'
+              }`}>
+                <ShieldAlert size={24} />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="font-extrabold text-base text-slate-850">
+                  {selectedCompany.suspension_status === 'suspended'
+                    ? 'Lift Account Suspension'
+                    : 'Suspend / Ban Employer'}
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                  {selectedCompany.suspension_status === 'suspended'
+                    ? `Are you sure you want to lift the suspension for ${selectedCompany.company_name}? This will restore access to their dashboard and allow users to login again.`
+                    : `Are you sure you want to suspend ${selectedCompany.company_name}? All associated users will be immediately locked out of their accounts.`}
+                </p>
+              </div>
+            </div>
+
+            {selectedCompany.suspension_status !== 'suspended' && (
+              <div className="space-y-4">
+                <label className="space-y-1 block">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider pl-0.5">Reason for Suspension *</span>
+                  <input
+                    type="text"
+                    required
+                    value={suspendReason}
+                    onChange={(e) => setSuspendReason(e.target.value)}
+                    placeholder="Enter violation details or reason for suspension..."
+                    className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-50 transition placeholder:text-slate-405"
+                  />
+                </label>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowSuspendModal(false)}
+                disabled={actionLoading}
+                className="h-10 px-4 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSuspendEmployer(selectedCompany.suspension_status !== 'suspended')}
+                disabled={actionLoading || (selectedCompany.suspension_status !== 'suspended' && !suspendReason.trim())}
+                className={`h-10 px-5.5 rounded-xl text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-60 ${
+                  selectedCompany.suspension_status === 'suspended'
+                    ? 'bg-emerald-650 hover:bg-emerald-700'
+                    : 'bg-amber-600 hover:bg-amber-700'
+                }`}
+              >
+                {actionLoading
+                  ? 'Processing...'
+                  : selectedCompany.suspension_status === 'suspended'
+                  ? 'Activate Account'
+                  : 'Suspend Account'}
               </button>
             </div>
           </div>

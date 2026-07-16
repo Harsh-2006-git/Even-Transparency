@@ -1,5 +1,5 @@
 import db from '../../models/index.js';
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 
 export const getEmployerDashboardStats = async (req, res) => {
   try {
@@ -18,37 +18,126 @@ export const getEmployerDashboardStats = async (req, res) => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // 1. Metrics counters
-    const activeOpenings = await db.EmployerJobPosting.count({
-      where: {
-        employer_id: employerId,
-        status: { [Op.in]: ['Open', 'open', 'Active', 'active'] }
-      }
-    });
+    // ─────────────────────────────────────────────────────────────────────────
+    // BATCH 1: All pure COUNT / GROUP-BY queries — run in parallel
+    // No rows are fetched over the network, only scalar counts.
+    // ─────────────────────────────────────────────────────────────────────────
+    const [
+      activeOpenings,
+      newOpeningsThisWeek,
+      totalApplicationsCount,
+      appsThisWeekCount,
+      appsLastWeekCount,
+      interviewsScheduled,
+      interviewsThisWeek,
+      activeApprentices,
+      newApprenticesThisMonth,
+      funnelRows,
+      contractStatusRows,
+    ] = await Promise.all([
 
-    const newOpeningsThisWeek = await db.EmployerJobPosting.count({
-      where: {
-        employer_id: employerId,
-        created_at: { [Op.gte]: oneWeekAgo }
-      }
-    });
+      // 1. Active job openings count
+      db.EmployerJobPosting.count({
+        where: {
+          employer_id: employerId,
+          status: { [Op.in]: ['Open', 'open', 'Active', 'active'] }
+        }
+      }),
 
-    const applications = await db.CandidateApplication.findAll({
-      include: [{
-        model: db.EmployerJobPosting,
-        where: { employer_id: employerId },
-        attributes: ['id', 'job_title', 'job_code']
-      }],
-      order: [['created_at', 'DESC']]
-    });
+      // 2. New openings this week
+      db.EmployerJobPosting.count({
+        where: {
+          employer_id: employerId,
+          created_at: { [Op.gte]: oneWeekAgo }
+        }
+      }),
 
-    const applicationsReceived = applications.length;
+      // 3. Total applications (SQL COUNT via a JOIN — no rows fetched)
+      db.sequelize.query(
+        `SELECT COUNT(ca.id)::int AS cnt
+         FROM candidateapplications ca
+         INNER JOIN employerjobpostings ejp ON ca.job_posting_id = ejp.id
+         WHERE ejp.employer_id = :employerId`,
+        { replacements: { employerId }, type: QueryTypes.SELECT }
+      ),
 
-    const appsThisWeek = applications.filter(app => new Date(app.created_at || app.applied_at) >= oneWeekAgo).length;
-    const appsLastWeek = applications.filter(app => {
-      const date = new Date(app.created_at || app.applied_at);
-      return date >= twoWeeksAgo && date < oneWeekAgo;
-    }).length;
+      // 4. Applications this week
+      db.sequelize.query(
+        `SELECT COUNT(ca.id)::int AS cnt
+         FROM candidateapplications ca
+         INNER JOIN employerjobpostings ejp ON ca.job_posting_id = ejp.id
+         WHERE ejp.employer_id = :employerId
+           AND COALESCE(ca.applied_at, ca.created_at) >= :oneWeekAgo`,
+        { replacements: { employerId, oneWeekAgo }, type: QueryTypes.SELECT }
+      ),
+
+      // 5. Applications last week (for trend calculation)
+      db.sequelize.query(
+        `SELECT COUNT(ca.id)::int AS cnt
+         FROM candidateapplications ca
+         INNER JOIN employerjobpostings ejp ON ca.job_posting_id = ejp.id
+         WHERE ejp.employer_id = :employerId
+           AND COALESCE(ca.applied_at, ca.created_at) >= :twoWeeksAgo
+           AND COALESCE(ca.applied_at, ca.created_at) < :oneWeekAgo`,
+        { replacements: { employerId, twoWeeksAgo, oneWeekAgo }, type: QueryTypes.SELECT }
+      ),
+
+      // 6. Total interviews scheduled
+      db.EmployerInterview.count({
+        where: { employer_id: employerId }
+      }),
+
+      // 7. Interviews scheduled this week
+      db.EmployerInterview.count({
+        where: {
+          employer_id: employerId,
+          scheduled_at: { [Op.gte]: oneWeekAgo }
+        }
+      }),
+
+      // 8. Active apprentices (contract count)
+      db.EmployerApprenticeshipContract.count({
+        where: {
+          employer_id: employerId,
+          contract_status: { [Op.in]: ['active', 'signed', 'Active', 'Signed'] }
+        }
+      }),
+
+      // 9. New apprentices this month
+      db.EmployerApprenticeshipContract.count({
+        where: {
+          employer_id: employerId,
+          contract_status: { [Op.in]: ['active', 'signed', 'Active', 'Signed'] },
+          created_at: { [Op.gte]: startOfMonth }
+        }
+      }),
+
+      // 10. Funnel counts — single GROUP BY query replaces 6 JS `.filter()` passes
+      db.sequelize.query(
+        `SELECT ca.application_status, COUNT(ca.id)::int AS cnt
+         FROM candidateapplications ca
+         INNER JOIN employerjobpostings ejp ON ca.job_posting_id = ejp.id
+         WHERE ejp.employer_id = :employerId
+         GROUP BY ca.application_status`,
+        { replacements: { employerId }, type: QueryTypes.SELECT }
+      ),
+
+      // 11. Contract status counts — single GROUP BY query replaces 4 JS `.filter()` passes
+      db.sequelize.query(
+        `SELECT contract_status, COUNT(id)::int AS cnt
+         FROM employerapprenticeshipcontracts
+         WHERE employer_id = :employerId
+         GROUP BY contract_status`,
+        { replacements: { employerId }, type: QueryTypes.SELECT }
+      ),
+    ]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Process scalar results from raw SQL queries
+    // ─────────────────────────────────────────────────────────────────────────
+    const applicationsReceived = totalApplicationsCount[0]?.cnt ?? 0;
+    const appsThisWeek        = appsThisWeekCount[0]?.cnt ?? 0;
+    const appsLastWeek        = appsLastWeekCount[0]?.cnt ?? 0;
 
     let appsTrend = 0;
     if (appsLastWeek > 0) {
@@ -57,60 +146,134 @@ export const getEmployerDashboardStats = async (req, res) => {
       appsTrend = 100;
     }
 
-    const interviewsScheduled = await db.EmployerInterview.count({
-      where: {
-        employer_id: employerId
-      }
-    });
+    // Build funnel map from GROUP BY rows
+    const funnelStatusMap = {};
+    for (const row of funnelRows) {
+      funnelStatusMap[(row.application_status || '').toLowerCase()] = row.cnt;
+    }
+    const sumStatuses = (...keys) => keys.reduce((acc, k) => acc + (funnelStatusMap[k] ?? 0), 0);
 
-    const interviewsThisWeek = await db.EmployerInterview.count({
-      where: {
-        employer_id: employerId,
-        scheduled_at: { [Op.gte]: oneWeekAgo }
-      }
-    });
-
-    const activeApprentices = await db.EmployerApprenticeshipContract.count({
-      where: {
-        employer_id: employerId,
-        contract_status: { [Op.in]: ['active', 'signed', 'Active', 'Signed'] }
-      }
-    });
-
-    const newApprenticesThisMonth = await db.EmployerApprenticeshipContract.count({
-      where: {
-        employer_id: employerId,
-        contract_status: { [Op.in]: ['active', 'signed', 'Active', 'Signed'] },
-        created_at: { [Op.gte]: startOfMonth }
-      }
-    });
-
-    // 2. Recruitment Funnel Progress counts
     const funnel = {
-      Applied: applications.filter(app => ['applied', 'Applied', 'pending', 'Under Review'].includes(app.application_status)).length,
-      Screening: applications.filter(app => ['screening', 'Screening'].includes(app.application_status)).length,
-      Shortlisted: applications.filter(app => ['shortlisted', 'Shortlisted'].includes(app.application_status)).length,
-      Interview: applications.filter(app => ['interview', 'Interview', 'Interview Scheduled', 'Interview Completed'].includes(app.application_status)).length,
-      Selected: applications.filter(app => ['selected', 'Selected', 'hired', 'Hired'].includes(app.application_status)).length,
-      Joined: applications.filter(app => ['joined', 'Joined', 'onboarded', 'Onboarded'].includes(app.application_status)).length,
+      Applied:     sumStatuses('applied', 'pending', 'under review'),
+      Screening:   sumStatuses('screening'),
+      Shortlisted: sumStatuses('shortlisted'),
+      Interview:   sumStatuses('interview', 'interview scheduled', 'interview completed'),
+      Selected:    sumStatuses('selected', 'hired'),
+      Joined:      sumStatuses('joined', 'onboarded'),
     };
 
-    // 3. Apprenticeship Openings (list of openings mapped to camelCase for the frontend)
-    const openingsList = await db.EmployerJobPosting.findAll({
-      where: { employer_id: employerId },
-      include: [
-        {
+    // Build contract summary map from GROUP BY rows
+    const contractStatusMap = {};
+    for (const row of contractStatusRows) {
+      contractStatusMap[(row.contract_status || '').toLowerCase()] = row.cnt;
+    }
+    const sumContractStatuses = (...keys) => keys.reduce((acc, k) => acc + (contractStatusMap[k] ?? 0), 0);
+
+    const contractsSummary = {
+      // draft / generated = contract created but not yet signed
+      Generated:        sumContractStatuses('draft', 'generated'),
+      // approved / active / signed = fully executed, running contract
+      Approved:         sumContractStatuses('approved', 'active', 'signed'),
+      // pending variants = awaiting signature from one or both parties
+      PendingSignature: sumContractStatuses('pending_signature', 'pending signature', 'pending'),
+      // expired / completed / terminated = contract has ended
+      Expired:          sumContractStatuses('expired', 'completed', 'terminated'),
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // BATCH 2: List queries — all run in parallel
+    // Only fetches the small number of rows needed to display in lists.
+    // ─────────────────────────────────────────────────────────────────────────
+    const [
+      openingsList,
+      recentApplicationsList,
+      interviewsList,
+      contractsList,
+    ] = await Promise.all([
+
+      // 1. Recent 5 job openings (with contract fill-counts via include)
+      db.EmployerJobPosting.findAll({
+        where: { employer_id: employerId },
+        include: [{
           model: db.EmployerApprenticeshipContract,
           attributes: ['id', 'contract_status'],
           required: false
-        }
-      ],
-      order: [['created_at', 'DESC']],
-      limit: 5
-    });
+        }],
+        order: [['created_at', 'DESC']],
+        limit: 5
+      }),
 
+      // 2. Recent 5 applications (with job posting name via include)
+      db.CandidateApplication.findAll({
+        include: [{
+          model: db.EmployerJobPosting,
+          where: { employer_id: employerId },
+          attributes: ['id', 'job_title', 'job_code']
+        }],
+        order: [['created_at', 'DESC']],
+        limit: 5
+      }),
+
+      // 3. Upcoming 5 interviews
+      db.EmployerInterview.findAll({
+        where: { employer_id: employerId },
+        order: [['scheduled_at', 'ASC']],
+        limit: 5
+      }),
+
+      // 4. Active 5 contracts
+      db.EmployerApprenticeshipContract.findAll({
+        where: {
+          employer_id: employerId,
+          contract_status: { [Op.in]: ['active', 'signed', 'Active', 'Signed'] }
+        },
+        order: [['created_at', 'DESC']],
+        limit: 5
+      }),
+    ]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // BATCH 3: Candidate / job-posting lookups needed to enrich the lists
+    // All run in parallel using the IDs gathered from Batch 2.
+    // ─────────────────────────────────────────────────────────────────────────
+    const appCandidateIds       = [...new Set(recentApplicationsList.map(a => a.candidate_id).filter(Boolean))];
+    const interviewCandidateIds = [...new Set(interviewsList.map(i => i.candidate_id).filter(Boolean))];
+    const interviewJobIds       = [...new Set(interviewsList.map(i => i.job_posting_id).filter(Boolean))];
+    const contractCandidateIds  = [...new Set(contractsList.map(c => c.candidate_id).filter(Boolean))];
+
+    // Merge all unique candidate IDs into a single lookup to minimise queries
+    const allCandidateIds = [...new Set([
+      ...appCandidateIds,
+      ...interviewCandidateIds,
+      ...contractCandidateIds,
+    ])];
+
+    const [allCandidates, interviewJobs] = await Promise.all([
+      allCandidateIds.length
+        ? db.Candidate.findAll({
+            where: { id: { [Op.in]: allCandidateIds } },
+            attributes: ['id', 'full_name', 'email']
+          })
+        : Promise.resolve([]),
+
+      interviewJobIds.length
+        ? db.EmployerJobPosting.findAll({
+            where: { id: { [Op.in]: interviewJobIds } },
+            attributes: ['id', 'job_title']
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const candidateMap  = new Map(allCandidates.map(c => [c.id, c]));
+    const intJobMap     = new Map(interviewJobs.map(j => [j.id, j]));
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Shape the response data
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Openings list
     const openings = openingsList.map(posting => {
-      const contracts = posting.EmployerApprenticeshipContracts || [];
+      const contracts  = posting.EmployerApprenticeshipContracts || [];
       const filledCount = contracts.filter(c =>
         ['active', 'completed'].includes((c.contract_status || '').toLowerCase())
       ).length;
@@ -132,54 +295,23 @@ export const getEmployerDashboardStats = async (req, res) => {
       };
     });
 
-    // 4. Recent Applications
-    const formattedRecentApps = [];
-    const candidates = await db.Candidate.findAll({
-      where: {
-        id: { [Op.in]: applications.map(app => app.candidate_id).filter(Boolean) }
-      }
-    });
-
-    const candidateMap = new Map(candidates.map(c => [c.id, c]));
-
-    for (const app of applications.slice(0, 5)) {
+    // Recent applications
+    const recentApplications = recentApplicationsList.map(app => {
       const cand = candidateMap.get(app.candidate_id);
-      formattedRecentApps.push({
+      return {
         id: app.id,
         name: cand?.full_name || 'Anonymous Candidate',
         email: cand?.email || '',
         appliedFor: app.EmployerJobPosting?.job_title || 'General Opening',
         appliedAt: app.applied_at || app.created_at,
         status: app.application_status || 'Under Review'
-      });
-    }
-
-    // 5. Upcoming Interviews
-    const interviewsList = await db.EmployerInterview.findAll({
-      where: {
-        employer_id: employerId
-      },
-      order: [['scheduled_at', 'ASC']],
-      limit: 5
+      };
     });
 
-    const interviewCandidates = await db.Candidate.findAll({
-      where: {
-        id: { [Op.in]: interviewsList.map(int => int.candidate_id).filter(Boolean) }
-      }
-    });
-    const intCandidateMap = new Map(interviewCandidates.map(c => [c.id, c]));
-
-    const interviewJobs = await db.EmployerJobPosting.findAll({
-      where: {
-        id: { [Op.in]: interviewsList.map(int => int.job_posting_id).filter(Boolean) }
-      }
-    });
-    const intJobMap = new Map(interviewJobs.map(j => [j.id, j]));
-
-    const formattedInterviews = interviewsList.map(int => {
-      const cand = intCandidateMap.get(int.candidate_id);
-      const job = intJobMap.get(int.job_posting_id);
+    // Upcoming interviews
+    const upcomingInterviews = interviewsList.map(int => {
+      const cand = candidateMap.get(int.candidate_id);
+      const job  = intJobMap.get(int.job_posting_id);
       return {
         id: int.id,
         candidateName: cand?.full_name || 'Anonymous Candidate',
@@ -190,25 +322,9 @@ export const getEmployerDashboardStats = async (req, res) => {
       };
     });
 
-    // 6. Active Apprentices (apprenticeship contracts in active status)
-    const contractsList = await db.EmployerApprenticeshipContract.findAll({
-      where: {
-        employer_id: employerId,
-        contract_status: { [Op.in]: ['active', 'signed', 'Active', 'Signed'] }
-      },
-      order: [['created_at', 'DESC']],
-      limit: 5
-    });
-
-    const contractCandidates = await db.Candidate.findAll({
-      where: {
-        id: { [Op.in]: contractsList.map(c => c.candidate_id).filter(Boolean) }
-      }
-    });
-    const contractCandidateMap = new Map(contractCandidates.map(c => [c.id, c]));
-
-    const formattedApprentices = contractsList.map(con => {
-      const cand = contractCandidateMap.get(con.candidate_id);
+    // Active apprentices list
+    const activeApprenticesList = contractsList.map(con => {
+      const cand = candidateMap.get(con.candidate_id);
       return {
         id: con.id,
         name: cand?.full_name || 'Anonymous Apprentice',
@@ -218,18 +334,6 @@ export const getEmployerDashboardStats = async (req, res) => {
         contractNumber: con.contract_number || 'N/A'
       };
     });
-
-    // 7. Contracts Summary counts
-    const allContracts = await db.EmployerApprenticeshipContract.findAll({
-      where: { employer_id: employerId }
-    });
-
-    const contractsSummary = {
-      Generated: allContracts.filter(c => ['draft', 'Draft', 'generated', 'Generated'].includes(c.contract_status)).length,
-      Approved: allContracts.filter(c => ['approved', 'Approved'].includes(c.contract_status)).length,
-      PendingSignature: allContracts.filter(c => ['pending_signature', 'Pending Signature', 'pending', 'Pending'].includes(c.contract_status)).length,
-      Expired: allContracts.filter(c => ['expired', 'Expired'].includes(c.contract_status)).length
-    };
 
     return res.status(200).json({
       metrics: {
@@ -244,9 +348,9 @@ export const getEmployerDashboardStats = async (req, res) => {
       },
       funnel,
       openings,
-      recentApplications: formattedRecentApps,
-      upcomingInterviews: formattedInterviews,
-      activeApprenticesList: formattedApprentices,
+      recentApplications,
+      upcomingInterviews,
+      activeApprenticesList,
       contractsSummary
     });
   } catch (error) {

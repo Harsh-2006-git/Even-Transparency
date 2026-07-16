@@ -27,6 +27,8 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showReadinessInfo, setShowReadinessInfo] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [stats, setStats] = useState({
     metrics: {
       activeOpenings: 0,
@@ -90,7 +92,7 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
     if (!user?.token) return;
     setLoading(true);
     try {
-      const [companyRes, docsRes, statsRes] = await Promise.all([
+      const [companyRes, docsRes, statsRes, notifRes] = await Promise.all([
         fetch(`${API}/employer/company`, {
           headers: { Authorization: `Bearer ${user.token}` }
         }),
@@ -98,6 +100,9 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
           headers: { Authorization: `Bearer ${user.token}` }
         }),
         fetch(`${API}/employer/dashboard-stats`, {
+          headers: { Authorization: `Bearer ${user.token}` }
+        }),
+        fetch(`${API}/employer/notifications?limit=5`, {
           headers: { Authorization: `Bearer ${user.token}` }
         })
       ]);
@@ -113,6 +118,11 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData || stats);
+      }
+      if (notifRes.ok) {
+        const notifData = await notifRes.json();
+        setNotifications(notifData.notifications || []);
+        setUnreadCount(notifData.unreadCount || 0);
       }
     } catch (err) {
       console.error('Failed to load company details, documents or stats in dashboard:', err);
@@ -745,9 +755,16 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
           </div>
 
           {/* 4. RECENT NOTIFICATIONS */}
-          <div className="bg-white border border-slate-200 rounded-[20px] p-5 shadow-xs space-y-4">
+          <div className="bg-white border border-slate-200 rounded-[20px] p-5 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-[10px] font-extrabold text-slate-800 uppercase tracking-widest leading-none">Recent Notifications</h4>
+              <h4 className="text-[10px] font-extrabold text-slate-800 uppercase tracking-widest leading-none flex items-center gap-1.5">
+                Recent Notifications
+                {unreadCount > 0 && (
+                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#6D3BFF] text-white text-[8px] font-black">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </h4>
               <button
                 onClick={() => onSectionChange?.('notifications')}
                 className="text-[9px] font-bold text-[#6D3BFF] hover:underline cursor-pointer"
@@ -756,9 +773,60 @@ export default function EmployerDashboard({ user, onSectionChange, setEditingJob
               </button>
             </div>
 
-            <div className="py-6 text-center text-slate-400 font-bold text-xs">
-              No new notifications.
-            </div>
+            {notifications.length === 0 ? (
+              <div className="py-5 text-center text-slate-400 font-bold text-xs">
+                No new notifications.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {notifications.map(notif => {
+                  const typeIconMap = {
+                    contract: '📝',
+                    contract_accepted: '✅',
+                    apprentice_activated: '🎓',
+                    active_apprentice: '🎓',
+                    interview: '📅',
+                    application: '📋',
+                    grievance: '⚠️',
+                    payment: '💰',
+                    document: '📄',
+                  };
+                  const icon = typeIconMap[notif.notification_type] || '🔔';
+                  const timeAgo = (() => {
+                    const diff = Date.now() - new Date(notif.created_at).getTime();
+                    const mins = Math.floor(diff / 60000);
+                    const hrs = Math.floor(mins / 60);
+                    const days = Math.floor(hrs / 24);
+                    if (days > 0) return `${days}d ago`;
+                    if (hrs > 0) return `${hrs}h ago`;
+                    if (mins > 0) return `${mins}m ago`;
+                    return 'Just now';
+                  })();
+
+                  return (
+                    <div
+                      key={notif.id}
+                      className={`flex items-start gap-2.5 p-2.5 rounded-xl transition cursor-default ${
+                        notif.is_read ? 'bg-slate-50/60' : 'bg-violet-50/60 border border-violet-100'
+                      }`}
+                    >
+                      <span className="text-base leading-none mt-0.5 shrink-0">{icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-[10px] leading-snug truncate ${
+                          notif.is_read ? 'font-semibold text-slate-600' : 'font-black text-slate-800'
+                        }`}>
+                          {notif.title}
+                        </p>
+                        <p className="text-[9px] text-slate-400 font-bold mt-0.5 leading-snug line-clamp-1">
+                          {notif.message}
+                        </p>
+                      </div>
+                      <span className="text-[8px] font-bold text-slate-400 shrink-0 mt-0.5">{timeAgo}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
       {shortlistTarget && (
         <div className="fixed inset-0 z-[150] bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">

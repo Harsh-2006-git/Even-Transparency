@@ -112,38 +112,105 @@ export default function AdminContracts({ adminUser, showToast }) {
       ) : (
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>{['Contract #', 'Candidate', 'Company', 'Trade', 'Stipend', 'Start → End', 'Status', 'Action'].map(h => (
-                  <th key={h} className="px-4 py-3 font-black text-[10px] text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}</tr>
+                <tr className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  <th className="px-5 py-3.5">Contract ID</th>
+                  <th className="px-5 py-3.5">Candidate</th>
+                  <th className="px-5 py-3.5">Company Partner</th>
+                  <th className="px-5 py-3.5">Monthly Stipend</th>
+                  <th className="px-5 py-3.5">Duration Timeline</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5 text-center">Action</th>
+                </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(c => (
-                  <tr key={c.id} className="hover:bg-slate-50/60 transition">
-                    <td className="px-4 py-3 font-black text-slate-800 text-xs">{c.contract_number || '—'}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-black text-slate-800">{c.Candidate?.full_name || '—'}</p>
-                      <p className="text-[10px] text-slate-400">{c.Candidate?.email || ''}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-bold text-slate-700 flex items-center gap-1"><Building2 size={11} />{c.Employer?.company_name || '—'}</p>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 font-medium">{c.trade_name || '—'}</td>
-                    <td className="px-4 py-3 font-black text-emerald-700 flex items-center gap-0.5"><IndianRupee size={11} />{(c.stipend_amount || 0).toLocaleString('en-IN')}</td>
-                    <td className="px-4 py-3 text-[10.5px] text-slate-500 font-medium">
-                      <span className="flex items-center gap-1"><Calendar size={10} />{fmtDate(c.contract_start_date)} → {fmtDate(c.contract_end_date)}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${STATUS_CLS[c.contract_status] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                        {c.contract_status || 'Unknown'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => setSelected(c)} className="w-7 h-7 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center cursor-pointer"><Eye size={13} /></button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map(c => {
+                  const initials = (c.Candidate?.full_name || 'Candidate')
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map(part => part[0])
+                    .join('')
+                    .toUpperCase();
+
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
+                      {/* Contract ID */}
+                      <td className="px-5 py-4 font-black text-slate-800 text-xs">
+                        {c.contract_number || '—'}
+                      </td>
+
+                      {/* Candidate Name, Email & Phone */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-750 flex items-center justify-center text-[10px] font-black shrink-0">
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-black text-slate-800 text-xs truncate leading-snug">{c.Candidate?.full_name || '—'}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 truncate select-all">{c.Candidate?.email || ''}</p>
+                            {c.Candidate?.mobile_number && (
+                              <p className="text-[9px] text-slate-450 mt-0.5 select-all">{c.Candidate.mobile_number}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Company Partner & Trade */}
+                      <td className="px-5 py-4">
+                        <div className="min-w-0">
+                          <p className="font-black text-slate-700 text-xs truncate leading-snug flex items-center gap-1">
+                            <Building2 size={12} className="text-indigo-500 shrink-0" />
+                            {c.Employer?.company_name || '—'}
+                          </p>
+                          <p className="text-[9.5px] font-bold text-indigo-650 bg-indigo-50/50 border border-indigo-100/60 rounded px-1.5 py-0.5 mt-1 inline-block uppercase tracking-wider">
+                            {c.trade_name || '—'}
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Stipend */}
+                      <td className="px-5 py-4">
+                        <span className="inline-flex items-center gap-0.5 font-black text-emerald-700 bg-emerald-50 border border-emerald-150 px-2 py-1 rounded-xl text-xs">
+                          <IndianRupee size={11} strokeWidth={2.5} />
+                          {(c.stipend_amount || 0).toLocaleString('en-IN')}
+                        </span>
+                      </td>
+
+                      {/* Timeline */}
+                      <td className="px-5 py-4">
+                        <div className="min-w-0 text-[10px] text-slate-500 font-bold">
+                          <p className="flex items-center gap-1">
+                            <Calendar size={11} className="text-slate-400 shrink-0" />
+                            <span>{fmtDate(c.contract_start_date)}</span>
+                          </p>
+                          <p className="text-[9px] text-slate-455 mt-1 pl-4 flex items-center gap-1">
+                            <span>→</span>
+                            <span>{fmtDate(c.contract_end_date)}</span>
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${STATUS_CLS[c.contract_status] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                          {c.contract_status || 'Unknown'}
+                        </span>
+                      </td>
+
+                      {/* Action */}
+                      <td className="px-5 py-4 text-center">
+                        <button
+                          onClick={() => setSelected(c)}
+                          title="View complete contract logs & supervisor details"
+                          className="w-7 h-7 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center cursor-pointer mx-auto transition-colors"
+                        >
+                          <Eye size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -152,29 +219,137 @@ export default function AdminContracts({ adminUser, showToast }) {
 
       {selected && (
         <div className="fixed inset-0 z-[120] bg-slate-900/35 backdrop-blur-sm flex justify-end">
-          <aside className="h-full w-full max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-slide-in">
-            <div className="p-5 border-b border-slate-200 flex items-start justify-between gap-4 bg-slate-50/50">
+          <aside className="h-full w-full max-w-lg bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-slide-in">
+            {/* Drawer Header */}
+            <div className="p-5 border-b border-slate-200 flex items-start justify-between bg-slate-50/50">
               <div>
-                <span className={`inline-flex px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${STATUS_CLS[selected.contract_status] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>{selected.contract_status}</span>
+                <span className={`inline-flex px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${STATUS_CLS[selected.contract_status] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                  {selected.contract_status}
+                </span>
                 <h2 className="mt-2 text-base font-black text-slate-900">{selected.contract_number}</h2>
-                <p className="text-xs text-blue-600 font-bold mt-1">{selected.Candidate?.full_name} @ {selected.Employer?.company_name}</p>
+                <p className="text-xs text-blue-600 font-bold mt-1">Apprenticeship Agreement Details</p>
               </div>
-              <button onClick={() => setSelected(null)} className="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 flex items-center justify-center cursor-pointer"><X size={15} /></button>
+              <button
+                onClick={() => setSelected(null)}
+                className="w-8 h-8 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X size={15} />
+              </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
-              <InfoBlock title="Contract Details" rows={[
-                ['Contract #', selected.contract_number], ['Trade', selected.trade_name],
-                ['Stipend', fmtMoney(selected.stipend_amount)], ['Start Date', fmtDate(selected.contract_start_date)],
-                ['End Date', fmtDate(selected.contract_end_date)], ['Probation', selected.probation_period_days ? `${selected.probation_period_days} days` : '—'],
-                ['Supervisor', selected.supervisor_name || '—'], ['Status', selected.contract_status],
+
+            {/* Scrollable details */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
+              
+              {/* Contract Specifications */}
+              <InfoBlock title="Agreement Details" rows={[
+                ['Contract ID', selected.contract_number],
+                ['Trade/Role Name', selected.trade_name],
+                ['Monthly Stipend', fmtMoney(selected.stipend_amount)],
+                ['Probation Period', selected.probation_period_days ? `${selected.probation_period_days} Days` : 'N/A'],
+                ['Contract Status', selected.contract_status ? selected.contract_status.toUpperCase() : 'UNKNOWN']
               ]} />
-              <InfoBlock title="Parties" rows={[
-                ['Candidate', selected.Candidate?.full_name || '—'], ['Candidate Email', selected.Candidate?.email || '—'],
-                ['Employer', selected.Employer?.company_name || '—'],
+
+              {/* Start/End Timestamps */}
+              <InfoBlock title="Timeline & Signatures" rows={[
+                ['Start Date', fmtDate(selected.contract_start_date)],
+                ['End Date', fmtDate(selected.contract_end_date)],
+                ['Candidate Signed', selected.candidate_signed_at ? fmtDate(selected.candidate_signed_at) : 'Awaiting signature'],
+                ['Employer Signed', selected.employer_signed_at ? fmtDate(selected.employer_signed_at) : 'Awaiting signature'],
+                ['Agreement Copy', selected.agreement_document_url ? (
+                  <a
+                    href={selected.agreement_document_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 hover:underline font-black flex items-center gap-1"
+                  >
+                    View Document
+                  </a>
+                ) : 'No PDF uploaded']
               ]} />
+
+              {/* Supervisor details */}
+              <InfoBlock title="Designated Supervisor" rows={[
+                ['Supervisor Name', selected.supervisor_name || 'Not assigned'],
+                ['Supervisor Contact', selected.supervisor_contact || 'N/A']
+              ]} />
+
+              {/* Candidate Info */}
+              <InfoBlock title="Candidate Credentials" rows={[
+                ['Full Name', selected.Candidate?.full_name || '—'],
+                ['Official Email', selected.Candidate?.email || '—'],
+                ['Phone Number', selected.Candidate?.mobile_number || '—'],
+                ['Gender', selected.Candidate?.gender || '—'],
+                ['Date of Birth', fmtDate(selected.Candidate?.date_of_birth)],
+                ['Highest Qualification', selected.Candidate?.CandidateEducations?.find(e => e.is_highest)?.qualification_level || '10th / 12th Pass'],
+                ['Institution', selected.Candidate?.CandidateEducations?.find(e => e.is_highest)?.school_name || 'N/A']
+              ]} />
+
+              {/* Bank accounts */}
+              {selected.Candidate?.CandidateBankAccounts?.length > 0 && (
+                <InfoBlock title="Verified Bank Account" rows={[
+                  ['Bank Name', selected.Candidate.CandidateBankAccounts[0].bank_name || 'N/A'],
+                  ['Account No. (Last 4)', `XXXX-XXXX-${selected.Candidate.CandidateBankAccounts[0].account_number_last_4 || 'XXXX'}`],
+                  ['Verification Status', selected.Candidate.CandidateBankAccounts[0].verification_status ? selected.Candidate.CandidateBankAccounts[0].verification_status.toUpperCase() : 'PENDING']
+                ]} />
+              )}
+
+              {/* Employer details */}
+              <InfoBlock title="Employer Partner" rows={[
+                ['Company Name', selected.Employer?.company_name || '—'],
+                ['Official Email', selected.Employer?.official_email || '—']
+              ]} />
+
+              {/* Stipend Payment History Logs */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2.5 shadow-xs text-left">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Stipend Payment History</h4>
+                {!selected.EmployerStipendPayments || selected.EmployerStipendPayments.length === 0 ? (
+                  <p className="text-[10.5px] text-slate-400 italic font-semibold">No stipend payments have been processed for this contract yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[10px] border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100 font-bold text-slate-400 uppercase">
+                          <th className="py-1.5 pr-2">Month</th>
+                          <th className="py-1.5 px-2">Amount</th>
+                          <th className="py-1.5 px-2">Status</th>
+                          <th className="py-1.5 pl-2 text-right">Reference</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {selected.EmployerStipendPayments.map(p => (
+                          <tr key={p.id}>
+                            <td className="py-2 pr-2 font-bold text-slate-800">{p.payment_month || '—'}</td>
+                            <td className="py-2 px-2 font-bold text-slate-700">₹{(p.stipend_amount || 0).toLocaleString('en-IN')}</td>
+                            <td className="py-2 px-2">
+                              <span className={`inline-flex px-1.5 py-0.5 rounded-md border text-[8px] font-black uppercase tracking-wider ${
+                                (p.payment_status || '').toLowerCase() === 'paid'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
+                                  : 'bg-amber-50 text-amber-700 border-amber-150'
+                              }`}>
+                                {p.payment_status}
+                              </span>
+                            </td>
+                            <td className="py-2 pl-2 text-right text-slate-450 font-mono" title={p.transaction_reference}>
+                              {p.transaction_reference ? `${p.transaction_reference.slice(0, 8)}...` : 'N/A'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
             </div>
+
+            {/* Footer */}
             <div className="p-4 border-t border-slate-200 bg-white">
-              <button onClick={() => setSelected(null)} className="w-full h-9 rounded-xl border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-50 cursor-pointer">Close</button>
+              <button
+                onClick={() => setSelected(null)}
+                className="w-full h-9 rounded-xl border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-50 cursor-pointer"
+              >
+                Close Details
+              </button>
             </div>
           </aside>
         </div>

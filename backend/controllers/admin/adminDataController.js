@@ -62,7 +62,31 @@ export const listAdminApplications = async (req, res) => {
  */
 export const listAdminInterviews = async (req, res) => {
   try {
-    const interviews = await db.EmployerInterview.findAll({
+    // 1. Fetch all candidate applications in interview / post-interview stages
+    const applications = await db.CandidateApplication.findAll({
+      where: {
+        application_status: ['Interview Scheduled', 'Interview Completed', 'Selected', 'Hired', 'Rejected']
+      },
+      include: [
+        {
+          model: db.Candidate,
+          attributes: ['id', 'full_name', 'email', 'mobile_number', 'gender']
+        },
+        {
+          model: db.EmployerJobPosting,
+          attributes: ['id', 'job_title', 'job_code', 'employer_id'],
+          include: [
+            {
+              model: db.Employer,
+              attributes: ['id', 'company_name', 'official_email']
+            }
+          ]
+        }
+      ]
+    });
+
+    // 2. Fetch existing EmployerInterview records
+    const existingInterviews = await db.EmployerInterview.findAll({
       include: [
         {
           model: db.Employer,
@@ -76,11 +100,66 @@ export const listAdminInterviews = async (req, res) => {
           model: db.EmployerJobPosting,
           attributes: ['id', 'job_title', 'job_code']
         }
-      ],
-      order: [['created_at', 'DESC']]
+      ]
     });
 
-    const formatted = interviews.map(i => ({
+    // 3. For any application in interview stage, if there is no corresponding interview record, create it
+    for (const app of applications) {
+      if (!app.Candidate || !app.EmployerJobPosting) continue;
+
+      const hasInterview = existingInterviews.some(
+        i => i.candidate_id === app.candidate_id && i.job_posting_id === app.job_posting_id
+      );
+
+      if (!hasInterview) {
+        try {
+          const scheduledAt = app.interview_scheduled_at || app.updated_at || new Date();
+          const created = await db.EmployerInterview.create({
+            employer_id: app.EmployerJobPosting.employer_id,
+            candidate_id: app.candidate_id,
+            job_posting_id: app.job_posting_id,
+            interviewer_name: 'Even Cargo HR',
+            interview_mode: app.interview_mode || 'Online',
+            interview_location: app.interview_mode === 'Online' ? 'Google Meet' : 'Office Premises',
+            meeting_link: 'https://meet.google.com/new',
+            scheduled_at: scheduledAt,
+            attendance_status: app.application_status === 'Interview Completed' || app.application_status === 'Selected' || app.application_status === 'Hired' ? 'Attended' : 'Pending',
+            final_decision: app.application_status === 'Selected' || app.application_status === 'Hired' ? 'Selected' : app.application_status === 'Rejected' ? 'Rejected' : 'Pending',
+            feedback: app.interview_feedback || '',
+            interview_score: app.interview_score || null
+          });
+
+          // Fetch the created interview with associations to add it to the final array
+          const fullCreated = await db.EmployerInterview.findByPk(created.id, {
+            include: [
+              {
+                model: db.Employer,
+                attributes: ['id', 'company_name', 'official_email']
+              },
+              {
+                model: db.Candidate,
+                attributes: ['id', 'full_name', 'email', 'mobile_number', 'gender']
+              },
+              {
+                model: db.EmployerJobPosting,
+                attributes: ['id', 'job_title', 'job_code']
+              }
+            ]
+          });
+
+          if (fullCreated) {
+            existingInterviews.push(fullCreated);
+          }
+        } catch (err) {
+          console.error('Failed to auto-create missing interview record during backfill:', err);
+        }
+      }
+    }
+
+    // Sort by scheduled time descending
+    existingInterviews.sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
+
+    const formatted = existingInterviews.map(i => ({
       id: i.id,
       candidateName: i.Candidate?.full_name || 'Unknown',
       candidateEmail: i.Candidate?.email || '',
@@ -114,49 +193,77 @@ export const listAdminInterviews = async (req, res) => {
  */
 export const listAdminStipends = async (req, res) => {
   try {
-    const payments = await db.EmployerStipendPayment.findAll({
+    const contracts = await db.EmployerApprenticeshipContract.findAll({
+      where: {
+        contract_status: ['Active', 'active']
+      },
       include: [
+        {
+          model: db.Candidate,
+          attributes: ['id', 'full_name', 'email', 'mobile_number']
+        },
         {
           model: db.Employer,
           attributes: ['id', 'company_name', 'official_email']
         },
         {
-          model: db.Candidate,
-          attributes: ['id', 'full_name', 'email']
+          model: db.EmployerJobPosting,
+          attributes: ['id', 'job_title', 'stipend_amount', 'location']
         },
         {
-          model: db.EmployerApprenticeshipContract,
-          attributes: ['id', 'contract_number', 'trade_name', 'contract_status']
+          model: db.EmployerStipendPayment,
+          attributes: ['id', 'payment_month', 'stipend_amount', 'payment_status', 'payment_date', 'due_date', 'transaction_reference']
         }
       ],
       order: [['created_at', 'DESC']]
     });
 
-    const formatted = payments.map(p => ({
-      id: p.id,
-      candidateName: p.Candidate?.full_name || 'Unknown',
-      candidateEmail: p.Candidate?.email || '',
-      companyName: p.Employer?.company_name || 'Unknown',
-      contractNumber: p.EmployerApprenticeshipContract?.contract_number || '',
-      tradeName: p.EmployerApprenticeshipContract?.trade_name || '',
-      paymentMonth: p.payment_month || '',
-      stipendAmount: p.stipend_amount || 0,
-      bonusAmount: p.bonus_amount || 0,
-      deductions: p.deductions || 0,
-      netAmount: p.net_amount || 0,
-      dueDate: p.due_date,
-      paymentDate: p.payment_date,
-      paymentStatus: p.payment_status || 'Pending',
-      transactionReference: p.transaction_reference || '',
-      paymentGateway: p.payment_gateway || '',
-      remarks: p.remarks || '',
-      createdAt: p.created_at
-    }));
+    const formatted = contracts.map(c => {
+      const payments = c.EmployerStipendPayments || [];
+      
+      // Determine the latest payment status & month
+      let lastPayment = null;
+      if (payments.length > 0) {
+        const sorted = [...payments].sort((a, b) => new Date(b.due_date || b.created_at) - new Date(a.due_date || a.created_at));
+        lastPayment = sorted[0];
+      }
+
+      const lastStatus = lastPayment ? lastPayment.payment_status : 'Pending';
+      const lastMonth = lastPayment ? lastPayment.payment_month : 'None';
+      
+      // Mark as having dues if the latest month payment is not paid or no payment records exist
+      const hasDues = !lastPayment || lastStatus.toLowerCase() !== 'paid';
+
+      return {
+        id: c.id,
+        contractNumber: c.contract_number,
+        candidateName: c.Candidate?.full_name || 'Unknown',
+        candidateEmail: c.Candidate?.email || '',
+        candidatePhone: c.Candidate?.mobile_number || '',
+        companyName: c.Employer?.company_name || 'Unknown',
+        openingName: c.trade_name || c.EmployerJobPosting?.job_title || 'Apprentice',
+        stipendAmount: c.stipend_amount || c.EmployerJobPosting?.stipend_amount || 0,
+        startDate: c.contract_start_date,
+        endDate: c.contract_end_date,
+        lastStipendStatus: lastStatus,
+        lastStipendMonth: lastMonth,
+        hasDues: hasDues,
+        payments: payments.map(p => ({
+          id: p.id,
+          paymentMonth: p.payment_month,
+          stipendAmount: p.stipend_amount,
+          paymentStatus: p.payment_status,
+          paymentDate: p.payment_date,
+          dueDate: p.due_date,
+          transactionReference: p.transaction_reference
+        }))
+      };
+    });
 
     return res.status(200).json(formatted);
   } catch (error) {
     console.error('listAdminStipends error:', error);
-    return res.status(500).json({ error: 'Failed to retrieve stipend payments.' });
+    return res.status(500).json({ error: 'Failed to retrieve active apprentice stipends.' });
   }
 };
 

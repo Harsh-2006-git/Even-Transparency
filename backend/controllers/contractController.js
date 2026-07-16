@@ -421,12 +421,20 @@ export const listAdminContracts = async (req, res) => {
           include: [
             {
               model: db.CandidateEducation
+            },
+            {
+              model: db.CandidateBankAccount,
+              attributes: ['id', 'bank_name', 'account_number_last_4', 'verification_status']
             }
           ]
         },
         {
           model: db.EmployerJobPosting,
           attributes: ['id', 'job_title', 'stipend_amount', 'location', 'apprenticeship_duration_months']
+        },
+        {
+          model: db.EmployerStipendPayment,
+          attributes: ['id', 'payment_month', 'stipend_amount', 'payment_status', 'payment_date', 'transaction_reference']
         }
       ],
       order: [['created_at', 'DESC']]

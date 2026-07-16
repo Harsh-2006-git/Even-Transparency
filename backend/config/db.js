@@ -17,7 +17,19 @@ process.emit = function (event, ...args) {
   return _originalEmit(event, ...args);
 };
 
-const rawUrl = process.env.DATABASE_URL;
+const sanitizeUrl = (str) => {
+  if (!str) return str;
+  let val = str.trim();
+  while ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+    val = val.slice(1, -1).trim();
+  }
+  if (val.startsWith('"') || val.startsWith("'")) {
+    val = val.replace(/^['"]|['"]$/g, '').trim();
+  }
+  return val;
+};
+
+const rawUrl = sanitizeUrl(process.env.DATABASE_URL);
 
 if (!rawUrl) {
   console.error('❌  DATABASE_URL environment variable is not defined.');

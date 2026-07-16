@@ -38,7 +38,7 @@ const isRemote =
   !rawUrl.includes('localhost') &&
   !rawUrl.includes('127.0.0.1');
 
-const sequelize = new Sequelize(databaseUrl, {
+const sequelize = new Sequelize(databaseUrl || 'postgres://avnadmin:password@localhost:5432/defaultdb', {
   dialect: 'postgres',
   logging: false, // Set to console.log to debug raw SQL
   pool: {

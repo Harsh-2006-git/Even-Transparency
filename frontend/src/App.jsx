@@ -31,10 +31,8 @@ import AdminContracts from './pages/admin/Contracts';
 import AdminStipend from './pages/admin/Stipend';
 import AdminReports from './pages/admin/Reports';
 import AdminCompliance from './pages/admin/Compliance';
-import AdminCommunications from './pages/admin/Communications';
 import AdminUserManagement from './pages/admin/UserManagement';
 import AdminAuditLogs from './pages/admin/AuditLogs';
-import AdminSupport from './pages/admin/Support';
 import EmployerCompanyManagement from './pages/employer/CompanyManagement';
 import EmployerDashboard from './pages/employer/Dashboard';
 import EmployerDocuments from './pages/employer/Documents';
@@ -1040,10 +1038,8 @@ function App() {
                 {activeSection === 'stipend' && <AdminStipend adminUser={user} showToast={showToast} />}
                 {activeSection === 'reports' && <AdminReports adminUser={user} showToast={showToast} />}
                 {activeSection === 'compliance' && <AdminCompliance adminUser={user} showToast={showToast} />}
-                {activeSection === 'communications' && <AdminCommunications adminUser={user} showToast={showToast} />}
                 {activeSection === 'user-management' && <AdminUserManagement adminUser={user} showToast={showToast} />}
                 {activeSection === 'audit-logs' && <AdminAuditLogs adminUser={user} showToast={showToast} />}
-                {activeSection === 'support' && <AdminSupport adminUser={user} showToast={showToast} />}
               </>
             ) : user.userType === 'Employer' ? (
               <>

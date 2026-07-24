@@ -43,12 +43,9 @@ export const send = async ({ type, recipient, data = {}, userId = null }) => {
     // 2. Compile Handlebars HTML and subject
     const { subject, html } = compileTemplate(type, data);
 
-    // 3. Dispatch non-blocking email
-    sendEmail({ recipient, subject, html, type }).catch(err => {
-      console.error(`Background email error [${type}]:`, err.message);
-    });
-
-    return { success: true };
+    // 3. Dispatch email directly via SMTP
+    const dispatchResult = await sendEmail({ recipient, subject, html, type });
+    return dispatchResult;
   } catch (error) {
     console.error(`❌  Notification Service error for [${type}]:`, error.message);
     return { success: false, error: error.message };

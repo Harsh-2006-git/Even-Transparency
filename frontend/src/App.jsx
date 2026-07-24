@@ -910,29 +910,8 @@ function App() {
   // Standalone public Email Templates Directory Page route
   if (window.location.pathname.replace(/\/+$/, '') === '/email-templates') {
     return (
-      <div id="public-email-templates-scroll" className="fixed inset-0 overflow-y-auto bg-slate-100 p-4 md:p-8 scroll-smooth z-50">
-        <div className="max-w-7xl mx-auto space-y-6 pb-24">
-          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-md">
-                EC
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Even Cargo Portal</h2>
-                <p className="text-xs text-slate-500">Public Email Templates Directory</p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                window.history.pushState({}, '', '/');
-                setAuthView('home');
-                window.location.reload();
-              }}
-              className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-            >
-              ← Back to Home
-            </button>
-          </div>
+      <div id="public-email-templates-scroll" className="fixed inset-0 overflow-y-auto bg-slate-100 p-3 sm:p-4 md:p-8 scroll-smooth z-50">
+        <div className="max-w-7xl mx-auto pb-24">
           <EmailTemplates showToast={showToast} />
         </div>
       </div>

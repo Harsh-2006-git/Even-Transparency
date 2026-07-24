@@ -46,7 +46,18 @@ export const compileTemplate = (type, data = {}) => {
   // Render final HTML within layout
   const year = new Date().getFullYear();
   const isDark = data.theme === 'dark';
-  const logoUrl = data.logo_url || 'http://localhost:5173/logo.png';
+
+  // Determine production-ready logo URL fallback chain
+  const getProductionLogoUrl = () => {
+    if (process.env.LOGO_URL) return process.env.LOGO_URL;
+    if (process.env.APP_URL) return `${process.env.APP_URL.replace(/\/+$/, '')}/logo.png`;
+    if (process.env.FRONTEND_URL) return `${process.env.FRONTEND_URL.replace(/\/+$/, '')}/logo.png`;
+    return 'http://localhost:5173/logo.png';
+  };
+
+  // Use CID attachment inline image when dispatching actual emails, or URL for live previews
+  const logoUrl = data.logo_url || (data.is_email_dispatch ? 'cid:evencargologo' : getProductionLogoUrl());
+
   const fullHtml = compiledLayout({
     subject,
     body: bodyHtml,

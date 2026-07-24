@@ -1,11 +1,5 @@
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import getTransporter from './transporter.js';
 import db from '../models/index.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export const sendEmail = async ({ recipient, subject, html, type, retries = 0 }) => {
   let logRecord = null;
@@ -24,24 +18,12 @@ export const sendEmail = async ({ recipient, subject, html, type, retries = 0 })
     const transporter = await getTransporter();
     const fromAddress = process.env.EMAIL_FROM || '"Even Cargo" <notifications@evencargo.in>';
 
-    // Attach logo.png inline as CID for bulletproof rendering in all email clients
-    const attachments = [];
-    const logoPath = path.join(__dirname, '../../frontend/public/logo.png');
-    if (fs.existsSync(logoPath)) {
-      attachments.push({
-        filename: 'logo.png',
-        path: logoPath,
-        cid: 'evencargologo'
-      });
-    }
-
-    // 2. Dispatch email
+    // 2. Dispatch email using public folder logo.png image address
     const mailOptions = {
       from: fromAddress,
       to: recipient,
       subject,
-      html,
-      attachments
+      html
     };
 
     const info = await transporter.sendMail(mailOptions);

@@ -43,6 +43,8 @@ import AdminReportModel from './admin/AdminReport.js';
 import AdminAuditLogModel from './admin/AdminAuditLog.js';
 import AdminDashboardMetricModel from './admin/AdminDashboardMetric.js';
 import AdminSystemSettingModel from './admin/AdminSystemSetting.js';
+import EmailLogModel from './EmailLog.js';
+import NotificationPreferenceModel from './NotificationPreference.js';
 
 import sequelize from '../config/db.js';
 
@@ -90,6 +92,8 @@ db.AdminReport = AdminReportModel(sequelize, Sequelize.DataTypes);
 db.AdminAuditLog = AdminAuditLogModel(sequelize, Sequelize.DataTypes);
 db.AdminDashboardMetric = AdminDashboardMetricModel(sequelize, Sequelize.DataTypes);
 db.AdminSystemSetting = AdminSystemSettingModel(sequelize, Sequelize.DataTypes);
+db.EmailLog = EmailLogModel(sequelize, Sequelize.DataTypes);
+db.NotificationPreference = NotificationPreferenceModel(sequelize, Sequelize.DataTypes);
 
 
 Object.keys(db).forEach(modelName => {

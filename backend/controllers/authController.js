@@ -73,6 +73,10 @@ export const refreshTokenHandler = async (req, res) => {
       ...tokens
     });
   } catch (error) {
+    if (error.name?.includes('Sequelize') || error.code === 'ENOTFOUND') {
+      console.error('Token refresh database connection error:', error.message);
+      return res.status(503).json({ error: 'Database service temporarily unavailable' });
+    }
     console.error('Token refresh error:', error);
     return res.status(500).json({ error: 'Failed to refresh token' });
   }

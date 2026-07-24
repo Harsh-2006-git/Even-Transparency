@@ -1,0 +1,18 @@
+<h2>Hello {{candidate_name}},</h2>
+
+<p>An interview has been scheduled for your application for <strong>{{job_title}}</strong> with <strong>{{employer_name}}</strong>.</p>
+
+<div class="info-box">
+  <p><strong>Date & Time:</strong> {{interview_date}} at {{interview_time}}</p>
+  <p><strong>Mode:</strong> {{interview_mode}}</p>
+  {{#if meeting_link}}
+  <p><strong>Meeting Link:</strong> <a href="{{meeting_link}}">{{meeting_link}}</a></p>
+  {{/if}}
+  {{#if location}}
+  <p><strong>Location:</strong> {{location}}</p>
+  {{/if}}
+</div>
+
+<p>Please log in to your dashboard to accept or request a reschedule for this interview.</p>
+
+<p>Best of luck!<br><strong>The Even Cargo Team</strong></p>

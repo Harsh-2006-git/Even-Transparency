@@ -1,5 +1,9 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+// Force Node.js to resolve IPv4 addresses first to avoid ENOTFOUND issues on dual-stack hosts (e.g. Aiven Cloud)
+dns.setDefaultResultOrder('ipv4first');
 
 dotenv.config();
 
@@ -53,6 +57,16 @@ const isRemote =
 const sequelize = new Sequelize(databaseUrl || 'postgres://avnadmin:password@localhost:5432/defaultdb', {
   dialect: 'postgres',
   logging: false, // Set to console.log to debug raw SQL
+  retry: {
+    max: 3,
+    match: [
+      /SequelizeHostNotFoundError/,
+      /ENOTFOUND/,
+      /ECONNREFUSED/,
+      /ETIMEDOUT/,
+      /ConnectionError/
+    ]
+  },
   pool: {
     max: 3,
     min: 0,        // Do not hold warm connections in development

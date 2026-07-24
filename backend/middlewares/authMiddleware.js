@@ -28,6 +28,10 @@ export const authMiddleware = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    if (error.name?.includes('Sequelize') || error.code === 'ENOTFOUND') {
+      console.error('Auth middleware database connection error:', error.message);
+      return res.status(503).json({ error: 'Database service temporarily unavailable' });
+    }
     console.error('Auth middleware error:', error.message);
     return res.status(401).json({ error: 'Invalid or expired token' });
   }

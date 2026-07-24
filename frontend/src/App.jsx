@@ -33,6 +33,7 @@ import AdminReports from './pages/admin/Reports';
 import AdminCompliance from './pages/admin/Compliance';
 import AdminUserManagement from './pages/admin/UserManagement';
 import AdminAuditLogs from './pages/admin/AuditLogs';
+import EmailTemplates from './pages/admin/EmailTemplates';
 import EmployerCompanyManagement from './pages/employer/CompanyManagement';
 import EmployerDashboard from './pages/employer/Dashboard';
 import EmployerDocuments from './pages/employer/Documents';
@@ -59,6 +60,7 @@ const getAuthViewFromPath = () => {
   if (path === '/candidate') return 'candidate';
   if (path === '/employer/onboarding') return 'employer-onboarding';
   if (path === '/employer') return 'employer';
+  if (path === '/email-templates') return 'email-templates';
   return 'staff';
 };
 
@@ -102,12 +104,12 @@ function App() {
           'openings', 'applications', 'interviews', 'contracts',
           'stipend', 'reports', 'compliance',
           'user-management', 'settings', 'audit-logs',
-          'company-management', 'grievances'
+          'company-management', 'grievances', 'email-templates'
         ];
       case 'Employer':
-        return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'stipends', 'reports', 'notifications', 'grievances', 'settings'];
+        return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'stipends', 'reports', 'notifications', 'grievances', 'settings', 'email-templates'];
       case 'Candidate':
-        return ['overview', 'profile', 'applications', 'stipends', 'jobs', 'documents', 'interviews', 'grievances', 'notifications', 'settings'];
+        return ['overview', 'profile', 'applications', 'stipends', 'jobs', 'documents', 'interviews', 'grievances', 'notifications', 'settings', 'email-templates'];
       case 'Mobiliser':
         return ['overview'];
       default:
@@ -204,6 +206,7 @@ function App() {
   useEffect(() => {
     if (!user) return;
     const currentPath = window.location.pathname.replace(/\/+$/, '');
+    if (currentPath === '/email-templates') return;
     if (user.userType === 'Employer' && !currentPath.startsWith('/employer')) {
       window.history.replaceState({}, '', '/employer' + (window.location.hash || ''));
     } else if (user.userType === 'Candidate' && !currentPath.startsWith('/candidate')) {
@@ -904,6 +907,38 @@ function App() {
     window.location.hash = '/overview';
   };
 
+  // Standalone public Email Templates Directory Page route
+  if (window.location.pathname.replace(/\/+$/, '') === '/email-templates') {
+    return (
+      <div id="public-email-templates-scroll" className="fixed inset-0 overflow-y-auto bg-slate-100 p-4 md:p-8 scroll-smooth z-50">
+        <div className="max-w-7xl mx-auto space-y-6 pb-24">
+          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-md">
+                EC
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Even Cargo Portal</h2>
+                <p className="text-xs text-slate-500">Public Email Templates Directory</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                window.history.pushState({}, '', '/');
+                setAuthView('home');
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+            >
+              ← Back to Home
+            </button>
+          </div>
+          <EmailTemplates showToast={showToast} />
+        </div>
+      </div>
+    );
+  }
+
   // If not logged in, render the secure Login gate
   if (!user) {
     if (authView === 'home') {
@@ -962,6 +997,32 @@ function App() {
           onLoginSuccess={handleLoginSuccess}
           onStartAuth={() => navigateAuth('/candidate/register')}
         />
+      );
+    }
+    if (authView === 'email-templates') {
+      return (
+        <div className="min-h-screen bg-slate-50 p-6 md:p-10">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-md">
+                  EC
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">Even Cargo Portal</h2>
+                  <p className="text-xs text-slate-500">Public Email Templates Directory</p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigateAuth('/')}
+                className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+              >
+                ← Back to Home
+              </button>
+            </div>
+            <EmailTemplates showToast={showToast} />
+          </div>
+        </div>
       );
     }
     return (
@@ -1040,6 +1101,7 @@ function App() {
                 {activeSection === 'compliance' && <AdminCompliance adminUser={user} showToast={showToast} />}
                 {activeSection === 'user-management' && <AdminUserManagement adminUser={user} showToast={showToast} />}
                 {activeSection === 'audit-logs' && <AdminAuditLogs adminUser={user} showToast={showToast} />}
+                {activeSection === 'email-templates' && <EmailTemplates showToast={showToast} />}
               </>
             ) : user.userType === 'Employer' ? (
               <>
@@ -1130,7 +1192,10 @@ function App() {
                     showToast={showToast} 
                   />
                 )}
-                {!['overview', 'company-management', 'profile', 'documents', 'settings', 'notifications', 'grievances', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'contracts', 'stipends'].includes(activeSection) && (
+                {activeSection === 'email-templates' && (
+                  <EmailTemplates showToast={showToast} />
+                )}
+                {!['overview', 'company-management', 'profile', 'documents', 'settings', 'notifications', 'grievances', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'contracts', 'stipends', 'email-templates'].includes(activeSection) && (
                   <EmployerDashboard 
                     user={user} 
                     onSectionChange={handleSectionChange} 
@@ -1149,6 +1214,7 @@ function App() {
                 {activeSection === 'interviews' && <CandidateInterviews onSectionChange={handleSectionChange} />}
                 {activeSection === 'grievances' && <CandidateGrievances user={user} />}
                 {activeSection === 'notifications' && <CandidateNotifications onSectionChange={handleSectionChange} />}
+                {activeSection === 'email-templates' && <EmailTemplates showToast={showToast} />}
                 {activeSection === 'settings' && <CandidateSettings user={user} onSectionChange={handleSectionChange} onUserUpdate={handleUserUpdate} />}
               </>
             ) : (

@@ -1,0 +1,16 @@
+<h2>Hello {{candidate_name}},</h2>
+
+<p>There is an update on your submitted grievance (Case #<strong>{{grievance_id}}</strong>).</p>
+
+<div class="info-box">
+  <p><strong>Case ID:</strong> #{{grievance_id}}</p>
+  <p><strong>Category:</strong> {{category}}</p>
+  <p><strong>Status:</strong> <span class="badge badge-warning">{{status}}</span></p>
+  {{#if resolution_notes}}
+  <p><strong>Resolution Details:</strong> {{resolution_notes}}</p>
+  {{/if}}
+</div>
+
+<p>Your safety and workplace wellbeing are our top priorities. You can review the full status and reply to the grievance team on your Candidate Support dashboard.</p>
+
+<p>Best regards,<br><strong>The Even Cargo Grievance Redressal Team</strong></p>

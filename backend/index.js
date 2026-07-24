@@ -17,12 +17,20 @@ import employerRoutes from './routes/employerRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import candidateRoutes from './routes/candidateRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import initScheduler from './notifications/scheduler.js';
 import { uploadProxy } from './controllers/candidate/documentController.js';
 import './models/index.js';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
+app.use('/public', express.static(path.join(__dirname, '../frontend/public')));
 
 const PORT = process.env.PORT || 5000;
 
@@ -196,7 +204,7 @@ const startServer = () => {
     console.log('');
     console.log(`  🚀  Even Cargo Backend`);
     console.log(`  ⚡  Server running on port ${PORT}`);
-    console.log('');
+
   });
 
   // Database init runs in background — does not block server from accepting requests
@@ -217,6 +225,9 @@ const startServer = () => {
       });
 
       console.log('  🗄️   Database schema ready.');
+
+      // Initialize automated email notification scheduler
+      initScheduler();
       console.log('');
     } catch (error) {
       console.error(`  ❌  Database connection failed: ${error.message}`);

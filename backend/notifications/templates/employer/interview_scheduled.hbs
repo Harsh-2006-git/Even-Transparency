@@ -1,0 +1,17 @@
+<h2>Dear {{employer_name}},</h2>
+
+<p>An interview has been scheduled with candidate <strong>{{candidate_name}}</strong> for the <strong>{{job_title}}</strong> role.</p>
+
+<div class="info-box">
+  <p><strong>Candidate:</strong> {{candidate_name}}</p>
+  <p><strong>Role:</strong> {{job_title}}</p>
+  <p><strong>Date & Time:</strong> {{interview_date}} at {{interview_time}}</p>
+  <p><strong>Mode:</strong> {{interview_mode}}</p>
+  {{#if meeting_link}}
+  <p><strong>Meeting Link:</strong> <a href="{{meeting_link}}">{{meeting_link}}</a></p>
+  {{/if}}
+</div>
+
+<p>An invitation has also been dispatched to the candidate. You can view all active interview schedules in your Employer Candidate Management section.</p>
+
+<p>Best regards,<br><strong>The Even Cargo Team</strong></p>

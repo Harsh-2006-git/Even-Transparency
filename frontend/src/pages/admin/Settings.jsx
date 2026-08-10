@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 const BRAND = '#6D3BFF';
-const TABS = ['Account', 'Security', 'Notifications', 'Platform', 'Privacy', 'Support'];
+const TABS = ['Account', 'Security', 'Notifications', 'Platform', 'Privacy', 'Support', 'Danger Zone'];
 
 export default function AdminSettings({ adminUser, onUserUpdate, showToast }) {
   const [activeTab, setActiveTab] = useState('Account');
@@ -82,6 +82,30 @@ export default function AdminSettings({ adminUser, onUserUpdate, showToast }) {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
   };
 
+  /* ── Modal states & Danger Zone ──────────────────── */
+  const [modalType, setModalType] = useState(null);
+  const [confirmInput, setConfirmInput] = useState('');
+
+  const handleDeactivate = () => {
+    if (confirmInput.toUpperCase() !== 'DEACTIVATE') {
+      triggerToast('Please type DEACTIVATE to confirm.', 'error');
+      return;
+    }
+    setModalType(null);
+    setConfirmInput('');
+    triggerToast('Admin account has been deactivated. Access is restricted.', 'warning');
+  };
+
+  const handleDeleteAccount = () => {
+    if (confirmInput.toUpperCase() !== 'DELETE') {
+      triggerToast('Please type DELETE to confirm.', 'error');
+      return;
+    }
+    setModalType(null);
+    setConfirmInput('');
+    triggerToast('Your admin delete request has been filed.');
+  };
+
   /* ── Scroll refs ───────────────────────────────── */
   const accountRef      = useRef(null);
   const securityRef     = useRef(null);
@@ -89,9 +113,11 @@ export default function AdminSettings({ adminUser, onUserUpdate, showToast }) {
   const platformRef     = useRef(null);
   const privacyRef      = useRef(null);
   const supportRef      = useRef(null);
+  const dangerRef       = useRef(null);
   const refMap = {
     Account: accountRef, Security: securityRef, Notifications: notifRef,
     Platform: platformRef, Privacy: privacyRef, Support: supportRef,
+    'Danger Zone': dangerRef
   };
 
   const handleTabClick = (tab) => {
@@ -725,6 +751,150 @@ export default function AdminSettings({ adminUser, onUserUpdate, showToast }) {
 
         </div>
       </div>
+
+      {/* Danger Zone - Full Width Section at the End of Settings Page */}
+      <div ref={dangerRef} className="rounded-3xl border border-rose-200/80 bg-rose-50/40 p-6 shadow-xs text-left transition hover:shadow-sm">
+        <div className="flex items-center gap-3 border-b border-rose-100 pb-4 mb-5">
+          <div className="w-10 h-10 rounded-2xl bg-rose-100/80 text-rose-600 flex items-center justify-center shrink-0">
+            <AlertTriangle size={18} />
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-rose-900">Danger Zone</h4>
+            <p className="text-xs font-semibold text-rose-600/80 mt-0.5">Actions that affect account status.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Deactivate Account */}
+          <div className="rounded-2xl border border-rose-200/60 bg-white p-4 flex flex-col justify-between space-y-3 transition hover:border-rose-300">
+            <div className="space-y-1">
+              <h5 className="text-xs font-black text-slate-800">Deactivate Account</h5>
+              <p className="text-[11px] font-semibold text-slate-500 leading-relaxed">Temporarily disable your profile visibility.</p>
+            </div>
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmInput('');
+                  setModalType('deactivate');
+                }}
+                className="h-9 px-4 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-xs font-black text-rose-700 rounded-xl transition cursor-pointer select-none shadow-2xs"
+              >
+                Deactivate
+              </button>
+            </div>
+          </div>
+
+          {/* Delete Account */}
+          <div className="rounded-2xl border border-rose-200/60 bg-white p-4 flex flex-col justify-between space-y-3 transition hover:border-rose-300">
+            <div className="space-y-1">
+              <h5 className="text-xs font-black text-rose-800">Delete Account</h5>
+              <p className="text-[11px] font-semibold text-slate-500 leading-relaxed">Permanently remove your account and application data.</p>
+            </div>
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmInput('');
+                  setModalType('delete');
+                }}
+                className="h-9 px-4 bg-rose-600 hover:bg-rose-700 text-xs font-black text-white rounded-xl transition cursor-pointer select-none shadow-xs"
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal Dialogs */}
+      {modalType && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md shadow-2xl p-6 flex flex-col space-y-5 animate-scale-up text-left text-xs font-sans">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-black text-sm text-slate-800 flex items-center gap-2">
+                {modalType === 'deactivate' && <AlertTriangle size={16} className="text-amber-500" />}
+                {modalType === 'delete' && <ShieldAlert size={16} className="text-rose-600" />}
+                <span>{modalType === 'deactivate' ? 'Deactivate Account' : 'Delete Account'}</span>
+              </h3>
+              <button
+                onClick={() => setModalType(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {modalType === 'deactivate' && (
+              <div className="space-y-4">
+                <p className="text-slate-600 font-semibold leading-relaxed">
+                  Deactivating your account will temporarily disable your profile visibility and admin privileges.
+                </p>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
+                    Type <span className="text-amber-600 font-black">DEACTIVATE</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmInput}
+                    onChange={(e) => setConfirmInput(e.target.value)}
+                    placeholder="DEACTIVATE"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-250 font-mono text-xs text-slate-800 outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => setModalType(null)}
+                    className="px-4 py-2 border border-slate-250 rounded-xl font-bold text-slate-650 hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeactivate}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold transition cursor-pointer shadow-xs"
+                  >
+                    Confirm Deactivation
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {modalType === 'delete' && (
+              <div className="space-y-4">
+                <p className="text-slate-600 font-semibold leading-relaxed">
+                  This action is permanent and cannot be undone. All your account data and settings will be permanently removed.
+                </p>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
+                    Type <span className="text-rose-600 font-black">DELETE</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmInput}
+                    onChange={(e) => setConfirmInput(e.target.value)}
+                    placeholder="DELETE"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-250 font-mono text-xs text-slate-800 outline-none focus:border-rose-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => setModalType(null)}
+                    className="px-4 py-2 border border-slate-250 rounded-xl font-bold text-slate-650 hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition cursor-pointer shadow-xs"
+                  >
+                    Permanently Delete
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

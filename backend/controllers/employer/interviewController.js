@@ -1,4 +1,6 @@
 import db from '../../models/index.js';
+import notificationService from '../../notifications/notification.service.js';
+import { NOTIFICATION_TYPES } from '../../notifications/notification.constants.js';
 
 /**
  * GET /api/employer/interviews
@@ -101,6 +103,51 @@ export const createEmployerInterview = async (req, res) => {
         interview_mode: interviewMode || 'Online'
       });
     }
+
+    // Trigger high-priority interview emails
+    Promise.all([
+      db.Candidate.findByPk(candidateId),
+      db.EmployerJobPosting.findByPk(jobPostingId, { include: [db.Employer] }),
+      db.EmployerUser.findOne({ where: { employer_id: employerId } })
+    ]).then(([cand, job, empUser]) => {
+      const interviewDateStr = new Date(scheduledAt).toLocaleDateString();
+      const interviewTimeStr = new Date(scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      if (cand?.email) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.CANDIDATE_INTERVIEW_SCHEDULED,
+          recipient: cand.email,
+          data: {
+            candidate_name: cand.full_name || 'Candidate',
+            job_title: job?.job_title || 'Apprenticeship Role',
+            employer_name: job?.Employer?.company_name || 'Employer',
+            interview_date: interviewDateStr,
+            interview_time: interviewTimeStr,
+            interview_mode: interviewMode || 'Online',
+            meeting_link: meetingLink || 'Will be provided by employer',
+            location: interviewLocation || 'Online'
+          },
+          priority: 'HIGH'
+        }).catch(err => console.error('Candidate interview email error:', err.message));
+      }
+
+      if (empUser?.email) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.EMPLOYER_INTERVIEW_SCHEDULED,
+          recipient: empUser.email,
+          data: {
+            employer_name: empUser.full_name || 'Employer',
+            candidate_name: cand?.full_name || 'Candidate',
+            job_title: job?.job_title || 'Apprenticeship Role',
+            interview_date: interviewDateStr,
+            interview_time: interviewTimeStr,
+            interview_mode: interviewMode || 'Online',
+            meeting_link: meetingLink || 'Online Link'
+          },
+          priority: 'HIGH'
+        }).catch(err => console.error('Employer interview email error:', err.message));
+      }
+    }).catch(() => null);
 
     return res.status(201).json({
       message: 'Interview scheduled successfully',

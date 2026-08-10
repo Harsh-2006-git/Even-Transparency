@@ -1,9 +1,12 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { Op } from 'sequelize';
 import db from '../../models/index.js';
 import { recalculateProfileCompletion } from '../../utils/profileCompletion.js';
 import { generateTokenPair } from '../../services/tokenService.js';
 import { notifyCandidate, notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
+import notificationService from '../../notifications/notification.service.js';
+import { NOTIFICATION_TYPES } from '../../notifications/notification.constants.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'even_cargo_secret_key';
 
@@ -43,44 +46,71 @@ const getProfileIncludes = () => [
   db.CandidateSkill,
   db.CandidateWorkExperience,
   db.CandidateBankAccount,
-  db.CandidateDocument,
-  db.CandidateApplication,
-  db.EmployerInterview,
-  db.EmployerApprenticeshipContract
+  db.CandidateDocument
 ];
 
-const buildProfilePayload = (candidate) => ({
-  id: candidate.id,
-  first_name: candidate.first_name,
-  last_name: candidate.last_name,
-  full_name: candidate.full_name,
-  gender: candidate.gender,
-  date_of_birth: candidate.date_of_birth,
-  age: candidate.age,
-  mobile_number: candidate.mobile_number,
-  email: candidate.email,
-  preferred_language: candidate.preferred_language,
-  aadhaar_last_4: candidate.aadhaar_last_4,
-  pan_number: candidate.pan_number,
-  naps_candidate_id: candidate.naps_candidate_id,
-  emergency_contact_name: candidate.emergency_contact_name,
-  emergency_contact_relation: candidate.emergency_contact_relation,
-  emergency_contact_phone: candidate.emergency_contact_phone,
-  onboarding_status: candidate.onboarding_status,
-  verification_status: candidate.verification_status,
-  availability_status: candidate.availability_status,
-  profile_completion_percentage: candidate.profile_completion_percentage,
-  profile_completion_breakdown: candidate.profile_completion_breakdown,
-  address: candidate.CandidateAddresses?.[0] || null,
-  education: candidate.CandidateEducations?.[0] || null,
-  skills: candidate.CandidateSkills || [],
-  workExperience: candidate.CandidateWorkExperiences?.[0] || null,
-  bankAccount: candidate.CandidateBankAccounts?.[0] || null,
-  documents: candidate.CandidateDocuments || [],
-  applications: candidate.CandidateApplications || [],
-  interviews: candidate.EmployerInterviews || [],
-  contracts: candidate.EmployerApprenticeshipContracts || []
-});
+const buildProfilePayload = (candidate, applicationsOverride = null) => {
+  const rawApps = applicationsOverride || candidate?.CandidateApplications || [];
+  const mappedApps = rawApps.map(app => {
+    const rawJob = app.EmployerJobPosting;
+    const job = rawJob?.get ? rawJob.get({ plain: true }) : (rawJob || {});
+    const employer = job.Employer || {};
+    const companyName = employer.company_name || job.company_name || 'Even Cargo Partner';
+    return {
+      id: app.id,
+      job_posting_id: app.job_posting_id,
+      position: job.job_title || 'Apprentice',
+      company: companyName,
+      company_name: companyName,
+      location: job.location || 'On-site',
+      applied_at: app.applied_at || app.created_at,
+      application_status: app.application_status || 'Applied',
+      EmployerJobPosting: {
+        id: job.id,
+        job_title: job.job_title,
+        location: job.location,
+        stipend_amount: job.stipend_amount,
+        company_name: companyName
+      }
+    };
+  });
+
+  return {
+    id: candidate.id,
+    first_name: candidate.first_name,
+    last_name: candidate.last_name,
+    full_name: candidate.full_name,
+    gender: candidate.gender,
+    date_of_birth: candidate.date_of_birth,
+    age: candidate.age,
+    mobile_number: candidate.mobile_number,
+    email: candidate.email,
+    preferred_language: candidate.preferred_language,
+    aadhaar_number_encrypted: candidate.aadhaar_number_encrypted,
+    aadhaar_last_4: candidate.aadhaar_last_4,
+    pan_number: candidate.pan_number,
+    naps_candidate_id: candidate.naps_candidate_id,
+    emergency_contact_name: candidate.emergency_contact_name,
+    emergency_contact_relation: candidate.emergency_contact_relation,
+    emergency_contact_phone: candidate.emergency_contact_phone,
+    onboarding_status: candidate.onboarding_status,
+    verification_status: candidate.verification_status,
+    availability_status: candidate.availability_status,
+    profile_completion_percentage: candidate.profile_completion_percentage,
+    profile_completion_breakdown: candidate.profile_completion_breakdown,
+    address: candidate.CandidateAddresses?.[0] || null,
+    education: candidate.CandidateEducations?.[0] || null,
+    educations: candidate.CandidateEducations || [],
+    skills: candidate.CandidateSkills || [],
+    workExperience: candidate.CandidateWorkExperiences?.[0] || null,
+    workExperiences: candidate.CandidateWorkExperiences || [],
+    bankAccount: candidate.CandidateBankAccounts?.[0] || null,
+    documents: candidate.CandidateDocuments || [],
+    applications: mappedApps,
+    interviews: candidate.EmployerInterviews || [],
+    contracts: candidate.EmployerApprenticeshipContracts || []
+  };
+};
 
 export const checkPhone = async (req, res) => {
   try {
@@ -359,12 +389,36 @@ export const completeOnboarding = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    const candidate = await db.Candidate.findByPk(req.candidate.id, {
-      include: getProfileIncludes()
-    });
+    const candidateId = req.candidate.id;
+
+    const [candidate, applications] = await Promise.all([
+      db.Candidate.findByPk(candidateId, {
+        include: getProfileIncludes()
+      }),
+      db.CandidateApplication.findAll({
+        where: { candidate_id: candidateId },
+        attributes: ['id', 'candidate_id', 'job_posting_id', 'application_status', 'applied_at', 'current_stage', 'created_at'],
+        include: [{
+          model: db.EmployerJobPosting,
+          attributes: ['id', 'job_title', 'location', 'stipend_amount'],
+          include: [{
+            model: db.Employer,
+            attributes: ['id', 'company_name']
+          }]
+        }],
+        order: [['applied_at', 'DESC']]
+      }).catch(err => {
+        console.error('Error fetching applications for profile:', err.message);
+        return [];
+      })
+    ]);
+
+    if (!candidate) {
+      return res.status(404).json({ error: 'Candidate profile not found.' });
+    }
 
     return res.status(200).json({
-      candidate: buildProfilePayload(candidate)
+      candidate: buildProfilePayload(candidate, applications)
     });
   } catch (error) {
     console.error('Candidate profile fetch error:', error);
@@ -392,8 +446,10 @@ export const updateProfile = async (req, res) => {
       availability_status,
       address = {},
       education = {},
+      educations = null,
       skills = [],
       workExperience = {},
+      workExperiences = null,
       bankAccount = {}
     } = req.body;
 
@@ -448,22 +504,28 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    const hasEducation = Object.values(education || {}).some((value) => cleanString(String(value ?? '')));
-    if (hasEducation) {
-      const existingEducation = await db.CandidateEducation.findOne({ where: { candidate_id: req.candidate.id }, transaction });
-      const educationPayload = {
-        candidate_id: req.candidate.id,
-        qualification_level: cleanString(education.qualification_level),
-        course_name: cleanString(education.course_name),
-        specialization: cleanString(education.specialization),
-        institution_name: cleanString(education.institution_name),
-        board_or_university: cleanString(education.board_or_university),
-        passing_year: cleanString(education.passing_year),
-        percentage_or_cgpa: cleanString(education.percentage_or_cgpa),
-        currently_pursuing: Boolean(education.currently_pursuing)
-      };
-      if (existingEducation) await existingEducation.update(educationPayload, { transaction });
-      else await db.CandidateEducation.create(educationPayload, { transaction });
+    // Handle Educations (multiple array or single object)
+    const rawEducationList = Array.isArray(educations)
+      ? educations
+      : (Object.values(education || {}).some(v => cleanString(String(v ?? ''))) ? [education] : []);
+
+    await db.CandidateEducation.destroy({ where: { candidate_id: req.candidate.id }, transaction });
+    const cleanEducations = rawEducationList.filter(edu => cleanString(edu.qualification_level) || cleanString(edu.course_name) || cleanString(edu.institution_name));
+    if (cleanEducations.length) {
+      await db.CandidateEducation.bulkCreate(
+        cleanEducations.map(edu => ({
+          candidate_id: req.candidate.id,
+          qualification_level: cleanString(edu.qualification_level),
+          course_name: cleanString(edu.course_name),
+          specialization: cleanString(edu.specialization),
+          institution_name: cleanString(edu.institution_name),
+          board_or_university: cleanString(edu.board_or_university),
+          passing_year: cleanString(edu.passing_year),
+          percentage_or_cgpa: cleanString(edu.percentage_or_cgpa),
+          currently_pursuing: Boolean(edu.currently_pursuing)
+        })),
+        { transaction }
+      );
     }
 
     await db.CandidateSkill.destroy({ where: { candidate_id: req.candidate.id }, transaction });
@@ -480,20 +542,28 @@ export const updateProfile = async (req, res) => {
       })), { transaction });
     }
 
-    const hasWorkExperience = Object.values(workExperience || {}).some((value) => cleanString(String(value ?? '')));
+    // Handle Work Experiences (multiple array or single object)
+    const rawExpList = Array.isArray(workExperiences)
+      ? workExperiences
+      : (Object.values(workExperience || {}).some(v => cleanString(String(v ?? ''))) ? [workExperience] : []);
+
     await db.CandidateWorkExperience.destroy({ where: { candidate_id: req.candidate.id }, transaction });
-    if (hasWorkExperience) {
-      await db.CandidateWorkExperience.create({
-        candidate_id: req.candidate.id,
-        company_name: cleanString(workExperience.company_name),
-        designation: cleanString(workExperience.designation),
-        employment_type: cleanString(workExperience.employment_type),
-        start_date: cleanString(workExperience.start_date),
-        end_date: workExperience.currently_working ? null : cleanString(workExperience.end_date),
-        currently_working: Boolean(workExperience.currently_working),
-        responsibilities: cleanString(workExperience.responsibilities),
-        reason_for_leaving: cleanString(workExperience.reason_for_leaving)
-      }, { transaction });
+    const cleanExperiences = rawExpList.filter(exp => cleanString(exp.company_name) || cleanString(exp.designation));
+    if (cleanExperiences.length) {
+      await db.CandidateWorkExperience.bulkCreate(
+        cleanExperiences.map(exp => ({
+          candidate_id: req.candidate.id,
+          company_name: cleanString(exp.company_name),
+          designation: cleanString(exp.designation),
+          employment_type: cleanString(exp.employment_type),
+          start_date: cleanString(exp.start_date),
+          end_date: exp.currently_working ? null : cleanString(exp.end_date),
+          currently_working: Boolean(exp.currently_working),
+          responsibilities: cleanString(exp.responsibilities),
+          reason_for_leaving: cleanString(exp.reason_for_leaving)
+        })),
+        { transaction }
+      );
     }
 
     const hasBankAccount = Object.values(bankAccount || {}).some((value) => cleanString(String(value ?? '')));
@@ -725,7 +795,9 @@ export const applyForJob = async (req, res) => {
       return res.status(400).json({ error: 'Job posting ID is required' });
     }
 
-    const job = await db.EmployerJobPosting.findByPk(jobPostingId);
+    const job = await db.EmployerJobPosting.findByPk(jobPostingId, {
+      include: [{ model: db.Employer, attributes: ['id', 'company_name', 'official_email'] }]
+    });
     if (!job) {
       return res.status(404).json({ error: 'Apprenticeship drive not found' });
     }
@@ -747,7 +819,7 @@ export const applyForJob = async (req, res) => {
 
     await job.increment('total_applications', { by: 1 });
 
-    // Notify candidate: application submitted
+    // Notify candidate: application submitted (In-App Push)
     notifyCandidate({
       candidateId,
       type: 'application',
@@ -757,7 +829,7 @@ export const applyForJob = async (req, res) => {
       entityId: application.id
     });
 
-    // Notify employer: new application received
+    // Notify employer: new application received (In-App Push)
     if (job.employer_id) {
       notifyEmployer({
         employerId: job.employer_id,
@@ -767,6 +839,39 @@ export const applyForJob = async (req, res) => {
         entityType: 'CandidateApplication',
         entityId: application.id
       });
+    }
+
+    // Trigger Candidate Application Confirmation Email (MEDIUM priority queue)
+    if (req.candidate?.email) {
+      notificationService.send({
+        type: NOTIFICATION_TYPES.CANDIDATE_JOB_APPLIED,
+        recipient: req.candidate.email,
+        data: {
+          candidate_name: req.candidate.full_name || 'Candidate',
+          first_name: (req.candidate.full_name || 'Candidate').split(' ')[0],
+          job_title: job.job_title || 'Apprenticeship Opening',
+          company_name: job.Employer?.company_name || 'Even Cargo Partner',
+          applied_date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        },
+        priority: 'MEDIUM'
+      }).catch(err => console.error('Candidate job applied email error:', err.message));
+    }
+
+    // Trigger Employer New Application Alert Email (MEDIUM priority queue)
+    const employerEmail = job.Employer?.official_email;
+    if (employerEmail) {
+      notificationService.send({
+        type: NOTIFICATION_TYPES.EMPLOYER_APPLICATION_RECEIVED,
+        recipient: employerEmail,
+        data: {
+          employer_name: job.Employer?.company_name || 'Employer',
+          candidate_name: req.candidate?.full_name || 'Candidate Applicant',
+          job_title: job.job_title || 'Apprenticeship Opening',
+          match_percentage: 90,
+          applied_date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        },
+        priority: 'MEDIUM'
+      }).catch(err => console.error('Employer new application alert email error:', err.message));
     }
 
     return res.status(201).json({
@@ -783,27 +888,28 @@ export const listMyApplications = async (req, res) => {
   try {
     const candidateId = req.candidate.id;
 
-    // Permanently destroy any legacy Withdrawn applications
-    await db.CandidateApplication.destroy({
-      where: { application_status: 'Withdrawn' }
-    });
-
-    const applications = await db.CandidateApplication.findAll({
-      where: { candidate_id: candidateId },
-      include: [{
-        model: db.EmployerJobPosting,
+    // Parallel fetch applications & contracts (excluding withdrawn status)
+    const [applications, contracts] = await Promise.all([
+      db.CandidateApplication.findAll({
+        where: {
+          candidate_id: candidateId,
+          application_status: { [Op.ne]: 'Withdrawn' }
+        },
         include: [{
-          model: db.Employer,
-          attributes: ['company_name']
-        }]
-      }],
-      order: [['applied_at', 'DESC']]
-    });
-
-    // Fetch all contracts for this candidate to attach contract details
-    const contracts = await db.EmployerApprenticeshipContract.findAll({
-      where: { candidate_id: candidateId }
-    });
+          model: db.EmployerJobPosting,
+          attributes: ['id', 'job_title', 'location', 'stipend_amount'],
+          include: [{
+            model: db.Employer,
+            attributes: ['company_name']
+          }]
+        }],
+        order: [['applied_at', 'DESC']]
+      }),
+      db.EmployerApprenticeshipContract.findAll({
+        where: { candidate_id: candidateId },
+        attributes: ['id', 'job_posting_id', 'contract_status', 'agreement_document_url']
+      })
+    ]);
 
     const formatted = applications.map(app => {
       const j = app.EmployerJobPosting || {};

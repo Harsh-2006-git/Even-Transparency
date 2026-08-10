@@ -1,5 +1,7 @@
 import db from '../models/index.js';
 import { notifyCandidate, notifyEmployer, notifyAdmin } from '../services/notificationService.js';
+import notificationService from '../notifications/notification.service.js';
+import { NOTIFICATION_TYPES } from '../notifications/notification.constants.js';
 
 /**
  * GET /api/contract/:applicationId
@@ -61,10 +63,17 @@ export const sendContract = async (req, res) => {
 
     const application = await db.CandidateApplication.findOne({
       where: { id },
-      include: [{
-        model: db.EmployerJobPosting,
-        where: { employer_id: employerId }
-      }]
+      include: [
+        {
+          model: db.EmployerJobPosting,
+          where: { employer_id: employerId },
+          include: [{ model: db.Employer }]
+        },
+        {
+          model: db.Candidate,
+          attributes: ['id', 'full_name', 'email', 'mobile_number']
+        }
+      ]
     });
 
     if (!application) {
@@ -108,7 +117,7 @@ export const sendContract = async (req, res) => {
       employer_signed_at: new Date()
     });
 
-    // Notify candidate: offer letter received
+    // Notify candidate: offer letter received (In-App Push)
     notifyCandidate({
       candidateId: application.candidate_id,
       type: 'contract',
@@ -118,7 +127,7 @@ export const sendContract = async (req, res) => {
       entityId: contract.id
     });
 
-    // Notify employer: offer letter sent successfully
+    // Notify employer: offer letter sent successfully (In-App Push)
     notifyEmployer({
       employerId,
       type: 'contract',
@@ -127,6 +136,22 @@ export const sendContract = async (req, res) => {
       entityType: 'EmployerApprenticeshipContract',
       entityId: contract.id
     });
+
+    // Trigger Candidate Offer Letter & Contract Email (HIGH Priority Queue)
+    if (application.Candidate?.email) {
+      notificationService.send({
+        type: NOTIFICATION_TYPES.CANDIDATE_HIRED_CONTRACT,
+        recipient: application.Candidate.email,
+        data: {
+          candidate_name: application.Candidate.full_name || 'Candidate',
+          job_title: application.EmployerJobPosting?.job_title || 'Apprenticeship Role',
+          employer_name: application.EmployerJobPosting?.Employer?.company_name || 'Even Cargo Partner',
+          stipend_amount: contract.stipend_amount ? `₹${contract.stipend_amount}` : '14,500',
+          start_date: contract.contract_start_date ? new Date(contract.contract_start_date).toLocaleDateString('en-IN') : 'Upcoming'
+        },
+        priority: 'HIGH'
+      }).catch(err => console.error('Candidate offer letter email error:', err.message));
+    }
 
     return res.status(200).json({
       message: 'Offer letter and contract template sent successfully.',
@@ -199,7 +224,12 @@ export const acceptContract = async (req, res) => {
       });
     }
 
-    // Notify candidate: active apprentice
+    // Fetch employer details for email alert
+    const jobPostingWithEmployer = await db.EmployerJobPosting.findByPk(contract.job_posting_id, {
+      include: [{ model: db.Employer }]
+    });
+
+    // Notify candidate: active apprentice (In-App Push)
     notifyCandidate({
       candidateId,
       type: 'active_apprentice',
@@ -208,7 +238,8 @@ export const acceptContract = async (req, res) => {
       entityType: 'EmployerApprenticeshipContract',
       entityId: contract.id
     });
-    // Notify employer: candidate accepted
+
+    // Notify employer: candidate accepted (In-App Push)
     if (contract.employer_id) {
       notifyEmployer({
         employerId: contract.employer_id,
@@ -219,6 +250,35 @@ export const acceptContract = async (req, res) => {
         entityId: contract.id
       });
     }
+
+    // Trigger Candidate Active Apprentice Confirmation Email (#6)
+    if (candidate?.email) {
+      notificationService.send({
+        type: NOTIFICATION_TYPES.CANDIDATE_ACTIVE_APPRENTICE,
+        recipient: candidate.email,
+        data: {
+          candidate_name: candidate.full_name || 'Apprentice',
+          apprentice_id: contract.contract_number || `APP-${contract.id.slice(0, 8)}`,
+          employer_name: jobPostingWithEmployer?.Employer?.company_name || 'Even Cargo Partner'
+        },
+        priority: 'MEDIUM'
+      }).catch(err => console.error('Candidate active apprentice email error:', err.message));
+    }
+
+    // Trigger Employer Contract Signed Email (#14)
+    const empEmail = jobPostingWithEmployer?.Employer?.official_email;
+    if (empEmail) {
+      notificationService.send({
+        type: NOTIFICATION_TYPES.EMPLOYER_CONTRACT_SIGNED,
+        recipient: empEmail,
+        data: {
+          employer_name: jobPostingWithEmployer?.Employer?.company_name || 'Employer',
+          candidate_name: candidate?.full_name || 'Candidate Apprentice',
+          job_title: jobPostingWithEmployer?.job_title || 'Apprenticeship Role'
+        },
+        priority: 'MEDIUM'
+      }).catch(err => console.error('Employer contract signed email error:', err.message));
+    }
     // Notify admin
     notifyAdmin({
       type: 'apprentice_activated',
@@ -227,6 +287,38 @@ export const acceptContract = async (req, res) => {
       entityType: 'EmployerApprenticeshipContract',
       entityId: contract.id
     });
+
+    // Dispatch email notifications for active apprentice & signed contract
+    if (candidate?.email) {
+      notificationService.send({
+        type: NOTIFICATION_TYPES.CANDIDATE_ACTIVE_APPRENTICE,
+        recipient: candidate.email,
+        data: {
+          candidate_name: candidate.full_name || 'Candidate',
+          apprentice_id: candidate.naps_candidate_id || `APP-${contract.id.slice(0, 8).toUpperCase()}`,
+          employer_name: jobPosting?.Employer?.company_name || 'Employer'
+        },
+        priority: 'MEDIUM'
+      }).catch(err => console.error('Active apprentice email trigger error:', err.message));
+    }
+
+    if (contract.employer_id) {
+      db.EmployerUser.findOne({ where: { employer_id: contract.employer_id } }).then(empUser => {
+        if (empUser?.email) {
+          notificationService.send({
+            type: NOTIFICATION_TYPES.EMPLOYER_CONTRACT_SIGNED,
+            recipient: empUser.email,
+            data: {
+              employer_name: empUser.full_name || 'Employer',
+              candidate_name: candidate?.full_name || 'Candidate',
+              job_title: contract.trade_name || 'Apprentice Role',
+              signed_date: new Date().toLocaleDateString()
+            },
+            priority: 'MEDIUM'
+          }).catch(err => console.error('Employer contract signed email error:', err.message));
+        }
+      }).catch(() => null);
+    }
 
     return res.status(200).json({
       message: 'Contract accepted successfully. You are now an active apprentice!',

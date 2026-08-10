@@ -18,9 +18,14 @@ export default (sequelize, DataTypes) => {
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM('PENDING', 'SENT', 'FAILED'),
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'PENDING',
+      defaultValue: 'QUEUED',
+    },
+    priority: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'MEDIUM', // HIGH, MEDIUM, LOW
     },
     provider: {
       type: DataTypes.STRING,

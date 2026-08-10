@@ -11,19 +11,9 @@ export const getDashboardStats = async (req, res) => {
     const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
     const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
 
-    // ─── BATCH 1: All pure count / aggregate queries in parallel ──────────────
+    // ─── BATCH 1: Single consolidated scalar stats query + group by queries ─────
     const [
-      totalEmployers,
-      totalCandidates,
-      activeOpenings,
-      activeContracts,
-      totalApprentices,
-      pendingEmployers,
-      pendingCandidates,
-      interviewsToday,
-      totalStipendResult,
-      pendingStipendResult,
-      stipendCount,
+      scalarStatsResult,
       funnelRows,
       contractStatusRows,
       stipendMonthlyRows,
@@ -33,56 +23,21 @@ export const getDashboardStats = async (req, res) => {
       adminNotifRows,
     ] = await Promise.all([
 
-      // 1. Total employers
-      db.Employer.count(),
-
-      // 2. Total candidates
-      db.Candidate.count(),
-
-      // 3. Active openings
-      db.EmployerJobPosting.count({
-        where: { status: { [Op.in]: ['Open', 'open', 'Active', 'active'] } }
-      }),
-
-      // 4. Active contracts
-      db.EmployerApprenticeshipContract.count({
-        where: { contract_status: { [Op.in]: ['active', 'signed', 'Active', 'Signed'] } }
-      }),
-
-      // 5. Total apprentices (have an active/signed contract)
-      db.EmployerApprenticeshipContract.count({
-        where: { contract_status: { [Op.in]: ['active', 'signed', 'Active', 'Signed'] } }
-      }),
-
-      // 6. Pending employer verifications
-      db.Employer.count({
-        where: { verification_status: { [Op.in]: ['pending', 'Pending', 'pending_approval'] } }
-      }),
-
-      // 7. Pending candidate verifications
-      db.Candidate.count({
-        where: { verification_status: { [Op.in]: ['pending', 'Pending', 'pending_approval'] } }
-      }),
-
-      // 8. Interviews today
-      db.EmployerInterview.count({
-        where: { scheduled_at: { [Op.between]: [startOfToday, endOfToday] } }
-      }),
-
-      // 9. Total stipend disbursed
-      db.EmployerStipendPayment.sum('net_amount', {
-        where: { payment_status: { [Op.in]: ['paid', 'Paid', 'processed', 'Processed'] } }
-      }),
-
-      // 10. Pending stipend
-      db.EmployerStipendPayment.sum('net_amount', {
-        where: { payment_status: { [Op.in]: ['pending', 'Pending', 'unpaid', 'Unpaid', 'due', 'Due'] } }
-      }),
-
-      // 11. Stipend transaction count (for avg)
-      db.EmployerStipendPayment.count({
-        where: { payment_status: { [Op.in]: ['paid', 'Paid', 'processed', 'Processed'] } }
-      }),
+      // 1. Single consolidated scalar stats query
+      db.sequelize.query(
+        `SELECT
+           (SELECT COUNT(*)::int FROM employers) AS total_employers,
+           (SELECT COUNT(*)::int FROM candidates) AS total_candidates,
+           (SELECT COUNT(*)::int FROM employerjobpostings WHERE status IN ('Open','open','Active','active')) AS active_openings,
+           (SELECT COUNT(*)::int FROM employerapprenticeshipcontracts WHERE contract_status IN ('active','signed','Active','Signed')) AS active_contracts,
+           (SELECT COUNT(*)::int FROM employers WHERE verification_status IN ('pending','Pending','pending_approval')) AS pending_employers,
+           (SELECT COUNT(*)::int FROM candidates WHERE verification_status IN ('pending','Pending','pending_approval')) AS pending_candidates,
+           (SELECT COUNT(*)::int FROM employerinterviews WHERE scheduled_at BETWEEN :startOfToday AND :endOfToday) AS interviews_today,
+           (SELECT COALESCE(SUM(net_amount), 0)::float FROM employerstipendpayments WHERE payment_status IN ('paid','Paid','processed','Processed')) AS total_stipend_paid,
+           (SELECT COALESCE(SUM(net_amount), 0)::float FROM employerstipendpayments WHERE payment_status IN ('pending','Pending','unpaid','Unpaid','due','Due')) AS pending_stipend,
+           (SELECT COUNT(*)::int FROM employerstipendpayments WHERE payment_status IN ('paid','Paid','processed','Processed')) AS stipend_count`,
+        { replacements: { startOfToday, endOfToday }, type: QueryTypes.SELECT }
+      ),
 
       // 12. Application funnel — GROUP BY
       db.sequelize.query(
@@ -107,18 +62,14 @@ export const getDashboardStats = async (req, res) => {
         { replacements: { startOfYear }, type: QueryTypes.SELECT }
       ),
 
-      // 15. Top 5 employers by apprentice count
+      // 15. Top 5 employers by apprentice count (subquery optimized to avoid Cartesian join overhead)
       db.sequelize.query(
         `SELECT e.id, e.company_name,
-           COUNT(DISTINCT c.id) FILTER (WHERE c.contract_status IN ('active','signed','Active','Signed')) AS apprentice_count,
-           COUNT(DISTINCT j.id) FILTER (WHERE j.status IN ('Open','open','Active','active'))              AS opening_count,
-           COUNT(DISTINCT c.id)                                                                          AS contract_count,
-           COALESCE(SUM(s.net_amount) FILTER (WHERE s.payment_status IN ('paid','Paid')), 0)             AS stipend_total
+           (SELECT COUNT(*)::int FROM employerapprenticeshipcontracts c WHERE c.employer_id = e.id AND c.contract_status IN ('active','signed','Active','Signed')) AS apprentice_count,
+           (SELECT COUNT(*)::int FROM employerjobpostings j WHERE j.employer_id = e.id AND j.status IN ('Open','open','Active','active')) AS opening_count,
+           (SELECT COUNT(*)::int FROM employerapprenticeshipcontracts c WHERE c.employer_id = e.id) AS contract_count,
+           (SELECT COALESCE(SUM(s.net_amount), 0)::float FROM employerstipendpayments s WHERE s.employer_id = e.id AND s.payment_status IN ('paid','Paid')) AS stipend_total
          FROM employers e
-         LEFT JOIN employerapprenticeshipcontracts c ON c.employer_id = e.id
-         LEFT JOIN employerjobpostings j             ON j.employer_id = e.id
-         LEFT JOIN employerstipendpayments s         ON s.employer_id = e.id
-         GROUP BY e.id, e.company_name
          ORDER BY apprentice_count DESC, contract_count DESC
          LIMIT 5`,
         { type: QueryTypes.SELECT }
@@ -155,10 +106,19 @@ export const getDashboardStats = async (req, res) => {
     ]);
 
     // ─── Process scalars ───────────────────────────────────────────────────────
-    const totalStipendDisbursed = totalStipendResult || 0;
-    const pendingDisbursement   = pendingStipendResult || 0;
-    const totalTransactions     = stipendCount || 0;
-    const avgStipend            = stipendCount > 0 ? Math.round(totalStipendDisbursed / stipendCount) : 0;
+    const scalars = scalarStatsResult[0] || {};
+    const totalEmployers         = scalars.total_employers || 0;
+    const totalCandidates        = scalars.total_candidates || 0;
+    const activeOpenings         = scalars.active_openings || 0;
+    const activeContracts        = scalars.active_contracts || 0;
+    const totalApprentices       = scalars.active_contracts || 0;
+    const pendingEmployers       = scalars.pending_employers || 0;
+    const pendingCandidates      = scalars.pending_candidates || 0;
+    const interviewsToday        = scalars.interviews_today || 0;
+    const totalStipendDisbursed = scalars.total_stipend_paid || 0;
+    const pendingDisbursement   = scalars.pending_stipend || 0;
+    const totalTransactions     = scalars.stipend_count || 0;
+    const avgStipend            = totalTransactions > 0 ? Math.round(totalStipendDisbursed / totalTransactions) : 0;
     const pendingApprovals      = pendingEmployers + pendingCandidates;
 
     // ─── Funnel ───────────────────────────────────────────────────────────────

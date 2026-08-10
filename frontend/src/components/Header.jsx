@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { LogOut, Menu, Database, X, CheckCircle2, RefreshCw, Edit, AlertCircle, UserCircle, ChevronDown, ChevronUp, Search, Bell } from 'lucide-react';
+import { LogOut, Menu, Database, X, CheckCircle2, RefreshCw, Edit, AlertCircle, UserCircle, ChevronDown, ChevronUp, Search, Bell, Settings2 } from 'lucide-react';
 
 export default function Header({
   user,
@@ -8,7 +8,9 @@ export default function Header({
   isOnline,
   unsyncedCandidates = [],
   triggerSync,
-  onEditCandidate
+  onEditCandidate,
+  onSectionChange,
+  notificationBadge
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -75,11 +77,21 @@ export default function Header({
           {/* Right: Notification, Avatar */}
           <div className="flex items-center gap-3.5 shrink-0 ml-auto">
             {/* Notification Bell */}
-            <button className="h-9 w-9 rounded-xl hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-800 transition flex items-center justify-center cursor-pointer relative shadow-xs active:scale-95">
+            <button 
+              onClick={() => onSectionChange && onSectionChange('notifications')}
+              className="h-9 w-9 rounded-xl hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-800 transition flex items-center justify-center cursor-pointer relative shadow-xs active:scale-95"
+              title="Notifications"
+            >
               <Bell className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 bg-[#6D3BFF] text-white rounded-full text-[8px] font-black h-4.5 w-4.5 flex items-center justify-center border-2 border-white shadow-sm">
-                6
-              </span>
+              {notificationBadge ? (
+                <span className="absolute -top-1 -right-1 bg-[#6D3BFF] text-white rounded-full text-[8px] font-black h-4.5 w-4.5 flex items-center justify-center border-2 border-white shadow-sm">
+                  {notificationBadge}
+                </span>
+              ) : (
+                <span className="absolute -top-1 -right-1 bg-[#6D3BFF] text-white rounded-full text-[8px] font-black h-4.5 w-4.5 flex items-center justify-center border-2 border-white shadow-sm">
+                  6
+                </span>
+              )}
             </button>
 
             {/* Profile Dropdown */}
@@ -107,6 +119,18 @@ export default function Header({
                       <span className="font-extrabold text-slate-800 truncate">{companyName}</span>
                       <span className="text-[10px] text-slate-550 truncate">{user.email}</span>
                     </div>
+                  </div>
+                  <div className="py-1 border-b border-slate-100">
+                    <button 
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        if (onSectionChange) onSectionChange('settings');
+                      }}
+                      className="w-full px-3 py-1.5 hover:bg-slate-50 text-slate-700 cursor-pointer flex items-center gap-2 font-bold transition text-left"
+                    >
+                      <Settings2 className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Settings</span>
+                    </button>
                   </div>
                   <div className="py-1">
                     <button 
@@ -329,6 +353,24 @@ export default function Header({
 
 
 
+          {/* Notification Bell */}
+          <button 
+            onClick={() => onSectionChange && onSectionChange('notifications')}
+            className="h-9 w-9 rounded-xl hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-800 transition flex items-center justify-center cursor-pointer relative shadow-xs active:scale-95 ml-1"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {notificationBadge ? (
+              <span className="absolute -top-1 -right-1 bg-[#6D3BFF] text-white rounded-full text-[8px] font-black h-4.5 w-4.5 flex items-center justify-center border-2 border-white shadow-sm">
+                {notificationBadge}
+              </span>
+            ) : (
+              <span className="absolute -top-1 -right-1 bg-[#6D3BFF] text-white rounded-full text-[8px] font-black h-4.5 w-4.5 flex items-center justify-center border-2 border-white shadow-sm">
+                3
+              </span>
+            )}
+          </button>
+
           {/* Profile Dropdown */}
           {user && (
             <div ref={profileRef} className="relative">
@@ -368,6 +410,16 @@ export default function Header({
                       <UserCircle className="w-3.5 h-3.5 text-slate-400" />
                       <span className="font-semibold">Role: {user.userType}</span>
                     </div>
+                    <button
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        if (onSectionChange) onSectionChange('settings');
+                      }}
+                      className="w-full px-3 py-1.5 hover:bg-slate-50 text-slate-700 cursor-pointer flex items-center gap-2.5 transition text-left font-semibold"
+                    >
+                      <Settings2 className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Settings</span>
+                    </button>
                   </div>
 
                   {/* Logout Button */}

@@ -24,7 +24,10 @@ import {
   AlertTriangle,
   UserCheck,
   ShieldAlert,
-  Trash2
+  Trash2,
+  ShieldCheck,
+  Pencil,
+  Save
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
@@ -41,11 +44,40 @@ export default function CompanyManagement({ adminUser, showToast }) {
   const [sizeFilter, setSizeFilter] = useState('');
   const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'oldest' | 'name_asc'
 
-  // Details Drawer State
+  // Details Drawer & Edit State
   const [selectedCompanyId, setSelectedCompanyId] = useState(null);
   const [selectedCompanyDetails, setSelectedCompanyDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  const handleSaveCompanyEdit = async (updatedDraft) => {
+    setSaveLoading(true);
+    try {
+      const res = await fetch(`${API}/admin/employers/${updatedDraft.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-id': adminUser?.id
+        },
+        body: JSON.stringify(updatedDraft)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update company details.');
+      
+      setCompanies((prev) => prev.map((c) => (c.id === updatedDraft.id ? { ...c, ...data.employer } : c)));
+      if (selectedCompanyDetails?.id === updatedDraft.id) {
+        setSelectedCompanyDetails((prev) => ({ ...prev, ...data.employer }));
+      }
+      setEditingCompany(null);
+      if (showToast) showToast('Employer details updated successfully!', 'success');
+    } catch (err) {
+      if (showToast) showToast(err.message, 'error');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -605,6 +637,15 @@ export default function CompanyManagement({ adminUser, showToast }) {
                           >
                             View Details
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingCompany(c)}
+                            className="px-2.5 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-black transition cursor-pointer flex items-center gap-1 active:scale-95"
+                            title="Edit Employer Details"
+                          >
+                            <Pencil size={12} />
+                            <span>Edit</span>
+                          </button>
                           {c.verification_status !== 'approved' && (
                             <button
                               type="button"
@@ -676,12 +717,24 @@ export default function CompanyManagement({ adminUser, showToast }) {
                   </span>
                 </div>
               </div>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="h-9 w-9 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition flex items-center justify-center cursor-pointer border border-slate-200 shadow-xs active:scale-95"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCompany(selectedCompanyDetails || selectedCompany);
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit Employer</span>
+                </button>
+                <button
+                  onClick={() => setDrawerOpen(false)}
+                  className="h-9 w-9 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition flex items-center justify-center cursor-pointer border border-slate-200 shadow-xs active:scale-95"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Drawer Scrollable Content with loading spinner wrapper */}
@@ -1189,6 +1242,207 @@ export default function CompanyManagement({ adminUser, showToast }) {
         </div>
       )}
 
+      {/* 11. EDIT EMPLOYER MODAL */}
+      {editingCompany && (
+        <EditCompanyModal
+          company={editingCompany}
+          loading={saveLoading}
+          onCancel={() => setEditingCompany(null)}
+          onSave={handleSaveCompanyEdit}
+        />
+      )}
+
+    </div>
+  );
+}
+
+function EditCompanyModal({ company, loading, onCancel, onSave }) {
+  const [draft, setDraft] = useState(null);
+
+  useEffect(() => {
+    if (!company) return;
+    setDraft({
+      id: company.id,
+      company_name: company.company_name || '',
+      legal_entity_name: company.legal_entity_name || '',
+      employer_code: company.employer_code || '',
+      company_type: company.company_type || 'Pvt Ltd',
+      industry_sector: company.industry_sector || '',
+      company_size: company.company_size || '',
+      website_url: company.website_url || '',
+      incorporation_date: company.incorporation_date ? new Date(company.incorporation_date).toISOString().split('T')[0] : '',
+      
+      official_email: company.official_email || '',
+      official_phone_number: company.official_phone_number || '',
+      registered_address: company.registered_address || '',
+      headquarters_city: company.headquarters_city || '',
+      headquarters_state: company.headquarters_state || '',
+      headquarters_pincode: company.headquarters_pincode || '',
+      headquarters_country: company.headquarters_country || 'India',
+
+      gst_number: company.gst_number || '',
+      pan_number: company.pan_number || '',
+      cin_number: company.cin_number || '',
+      naps_establishment_id: company.naps_establishment_id || '',
+      esic_registration_number: company.esic_registration_number || '',
+      epfo_registration_number: company.epfo_registration_number || '',
+
+      gender_policy_status: company.gender_policy_status || 'Pending',
+      posh_compliance: company.posh_compliance || 'Pending',
+      maternity_policy_available: company.maternity_policy_available || 'Pending',
+      women_friendly_workplace: !!company.women_friendly_workplace,
+
+      verification_status: company.verification_status || 'pending',
+      onboarding_status: company.onboarding_status || 'pending',
+      suspension_status: company.suspension_status || 'active'
+    });
+  }, [company]);
+
+  if (!company || !draft) return null;
+
+  const update = (key, value) => setDraft((prev) => ({ ...prev, [key]: value }));
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-xs">
+      <div className="w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-6 text-left">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100">
+              <Pencil className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-900">Edit Employer Profile</h3>
+              <p className="text-xs text-slate-500 font-semibold">Update company details, legal IDs, address & approval status</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); onSave(draft); }} className="space-y-6">
+          {/* Section 1: Company Profile */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Company Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <ModalInput label="Company Name *" value={draft.company_name} onChange={(v) => update('company_name', v)} required />
+              <ModalInput label="Legal Entity Name" value={draft.legal_entity_name} onChange={(v) => update('legal_entity_name', v)} />
+              <ModalInput label="Employer Code" value={draft.employer_code} onChange={(v) => update('employer_code', v)} />
+              <ModalInput label="Industry Sector" value={draft.industry_sector} onChange={(v) => update('industry_sector', v)} />
+              <ModalInput label="Company Size" value={draft.company_size} onChange={(v) => update('company_size', v)} />
+              <ModalInput label="Website URL" value={draft.website_url} onChange={(v) => update('website_url', v)} />
+            </div>
+          </div>
+
+          {/* Section 2: Contact & Address */}
+          <div className="space-y-3 border-t border-slate-100 pt-4">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Contact & Headquarters</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <ModalInput label="Official Email *" type="email" value={draft.official_email} onChange={(v) => update('official_email', v)} required />
+              <ModalInput label="Official Phone *" value={draft.official_phone_number} onChange={(v) => update('official_phone_number', v.replace(/\D/g, '').slice(0, 10))} required />
+              <ModalInput label="Headquarters City" value={draft.headquarters_city} onChange={(v) => update('headquarters_city', v)} />
+              <ModalInput label="Headquarters State" value={draft.headquarters_state} onChange={(v) => update('headquarters_state', v)} />
+              <ModalInput label="Pincode" value={draft.headquarters_pincode} onChange={(v) => update('headquarters_pincode', v.replace(/\D/g, '').slice(0, 6))} />
+              <ModalInput label="Registered Address" value={draft.registered_address} onChange={(v) => update('registered_address', v)} />
+            </div>
+          </div>
+
+          {/* Section 3: Legal & Compliance */}
+          <div className="space-y-3 border-t border-slate-100 pt-4">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Legal Compliance & Tax IDs</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <ModalInput label="GSTIN Number" value={draft.gst_number} onChange={(v) => update('gst_number', v.toUpperCase())} />
+              <ModalInput label="PAN Number" value={draft.pan_number} onChange={(v) => update('pan_number', v.toUpperCase())} />
+              <ModalInput label="CIN Number" value={draft.cin_number} onChange={(v) => update('cin_number', v.toUpperCase())} />
+              <ModalInput label="NAPS Establishment ID" value={draft.naps_establishment_id} onChange={(v) => update('naps_establishment_id', v)} />
+              <ModalInput label="ESIC Reg Number" value={draft.esic_registration_number} onChange={(v) => update('esic_registration_number', v)} />
+              <ModalInput label="EPFO Reg Number" value={draft.epfo_registration_number} onChange={(v) => update('epfo_registration_number', v)} />
+            </div>
+          </div>
+
+          {/* Section 4: Status Settings */}
+          <div className="space-y-3 border-t border-slate-100 pt-4">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Verification & Account Status</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <ModalSelect
+                label="Verification Status"
+                value={draft.verification_status}
+                onChange={(v) => update('verification_status', v)}
+                options={['pending', 'approved', 'rejected', 'under_review']}
+              />
+              <ModalSelect
+                label="Onboarding Status"
+                value={draft.onboarding_status}
+                onChange={(v) => update('onboarding_status', v)}
+                options={['pending', 'completed', 'approved', 'rejected']}
+              />
+              <ModalSelect
+                label="Suspension Status"
+                value={draft.suspension_status}
+                onChange={(v) => update('suspension_status', v)}
+                options={['active', 'suspended', 'rejected']}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={loading}
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>{loading ? 'Saving...' : 'Save Employer Details'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ModalInput({ label, value, onChange, type = 'text', required = false }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">{label}</label>
+      <input
+        type={type}
+        required={required}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-9.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+      />
+    </div>
+  );
+}
+
+function ModalSelect({ label, value, onChange, options }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">{label}</label>
+      <select
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-9.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition"
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

@@ -34,6 +34,7 @@ import AdminCompliance from './pages/admin/Compliance';
 import AdminUserManagement from './pages/admin/UserManagement';
 import AdminAuditLogs from './pages/admin/AuditLogs';
 import EmailTemplates from './pages/admin/EmailTemplates';
+import EmailQueuePage from './pages/admin/EmailQueuePage';
 import EmployerCompanyManagement from './pages/employer/CompanyManagement';
 import EmployerDashboard from './pages/employer/Dashboard';
 import EmployerDocuments from './pages/employer/Documents';
@@ -61,6 +62,7 @@ const getAuthViewFromPath = () => {
   if (path === '/employer/onboarding') return 'employer-onboarding';
   if (path === '/employer') return 'employer';
   if (path === '/email-templates') return 'email-templates';
+  if (path === '/email-queue') return 'email-queue';
   return 'staff';
 };
 
@@ -104,7 +106,7 @@ function App() {
           'openings', 'applications', 'interviews', 'contracts',
           'stipend', 'reports', 'compliance',
           'user-management', 'settings', 'audit-logs',
-          'company-management', 'grievances', 'email-templates'
+          'company-management', 'grievances', 'email-queue', 'email-templates'
         ];
       case 'Employer':
         return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'stipends', 'reports', 'notifications', 'grievances', 'settings', 'email-templates'];
@@ -1025,6 +1027,8 @@ function App() {
         unsyncedCandidates={unsyncedCandidates}
         triggerSync={triggerSync}
         onEditCandidate={handleEditOfflineCandidate}
+        onSectionChange={handleSectionChange}
+        notificationBadge={unreadNotifCount > 0 ? unreadNotifCount : null}
       />
 
       {/* Spacer to prevent fixed header from overlapping content */}
@@ -1080,6 +1084,7 @@ function App() {
                 {activeSection === 'compliance' && <AdminCompliance adminUser={user} showToast={showToast} />}
                 {activeSection === 'user-management' && <AdminUserManagement adminUser={user} showToast={showToast} />}
                 {activeSection === 'audit-logs' && <AdminAuditLogs adminUser={user} showToast={showToast} />}
+                {activeSection === 'email-queue' && <EmailQueuePage showToast={showToast} />}
                 {activeSection === 'email-templates' && <EmailTemplates showToast={showToast} />}
               </>
             ) : user.userType === 'Employer' ? (

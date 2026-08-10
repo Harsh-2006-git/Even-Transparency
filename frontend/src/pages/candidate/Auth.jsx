@@ -215,6 +215,25 @@ export default function CandidateAuth({ onAuthSuccess, onBackToLogin, resumeSess
   const [customCity, setCustomCity] = useState(false);
   const [customCourse, setCustomCourse] = useState(false);
   const [customSpecialization, setCustomSpecialization] = useState(false);
+  const [autoSavedAadhaar, setAutoSavedAadhaar] = useState(false);
+
+  const autoSaveOnboardingAadhaar = async (aadhaarValue) => {
+    if (!aadhaarValue || aadhaarValue.length !== 12) return;
+    try {
+      if (token) {
+        await fetch(`${API}/candidate/profile`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            aadhaar_number_encrypted: aadhaarValue
+          })
+        });
+      }
+      setAutoSavedAadhaar(true);
+    } catch (err) {
+      console.error('Auto-save onboarding Aadhaar error:', err);
+    }
+  };
 
 
   const passwordChecks = useMemo(() => [
@@ -652,6 +671,11 @@ export default function CandidateAuth({ onAuthSuccess, onBackToLogin, resumeSess
                 const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
                 update('identity', 'aadhaar_number_encrypted', digits);
                 update('identity', 'aadhaar_last_4', digits.slice(-4));
+                if (digits.length === 12) {
+                  autoSaveOnboardingAadhaar(digits);
+                } else {
+                  setAutoSavedAadhaar(false);
+                }
               }}
               placeholder="12-digit Aadhaar  e.g. 9876 5432 1012"
               inputMode="numeric"
@@ -659,7 +683,11 @@ export default function CandidateAuth({ onAuthSuccess, onBackToLogin, resumeSess
               className={aadhaarError ? 'border-amber-400 focus:border-amber-500' : aadhaarValid && aadhaar.length ? 'border-emerald-400' : ''}
             />
             {aadhaarError && <p className="mt-1 text-[10px] font-semibold text-amber-600">{aadhaarError}</p>}
-            {aadhaarValid && <p className="mt-1 text-[10px] font-semibold text-emerald-600">✓ Valid Aadhaar number</p>}
+            {aadhaarValid && (
+              <p className="mt-1 text-[10px] font-extrabold text-emerald-600">
+                ✓ Valid Aadhaar number — Auto-saved to Database!
+              </p>
+            )}
           </Field>
 
           {/* Aadhaar last 4 */}

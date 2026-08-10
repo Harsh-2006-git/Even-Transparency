@@ -74,6 +74,7 @@ export default function CandidateSettings({ user, onSectionChange, onUserUpdate 
   const privacyRef = useRef(null);
   const accessibilityRef = useRef(null);
   const supportRef = useRef(null);
+  const dangerRef = useRef(null);
 
   // Map tab name to refs
   const refMap = {
@@ -82,7 +83,8 @@ export default function CandidateSettings({ user, onSectionChange, onUserUpdate 
     'Notifications': notificationsRef,
     'Privacy': privacyRef,
     'Availability': accessibilityRef, // Availability scrolls down to Accessibility & Right Sidebar
-    'Support': supportRef
+    'Support': supportRef,
+    'Danger Zone': dangerRef
   };
 
   // Local Toast notification engine
@@ -293,7 +295,7 @@ export default function CandidateSettings({ user, onSectionChange, onUserUpdate 
 
       {/* Horizontal Tabs Section Navigation */}
       <div className="flex overflow-x-auto gap-2 no-scrollbar pb-1.5 md:pb-0">
-        {['Account', 'Security', 'Notifications', 'Privacy', 'Availability', 'Support'].map((tab) => {
+        {['Account', 'Security', 'Notifications', 'Privacy', 'Availability', 'Support', 'Danger Zone'].map((tab) => {
           const isActive = activeTab === tab;
           return (
             <button
@@ -880,55 +882,63 @@ export default function CandidateSettings({ user, onSectionChange, onUserUpdate 
             </div>
           </div>
 
-          {/* Card R4: Danger Zone */}
-          <div className="rounded-3xl border border-rose-200 bg-rose-50/30 p-5 shadow-xs text-left transition hover:shadow-sm">
-            <div className="flex items-center gap-2.5 border-b border-rose-100 pb-3 mb-4">
-              <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                <AlertTriangle size={15} />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-rose-800">Danger Zone</h4>
-                <p className="text-[9px] font-bold text-rose-450 mt-0.5">Actions that affect account status.</p>
-              </div>
+        </div>
+
+      </div>
+
+      {/* Danger Zone - Full Width Section at the End of Settings Page */}
+      <div ref={dangerRef} className="rounded-3xl border border-rose-200/80 bg-rose-50/40 p-6 shadow-xs text-left transition hover:shadow-sm">
+        <div className="flex items-center gap-3 border-b border-rose-100 pb-4 mb-5">
+          <div className="w-10 h-10 rounded-2xl bg-rose-100/80 text-rose-600 flex items-center justify-center shrink-0">
+            <AlertTriangle size={18} />
+          </div>
+          <div>
+            <h4 className="text-sm font-black text-rose-900">Danger Zone</h4>
+            <p className="text-xs font-semibold text-rose-600/80 mt-0.5">Actions that affect account status.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Deactivate Account */}
+          <div className="rounded-2xl border border-rose-200/60 bg-white p-4 flex flex-col justify-between space-y-3 transition hover:border-rose-300">
+            <div className="space-y-1">
+              <h5 className="text-xs font-black text-slate-800">Deactivate Account</h5>
+              <p className="text-[11px] font-semibold text-slate-500 leading-relaxed">Temporarily disable your profile visibility.</p>
             </div>
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-center gap-2">
-                <div className="space-y-0.5 min-w-0 flex-1">
-                  <h5 className="text-[10px] font-black text-slate-800">Deactivate Account</h5>
-                  <p className="text-[8.5px] font-bold text-slate-450 leading-normal">Temporarily disable your profile visibility.</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setConfirmInput('');
-                    setModalType('deactivate');
-                  }}
-                  className="h-8 px-3.5 border border-rose-200 hover:bg-rose-100/50 hover:border-rose-300 text-[10px] font-black text-rose-650 rounded-xl transition cursor-pointer select-none"
-                >
-                  Deactivate
-                </button>
-              </div>
-
-              <div className="flex justify-between items-center gap-2 pt-3 border-t border-rose-100">
-                <div className="space-y-0.5 min-w-0 flex-1">
-                  <h5 className="text-[10px] font-black text-rose-800">Delete Account</h5>
-                  <p className="text-[8.5px] font-bold text-slate-450 leading-normal">Permanently remove your account and application data.</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setConfirmInput('');
-                    setModalType('delete');
-                  }}
-                  className="h-8 px-3.5 bg-rose-600 hover:bg-rose-700 text-[10px] font-black text-white rounded-xl transition cursor-pointer select-none"
-                >
-                  Delete Account
-                </button>
-              </div>
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmInput('');
+                  setModalType('deactivate');
+                }}
+                className="h-9 px-4 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-xs font-black text-rose-700 rounded-xl transition cursor-pointer select-none shadow-2xs"
+              >
+                Deactivate
+              </button>
             </div>
           </div>
 
+          {/* Delete Account */}
+          <div className="rounded-2xl border border-rose-200/60 bg-white p-4 flex flex-col justify-between space-y-3 transition hover:border-rose-300">
+            <div className="space-y-1">
+              <h5 className="text-xs font-black text-rose-800">Delete Account</h5>
+              <p className="text-[11px] font-semibold text-slate-500 leading-relaxed">Permanently remove your account and application data.</p>
+            </div>
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmInput('');
+                  setModalType('delete');
+                }}
+                className="h-9 px-4 bg-rose-600 hover:bg-rose-700 text-xs font-black text-white rounded-xl transition cursor-pointer select-none shadow-xs"
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
         </div>
-
       </div>
 
       {/* ========================================================================= */}

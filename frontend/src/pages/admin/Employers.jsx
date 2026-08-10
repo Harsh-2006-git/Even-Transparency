@@ -16,7 +16,10 @@ import {
   XCircle,
   ArrowLeft,
   Pencil,
-  Trash2
+  Trash2,
+  Save,
+  Globe,
+  FileText
 } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_BASE_URL;
@@ -165,7 +168,7 @@ export default function Employers({ adminUser, showToast }) {
       if (!res.ok) throw new Error(data.error || 'Failed to update employer.');
       setEmployers((prev) => prev.map((employer) => employer.id === draft.id ? data.employer : employer));
       setEditingEmployer(null);
-      showToast?.(data.message, 'success');
+      showToast?.(data.message || 'Employer details updated successfully!', 'success');
     } catch (err) {
       showToast?.(err.message, 'error');
     } finally {
@@ -174,24 +177,38 @@ export default function Employers({ adminUser, showToast }) {
   };
 
   // ---------------------------------------------------------------------------
-  // DETAILS VIEW
+  // VIEW 1: DEDICATED EDIT EMPLOYER PAGE
+  // ---------------------------------------------------------------------------
+  if (editingEmployer) {
+    return (
+      <EditEmployerPage
+        employer={editingEmployer}
+        loading={editLoading}
+        onCancel={() => setEditingEmployer(null)}
+        onSave={saveEmployerEdit}
+      />
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // VIEW 2: DETAILED EMPLOYER PROFILE VIEW
   // ---------------------------------------------------------------------------
   if (detailedEmployer) {
     return (
       <div className="space-y-6 animate-fade-in">
         <button
           onClick={() => setDetailedEmployerId(null)}
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition"
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Employers
+          Back to Employers List
         </button>
 
         <section className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-50 via-white to-slate-50 border-b border-slate-200 p-5 md:p-8">
             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
               <div className="flex items-start gap-4">
-                <div className="h-14 w-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-lg font-black shadow-sm">
+                <div className="h-14 w-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-lg font-black shadow-sm shrink-0">
                   {(detailedEmployer.company_name || 'EM').slice(0, 2).toUpperCase()}
                 </div>
                 <div>
@@ -204,14 +221,23 @@ export default function Employers({ adminUser, showToast }) {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingEmployer(detailedEmployer)}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition cursor-pointer"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit Employer Details
+                </button>
+
                 {(detailedEmployer.verification_status || 'pending') === 'pending' ? (
                   <>
                     <button
                       type="button"
                       onClick={() => updateEmployerApproval(detailedEmployer.id, 'rejected', employerRemarks)}
                       disabled={employerActionLoading === 'rejected'}
-                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60"
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60 cursor-pointer"
                     >
                       <XCircle className="w-4 h-4" />
                       {employerActionLoading === 'rejected' ? 'Declining...' : 'Decline'}
@@ -220,7 +246,7 @@ export default function Employers({ adminUser, showToast }) {
                       type="button"
                       onClick={() => updateEmployerApproval(detailedEmployer.id, 'approved')}
                       disabled={employerActionLoading === 'approved'}
-                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-60"
+                      className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition disabled:opacity-60 cursor-pointer"
                     >
                       <CheckCircle className="w-4 h-4" />
                       {employerActionLoading === 'approved' ? 'Approving...' : 'Approve'}
@@ -229,21 +255,15 @@ export default function Employers({ adminUser, showToast }) {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => deleteEmployer(detailedEmployer.id)}
+                    onClick={() => setDeleteEmployerId(detailedEmployer.id)}
                     disabled={employerActionLoading === 'delete'}
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition disabled:opacity-60 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                     {employerActionLoading === 'delete' ? 'Deleting...' : 'Delete'}
                   </button>
                 )}
               </div>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
-              <MiniMetric label="Onboarding" value={detailedEmployer.onboarding_status} />
-              <MiniMetric label="Suspension" value={detailedEmployer.suspension_status} />
-              <MiniMetric label="Apprentices" value={detailedEmployer.active_apprentice_count || 0} />
-              <MiniMetric label="Registered" value={formatDate(detailedEmployer.created_at)} />
             </div>
           </div>
 
@@ -295,7 +315,7 @@ export default function Employers({ adminUser, showToast }) {
                 ['Gender Policy', detailedEmployer.gender_policy_status],
                 ['POSH Compliance', detailedEmployer.posh_compliance],
                 ['Maternity Policy', detailedEmployer.maternity_policy_available],
-                ['Women Friendly Workplace', detailedEmployer.women_friendly_workplace],
+                ['Women Friendly Workplace', detailedEmployer.women_friendly_workplace ? 'Yes' : 'No'],
                 ['Suspension Reason', detailedEmployer.suspension_reason]
               ]} />
 
@@ -324,18 +344,20 @@ export default function Employers({ adminUser, showToast }) {
               </div>
             </div>
 
-            <div className="space-y-2 bg-slate-50 p-5 rounded-2xl border border-slate-200">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                Decline Remarks
-              </label>
-              <textarea
-                value={employerRemarks}
-                onChange={(e) => setEmployerRemarks(e.target.value)}
-                placeholder="Optional: Add a reason before declining this employer"
-                className="w-full min-h-24 rounded-xl border border-slate-200 p-3.5 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition resize-none bg-white"
-              />
-            </div>
+            {(detailedEmployer.verification_status || 'pending') === 'pending' && (
+              <div className="space-y-2 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                  Decline Remarks
+                </label>
+                <textarea
+                  value={employerRemarks}
+                  onChange={(e) => setEmployerRemarks(e.target.value)}
+                  placeholder="Optional: Add a reason before declining this employer"
+                  className="w-full min-h-24 rounded-xl border border-slate-200 p-3.5 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition resize-none bg-white"
+                />
+              </div>
+            )}
           </div>
         </section>
       </div>
@@ -343,7 +365,7 @@ export default function Employers({ adminUser, showToast }) {
   }
 
   // ---------------------------------------------------------------------------
-  // LIST VIEW (TABLE)
+  // VIEW 3: MAIN LIST VIEW (TABLE)
   // ---------------------------------------------------------------------------
   return (
     <div className="space-y-6 animate-fade-in w-full h-full flex flex-col">
@@ -353,7 +375,7 @@ export default function Employers({ adminUser, showToast }) {
             <Building2 className="w-6 h-6 text-indigo-650" />
             <h2 className="text-2xl font-bold text-slate-850">Employers</h2>
           </div>
-          <p className="text-sm font-semibold text-slate-500 mt-1">Review employer details and manage portal access.</p>
+          <p className="text-sm font-semibold text-slate-500 mt-1">Review employer details, edit company profiles, and manage portal access.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative w-full lg:w-72">
@@ -370,7 +392,7 @@ export default function Employers({ adminUser, showToast }) {
             type="button"
             onClick={fetchEmployers}
             disabled={employersLoading}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition shadow-sm disabled:opacity-60 shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition shadow-sm disabled:opacity-60 shrink-0 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${employersLoading ? 'animate-spin' : ''}`} />
             Refresh
@@ -387,150 +409,146 @@ export default function Employers({ adminUser, showToast }) {
 
       {/* TABLE START */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex-1">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-separate border-spacing-0">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Company</th>
-                    <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Website</th>
-                    <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Contact Info</th>
-                    <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Location</th>
-                    <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                    <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right whitespace-nowrap">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  {employersLoading ? (
-                    <tr>
-                      <td colSpan="6" className="px-5 py-8 text-center text-xs font-semibold text-slate-500">
-                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-indigo-500" />
-                        Loading employers...
-                      </td>
-                    </tr>
-                  ) : filteredEmployers.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" className="px-5 py-8 text-center text-xs font-semibold text-slate-500">
-                        No employers found matching your criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredEmployers.map((employer) => (
-                      <tr key={employer.id} className="hover:bg-slate-50/80 transition group">
-                        <td className="px-5 py-4 min-w-[200px] border-b border-slate-200">
-                          <p className="font-bold text-xs text-slate-800">{displayValue(employer.company_name)}</p>
-                          <p className="text-[10px] font-semibold text-slate-500 mt-0.5">{displayValue(employer.industry_sector)}</p>
-                        </td>
-                        <td className="px-5 py-4 min-w-[160px] border-b border-slate-200">
-                          {employer.website_url ? (
-                            <a
-                              href={employer.website_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline truncate block max-w-[160px] transition"
-                            >
-                              {employer.website_url.replace(/^https?:\/\//, '')}
-                            </a>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 font-semibold">Not provided</span>
-                          )}
-                          {employer.company_size && (
-                            <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                              {employer.company_size}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 min-w-[180px] border-b border-slate-200">
-                          <p className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
-                            <Mail className="w-3 h-3 text-slate-400" />
-                            {displayValue(employer.official_email)}
-                          </p>
-                          <p className="text-[10px] font-semibold text-slate-500 mt-1 flex items-center gap-1.5">
-                            <Phone className="w-3 h-3 text-slate-400" />
-                            {displayValue(employer.official_phone_number)}
-                          </p>
-                        </td>
-                        <td className="px-5 py-4 min-w-[150px] border-b border-slate-200">
-                          <p className="text-[11px] font-semibold text-slate-700">{displayValue(employer.headquarters_city)}</p>
-                          <p className="text-[10px] font-semibold text-slate-500 mt-0.5">{displayValue(employer.headquarters_state)}</p>
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap border-b border-slate-200">
-                          <StatusBadge status={employer.verification_status || 'pending'} />
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-right border-b border-slate-200">
-                          <div className="flex items-center justify-end gap-2">
-                            {(employer.verification_status || 'pending') === 'pending' && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => updateEmployerApproval(employer.id, 'approved')}
-                                  disabled={actingEmployerId === employer.id && employerActionLoading === 'approved'}
-                                  title="Approve"
-                                  className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition disabled:opacity-50"
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const reason = window.prompt("Optional: Enter reason for declining:");
-                                    if (reason !== null) {
-                                      updateEmployerApproval(employer.id, 'rejected', reason);
-                                    }
-                                  }}
-                                  disabled={actingEmployerId === employer.id && employerActionLoading === 'rejected'}
-                                  title="Decline"
-                                  className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition disabled:opacity-50"
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
-                            {(employer.verification_status || 'pending') !== 'pending' && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingEmployer(employer)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-wider rounded-xl transition"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setDeleteEmployerId(employer.id)}
-                                  disabled={actingEmployerId === employer.id && employerActionLoading === 'delete'}
-                                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold uppercase tracking-wider rounded-xl transition disabled:opacity-50"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  Delete
-                                </button>
-                              </>
-                            )}
-                            <div className="w-px h-6 bg-slate-200 mx-1"></div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-separate border-spacing-0">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Company</th>
+                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Website</th>
+                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Contact Info</th>
+                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Location</th>
+                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white">
+              {employersLoading ? (
+                <tr>
+                  <td colSpan="6" className="px-5 py-8 text-center text-xs font-semibold text-slate-500">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-indigo-500" />
+                    Loading employers...
+                  </td>
+                </tr>
+              ) : filteredEmployers.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-5 py-8 text-center text-xs font-semibold text-slate-500">
+                    No employers found matching your criteria.
+                  </td>
+                </tr>
+              ) : (
+                filteredEmployers.map((employer) => (
+                  <tr key={employer.id} className="hover:bg-slate-50/80 transition group">
+                    <td className="px-5 py-4 min-w-[200px] border-b border-slate-200">
+                      <p className="font-bold text-xs text-slate-800">{displayValue(employer.company_name)}</p>
+                      <p className="text-[10px] font-semibold text-slate-500 mt-0.5">{displayValue(employer.industry_sector)}</p>
+                    </td>
+                    <td className="px-5 py-4 min-w-[160px] border-b border-slate-200">
+                      {employer.website_url ? (
+                        <a
+                          href={employer.website_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline truncate block max-w-[160px] transition"
+                        >
+                          {employer.website_url.replace(/^https?:\/\//, '')}
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold">Not provided</span>
+                      )}
+                      {employer.company_size && (
+                        <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                          {employer.company_size}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 min-w-[180px] border-b border-slate-200">
+                      <p className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+                        <Mail className="w-3 h-3 text-slate-400" />
+                        {displayValue(employer.official_email)}
+                      </p>
+                      <p className="text-[10px] font-semibold text-slate-500 mt-1 flex items-center gap-1.5">
+                        <Phone className="w-3 h-3 text-slate-400" />
+                        {displayValue(employer.official_phone_number)}
+                      </p>
+                    </td>
+                    <td className="px-5 py-4 min-w-[150px] border-b border-slate-200">
+                      <p className="text-[11px] font-semibold text-slate-700">{displayValue(employer.headquarters_city)}</p>
+                      <p className="text-[10px] font-semibold text-slate-500 mt-0.5">{displayValue(employer.headquarters_state)}</p>
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap border-b border-slate-200">
+                      <StatusBadge status={employer.verification_status || 'pending'} />
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap text-right border-b border-slate-200">
+                      <div className="flex items-center justify-end gap-2">
+                        {(employer.verification_status || 'pending') === 'pending' && (
+                          <>
                             <button
                               type="button"
-                              onClick={() => setDetailedEmployerId(employer.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-wider rounded-xl transition"
+                              onClick={() => updateEmployerApproval(employer.id, 'approved')}
+                              disabled={actingEmployerId === employer.id && employerActionLoading === 'approved'}
+                              title="Approve"
+                              className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition disabled:opacity-50 cursor-pointer"
                             >
-                              <Eye className="w-3.5 h-3.5" />
-                              View
+                              <CheckCircle className="w-4 h-4" />
                             </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          {/* TABLE END */}
-      <EditEmployerModal
-        employer={editingEmployer}
-        loading={editLoading}
-        onCancel={() => setEditingEmployer(null)}
-        onSave={saveEmployerEdit}
-      />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const reason = window.prompt("Optional: Enter reason for declining:");
+                                if (reason !== null) {
+                                  updateEmployerApproval(employer.id, 'rejected', reason);
+                                }
+                              }}
+                              disabled={actingEmployerId === employer.id && employerActionLoading === 'rejected'}
+                              title="Decline"
+                              className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition disabled:opacity-50 cursor-pointer"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        
+                        {/* Always available Edit Button */}
+                        <button
+                          type="button"
+                          onClick={() => setEditingEmployer(employer)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-wider rounded-xl transition cursor-pointer"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setDeleteEmployerId(employer.id)}
+                          disabled={actingEmployerId === employer.id && employerActionLoading === 'delete'}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold uppercase tracking-wider rounded-xl transition disabled:opacity-50 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
+                        </button>
+
+                        <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setDetailedEmployerId(employer.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-xl transition cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {/* TABLE END */}
+
       <DeleteEmployerModal
         employer={employers.find(e => e.id === deleteEmployerId)}
         loading={employerActionLoading === 'delete'}
@@ -541,120 +559,341 @@ export default function Employers({ adminUser, showToast }) {
   );
 }
 
-function EditEmployerModal({ employer, loading, onCancel, onSave }) {
-  const [draft, setDraft] = useState(null);
+// ─────────────────────────────────────────────────────────────────────────────
+// DEDICATED FULL-PAGE EDIT EMPLOYER COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+function EditEmployerPage({ employer, loading, onCancel, onSave }) {
+  const [draft, setDraft] = useState({
+    id: employer.id,
+    employer_code: employer.employer_code || '',
+    company_name: employer.company_name || '',
+    legal_entity_name: employer.legal_entity_name || '',
+    company_type: employer.company_type || 'Pvt Ltd',
+    industry_sector: employer.industry_sector || 'Logistics',
+    company_size: employer.company_size || 'Startup',
+    website_url: employer.website_url || '',
+    incorporation_date: employer.incorporation_date ? new Date(employer.incorporation_date).toISOString().split('T')[0] : '',
+    
+    // Contact & HQ
+    official_email: employer.official_email || '',
+    official_phone_number: employer.official_phone_number || '',
+    registered_address: employer.registered_address || '',
+    headquarters_city: employer.headquarters_city || '',
+    headquarters_state: employer.headquarters_state || '',
+    headquarters_pincode: employer.headquarters_pincode || '',
+    headquarters_country: employer.headquarters_country || 'India',
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!employer) {
-        setDraft(null);
-        return;
-      }
-      setDraft({
-        id: employer.id,
-        company_name: employer.company_name || '',
-        legal_entity_name: employer.legal_entity_name || '',
-        company_type: employer.company_type || '',
-        industry_sector: employer.industry_sector || '',
-        company_size: employer.company_size || '',
-        website_url: employer.website_url || '',
-        official_email: employer.official_email || '',
-        official_phone_number: employer.official_phone_number || '',
-        gst_number: employer.gst_number || '',
-        pan_number: employer.pan_number || '',
-        naps_establishment_id: employer.naps_establishment_id || '',
-        registered_address: employer.registered_address || '',
-        headquarters_city: employer.headquarters_city || '',
-        headquarters_state: employer.headquarters_state || '',
-        headquarters_pincode: employer.headquarters_pincode || '',
-        verification_status: employer.verification_status || 'pending',
-        onboarding_status: employer.onboarding_status || 'pending',
-        suspension_status: employer.suspension_status || 'active'
-      });
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [employer]);
+    // Legal & Compliance IDs
+    gst_number: employer.gst_number || '',
+    pan_number: employer.pan_number || '',
+    cin_number: employer.cin_number || '',
+    naps_establishment_id: employer.naps_establishment_id || '',
+    esic_registration_number: employer.esic_registration_number || '',
+    epfo_registration_number: employer.epfo_registration_number || '',
 
-  if (!employer || !draft) return null;
+    // Workplace Policies & Metrics
+    gender_policy_status: employer.gender_policy_status || 'Pending',
+    posh_compliance: employer.posh_compliance || 'Pending',
+    maternity_policy_available: employer.maternity_policy_available || 'Pending',
+    women_friendly_workplace: !!employer.women_friendly_workplace,
+    safety_score: employer.safety_score || 0,
+    compliance_score: employer.compliance_score || 0,
+    active_apprentice_count: employer.active_apprentice_count || 0,
+    total_apprentices_hired: employer.total_apprentices_hired || 0,
+    retention_rate: employer.retention_rate || 0,
+    average_stipend: employer.average_stipend || 0,
+
+    // Status
+    verification_status: employer.verification_status || 'pending',
+    onboarding_status: employer.onboarding_status || 'pending',
+    suspension_status: employer.suspension_status || 'active',
+    suspension_reason: employer.suspension_reason || ''
+  });
 
   const update = (key, value) => setDraft((prev) => ({ ...prev, [key]: value }));
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(draft);
+  };
+
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-3xl max-h-[90dvh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+    <div className="space-y-6 animate-fade-in text-left">
+      {/* Top Action Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <div>
-            <h3 className="text-lg font-black text-slate-900">Edit employer</h3>
-            <p className="mt-1 text-xs font-semibold text-slate-500">Update employer company and compliance details.</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-extrabold text-slate-900">Edit Employer Profile</h2>
+              <span className="text-xs font-mono bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-md border border-indigo-200">
+                {draft.employer_code || draft.id}
+              </span>
+            </div>
+            <p className="text-xs font-medium text-slate-500 mt-0.5">
+              Editing <strong className="text-slate-800">{draft.company_name || 'Employer'}</strong> details & compliance settings
+            </p>
           </div>
-          <button type="button" onClick={onCancel} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Close</button>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <EditField label="Company name" value={draft.company_name} onChange={(value) => update('company_name', value)} />
-          <EditField label="Legal entity" value={draft.legal_entity_name} onChange={(value) => update('legal_entity_name', value)} />
-          <EditField label="Company type" value={draft.company_type} onChange={(value) => update('company_type', value)} />
-          <EditField label="Industry" value={draft.industry_sector} onChange={(value) => update('industry_sector', value)} />
-          <EditField label="Company size" value={draft.company_size} onChange={(value) => update('company_size', value)} />
-          <EditField label="Website" value={draft.website_url} onChange={(value) => update('website_url', value)} />
-          <EditField label="Official email" value={draft.official_email} onChange={(value) => update('official_email', value)} />
-          <EditField label="Official phone" value={draft.official_phone_number} onChange={(value) => update('official_phone_number', value.replace(/\D/g, '').slice(0, 10))} />
-          <EditField label="GST" value={draft.gst_number} onChange={(value) => update('gst_number', value.toUpperCase())} />
-          <EditField label="PAN" value={draft.pan_number} onChange={(value) => update('pan_number', value.toUpperCase())} />
-          <EditField label="NAPS ID" value={draft.naps_establishment_id} onChange={(value) => update('naps_establishment_id', value)} />
-          <EditSelect label="Verification" value={draft.verification_status} onChange={(value) => update('verification_status', value)} options={['pending', 'approved', 'rejected']} />
-          <EditField label="Registered address" value={draft.registered_address} onChange={(value) => update('registered_address', value)} />
-          <EditField label="City" value={draft.headquarters_city} onChange={(value) => update('headquarters_city', value)} />
-          <EditField label="State" value={draft.headquarters_state} onChange={(value) => update('headquarters_state', value)} />
-          <EditField label="Pincode" value={draft.headquarters_pincode} onChange={(value) => update('headquarters_pincode', value.replace(/\D/g, '').slice(0, 6))} />
-        </div>
-
-        <div className="mt-5 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
-          <button type="button" onClick={onCancel} disabled={loading} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60">Cancel</button>
-          <button type="button" onClick={() => onSave(draft)} disabled={loading} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-60">{loading ? 'Saving...' : 'Save changes'}</button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            <span>{loading ? 'Saving Changes...' : 'Save Employer Details'}</span>
+          </button>
         </div>
       </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* SECTION 1: COMPANY IDENTITY & PROFILE */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <Building2 className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
+              1. Company Profile & Information
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormInput label="Company Name *" value={draft.company_name} onChange={(v) => update('company_name', v)} required />
+            <FormInput label="Legal Entity Name" value={draft.legal_entity_name} onChange={(v) => update('legal_entity_name', v)} />
+            <FormInput label="Employer Code" value={draft.employer_code} onChange={(v) => update('employer_code', v)} />
+            
+            <FormSelect
+              label="Company Type"
+              value={draft.company_type}
+              onChange={(v) => update('company_type', v)}
+              options={['Pvt Ltd', 'Public Ltd', 'LLP', 'Partnership', 'Sole Proprietorship', 'Govt PSU', 'NGO / Trust']}
+            />
+
+            <FormInput label="Industry Sector" value={draft.industry_sector} onChange={(v) => update('industry_sector', v)} placeholder="e.g. Logistics, Automotive, IT" />
+
+            <FormSelect
+              label="Company Size"
+              value={draft.company_size}
+              onChange={(v) => update('company_size', v)}
+              options={['Startup (1-50)', 'Mid-Size (50-250)', 'Large Enterprise (250-1000)', 'Corporate (1000+)']}
+            />
+
+            <FormInput label="Website URL" value={draft.website_url} onChange={(v) => update('website_url', v)} placeholder="https://company.com" />
+            <FormInput label="Incorporation Date" type="date" value={draft.incorporation_date} onChange={(v) => update('incorporation_date', v)} />
+          </div>
+        </div>
+
+        {/* SECTION 2: CONTACT & HEADQUARTERS ADDRESS */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <MapPin className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
+              2. Official Contact & Headquarters Address
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormInput label="Official Email *" type="email" value={draft.official_email} onChange={(v) => update('official_email', v)} required />
+            <FormInput label="Official Phone Number *" value={draft.official_phone_number} onChange={(v) => update('official_phone_number', v.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" required />
+            <FormInput label="Headquarters City" value={draft.headquarters_city} onChange={(v) => update('headquarters_city', v)} />
+            <FormInput label="Headquarters State" value={draft.headquarters_state} onChange={(v) => update('headquarters_state', v)} />
+            <FormInput label="Pincode" value={draft.headquarters_pincode} onChange={(v) => update('headquarters_pincode', v.replace(/\D/g, '').slice(0, 6))} />
+            <FormInput label="Country" value={draft.headquarters_country} onChange={(v) => update('headquarters_country', v)} />
+          </div>
+
+          <div>
+            <FormInput label="Registered Office Address" value={draft.registered_address} onChange={(v) => update('registered_address', v)} placeholder="Full street address, building/floor" />
+          </div>
+        </div>
+
+        {/* SECTION 3: COMPLIANCE & LEGAL IDENTIFICATION */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <ShieldCheck className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
+              3. Legal Compliance & Identification IDs
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormInput label="PAN Number" value={draft.pan_number} onChange={(v) => update('pan_number', v.toUpperCase())} placeholder="ABCDE1234F" />
+            <FormInput label="GSTIN Number" value={draft.gst_number} onChange={(v) => update('gst_number', v.toUpperCase())} placeholder="27ABCDE1234F1Z5" />
+            <FormInput label="CIN Number" value={draft.cin_number} onChange={(v) => update('cin_number', v.toUpperCase())} placeholder="U74999DL2020PTC123456" />
+            <FormInput label="NAPS Establishment ID" value={draft.naps_establishment_id} onChange={(v) => update('naps_establishment_id', v)} placeholder="E05202700001" />
+            <FormInput label="ESIC Registration Number" value={draft.esic_registration_number} onChange={(v) => update('esic_registration_number', v)} placeholder="17-digit ESIC" />
+            <FormInput label="EPFO Registration Number" value={draft.epfo_registration_number} onChange={(v) => update('epfo_registration_number', v)} placeholder="EPFO Code" />
+          </div>
+        </div>
+
+        {/* SECTION 4: WORKPLACE POLICIES & METRICS */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <CheckCircle className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
+              4. Workplace Policies & Safety Metrics
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormSelect
+              label="Gender Policy Status"
+              value={draft.gender_policy_status}
+              onChange={(v) => update('gender_policy_status', v)}
+              options={['Verified', 'Pending', 'In Progress', 'Exempted']}
+            />
+            <FormSelect
+              label="POSH Compliance Status"
+              value={draft.posh_compliance}
+              onChange={(v) => update('posh_compliance', v)}
+              options={['Compliant', 'Pending', 'Under Audit']}
+            />
+            <FormSelect
+              label="Maternity Policy Status"
+              value={draft.maternity_policy_available}
+              onChange={(v) => update('maternity_policy_available', v)}
+              options={['Available', 'Pending', 'Not Applicable']}
+            />
+
+            <FormInput label="Safety Score (0 - 100)" type="number" value={draft.safety_score} onChange={(v) => update('safety_score', parseFloat(v) || 0)} />
+            <FormInput label="Compliance Score (0 - 100)" type="number" value={draft.compliance_score} onChange={(v) => update('compliance_score', parseFloat(v) || 0)} />
+            <FormInput label="Average Stipend (₹)" type="number" value={draft.average_stipend} onChange={(v) => update('average_stipend', parseFloat(v) || 0)} />
+          </div>
+
+          <div className="pt-2">
+            <label className="inline-flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+              <input
+                type="checkbox"
+                checked={draft.women_friendly_workplace}
+                onChange={(e) => update('women_friendly_workplace', e.target.checked)}
+                className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-slate-300"
+              />
+              <span className="text-xs font-bold text-slate-800">
+                Certified Women-Friendly Workplace (Provides Transport Escort, CCTV & Shift Safeguards)
+              </span>
+            </label>
+          </div>
+        </div>
+
+        {/* SECTION 5: ACCOUNT & VERIFICATION STATUS */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <Users className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
+              5. Portal Verification & Account Status
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormSelect
+              label="Verification Status"
+              value={draft.verification_status}
+              onChange={(v) => update('verification_status', v)}
+              options={['pending', 'approved', 'rejected']}
+            />
+            <FormSelect
+              label="Onboarding Status"
+              value={draft.onboarding_status}
+              onChange={(v) => update('onboarding_status', v)}
+              options={['pending', 'completed', 'approved', 'rejected']}
+            />
+            <FormSelect
+              label="Suspension Status"
+              value={draft.suspension_status}
+              onChange={(v) => update('suspension_status', v)}
+              options={['active', 'suspended', 'rejected']}
+            />
+          </div>
+
+          {draft.suspension_status === 'suspended' && (
+            <div>
+              <FormInput
+                label="Suspension Reason"
+                value={draft.suspension_reason}
+                onChange={(v) => update('suspension_reason', v)}
+                placeholder="Reason for suspending employer portal access"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Save Bar */}
+        <div className="flex items-center justify-end gap-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            <span>{loading ? 'Saving Changes...' : 'Save Employer Details'}</span>
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
 
-function EditField({ label, value, onChange, type = 'text' }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER UI COMPONENTS FOR EDIT FORM
+// ─────────────────────────────────────────────────────────────────────────────
+function FormInput({ label, value, onChange, type = 'text', placeholder = '', required = false }) {
   return (
-    <label className="space-y-1">
-      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
-      <input type={type} value={value || ''} onChange={(e) => onChange(e.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10" />
-    </label>
+    <div className="space-y-1">
+      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">
+        {label}
+      </label>
+      <input
+        type={type}
+        required={required}
+        value={value || ''}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition"
+      />
+    </div>
   );
 }
 
-function EditSelect({ label, value, onChange, options }) {
+function FormSelect({ label, value, onChange, options }) {
   return (
-    <label className="space-y-1">
-      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
-      <select value={value || ''} onChange={(e) => onChange(e.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10">
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+    <div className="space-y-1">
+      <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">
+        {label}
+      </label>
+      <select
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition"
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
       </select>
-    </label>
-  );
-}
-
-function EmployerStat({ label, value, icon: Icon, tone }) {
-  const tones = {
-    indigo: 'bg-indigo-50 text-indigo-650 border-indigo-100 shadow-indigo-100/50',
-    amber: 'bg-amber-50 text-amber-650 border-amber-100 shadow-amber-100/50',
-    emerald: 'bg-emerald-50 text-emerald-650 border-emerald-100 shadow-emerald-100/50',
-    rose: 'bg-rose-50 text-rose-650 border-rose-100 shadow-rose-100/50'
-  };
-
-  return (
-    <div className={`border rounded-2xl p-4 flex items-center justify-between transition-all hover:-translate-y-0.5 shadow-sm ${tones[tone]}`}>
-      <div>
-        <span className="text-[10px] uppercase font-black tracking-wider block opacity-70">{label}</span>
-        <span className="text-2xl font-black mt-1 block">{value}</span>
-      </div>
-      <span className="p-2.5 rounded-xl bg-white/60 backdrop-blur-sm">
-        <Icon className="h-5 w-5" />
-      </span>
     </div>
   );
 }
@@ -697,11 +936,23 @@ function DetailBox({ icon: Icon, title, rows }) {
   );
 }
 
-function MiniMetric({ label, value }) {
+function EmployerStat({ label, value, icon: Icon, tone }) {
+  const tones = {
+    indigo: 'bg-indigo-50 text-indigo-650 border-indigo-100 shadow-indigo-100/50',
+    amber: 'bg-amber-50 text-amber-650 border-amber-100 shadow-amber-100/50',
+    emerald: 'bg-emerald-50 text-emerald-650 border-emerald-100 shadow-emerald-100/50',
+    rose: 'bg-rose-50 text-rose-650 border-rose-100 shadow-rose-100/50'
+  };
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 shadow-sm">
-      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="mt-1 text-xs font-black text-slate-800">{displayValue(value)}</p>
+    <div className={`border rounded-2xl p-4 flex items-center justify-between transition-all hover:-translate-y-0.5 shadow-sm ${tones[tone]}`}>
+      <div>
+        <span className="text-[10px] uppercase font-black tracking-wider block opacity-70">{label}</span>
+        <span className="text-2xl font-black mt-1 block">{value}</span>
+      </div>
+      <span className="p-2.5 rounded-xl bg-white/60 backdrop-blur-sm">
+        <Icon className="h-5 w-5" />
+      </span>
     </div>
   );
 }

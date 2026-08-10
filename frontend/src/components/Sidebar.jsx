@@ -21,7 +21,8 @@ import {
   MessageSquare,
   UserCog,
   ScrollText,
-  HeadphonesIcon
+  HeadphonesIcon,
+  Cpu
 } from 'lucide-react';
 
 export default function Sidebar({ user, activeSection, onSectionChange, isOpen, toggleSidebar, isCollapsed, notificationBadge }) {
@@ -50,9 +51,9 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
           { id: 'reports', label: 'Reports', icon: BarChart3 },
           { id: 'compliance', label: 'Compliance & Approvals', icon: ShieldCheck },
           { id: 'grievances', label: 'Grievances', icon: Scale },
+          { id: 'email-queue', label: 'Email Queue', icon: Cpu },
           { id: 'email-templates', label: 'Email Templates', icon: Mail },
           { id: 'user-management', label: 'User Management', icon: UserCog },
-          { id: 'settings', label: 'Settings', icon: Settings2 },
           { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText },
         ];
       case 'Employer':
@@ -64,13 +65,9 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
           { id: 'candidates', label: 'Candidates', icon: Users },
           { id: 'interviews', label: 'Interviews', icon: Calendar },
           { id: 'apprentices', label: 'Apprentices', icon: UserCheck },
-
           { id: 'contracts', label: 'Contracts', icon: FileText },
           { id: 'stipends', label: 'Stipends & Payments', icon: CreditCard },
-          { id: 'notifications', label: 'Notifications', icon: Bell },
           { id: 'grievances', label: 'Grievances', icon: Scale },
-          { id: 'settings', label: 'Settings', icon: Settings2 },
-
         ];
       case 'Candidate':
         return [
@@ -82,8 +79,6 @@ export default function Sidebar({ user, activeSection, onSectionChange, isOpen, 
           { id: 'documents', label: 'Documents', icon: FolderOpen },
           { id: 'interviews', label: 'Interviews', icon: Calendar },
           { id: 'grievances', label: 'Grievances', icon: Scale },
-          { id: 'notifications', label: 'Notifications', icon: Bell },
-          { id: 'settings', label: 'Settings', icon: Settings2 },
         ];
       case 'Mobiliser':
         return [

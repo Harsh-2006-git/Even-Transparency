@@ -68,11 +68,11 @@ const sequelize = new Sequelize(databaseUrl || 'postgres://avnadmin:password@loc
     ]
   },
   pool: {
-    max: 3,
-    min: 0,        // Do not hold warm connections in development
+    max: 8,        // Respect Aiven Cloud PostgreSQL maximum connection limits
+    min: 2,        // Keep warm connections pre-established for fast query execution
     acquire: 30000,
-    idle: 5000,    // Evict idle connections after 5 seconds to free slots
-    evict: 2000    // Evict check interval
+    idle: 30000,   // Keep connections warm for 30 seconds before eviction
+    evict: 5000    // Evict check interval
   },
   dialectOptions: {
     // rejectUnauthorized: false accepts Aiven's self-signed CA certificate.

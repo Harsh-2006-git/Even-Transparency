@@ -7,6 +7,7 @@ import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { NOTIFICATION_TYPES, NOTIFICATION_SUBJECTS, TEMPLATE_MAPPING } from '../notifications/notification.constants.js';
 import { compileTemplate } from '../notifications/template.service.js';
 import notificationService from '../notifications/notification.service.js';
+import emailQueue from '../notifications/email.queue.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -178,8 +179,67 @@ router.put('/notifications/preferences', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/notifications/queue (Admin View & Live Queue Monitor)
+router.get('/notifications/queue', async (req, res) => {
+  try {
+    const stats = await emailQueue.getStats();
+    
+    // Fetch Queued & Processing items (going to send)
+    const pendingRows = await db.EmailLog.findAll({
+      where: {
+        status: ['QUEUED', 'PROCESSING', 'PENDING']
+      },
+      order: [
+        ['priority', 'ASC'], // HIGH, MEDIUM, LOW ordering
+        ['createdAt', 'ASC']
+      ],
+      limit: 50
+    }).catch(() => []);
+
+    // Fetch Already Sent & Failed items (history)
+    const historyRows = await db.EmailLog.findAll({
+      where: {
+        status: ['SENT', 'FAILED']
+      },
+      order: [['updatedAt', 'DESC']],
+      limit: 50
+    }).catch(() => []);
+
+    return res.json({
+      success: true,
+      stats,
+      queuedItems: pendingRows,
+      historyItems: historyRows
+    });
+  } catch (error) {
+    console.error('Error fetching email queue monitor:', error);
+    return res.status(500).json({ error: 'Failed to fetch email queue state' });
+  }
+});
+
+// POST /api/notifications/queue/retry - Retry failed email(s)
+router.post('/notifications/queue/retry', async (req, res) => {
+  try {
+    const { logId } = req.body;
+    if (logId) {
+      const result = await emailQueue.retryLog(logId);
+      return res.json({ success: true, message: 'Email re-queued with HIGH priority', result });
+    }
+
+    // Re-queue all failed logs
+    const failedLogs = await db.EmailLog.findAll({ where: { status: 'FAILED' } });
+    for (const log of failedLogs) {
+      await emailQueue.retryLog(log.id);
+    }
+    return res.json({ success: true, message: `Re-queued ${failedLogs.length} failed emails` });
+  } catch (error) {
+    console.error('Error retrying failed email:', error);
+    return res.status(500).json({ error: 'Failed to retry email dispatch' });
+  }
+});
+
 // GET /api/notifications/logs (Admin View)
-router.get('/notifications/logs', authMiddleware, async (req, res) => {
+router.get('/notifications/logs', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;

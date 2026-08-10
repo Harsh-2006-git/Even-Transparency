@@ -18,6 +18,7 @@ import authRoutes from './routes/authRoutes.js';
 import candidateRoutes from './routes/candidateRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import initScheduler from './notifications/scheduler.js';
+import { initEmailQueue } from './notifications/email.queue.js';
 import { uploadProxy } from './controllers/candidate/documentController.js';
 import './models/index.js';
 
@@ -163,6 +164,21 @@ async function ensureDbColumnsExist() {
       console.log('Altered candidategrievances.evidence_urls column to JSON.');
     }
   }
+
+  // 5. Check emaillogs table
+  const emailLogsTable = await queryInterface.describeTable('emaillogs').catch(() => null);
+  if (emailLogsTable) {
+    if (!emailLogsTable['priority']) {
+      await queryInterface.addColumn('emaillogs', 'priority', {
+        type: sequelize.Sequelize.STRING,
+        allowNull: false,
+        defaultValue: 'MEDIUM'
+      }).catch(() => null);
+      console.log('Added missing emaillogs.priority column.');
+    }
+    // Safely convert PostgreSQL enum column to VARCHAR(255)
+    await sequelize.query('ALTER TABLE emaillogs ALTER COLUMN status TYPE VARCHAR(255);').catch(() => null);
+  }
 }
 
 // Enable CORS for frontend connectivity
@@ -225,6 +241,9 @@ const startServer = () => {
       });
 
       console.log('  🗄️   Database schema ready.');
+
+      // Initialize Priority Parallel Email Queue
+      await initEmailQueue();
 
       // Initialize automated email notification scheduler
       initScheduler();

@@ -17,7 +17,9 @@ export const candidateAuthMiddleware = async (req, res, next) => {
       return res.status(403).json({ error: 'Candidate access is required.' });
     }
 
-    const candidate = await db.Candidate.findByPk(decoded.id);
+    const candidate = await db.Candidate.findByPk(decoded.id, {
+      attributes: ['id', 'email', 'mobile_number', 'full_name', 'first_name', 'last_name', 'onboarding_status', 'verification_status', 'availability_status']
+    });
     if (!candidate) {
       return res.status(401).json({ error: 'Candidate no longer exists.' });
     }

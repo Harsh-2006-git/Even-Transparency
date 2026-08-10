@@ -1,4 +1,6 @@
 import db from '../../models/index.js';
+import notificationService from '../../notifications/notification.service.js';
+import { NOTIFICATION_TYPES } from '../../notifications/notification.constants.js';
 
 const isAdminRequest = (req) => Boolean(req.headers['x-admin-id']);
 
@@ -245,6 +247,22 @@ export const updateEmployerApproval = async (req, res) => {
         { model: db.EmployerDocument }
       ]
     });
+
+    // Trigger high-priority status notification email to employer
+    const targetEmail = updatedEmployer.official_email || updatedEmployer.EmployerUsers?.[0]?.email;
+    if (targetEmail) {
+      notificationService.send({
+        type: NOTIFICATION_TYPES.EMPLOYER_REGISTRATION_STATUS,
+        recipient: targetEmail,
+        data: {
+          company_name: updatedEmployer.company_name,
+          status: isApproved ? 'Approved & Active' : 'Rejected',
+          approved: isApproved,
+          rejection_reason: remarks || ''
+        },
+        priority: 'HIGH'
+      }).catch(err => console.error('Employer status email trigger error:', err.message));
+    }
 
     return res.status(200).json({
       message: isApproved ? 'Employer approved successfully.' : 'Employer rejected successfully.',

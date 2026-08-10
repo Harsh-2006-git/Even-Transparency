@@ -3,6 +3,8 @@ import { Op } from 'sequelize';
 import { createAuditLog } from '../../services/auditService.js';
 import { createPaymentReference, validateStipendAmount } from '../../services/razorpayService.js';
 import { notifyCandidate, notifyEmployer } from '../../services/notificationService.js';
+import notificationService from '../../notifications/notification.service.js';
+import { NOTIFICATION_TYPES } from '../../notifications/notification.constants.js';
 
 export const confirmStipendPayment = async (req, res) => {
   try {
@@ -65,6 +67,40 @@ export const confirmStipendPayment = async (req, res) => {
       entityType: 'EmployerStipendPayment',
       entityId: stipend.id
     });
+
+    // Dispatch email notifications for stipend processed
+    if (req.body.candidate_id) {
+      db.Candidate.findByPk(req.body.candidate_id).then(cand => {
+        if (cand?.email) {
+          notificationService.send({
+            type: NOTIFICATION_TYPES.CANDIDATE_STIPEND_PROCESSED,
+            recipient: cand.email,
+            data: {
+              candidate_name: cand.full_name || 'Candidate',
+              month: req.body.payment_month || 'Current Month',
+              amount: validation.amount.toLocaleString('en-IN'),
+              status: 'Processed & Credited',
+              transaction_id: stipend.transaction_reference || 'TXN-ONLINE'
+            },
+            priority: 'MEDIUM'
+          }).catch(err => console.error('Candidate stipend email error:', err.message));
+        }
+      }).catch(() => null);
+    }
+
+    if (employer.official_email) {
+      notificationService.send({
+        type: NOTIFICATION_TYPES.EMPLOYER_STIPEND_PROCESSED,
+        recipient: employer.official_email,
+        data: {
+          employer_name: employer.company_name || 'Employer',
+          month: req.body.payment_month || 'Current Month',
+          apprentice_count: 1,
+          total_amount: validation.amount.toLocaleString('en-IN')
+        },
+        priority: 'LOW'
+      }).catch(err => console.error('Employer stipend email error:', err.message));
+    }
 
     return res.status(201).json({
       message: 'Stipend payment confirmed successfully.',

@@ -25,29 +25,29 @@ export const NOTIFICATION_TYPES = {
 };
 
 export const NOTIFICATION_SUBJECTS = {
-  // Candidate
-  [NOTIFICATION_TYPES.CANDIDATE_REGISTRATION_OTP]: 'Welcome to the Apprenticeship Portal – Your OTP for Account Verification',
-  [NOTIFICATION_TYPES.CANDIDATE_JOB_APPLIED]: 'Application Received: {{job_title}} at {{company_name}}',
-  [NOTIFICATION_TYPES.CANDIDATE_APPLICATION_SHORTLISTED]: "Great News! You've been shortlisted for {{job_title}}",
-  [NOTIFICATION_TYPES.CANDIDATE_INTERVIEW_SCHEDULED]: 'Interview Scheduled: {{job_title}} with {{company_name}}',
-  [NOTIFICATION_TYPES.CANDIDATE_HIRED_CONTRACT]: 'Congratulations! You have been selected for {{job_title}}',
-  [NOTIFICATION_TYPES.CANDIDATE_ACTIVE_APPRENTICE]: 'Apprentice Onboarding Complete – Apprentice ID: {{apprentice_id}}',
-  [NOTIFICATION_TYPES.CANDIDATE_STIPEND_PROCESSED]: 'Stipend Update for {{month}}',
-  [NOTIFICATION_TYPES.CANDIDATE_GRIEVANCE_UPDATE]: 'Grievance Update - Case #{{grievance_id}}',
+  // Candidate Notifications (Short, Professional & Compact)
+  [NOTIFICATION_TYPES.CANDIDATE_REGISTRATION_OTP]: 'Even Cargo Verification OTP: {{otp}}',
+  [NOTIFICATION_TYPES.CANDIDATE_JOB_APPLIED]: 'Application Received: {{job_title}}',
+  [NOTIFICATION_TYPES.CANDIDATE_APPLICATION_SHORTLISTED]: 'Shortlisted: {{job_title}}',
+  [NOTIFICATION_TYPES.CANDIDATE_INTERVIEW_SCHEDULED]: 'Interview Scheduled: {{job_title}}',
+  [NOTIFICATION_TYPES.CANDIDATE_HIRED_CONTRACT]: 'Offer Issued: {{job_title}}',
+  [NOTIFICATION_TYPES.CANDIDATE_ACTIVE_APPRENTICE]: 'Apprentice Onboarded: ID {{apprentice_id}}',
+  [NOTIFICATION_TYPES.CANDIDATE_STIPEND_PROCESSED]: 'Stipend Processed: {{month}}',
+  [NOTIFICATION_TYPES.CANDIDATE_GRIEVANCE_UPDATE]: 'Grievance Update #{{grievance_id}}',
 
-  // Employer
-  [NOTIFICATION_TYPES.EMPLOYER_REGISTRATION_SENT]: 'Registration Submission Received - Even Cargo Apprenticeship Portal',
-  [NOTIFICATION_TYPES.EMPLOYER_REGISTRATION_STATUS]: 'Employer Account Status Update: {{status}}',
-  [NOTIFICATION_TYPES.EMPLOYER_JOB_POSTED]: 'Job Posting Confirmation: {{job_title}}',
-  [NOTIFICATION_TYPES.EMPLOYER_APPLICATION_RECEIVED]: 'New Candidate Application for {{job_title}}',
-  [NOTIFICATION_TYPES.EMPLOYER_INTERVIEW_SCHEDULED]: 'Interview Scheduled with {{candidate_name}} for {{job_title}}',
-  [NOTIFICATION_TYPES.EMPLOYER_CONTRACT_SIGNED]: 'Apprenticeship Contract Signed by {{candidate_name}}',
-  [NOTIFICATION_TYPES.EMPLOYER_STIPEND_PROCESSED]: 'Stipend Processing Confirmation for {{month}}',
-  [NOTIFICATION_TYPES.EMPLOYER_GRIEVANCE_ALERT]: 'URGENT: Grievance Alert - Case #{{grievance_id}}',
+  // Employer Notifications (Short, Professional & Compact)
+  [NOTIFICATION_TYPES.EMPLOYER_REGISTRATION_SENT]: 'Registration Submission Received',
+  [NOTIFICATION_TYPES.EMPLOYER_REGISTRATION_STATUS]: 'Employer Account Status: {{status}}',
+  [NOTIFICATION_TYPES.EMPLOYER_JOB_POSTED]: 'Job Published: {{job_title}}',
+  [NOTIFICATION_TYPES.EMPLOYER_APPLICATION_RECEIVED]: 'New Application: {{job_title}}',
+  [NOTIFICATION_TYPES.EMPLOYER_INTERVIEW_SCHEDULED]: 'Interview Set: {{candidate_name}}',
+  [NOTIFICATION_TYPES.EMPLOYER_CONTRACT_SIGNED]: 'Contract Signed: {{candidate_name}}',
+  [NOTIFICATION_TYPES.EMPLOYER_STIPEND_PROCESSED]: 'Stipend Confirmation: {{month}}',
+  [NOTIFICATION_TYPES.EMPLOYER_GRIEVANCE_ALERT]: 'Grievance Alert #{{grievance_id}}',
 
-  // Admin
-  [NOTIFICATION_TYPES.ADMIN_EMPLOYER_REGISTRATION_REQUEST]: 'New Employer Registration Pending Approval: {{company_name}}',
-  [NOTIFICATION_TYPES.ADMIN_GRIEVANCE_ESCALATION]: 'CRITICAL: Safety/Harassment Grievance Reported - Case #{{grievance_id}}',
+  // Admin Notifications (Short, Professional & Compact)
+  [NOTIFICATION_TYPES.ADMIN_EMPLOYER_REGISTRATION_REQUEST]: 'Employer Approval Needed: {{company_name}}',
+  [NOTIFICATION_TYPES.ADMIN_GRIEVANCE_ESCALATION]: 'Urgent Grievance Escalation #{{grievance_id}}',
 };
 
 export const TEMPLATE_MAPPING = {

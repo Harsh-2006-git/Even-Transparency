@@ -1,5 +1,7 @@
 import db from '../../models/index.js';
 import { notifyCandidate, notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
+import notificationService from '../../notifications/notification.service.js';
+import { NOTIFICATION_TYPES } from '../../notifications/notification.constants.js';
 
 // Helper to seed mock candidate applications if table is empty
 const seedMockApplicationsIfNeeded = async (employerId) => {
@@ -427,7 +429,12 @@ export const updateCandidateStatus = async (req, res) => {
       include: [
         {
           model: db.EmployerJobPosting,
-          where: { employer_id: employerId }
+          where: { employer_id: employerId },
+          include: [{ model: db.Employer }]
+        },
+        {
+          model: db.Candidate,
+          attributes: ['id', 'full_name', 'email', 'mobile_number']
         }
       ]
     });
@@ -508,14 +515,18 @@ export const updateCandidateStatus = async (req, res) => {
 
     await application.update(updateData);
 
-    // Fire status-specific notifications
+    // Fire status-specific notifications & emails
     const candidateId = application.candidate_id;
+    const candidateEmail = application.Candidate?.email;
+    const jobTitle = application.EmployerJobPosting?.job_title || 'Apprenticeship Opening';
+    const employerName = application.EmployerJobPosting?.Employer?.company_name || 'Even Cargo Partner';
+
     if (status === 'Shortlisted') {
       notifyCandidate({
         candidateId,
         type: 'status_change',
         title: 'Application Shortlisted 🌟',
-        message: `Congratulations! Your application has been shortlisted. Keep an eye out for next steps.`,
+        message: `Congratulations! Your application for "${jobTitle}" has been shortlisted. Keep an eye out for next steps.`,
         entityType: 'CandidateApplication',
         entityId: application.id
       });
@@ -527,12 +538,25 @@ export const updateCandidateStatus = async (req, res) => {
         entityType: 'CandidateApplication',
         entityId: application.id
       });
+
+      if (candidateEmail) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.CANDIDATE_APPLICATION_SHORTLISTED,
+          recipient: candidateEmail,
+          data: {
+            candidate_name: application.Candidate.full_name || 'Candidate',
+            job_title: jobTitle,
+            employer_name: employerName
+          },
+          priority: 'HIGH'
+        }).catch(err => console.error('Shortlist email trigger error:', err.message));
+      }
     } else if (status === 'Rejected') {
       notifyCandidate({
         candidateId,
         type: 'status_change',
-        title: 'Application Update',
-        message: 'Your application was not selected at this time. Don\'t give up — keep applying!',
+        title: 'Application Status Update',
+        message: `Your application for "${jobTitle}" was not selected at this time. Don't give up — keep applying!`,
         entityType: 'CandidateApplication',
         entityId: application.id
       });
@@ -544,12 +568,29 @@ export const updateCandidateStatus = async (req, res) => {
         entityType: 'CandidateApplication',
         entityId: application.id
       });
+
+      // Send polite rejection update email to candidate
+      if (candidateEmail) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.CANDIDATE_JOB_APPLIED,
+          recipient: candidateEmail,
+          data: {
+            candidate_name: application.Candidate.full_name || 'Candidate',
+            first_name: (application.Candidate.full_name || 'Candidate').split(' ')[0],
+            job_title: jobTitle,
+            company_name: employerName,
+            status: 'Not Selected',
+            applied_date: new Date().toLocaleDateString('en-IN')
+          },
+          priority: 'MEDIUM'
+        }).catch(err => console.error('Rejection email trigger error:', err.message));
+      }
     } else if (status === 'Interview Scheduled') {
       notifyCandidate({
         candidateId,
         type: 'interview',
         title: 'Interview Scheduled 📅',
-        message: 'Your interview has been scheduled. Check your Interviews section for details.',
+        message: `Your interview for "${jobTitle}" has been scheduled. Check your Interviews section for details.`,
         entityType: 'CandidateApplication',
         entityId: application.id
       });
@@ -561,6 +602,44 @@ export const updateCandidateStatus = async (req, res) => {
         entityType: 'CandidateApplication',
         entityId: application.id
       });
+
+      // Trigger Candidate Interview Scheduled Email (HIGH priority queue)
+      if (candidateEmail) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.CANDIDATE_INTERVIEW_SCHEDULED,
+          recipient: candidateEmail,
+          data: {
+            candidate_name: application.Candidate?.full_name || 'Candidate',
+            job_title: jobTitle,
+            employer_name: employerName,
+            interview_date: req.body.interviewScheduledAt ? new Date(req.body.interviewScheduledAt).toLocaleDateString() : 'Scheduled Date',
+            interview_time: req.body.interviewScheduledAt ? new Date(req.body.interviewScheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Scheduled Time',
+            interview_mode: req.body.interviewMode || 'Online',
+            meeting_link: req.body.meetingLink || 'https://meet.google.com/new',
+            location: req.body.interviewMode === 'Online' ? 'Google Meet' : 'Office Premises'
+          },
+          priority: 'HIGH'
+        }).catch(err => console.error('Candidate interview scheduled email error:', err.message));
+      }
+
+      // Trigger Employer Interview Confirmation Email (HIGH priority queue)
+      const empUserEmail = application.EmployerJobPosting?.Employer?.official_email;
+      if (empUserEmail) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.EMPLOYER_INTERVIEW_SCHEDULED,
+          recipient: empUserEmail,
+          data: {
+            employer_name: employerName,
+            candidate_name: application.Candidate?.full_name || 'Candidate',
+            job_title: jobTitle,
+            interview_date: req.body.interviewScheduledAt ? new Date(req.body.interviewScheduledAt).toLocaleDateString() : 'Scheduled Date',
+            interview_time: req.body.interviewScheduledAt ? new Date(req.body.interviewScheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Scheduled Time',
+            interview_mode: req.body.interviewMode || 'Online',
+            meeting_link: req.body.meetingLink || 'Google Meet'
+          },
+          priority: 'HIGH'
+        }).catch(err => console.error('Employer interview scheduled email error:', err.message));
+      }
     } else if (status === 'Hired') {
       notifyCandidate({
         candidateId,
@@ -585,6 +664,21 @@ export const updateCandidateStatus = async (req, res) => {
         entityType: 'CandidateApplication',
         entityId: application.id
       });
+
+      if (application.Candidate?.email) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.CANDIDATE_HIRED_CONTRACT,
+          recipient: application.Candidate.email,
+          data: {
+            candidate_name: application.Candidate.full_name || 'Candidate',
+            job_title: application.EmployerJobPosting?.job_title || 'Apprenticeship Role',
+            employer_name: application.EmployerJobPosting?.Employer?.company_name || 'Employer',
+            stipend_amount: application.EmployerJobPosting?.stipend_amount ? `₹${application.EmployerJobPosting.stipend_amount}` : '12,000',
+            start_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()
+          },
+          priority: 'HIGH'
+        }).catch(err => console.error('Hired email trigger error:', err.message));
+      }
     }
 
     // Auto-create a draft contract if candidate status is updated to 'Hired'

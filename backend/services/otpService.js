@@ -1,4 +1,4 @@
-const MSG91_BASE_URL = 'https://api.msg91.com/api/v5';
+const MSG91_BASE_URL = 'https://control.msg91.com/api/v5';
 
 // WARNING: localOtpStore is in-memory and will be wiped on every server restart.
 // On Render's free tier (which spins down after inactivity), OTPs stored here
@@ -7,7 +7,7 @@ const MSG91_BASE_URL = 'https://api.msg91.com/api/v5';
 const localOtpStore = new Map();
 
 const normalizeMobile = (mobile) => String(mobile || '').replace(/\D/g, '').slice(-10);
-const hasMsg91Config = () => Boolean(process.env.MSG91_AUTH_KEY && process.env.MSG91_OTP_TEMPLATE_ID);
+const hasMsg91Config = () => Boolean(process.env.MSG91_AUTH_KEY && (process.env.MSG91_OTP_TEMPLATE_ID || process.env.MSG91_WIDGET_ID));
 
 export const sendOTP = async (mobile) => {
   const cleanMobile = normalizeMobile(mobile);
@@ -33,16 +33,23 @@ export const sendOTP = async (mobile) => {
   }
 
   try {
+    const payload = {
+      mobile: `91${cleanMobile}`,
+      authkey: process.env.MSG91_AUTH_KEY,
+      otp_expiry: Number(process.env.MSG91_OTP_EXPIRY_MINUTES || 10),
+      realTimeResponse: '1'
+    };
+    if (process.env.MSG91_WIDGET_ID) {
+      payload.widget_id = process.env.MSG91_WIDGET_ID;
+    }
+    if (process.env.MSG91_OTP_TEMPLATE_ID) {
+      payload.template_id = process.env.MSG91_OTP_TEMPLATE_ID;
+    }
+
     const response = await fetch(`${MSG91_BASE_URL}/otp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        template_id: process.env.MSG91_OTP_TEMPLATE_ID,
-        mobile: `91${cleanMobile}`,
-        authkey: process.env.MSG91_AUTH_KEY,
-        otp_expiry: Number(process.env.MSG91_OTP_EXPIRY_MINUTES || 10),
-        realTimeResponse: '1'
-      })
+      headers: { 'Content-Type': 'application/json', 'authkey': process.env.MSG91_AUTH_KEY },
+      body: JSON.stringify(payload)
     });
     const data = await response.json();
 

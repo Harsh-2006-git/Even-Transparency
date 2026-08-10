@@ -660,14 +660,8 @@ export default function EmployerGrievances({ user }) {
 
           {/* Grievance Support Card */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-5">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                <HeartHandshake size={16} />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-slate-800">Employer Support</h4>
-                <p className="text-[9px] text-slate-400 font-semibold mt-0.5">We are here to help resolve your issues.</p>
-              </div>
+            <div className="border-b border-slate-100 pb-4 mb-4">
+              <h4 className="text-base font-black text-slate-900">Grievance Support</h4>
             </div>
             <div className="space-y-3.5">
               {[

@@ -11,7 +11,9 @@ import {
   CheckCircle2,
   X,
   Briefcase,
-  AlertCircle
+  AlertCircle,
+  Filter,
+  ChevronDown
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -503,33 +505,44 @@ export default function CandidateApplications({ onSectionChange, user }) {
 
       {/* Filter and Search Bar Dashboard */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
-        <div className="flex overflow-x-auto gap-2 no-scrollbar pb-1 md:pb-0">
-          {['All', 'Applied', 'Under Review', 'Shortlisted', 'Interview', 'Offer / Reject', 'Hired'].map((tab) => {
-            const count = tab === 'All' 
-              ? applications.length 
-              : tab === 'Offer / Reject' 
-                ? applications.filter(a => a.status === 'Offered' || a.status === 'Rejected').length
-                : applications.filter(a => a.status === tab).length;
-            const isActive = filter === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setFilter(tab)}
-                className={`shrink-0 px-4 py-2 rounded-xl text-xs font-black border transition-all duration-200 cursor-pointer select-none ${
-                  isActive 
-                    ? 'bg-violet-50/80 border-[#6D3BFF] text-[#6D3BFF] shadow-xs' 
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50/80 hover:text-slate-900'
-                }`}
-              >
-                {tab}
-                <span className={`ml-1.5 px-1.5 py-0.2 rounded-md text-[9px] font-black ${
-                  isActive ? 'bg-[#6D3BFF] text-white' : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+        {/* Application Status Filter Dropdown */}
+        <div className="flex items-center gap-3">
+          <div className="relative min-w-[220px] sm:min-w-[260px]">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6D3BFF] pointer-events-none flex items-center justify-center">
+              <Filter size={15} />
+            </div>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="w-full h-10 pl-10 pr-9 rounded-2xl border border-slate-250 bg-slate-50/70 text-xs font-black text-slate-800 outline-none focus:border-[#6D3BFF] focus:bg-white focus:ring-2 focus:ring-violet-100 transition-all cursor-pointer appearance-none shadow-xs"
+            >
+              {['All', 'Applied', 'Under Review', 'Shortlisted', 'Interview', 'Offer / Reject', 'Hired'].map((tab) => {
+                const count = tab === 'All' 
+                  ? applications.length 
+                  : tab === 'Offer / Reject' 
+                    ? applications.filter(a => a.status === 'Offered' || a.status === 'Rejected').length
+                    : applications.filter(a => a.status === tab).length;
+                return (
+                  <option key={tab} value={tab}>
+                    {tab} ({count})
+                  </option>
+                );
+              })}
+            </select>
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              <ChevronDown size={14} />
+            </div>
+          </div>
+
+          <span className="hidden sm:inline-flex items-center px-3 py-2 rounded-2xl bg-violet-50 text-[#6D3BFF] border border-violet-200 text-xs font-black shrink-0">
+            {filter}: {
+              filter === 'All' 
+                ? applications.length 
+                : filter === 'Offer / Reject' 
+                  ? applications.filter(a => a.status === 'Offered' || a.status === 'Rejected').length
+                  : applications.filter(a => a.status === filter).length
+            }
+          </span>
         </div>
 
         <div className="relative md:w-72">
@@ -554,21 +567,49 @@ export default function CandidateApplications({ onSectionChange, user }) {
 
       {/* Applications list */}
       <div className="space-y-5">
-        {filteredApps.length === 0 ? (
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse flex flex-col xl:flex-row gap-5 justify-between items-center">
+                <div className="flex items-center gap-4 w-full xl:w-1/3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-200 shrink-0"></div>
+                  <div className="space-y-2 w-full">
+                    <div className="h-4 bg-slate-200 rounded-md w-3/4"></div>
+                    <div className="h-3 bg-slate-100 rounded-md w-1/2"></div>
+                  </div>
+                </div>
+                <div className="h-10 bg-slate-100 rounded-2xl w-full xl:w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : filteredApps.length === 0 ? (
           <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center max-w-xl mx-auto space-y-4 shadow-sm">
-            <div className="w-16 h-16 bg-violet-50 rounded-2xl flex items-center justify-center text-[#6D3BFF] mx-auto animate-pulse">
+            <div className="w-16 h-16 bg-violet-50 rounded-2xl flex items-center justify-center text-[#6D3BFF] mx-auto">
               <FileText size={28} />
             </div>
             <div className="space-y-1">
-              <h4 className="text-sm font-black text-slate-800">No applications match your filter</h4>
-              <p className="text-xs text-slate-500 font-semibold">Try changing your search term or select another status filter.</p>
+              <h4 className="text-sm font-black text-slate-800">
+                {applications.length === 0 ? 'No Applications Yet' : 'No applications match your filter'}
+              </h4>
+              <p className="text-xs text-slate-500 font-semibold">
+                {applications.length === 0 ? 'You have not submitted any apprenticeship applications yet.' : 'Try changing your search term or select another status filter.'}
+              </p>
             </div>
-            <button
-              onClick={() => { setFilter('All'); setSearch(''); }}
-              className="px-4 py-2 border border-slate-250 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
-            >
-              Reset Filters
-            </button>
+            {applications.length === 0 ? (
+              <button
+                onClick={() => onSectionChange?.('jobs')}
+                className="px-5 py-2.5 bg-[#6D3BFF] hover:bg-[#5C2FFF] rounded-xl text-xs font-black text-white cursor-pointer shadow-md transition-all"
+              >
+                Browse Apprenticeship Drives
+              </button>
+            ) : (
+              <button
+                onClick={() => { setFilter('All'); setSearch(''); }}
+                className="px-4 py-2 border border-slate-250 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         ) : (
           filteredApps.map((app) => {

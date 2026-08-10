@@ -48,6 +48,7 @@ const emptyProfileForm = {
   date_of_birth: '',
   email: '',
   preferred_language: '',
+  aadhaar_number_encrypted: '',
   pan_number: '',
   naps_candidate_id: '',
   emergency_contact_name: '',
@@ -64,6 +65,18 @@ const emptyProfileForm = {
     state: '',
     pincode: ''
   },
+  educations: [
+    {
+      qualification_level: '',
+      course_name: '',
+      specialization: '',
+      institution_name: '',
+      board_or_university: '',
+      passing_year: '',
+      percentage_or_cgpa: '',
+      currently_pursuing: false
+    }
+  ],
   education: {
     qualification_level: '',
     course_name: '',
@@ -75,6 +88,18 @@ const emptyProfileForm = {
     currently_pursuing: false
   },
   skills: [],
+  workExperiences: [
+    {
+      company_name: '',
+      designation: '',
+      employment_type: '',
+      start_date: '',
+      end_date: '',
+      currently_working: false,
+      responsibilities: '',
+      reason_for_leaving: ''
+    }
+  ],
   workExperience: {
     company_name: '',
     designation: '',
@@ -95,6 +120,28 @@ const emptyProfileForm = {
   }
 };
 
+const emptyEducationItem = {
+  qualification_level: '',
+  course_name: '',
+  specialization: '',
+  institution_name: '',
+  board_or_university: '',
+  passing_year: '',
+  percentage_or_cgpa: '',
+  currently_pursuing: false
+};
+
+const emptyWorkExperienceItem = {
+  company_name: '',
+  designation: '',
+  employment_type: '',
+  start_date: '',
+  end_date: '',
+  currently_working: false,
+  responsibilities: '',
+  reason_for_leaving: ''
+};
+
 const toDateInput = (value) => {
   if (!value) return '';
   return String(value).slice(0, 10);
@@ -103,6 +150,26 @@ const toDateInput = (value) => {
 function buildProfileForm(profile, user) {
   const fullName = profile?.full_name || user?.full_name || user?.username || '';
   const [fallbackFirst = '', ...fallbackRest] = fullName.split(' ');
+
+  const rawEdus = profile?.educations?.length 
+    ? profile.educations 
+    : (profile?.CandidateEducations?.length 
+      ? profile.CandidateEducations 
+      : (profile?.education ? [profile.education] : []));
+  const educationsList = rawEdus.length ? rawEdus.map(edu => ({ ...emptyEducationItem, ...edu })) : [{ ...emptyEducationItem }];
+
+  const rawExps = profile?.workExperiences?.length 
+    ? profile.workExperiences 
+    : (profile?.CandidateWorkExperiences?.length 
+      ? profile.CandidateWorkExperiences 
+      : (profile?.workExperience ? [profile.workExperience] : []));
+  const workExpList = rawExps.length ? rawExps.map(exp => ({
+    ...emptyWorkExperienceItem,
+    ...exp,
+    start_date: toDateInput(exp.start_date),
+    end_date: toDateInput(exp.end_date)
+  })) : [{ ...emptyWorkExperienceItem }];
+
   return {
     ...emptyProfileForm,
     first_name: profile?.first_name || fallbackFirst,
@@ -111,6 +178,7 @@ function buildProfileForm(profile, user) {
     date_of_birth: toDateInput(profile?.date_of_birth),
     email: profile?.email || user?.email || '',
     preferred_language: profile?.preferred_language || '',
+    aadhaar_number_encrypted: profile?.aadhaar_number_encrypted || profile?.aadhaar_number || user?.candidate?.aadhaar_number_encrypted || user?.candidate?.aadhaar_number || '',
     pan_number: profile?.pan_number || '',
     naps_candidate_id: profile?.naps_candidate_id || user?.naps_candidate_id || '',
     emergency_contact_name: profile?.emergency_contact_name || '',
@@ -121,17 +189,11 @@ function buildProfileForm(profile, user) {
       ...emptyProfileForm.address,
       ...(profile?.address || profile?.CandidateAddresses?.[0] || {})
     },
-    education: {
-      ...emptyProfileForm.education,
-      ...(profile?.education || profile?.CandidateEducations?.[0] || {})
-    },
+    educations: educationsList,
+    education: educationsList[0] || { ...emptyEducationItem },
     skills: profile?.skills?.length ? profile.skills : (profile?.CandidateSkills?.length ? profile.CandidateSkills : []),
-    workExperience: {
-      ...emptyProfileForm.workExperience,
-      ...(profile?.workExperience || profile?.CandidateWorkExperiences?.[0] || {}),
-      start_date: toDateInput(profile?.workExperience?.start_date || profile?.CandidateWorkExperiences?.[0]?.start_date),
-      end_date: toDateInput(profile?.workExperience?.end_date || profile?.CandidateWorkExperiences?.[0]?.end_date)
-    },
+    workExperiences: workExpList,
+    workExperience: workExpList[0] || { ...emptyWorkExperienceItem },
     bankAccount: {
       ...emptyProfileForm.bankAccount,
       ...(profile?.bankAccount || profile?.CandidateBankAccounts?.[0] || {})
@@ -196,6 +258,50 @@ export default function CandidateProfile({ user, onUserUpdate }) {
     setProfileForm((prev) => ({ ...prev, [section]: { ...prev[section], [key]: value } }));
   };
 
+  const addEducationItem = () => {
+    setProfileForm(prev => ({
+      ...prev,
+      educations: [...(prev.educations || []), { ...emptyEducationItem }]
+    }));
+  };
+
+  const removeEducationItem = (index) => {
+    setProfileForm(prev => {
+      const updated = (prev.educations || []).filter((_, idx) => idx !== index);
+      return { ...prev, educations: updated.length ? updated : [{ ...emptyEducationItem }] };
+    });
+  };
+
+  const updateEducationItem = (index, field, value) => {
+    setProfileForm(prev => {
+      const updated = [...(prev.educations || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, educations: updated, education: updated[0] };
+    });
+  };
+
+  const addWorkExperienceItem = () => {
+    setProfileForm(prev => ({
+      ...prev,
+      workExperiences: [...(prev.workExperiences || []), { ...emptyWorkExperienceItem }]
+    }));
+  };
+
+  const removeWorkExperienceItem = (index) => {
+    setProfileForm(prev => {
+      const updated = (prev.workExperiences || []).filter((_, idx) => idx !== index);
+      return { ...prev, workExperiences: updated.length ? updated : [{ ...emptyWorkExperienceItem }] };
+    });
+  };
+
+  const updateWorkExperienceItem = (index, field, value) => {
+    setProfileForm(prev => {
+      const updated = [...(prev.workExperiences || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, workExperiences: updated, workExperience: updated[0] };
+    });
+  };
+
   const addSkillChip = () => {
     if (!newSkillText.trim()) return;
     const isDup = profileForm.skills.some(s => s.skill_name?.toLowerCase() === newSkillText.trim().toLowerCase());
@@ -217,6 +323,8 @@ export default function CandidateProfile({ user, onUserUpdate }) {
     }));
   };
 
+  const [savingSectionKey, setSavingSectionKey] = useState(null);
+
   const handleCancelEdit = () => {
     setProfileForm(buildProfileForm(profile, user));
     setEditSection(null);
@@ -227,6 +335,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
     setProfileError('');
     setProfileSuccess('');
     setProfileSaving(true);
+    setSavingSectionKey(sectionKey);
     try {
       const res = await fetch(`${API}/candidate/profile`, {
         method: 'PUT',
@@ -258,7 +367,95 @@ export default function CandidateProfile({ user, onUserUpdate }) {
       setProfileError(err.message);
     } finally {
       setProfileSaving(false);
+      setSavingSectionKey(null);
     }
+  };
+
+  const handleAutoSaveAadhaar = async (aadhaarValue) => {
+    if (!aadhaarValue || aadhaarValue.length !== 12) return;
+    setProfileSaving(true);
+    setSavingSectionKey('identity');
+    try {
+      const updatedForm = {
+        ...profileForm,
+        aadhaar_number_encrypted: aadhaarValue
+      };
+      const res = await fetch(`${API}/candidate/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify(updatedForm)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not auto-save Aadhaar.');
+
+      setProfile(data.candidate || {});
+      setProfileForm(buildProfileForm(data.candidate || {}, user));
+      onUserUpdate?.({
+        candidate: data.candidate,
+        full_name: data.candidate?.full_name,
+        email: data.candidate?.email,
+        profile_completion_percentage: data.candidate?.profile_completion_percentage,
+        profile_completion_breakdown: data.candidate?.profile_completion_breakdown,
+        verification_status: data.candidate?.verification_status,
+        availability_status: data.candidate?.availability_status
+      });
+
+      setProfileSuccess(`✓ Aadhaar card auto-saved to database! (Last 4: ${aadhaarValue.slice(-4)})`);
+      setTimeout(() => setProfileSuccess(''), 4000);
+    } catch (err) {
+      setProfileError(err.message);
+    } finally {
+      setProfileSaving(false);
+      setSavingSectionKey(null);
+    }
+  };
+
+  const renderSaveButton = (sectionKey, text = 'Save Section') => {
+    const isSavingThis = savingSectionKey === sectionKey;
+    return (
+      <button
+        type="button"
+        disabled={profileSaving}
+        onClick={() => handleSaveSection(sectionKey)}
+        className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white rounded-xl font-bold text-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-60 transition active:scale-95"
+      >
+        {isSavingThis ? (
+          <>
+            <Loader2 size={13} className="animate-spin" />
+            <span>Saving...</span>
+          </>
+        ) : (
+          <span>{text}</span>
+        )}
+      </button>
+    );
+  };
+
+  const startEditingSection = (sectionKey) => {
+    setProfileForm(buildProfileForm(profile, user));
+    setEditSection(sectionKey);
+  };
+
+  const renderHeaderEditSaveButton = (sectionKey) => {
+    const isEditing = editSection === sectionKey;
+    const isSavingThis = savingSectionKey === sectionKey;
+    return (
+      <button
+        type="button"
+        disabled={isSavingThis}
+        onClick={() => isEditing ? handleSaveSection(sectionKey) : startEditingSection(sectionKey)}
+        className="text-xs font-bold text-violet-600 hover:text-violet-855 transition cursor-pointer flex items-center gap-1 disabled:opacity-60"
+      >
+        {isSavingThis ? (
+          <>
+            <Loader2 size={12} className="animate-spin" />
+            <span>Saving...</span>
+          </>
+        ) : (
+          <span>{isEditing ? 'Save' : 'Edit'}</span>
+        )}
+      </button>
+    );
   };
 
   const uploadSingleDocument = async (key, file) => {
@@ -384,10 +581,12 @@ export default function CandidateProfile({ user, onUserUpdate }) {
       profileForm.address.pincode
     );
 
-    const educationDone = Boolean(
-      profileForm.education.qualification_level &&
-      profileForm.education.course_name &&
-      profileForm.education.institution_name
+    const educationDone = (profileForm.educations || []).some(edu => 
+      Boolean(edu.qualification_level || edu.course_name || edu.institution_name)
+    );
+
+    const workExperienceDone = (profileForm.workExperiences || []).some(exp => 
+      Boolean(exp.company_name || exp.designation)
     );
 
     const skillsDone = profileForm.skills.length > 0;
@@ -521,8 +720,17 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                 onClick={() => handleSaveSection(editSection)}
                 className="flex h-10 items-center gap-1.5 rounded-xl bg-violet-650 hover:bg-[#5C2FFF] px-4 text-xs font-bold text-white shadow-md shadow-violet-100 transition disabled:opacity-60 active:scale-95 cursor-pointer"
               >
-                <Save size={13} />
-                <span>{profileSaving ? 'Saving...' : 'Save Changes'}</span>
+                {profileSaving ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={13} />
+                    <span>Save Changes</span>
+                  </>
+                )}
               </button>
             </div>
 
@@ -566,18 +774,16 @@ export default function CandidateProfile({ user, onUserUpdate }) {
         </div>
       </div>
 
-      {/* MAIN TWO-COLUMN SECTION GRID */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 items-start">
-        {/* Left Column: Cards Form sections */}
-        <div className="lg:col-span-3 space-y-6">
+      {/* MAIN SECTION CONTAINER */}
+      <div className="space-y-6">
+        {/* Form sections */}
+        <div className="space-y-6">
 
           {/* SECTION 1: Basic Information */}
           <div id="section-basicInfo" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition scroll-mt-32">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
-                  <User size={16} strokeWidth={2.5} />
-                </div>
+                <User size={18} strokeWidth={2.5} className="text-blue-600" />
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Basic Information</h3>
                   <p className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5">SECTION 1</p>
@@ -587,13 +793,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                 <span className="text-[10px] font-black text-violet-600 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-lg">
                   {calculatedCompletion.breakdown.basicInfo ? '100% COMPLETE' : 'INCOMPLETE'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => editSection === 'basicInfo' ? handleSaveSection('basicInfo') : setEditSection('basicInfo')}
-                  className="text-xs font-bold text-violet-600 hover:text-violet-850 transition cursor-pointer"
-                >
-                  {editSection === 'basicInfo' ? 'Save' : 'Edit'}
-                </button>
+                {renderHeaderEditSaveButton('basicInfo')}
               </div>
             </div>
 
@@ -677,13 +877,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveSection('basicInfo')}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white rounded-xl font-bold text-xs cursor-pointer"
-                  >
-                    Save Section
-                  </button>
+                  {renderSaveButton('basicInfo')}
                 </div>
               </div>
             ) : (
@@ -720,9 +914,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
           <div id="section-identity" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition scroll-mt-32">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
-                  <Shield size={16} strokeWidth={2.5} />
-                </div>
+                <Shield size={18} strokeWidth={2.5} className="text-blue-600" />
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Identity Details</h3>
                   <p className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5">SECTION 2</p>
@@ -732,13 +924,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                 <span className="text-[10px] font-black text-violet-600 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-lg">
                   {calculatedCompletion.breakdown.identity ? '✓ VERIFIED' : 'PENDING'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => editSection === 'identity' ? handleSaveSection('identity') : setEditSection('identity')}
-                  className="text-xs font-bold text-violet-600 hover:text-violet-850 transition cursor-pointer"
-                >
-                  {editSection === 'identity' ? 'Save' : 'Edit'}
-                </button>
+                {renderHeaderEditSaveButton('identity')}
               </div>
             </div>
 
@@ -749,10 +935,20 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                   <input
                     type="text"
                     value={profileForm.aadhaar_number_encrypted || ''}
-                    onChange={(e) => updateProfileField('aadhaar_number_encrypted', e.target.value.replace(/\D/g, '').slice(0, 12))}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
+                      updateProfileField('aadhaar_number_encrypted', digits);
+                      if (digits.length === 12) {
+                        handleAutoSaveAadhaar(digits);
+                      }
+                    }}
                     className="profile-input"
                     placeholder="12-digit Aadhaar"
+                    maxLength={12}
                   />
+                  {profileForm.aadhaar_number_encrypted?.length === 12 && (
+                    <p className="text-[10px] font-extrabold text-emerald-600 mt-1">✓ Auto-saved to Database</p>
+                  )}
                 </label>
                 <label className="space-y-1.5 block">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">PAN Card Number</span>
@@ -783,13 +979,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveSection('identity')}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-750 text-white rounded-xl font-bold text-xs cursor-pointer"
-                  >
-                    Save Section
-                  </button>
+                  {renderSaveButton('identity')}
                 </div>
               </div>
             ) : (
@@ -841,9 +1031,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
           <div id="section-address" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition scroll-mt-32">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
-                  <MapPin size={16} strokeWidth={2.5} />
-                </div>
+                <MapPin size={18} strokeWidth={2.5} className="text-blue-600" />
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Address Details</h3>
                   <p className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5">SECTION 3</p>
@@ -853,13 +1041,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                 <span className="text-[10px] font-black text-violet-600 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-lg">
                   {calculatedCompletion.breakdown.address ? '100% COMPLETE' : 'INCOMPLETE'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => editSection === 'address' ? handleSaveSection('address') : setEditSection('address')}
-                  className="text-xs font-bold text-violet-600 hover:text-violet-850 transition cursor-pointer"
-                >
-                  {editSection === 'address' ? 'Save' : 'Edit'}
-                </button>
+                {renderHeaderEditSaveButton('address')}
               </div>
             </div>
 
@@ -1014,13 +1196,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveSection('address')}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white rounded-xl font-bold text-xs cursor-pointer"
-                  >
-                    Save Section
-                  </button>
+                  {renderSaveButton('address')}
                 </div>
               </div>
             ) : (
@@ -1065,22 +1241,30 @@ export default function CandidateProfile({ user, onUserUpdate }) {
           <div id="section-education" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition scroll-mt-32">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
-                  <GraduationCap size={16} strokeWidth={2.5} />
-                </div>
+                <GraduationCap size={18} strokeWidth={2.5} className="text-blue-600" />
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Education Details</h3>
                   <p className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5">SECTION 4</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-violet-600 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-lg">
-                  {calculatedCompletion.breakdown.education ? '100% COMPLETE' : 'INCOMPLETE'}
+                  {calculatedCompletion.breakdown.education ? `${profileForm.educations?.filter(e => e.qualification_level || e.course_name).length || 1} ADDED` : 'INCOMPLETE'}
                 </span>
                 <button
                   type="button"
+                  onClick={() => {
+                    if (editSection !== 'education') setEditSection('education');
+                    addEducationItem();
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-violet-650 hover:text-violet-800 bg-violet-50 hover:bg-violet-100 border border-violet-200/80 px-2.5 py-1 rounded-xl transition cursor-pointer"
+                >
+                  <Plus size={12} /> Add New
+                </button>
+                <button
+                  type="button"
                   onClick={() => editSection === 'education' ? handleSaveSection('education') : setEditSection('education')}
-                  className="text-xs font-bold text-violet-600 hover:text-violet-855 transition cursor-pointer"
+                  className="text-xs font-bold text-violet-600 hover:text-violet-855 transition cursor-pointer ml-1"
                 >
                   {editSection === 'education' ? 'Save' : 'Edit'}
                 </button>
@@ -1088,159 +1272,133 @@ export default function CandidateProfile({ user, onUserUpdate }) {
             </div>
 
             {editSection === 'education' ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Qualification Level</span>
-                  <select
-                    value={profileForm.education.qualification_level || ''}
-                    onChange={(e) => updateNestedField('education', 'qualification_level', e.target.value)}
-                    className="profile-input"
-                  >
-                    <option value="">Select qualification</option>
-                    <option>10th Pass</option>
-                    <option>12th Pass</option>
-                    <option>ITI / Diploma</option>
-                    <option>Graduate</option>
-                    <option>Postgraduate</option>
-                  </select>
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Course / Degree</span>
-                  <select
-                    value={customCourse ? 'custom_other' : (profileForm.education.course_name || '')}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === 'custom_other') {
-                        setCustomCourse(true);
-                        updateNestedField('education', 'course_name', '');
-                      } else {
-                        setCustomCourse(false);
-                        updateNestedField('education', 'course_name', val);
-                      }
-                    }}
-                    className="profile-input"
-                  >
-                    <option value="">Select Course Name</option>
-                    <option>Class 10</option>
-                    <option>Class 12</option>
-                    <option>ITI (Fitter)</option>
-                    <option>ITI (Electrician)</option>
-                    <option>Diploma (Mechanical)</option>
-                    <option>Diploma (Electrical)</option>
-                    <option>B.A</option>
-                    <option>B.Sc</option>
-                    <option>B.Com</option>
-                    <option>B.Tech</option>
-                    <option>BCA</option>
-                    <option>BBA</option>
-                    <option>M.A</option>
-                    <option>M.Sc</option>
-                    <option>M.Com</option>
-                    <option>MBA</option>
-                    <option>MCA</option>
-                    <option value="custom_other">Other (Type manually)</option>
-                  </select>
-                  {customCourse && (
-                    <input
-                      type="text"
-                      value={profileForm.education.course_name || ''}
-                      onChange={(e) => updateNestedField('education', 'course_name', e.target.value)}
-                      placeholder="Enter custom course name"
-                      className="profile-input mt-2"
-                    />
-                  )}
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Specialization</span>
-                  <select
-                    value={customSpecialization ? 'custom_other' : (profileForm.education.specialization || '')}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === 'custom_other') {
-                        setCustomSpecialization(true);
-                        updateNestedField('education', 'specialization', '');
-                      } else {
-                        setCustomSpecialization(false);
-                        updateNestedField('education', 'specialization', val);
-                      }
-                    }}
-                    className="profile-input"
-                  >
-                    <option value="">Select Specialization</option>
-                    <option>General</option>
-                    <option>Science</option>
-                    <option>Commerce</option>
-                    <option>Arts</option>
-                    <option>Fitter</option>
-                    <option>Electrician</option>
-                    <option>Mechanical</option>
-                    <option>Electrical</option>
-                    <option>Computers</option>
-                    <option>Finance</option>
-                    <option>Marketing</option>
-                    <option value="custom_other">Other (Type manually)</option>
-                  </select>
-                  {customSpecialization && (
-                    <input
-                      type="text"
-                      value={profileForm.education.specialization || ''}
-                      onChange={(e) => updateNestedField('education', 'specialization', e.target.value)}
-                      placeholder="Enter custom specialization"
-                      className="profile-input mt-2"
-                    />
-                  )}
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Institution Name</span>
-                  <input
-                    type="text"
-                    value={profileForm.education.institution_name || ''}
-                    onChange={(e) => updateNestedField('education', 'institution_name', e.target.value)}
-                    className="profile-input"
-                  />
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Board / University</span>
-                  <input
-                    type="text"
-                    value={profileForm.education.board_or_university || ''}
-                    onChange={(e) => updateNestedField('education', 'board_or_university', e.target.value)}
-                    className="profile-input"
-                  />
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Passing Year</span>
-                  <select
-                    value={profileForm.education.passing_year || ''}
-                    onChange={(e) => updateNestedField('education', 'passing_year', e.target.value)}
-                    className="profile-input"
-                  >
-                    <option value="">Select Passing Year</option>
-                    {Array.from({ length: 33 }, (_, i) => String(2027 - i)).map((yr) => (
-                      <option key={yr} value={yr}>{yr}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Percentage / CGPA</span>
-                  <input
-                    type="text"
-                    value={profileForm.education.percentage_or_cgpa || ''}
-                    onChange={(e) => updateNestedField('education', 'percentage_or_cgpa', e.target.value)}
-                    className="profile-input"
-                  />
-                </label>
-                <label className="flex items-center space-x-2.5 pt-6 block select-none">
-                  <input
-                    type="checkbox"
-                    checked={profileForm.education.currently_pursuing || false}
-                    onChange={(e) => updateNestedField('education', 'currently_pursuing', e.target.checked)}
-                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-500 h-4.5 w-4.5"
-                  />
-                  <span className="text-xs font-bold text-slate-700">Currently Pursuing Education</span>
-                </label>
+              <div className="space-y-6">
+                {(profileForm.educations || [{}]).map((edu, index) => (
+                  <div key={index} className="p-4 border border-slate-200 rounded-2xl bg-slate-50/40 relative space-y-4">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-150">
+                      <span className="text-xs font-extrabold text-slate-700 flex items-center gap-1.5">
+                        <GraduationCap size={14} className="text-violet-600" />
+                        Qualification #{index + 1}
+                      </span>
+                      {profileForm.educations.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeEducationItem(index)}
+                          className="text-rose-500 hover:text-rose-700 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      )}
+                    </div>
 
-                <div className="col-span-1 sm:col-span-2 pt-2 flex justify-end gap-2 border-t border-slate-100">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Qualification Level</span>
+                        <select
+                          value={edu.qualification_level || ''}
+                          onChange={(e) => updateEducationItem(index, 'qualification_level', e.target.value)}
+                          className="profile-input"
+                        >
+                          <option value="">Select qualification</option>
+                          <option>10th Pass</option>
+                          <option>12th Pass</option>
+                          <option>ITI / Diploma</option>
+                          <option>Graduate</option>
+                          <option>Postgraduate</option>
+                        </select>
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Course / Degree</span>
+                        <input
+                          type="text"
+                          value={edu.course_name || ''}
+                          onChange={(e) => updateEducationItem(index, 'course_name', e.target.value)}
+                          placeholder="e.g. Class 10, Class 12, B.Sc, ITI Fitter"
+                          className="profile-input"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Specialization / Stream</span>
+                        <input
+                          type="text"
+                          value={edu.specialization || ''}
+                          onChange={(e) => updateEducationItem(index, 'specialization', e.target.value)}
+                          placeholder="e.g. Science, Commerce, Fitter, Mechanical"
+                          className="profile-input"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Institution / School Name</span>
+                        <input
+                          type="text"
+                          value={edu.institution_name || ''}
+                          onChange={(e) => updateEducationItem(index, 'institution_name', e.target.value)}
+                          className="profile-input"
+                          placeholder="School or College name"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Board / University</span>
+                        <input
+                          type="text"
+                          value={edu.board_or_university || ''}
+                          onChange={(e) => updateEducationItem(index, 'board_or_university', e.target.value)}
+                          className="profile-input"
+                          placeholder="e.g. CBSE, Delhi University"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Passing Year</span>
+                        <select
+                          value={edu.passing_year || ''}
+                          onChange={(e) => updateEducationItem(index, 'passing_year', e.target.value)}
+                          className="profile-input"
+                        >
+                          <option value="">Select Passing Year</option>
+                          {Array.from({ length: 33 }, (_, i) => String(2027 - i)).map((yr) => (
+                            <option key={yr} value={yr}>{yr}</option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Percentage / CGPA</span>
+                        <input
+                          type="text"
+                          value={edu.percentage_or_cgpa || ''}
+                          onChange={(e) => updateEducationItem(index, 'percentage_or_cgpa', e.target.value)}
+                          className="profile-input"
+                          placeholder="e.g. 85% or 8.5 CGPA"
+                        />
+                      </label>
+
+                      <label className="flex items-center space-x-2.5 pt-6 block select-none">
+                        <input
+                          type="checkbox"
+                          checked={edu.currently_pursuing || false}
+                          onChange={(e) => updateEducationItem(index, 'currently_pursuing', e.target.checked)}
+                          className="rounded border-slate-300 text-violet-600 focus:ring-violet-500 h-4.5 w-4.5"
+                        />
+                        <span className="text-xs font-bold text-slate-700">Currently Pursuing This Degree</span>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addEducationItem}
+                  className="w-full py-2.5 border-2 border-dashed border-violet-200 hover:border-violet-400 bg-violet-50/30 hover:bg-violet-50 text-violet-700 font-extrabold text-xs rounded-2xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Plus size={14} /> Add Another Qualification / Degree
+                </button>
+
+                <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={handleCancelEdit}
@@ -1248,51 +1406,42 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveSection('education')}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white rounded-xl font-bold text-xs cursor-pointer"
-                  >
-                    Save Section
-                  </button>
+                  {renderSaveButton('education')}
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Qualification</p>
-                  <p className="text-xs font-bold text-slate-800">{profileForm.education.qualification_level || renderEmptyState()}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Course / Degree</p>
-                  <p className="text-xs font-bold text-slate-800">
-                    {profileForm.education.course_name
-                      ? `${profileForm.education.course_name} ${profileForm.education.specialization ? `(${profileForm.education.specialization})` : ''}`
-                      : renderEmptyState()}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Institution / School</p>
-                  <p className="text-xs font-bold text-slate-800">{profileForm.education.institution_name || renderEmptyState()}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Board / University</p>
-                  <p className="text-xs font-bold text-slate-800">{profileForm.education.board_or_university || renderEmptyState()}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Passing Year / Score</p>
-                  <p className="text-xs font-bold text-slate-800 font-sans">
-                    {profileForm.education.passing_year
-                      ? `${profileForm.education.passing_year} (Score: ${profileForm.education.percentage_or_cgpa || 'Not provided'})`
-                      : renderEmptyState()}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Currently Pursuing</p>
-                  <p className="text-xs font-bold text-slate-800 font-sans">
-                    {profileForm.education.currently_pursuing ? 'Yes' : 'No'}
-                  </p>
-                </div>
+              <div className="space-y-4">
+                {(!profileForm.educations || profileForm.educations.filter(e => e.qualification_level || e.course_name || e.institution_name).length === 0) ? (
+                  <div className="bg-slate-50 border border-dashed border-slate-200 p-6 rounded-2xl text-center">
+                    <p className="text-xs text-slate-400 font-bold">No education details added yet. Click Edit to add qualifications.</p>
+                  </div>
+                ) : (
+                  profileForm.educations.filter(e => e.qualification_level || e.course_name || e.institution_name).map((edu, idx) => (
+                    <div key={idx} className="p-4 rounded-2xl border border-slate-150 bg-slate-50/40 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Qualification</p>
+                        <p className="text-xs font-extrabold text-slate-800">{edu.qualification_level || 'N/A'}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Course / Degree</p>
+                        <p className="text-xs font-bold text-slate-800">
+                          {edu.course_name ? `${edu.course_name}${edu.specialization ? ` (${edu.specialization})` : ''}` : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Institution / School</p>
+                        <p className="text-xs font-bold text-slate-800">{edu.institution_name || 'N/A'}</p>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Passing Year / Score</p>
+                        <p className="text-xs font-bold text-slate-800 font-sans">
+                          {edu.passing_year ? `${edu.passing_year} ${edu.percentage_or_cgpa ? `(Score: ${edu.percentage_or_cgpa})` : ''}` : 'N/A'}
+                          {edu.currently_pursuing && <span className="ml-2 px-2 py-0.5 bg-violet-100 text-violet-700 font-extrabold text-[9px] rounded-md">Pursuing</span>}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -1301,9 +1450,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
           <div id="section-skills" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition scroll-mt-32">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
-                  <Award size={16} strokeWidth={2.5} />
-                </div>
+                <Award size={18} strokeWidth={2.5} className="text-blue-600" />
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Skills</h3>
                   <p className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5">SECTION 5</p>
@@ -1370,13 +1517,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveSection('skills')}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white rounded-xl font-bold text-xs cursor-pointer"
-                  >
-                    Save Section
-                  </button>
+                  {renderSaveButton('skills')}
                 </div>
               </div>
             ) : (
@@ -1404,22 +1545,30 @@ export default function CandidateProfile({ user, onUserUpdate }) {
           <div id="section-workExperience" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition scroll-mt-32">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
-                  <Briefcase size={16} strokeWidth={2.5} />
-                </div>
+                <Briefcase size={18} strokeWidth={2.5} className="text-blue-600" />
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Work Experience</h3>
                   <p className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5">SECTION 6</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-violet-600 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-lg">
-                  {calculatedCompletion.breakdown.workExperience ? 'EXPERIENCED' : 'FRESHER'}
+                  {profileForm.workExperiences?.filter(e => e.company_name || e.designation).length ? `${profileForm.workExperiences.filter(e => e.company_name || e.designation).length} ADDED` : 'FRESHER'}
                 </span>
                 <button
                   type="button"
+                  onClick={() => {
+                    if (editSection !== 'workExperience') setEditSection('workExperience');
+                    addWorkExperienceItem();
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-violet-650 hover:text-violet-800 bg-violet-50 hover:bg-violet-100 border border-violet-200/80 px-2.5 py-1 rounded-xl transition cursor-pointer"
+                >
+                  <Plus size={12} /> Add New
+                </button>
+                <button
+                  type="button"
                   onClick={() => editSection === 'workExperience' ? handleSaveSection('workExperience') : setEditSection('workExperience')}
-                  className="text-xs font-bold text-violet-600 hover:text-violet-855 transition cursor-pointer"
+                  className="text-xs font-bold text-violet-600 hover:text-violet-855 transition cursor-pointer ml-1"
                 >
                   {editSection === 'workExperience' ? 'Save' : 'Edit'}
                 </button>
@@ -1427,80 +1576,116 @@ export default function CandidateProfile({ user, onUserUpdate }) {
             </div>
 
             {editSection === 'workExperience' ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Company Name</span>
-                  <input
-                    type="text"
-                    value={profileForm.workExperience.company_name || ''}
-                    onChange={(e) => updateNestedField('workExperience', 'company_name', e.target.value)}
-                    className="profile-input"
-                    placeholder="e.g. Even Cargo Logistics"
-                  />
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Designation / Role</span>
-                  <input
-                    type="text"
-                    value={profileForm.workExperience.designation || ''}
-                    onChange={(e) => updateNestedField('workExperience', 'designation', e.target.value)}
-                    className="profile-input"
-                    placeholder="e.g. Delivery Executive"
-                  />
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Employment Type</span>
-                  <select
-                    value={profileForm.workExperience.employment_type || ''}
-                    onChange={(e) => updateNestedField('workExperience', 'employment_type', e.target.value)}
-                    className="profile-input"
-                  >
-                    <option value="">Select Employment Type</option>
-                    <option value="Full-time">Full-time</option>
-                    <option value="Part-time">Part-time</option>
-                    <option value="Apprenticeship">Apprenticeship</option>
-                    <option value="Internship">Internship</option>
-                  </select>
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Start Date</span>
-                  <input
-                    type="date"
-                    value={profileForm.workExperience.start_date || ''}
-                    onChange={(e) => updateNestedField('workExperience', 'start_date', e.target.value)}
-                    className="profile-input"
-                  />
-                </label>
-                <label className="space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">End Date</span>
-                  <input
-                    type="date"
-                    value={profileForm.workExperience.currently_working ? '' : profileForm.workExperience.end_date || ''}
-                    onChange={(e) => updateNestedField('workExperience', 'end_date', e.target.value)}
-                    className="profile-input"
-                    disabled={profileForm.workExperience.currently_working || false}
-                  />
-                </label>
-                <label className="flex items-center space-x-2.5 pt-6 block select-none">
-                  <input
-                    type="checkbox"
-                    checked={profileForm.workExperience.currently_working || false}
-                    onChange={(e) => updateNestedField('workExperience', 'currently_working', e.target.checked)}
-                    className="rounded border-slate-300 text-violet-600 focus:ring-violet-500 h-4.5 w-4.5"
-                  />
-                  <span className="text-xs font-bold text-slate-700 font-sans">Currently Working Here</span>
-                </label>
-                <label className="col-span-1 sm:col-span-2 space-y-1.5 block">
-                  <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Responsibilities</span>
-                  <textarea
-                    value={profileForm.workExperience.responsibilities || ''}
-                    onChange={(e) => updateNestedField('workExperience', 'responsibilities', e.target.value)}
-                    className="profile-input h-20 py-2"
-                    placeholder="Brief description of duties..."
-                  />
-                </label>
+              <div className="space-y-6">
+                {(profileForm.workExperiences || [{}]).map((exp, index) => (
+                  <div key={index} className="p-4 border border-slate-200 rounded-2xl bg-slate-50/40 relative space-y-4">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-150">
+                      <span className="text-xs font-extrabold text-slate-700 flex items-center gap-1.5">
+                        <Briefcase size={14} className="text-violet-600" />
+                        Work Experience #{index + 1}
+                      </span>
+                      {profileForm.workExperiences.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeWorkExperienceItem(index)}
+                          className="text-rose-500 hover:text-rose-700 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      )}
+                    </div>
 
-                <div className="col-span-1 sm:col-span-2 pt-2 flex justify-end gap-2 border-t border-slate-100">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Company Name</span>
+                        <input
+                          type="text"
+                          value={exp.company_name || ''}
+                          onChange={(e) => updateWorkExperienceItem(index, 'company_name', e.target.value)}
+                          className="profile-input"
+                          placeholder="e.g. Even Cargo Logistics"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Designation / Role</span>
+                        <input
+                          type="text"
+                          value={exp.designation || ''}
+                          onChange={(e) => updateWorkExperienceItem(index, 'designation', e.target.value)}
+                          className="profile-input"
+                          placeholder="e.g. Delivery Executive"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Employment Type</span>
+                        <select
+                          value={exp.employment_type || ''}
+                          onChange={(e) => updateWorkExperienceItem(index, 'employment_type', e.target.value)}
+                          className="profile-input"
+                        >
+                          <option value="">Select Employment Type</option>
+                          <option value="Full-time">Full-time</option>
+                          <option value="Part-time">Part-time</option>
+                          <option value="Apprenticeship">Apprenticeship</option>
+                          <option value="Internship">Internship</option>
+                        </select>
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Start Date</span>
+                        <input
+                          type="date"
+                          value={exp.start_date || ''}
+                          onChange={(e) => updateWorkExperienceItem(index, 'start_date', e.target.value)}
+                          className="profile-input"
+                        />
+                      </label>
+
+                      <label className="space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">End Date</span>
+                        <input
+                          type="date"
+                          value={exp.currently_working ? '' : exp.end_date || ''}
+                          onChange={(e) => updateWorkExperienceItem(index, 'end_date', e.target.value)}
+                          className="profile-input"
+                          disabled={exp.currently_working || false}
+                        />
+                      </label>
+
+                      <label className="flex items-center space-x-2.5 pt-6 block select-none">
+                        <input
+                          type="checkbox"
+                          checked={exp.currently_working || false}
+                          onChange={(e) => updateWorkExperienceItem(index, 'currently_working', e.target.checked)}
+                          className="rounded border-slate-300 text-violet-600 focus:ring-violet-500 h-4.5 w-4.5"
+                        />
+                        <span className="text-xs font-bold text-slate-700 font-sans">Currently Working Here</span>
+                      </label>
+
+                      <label className="col-span-1 sm:col-span-2 space-y-1.5 block">
+                        <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Responsibilities</span>
+                        <textarea
+                          value={exp.responsibilities || ''}
+                          onChange={(e) => updateWorkExperienceItem(index, 'responsibilities', e.target.value)}
+                          className="profile-input h-20 py-2"
+                          placeholder="Brief description of duties..."
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addWorkExperienceItem}
+                  className="w-full py-2.5 border-2 border-dashed border-violet-200 hover:border-violet-400 bg-violet-50/30 hover:bg-violet-50 text-violet-700 font-extrabold text-xs rounded-2xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Plus size={14} /> Add Another Work Experience
+                </button>
+
+                <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={handleCancelEdit}
@@ -1508,39 +1693,35 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveSection('workExperience')}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-750 text-white rounded-xl font-bold text-xs cursor-pointer"
-                  >
-                    Save Section
-                  </button>
+                  {renderSaveButton('workExperience')}
                 </div>
               </div>
             ) : (
-              <div>
-                {!profileForm.workExperience.company_name ? (
+              <div className="space-y-4">
+                {(!profileForm.workExperiences || profileForm.workExperiences.filter(e => e.company_name || e.designation).length === 0) ? (
                   <div className="bg-violet-50/40 border border-dashed border-violet-200 p-6 rounded-2xl text-center flex flex-col items-center justify-center space-y-2">
                     <Briefcase size={24} className="text-violet-500" />
                     <h4 className="text-xs font-extrabold text-violet-850">No Work Experience Added</h4>
-                    <p className="text-[10px] text-slate-500 max-w-sm font-sans">Fresher? That's fine! If you have prior logistics, delivery, or general experience, add it here.</p>
+                    <p className="text-[10px] text-slate-500 max-w-sm font-sans">Fresher? That's fine! If you have prior logistics, delivery, or general experience, click Edit to add your work history.</p>
                   </div>
                 ) : (
-                  <div className="relative border-l-2 border-violet-100 pl-5 ml-2.5 py-1 space-y-3">
-                    <div className="absolute w-3.5 h-3.5 bg-violet-600 rounded-full -left-2 top-2 border-2 border-white"></div>
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800">{profileForm.workExperience.designation}</h4>
-                      <p className="text-[11px] text-slate-600 font-bold">{profileForm.workExperience.company_name} • {profileForm.workExperience.employment_type || 'Full-time'}</p>
-                      <p className="text-[10px] text-slate-400 font-bold font-sans mt-0.5">
-                        {profileForm.workExperience.start_date || 'N/A'} — {profileForm.workExperience.currently_working ? 'Present' : profileForm.workExperience.end_date || 'N/A'}
-                      </p>
-                      {profileForm.workExperience.responsibilities && (
-                        <p className="text-xs text-slate-500 font-medium leading-relaxed mt-2 p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                          {profileForm.workExperience.responsibilities}
+                  profileForm.workExperiences.filter(e => e.company_name || e.designation).map((exp, idx) => (
+                    <div key={idx} className="relative border-l-2 border-violet-100 pl-5 ml-2.5 py-1 space-y-2">
+                      <div className="absolute w-3.5 h-3.5 bg-violet-600 rounded-full -left-2 top-2 border-2 border-white"></div>
+                      <div>
+                        <h4 className="text-xs font-black text-slate-800">{exp.designation || 'Position'}</h4>
+                        <p className="text-[11px] text-slate-600 font-bold">{exp.company_name} • {exp.employment_type || 'Full-time'}</p>
+                        <p className="text-[10px] text-slate-400 font-bold font-sans mt-0.5">
+                          {exp.start_date || 'N/A'} — {exp.currently_working ? 'Present' : exp.end_date || 'N/A'}
                         </p>
-                      )}
+                        {exp.responsibilities && (
+                          <p className="text-xs text-slate-500 font-medium leading-relaxed mt-2 p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                            {exp.responsibilities}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  ))
                 )}
               </div>
             )}
@@ -1550,9 +1731,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
           <div id="section-bankAccount" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition scroll-mt-32">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
-                  <Wallet size={16} strokeWidth={2.5} />
-                </div>
+                <Wallet size={18} strokeWidth={2.5} className="text-blue-600" />
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Bank Account Details</h3>
                   <p className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5">SECTION 7</p>
@@ -1640,13 +1819,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveSection('bankAccount')}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-755 text-white rounded-xl font-bold text-xs cursor-pointer"
-                  >
-                    Save Section
-                  </button>
+                  {renderSaveButton('bankAccount')}
                 </div>
               </div>
             ) : (
@@ -1687,9 +1860,7 @@ export default function CandidateProfile({ user, onUserUpdate }) {
           <div id="section-documents" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition scroll-mt-32">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-violet-50 text-violet-600 rounded-xl">
-                  <FileText size={16} strokeWidth={2.5} />
-                </div>
+                <FileText size={18} strokeWidth={2.5} className="text-blue-600" />
                 <div>
                   <h3 className="text-sm font-black text-slate-800">Uploaded Documents</h3>
                   <p className="text-[10px] text-slate-400 font-bold tracking-widest mt-0.5">SECTION 8</p>
@@ -1777,114 +1948,113 @@ export default function CandidateProfile({ user, onUserUpdate }) {
               })}
             </div>
           </div>
-
         </div>
 
-        {/* Right Column: Sticky Summary sidebar Panel */}
-        <div className="lg:col-span-1 sticky top-36 space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+        {/* PROFILE COMPLETION SECTION (END OF PAGE, NON-STICKY / MOVES WITH SCROLL) */}
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5 text-left mt-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
-              <h3 className="text-sm font-black text-slate-800">Profile Completion</h3>
+              <h3 className="text-base font-black text-slate-800">Profile Completion</h3>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Real-time Status</p>
             </div>
 
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-black text-slate-900 leading-none">{pct}%</span>
-              <span className="text-xs text-slate-400 font-bold">COMPLETED</span>
-            </div>
-
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-violet-650 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-            </div>
-
-            <div className="space-y-3.5 pt-3 border-t border-slate-100 text-[11px] font-bold">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-bold">Basic Info (20%)</span>
-                {calculatedCompletion.breakdown.basicInfo ? (
-                  <span className="text-emerald-600">✓ Complete</span>
-                ) : (
-                  <span className="text-amber-600 font-bold">⚠ Pending</span>
-                )}
+            <div className="flex items-center gap-4">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-black text-slate-900 leading-none">{pct}%</span>
+                <span className="text-xs text-slate-400 font-bold">COMPLETED</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-bold">Address (15%)</span>
-                {calculatedCompletion.breakdown.address ? (
-                  <span className="text-emerald-600">✓ Complete</span>
-                ) : (
-                  <span className="text-amber-600 font-bold">⚠ Pending</span>
-                )}
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-bold">Education (15%)</span>
-                {calculatedCompletion.breakdown.education ? (
-                  <span className="text-emerald-600">✓ Complete</span>
-                ) : (
-                  <span className="text-amber-600 font-bold">⚠ Pending</span>
-                )}
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-bold">Documents (20%)</span>
-                {calculatedCompletion.breakdown.documents ? (
-                  <span className="text-emerald-600">✓ Complete</span>
-                ) : (
-                  <span className="text-amber-600 font-bold">⚠ Pending</span>
-                )}
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-bold">Bank Account (20%)</span>
-                {calculatedCompletion.breakdown.bankAccount ? (
-                  <span className="text-emerald-600">✓ Complete</span>
-                ) : (
-                  <span className="text-amber-600 font-bold">⚠ Pending</span>
-                )}
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-bold">Skills (10%)</span>
-                {calculatedCompletion.breakdown.skills ? (
-                  <span className="text-emerald-600">✓ Complete</span>
-                ) : (
-                  <span className="text-amber-600 font-bold">⚠ Pending</span>
-                )}
+              <div className="flex gap-1.5">
+                <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase rounded-lg border border-emerald-100">Approved</span>
+                <span className="px-2.5 py-1 bg-violet-50 text-violet-750 text-[10px] font-black uppercase rounded-lg border border-violet-100">Available</span>
               </div>
             </div>
+          </div>
 
-            <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
-              <div className="flex justify-between items-center text-[10px] font-black text-slate-400">
-                <span>OVERALL STATUS</span>
-              </div>
-              <div className="flex gap-1.5 pt-1">
-                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase rounded border border-emerald-100">Approved</span>
-                <span className="px-2 py-0.5 bg-violet-50 text-violet-750 text-[9px] font-black uppercase rounded border border-violet-100">Available</span>
-              </div>
-            </div>
+          {/* Progress Bar */}
+          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full bg-violet-655 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+          </div>
 
-            {/* Collapsible How is this calculated */}
-            <div className="pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowCalculationInfo(!showCalculationInfo)}
-                className="w-full flex items-center justify-between text-[10px] font-black text-violet-650 hover:underline cursor-pointer"
-              >
-                <span>How is this calculated?</span>
-                <span>{showCalculationInfo ? 'Hide' : 'Show'}</span>
-              </button>
-              {showCalculationInfo && (
-                <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] text-slate-500 font-semibold space-y-1.5 text-left leading-relaxed">
-                  <p>Profile completion is computed out of 100% based on backend criteria:</p>
-                  <ul className="list-disc list-inside space-y-1 pl-1">
-                    <li><span className="font-extrabold">Basic Info (20%):</span> Name, DOB, Gender, Preferred Language.</li>
-                    <li><span className="font-extrabold">Address Details (15%):</span> City, State, Pincode, Address lines.</li>
-                    <li><span className="font-extrabold">Education Details (15%):</span> Qualification, Course, Institution.</li>
-                    <li><span className="font-extrabold">Aadhaar Card (20%):</span> Uploaded in Documents.</li>
-                    <li><span className="font-extrabold">Bank Account (20%):</span> Account Number, IFSC code.</li>
-                    <li><span className="font-extrabold">Skills Added (10%):</span> At least one core skill chip.</li>
-                  </ul>
-                  <p className="text-[9px] text-slate-400 font-bold pt-1">Note: Identity details and Work Experience are checked during review but do not affect the basic completion percentage.</p>
-                </div>
+          {/* Grid of Completion Items */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1 text-xs font-bold">
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
+              <span className="text-slate-600 font-bold">Basic Info (20%)</span>
+              {calculatedCompletion.breakdown.basicInfo ? (
+                <span className="text-emerald-600 font-black">✓ Complete</span>
+              ) : (
+                <span className="text-amber-600 font-black">⚠ Pending</span>
               )}
             </div>
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
+              <span className="text-slate-600 font-bold">Address (15%)</span>
+              {calculatedCompletion.breakdown.address ? (
+                <span className="text-emerald-600 font-black">✓ Complete</span>
+              ) : (
+                <span className="text-amber-600 font-black">⚠ Pending</span>
+              )}
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
+              <span className="text-slate-600 font-bold">Education (15%)</span>
+              {calculatedCompletion.breakdown.education ? (
+                <span className="text-emerald-600 font-black">✓ Complete</span>
+              ) : (
+                <span className="text-amber-600 font-black">⚠ Pending</span>
+              )}
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
+              <span className="text-slate-600 font-bold">Documents (20%)</span>
+              {calculatedCompletion.breakdown.documents ? (
+                <span className="text-emerald-600 font-black">✓ Complete</span>
+              ) : (
+                <span className="text-amber-600 font-black">⚠ Pending</span>
+              )}
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
+              <span className="text-slate-600 font-bold">Bank Account (20%)</span>
+              {calculatedCompletion.breakdown.bankAccount ? (
+                <span className="text-emerald-600 font-black">✓ Complete</span>
+              ) : (
+                <span className="text-amber-600 font-black">⚠ Pending</span>
+              )}
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
+              <span className="text-slate-600 font-bold">Skills (10%)</span>
+              {calculatedCompletion.breakdown.skills ? (
+                <span className="text-emerald-600 font-black">✓ Complete</span>
+              ) : (
+                <span className="text-amber-600 font-black">⚠ Pending</span>
+              )}
+            </div>
+          </div>
 
-            {pct < 100 && (
+          {/* Collapsible How is this calculated */}
+          <div className="pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setShowCalculationInfo(!showCalculationInfo)}
+              className="flex items-center gap-2 text-xs font-black text-violet-655 hover:underline cursor-pointer"
+            >
+              <span>How is this calculated?</span>
+              <span className="text-[10px] bg-violet-50 text-violet-600 px-2 py-0.5 rounded-md font-bold">{showCalculationInfo ? 'Hide' : 'Show'}</span>
+            </button>
+            {showCalculationInfo && (
+              <div className="mt-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 font-medium space-y-2 text-left leading-relaxed">
+                <p className="font-bold text-slate-700">Profile completion is computed out of 100% based on backend criteria:</p>
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 list-disc list-inside pl-1 text-[11px]">
+                  <li><span className="font-black text-slate-800">Basic Info (20%):</span> Name, DOB, Gender, Preferred Language.</li>
+                  <li><span className="font-black text-slate-800">Address Details (15%):</span> City, State, Pincode, Address lines.</li>
+                  <li><span className="font-black text-slate-800">Education Details (15%):</span> Qualification, Course, Institution.</li>
+                  <li><span className="font-black text-slate-800">Aadhaar Card (20%):</span> Uploaded in Documents.</li>
+                  <li><span className="font-black text-slate-800">Bank Account (20%):</span> Account Number, IFSC code.</li>
+                  <li><span className="font-black text-slate-800">Skills Added (10%):</span> At least one core skill chip.</li>
+                </ul>
+                <p className="text-[10px] text-slate-400 font-semibold pt-1">Note: Identity details and Work Experience are checked during review but do not affect the basic completion percentage.</p>
+              </div>
+            )}
+          </div>
+
+          {pct < 100 && (
+            <div className="pt-2 flex justify-end">
               <button
                 type="button"
                 onClick={() => {
@@ -1896,13 +2066,13 @@ export default function CandidateProfile({ user, onUserUpdate }) {
                     scrollToSection('documents');
                   }
                 }}
-                className="w-full py-2.5 bg-violet-655 hover:bg-violet-755 text-white font-extrabold text-xs rounded-xl shadow-md shadow-violet-100 transition-all text-center mt-2 cursor-pointer active:scale-95"
+                className="px-5 py-2.5 bg-violet-655 hover:bg-violet-755 text-white font-black text-xs rounded-xl shadow-md shadow-violet-100 transition-all text-center cursor-pointer active:scale-95"
               >
                 Complete Profile
               </button>
-            )}
-          </section>
-        </div>
+            </div>
+          )}
+        </section>
       </div>
 
       {/* ── Document Preview side-drawer ────────────────────── */}

@@ -89,6 +89,9 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
     }
   };
 
+  const [dashboardNotifications, setDashboardNotifications] = useState([]);
+  const [applicationsList, setApplicationsList] = useState([]);
+
   const fetchProfile = async () => {
     if (!user?.token) return;
     setLoading(true);
@@ -107,10 +110,50 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
     }
   };
 
+  const fetchApplications = async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch(`${API}/candidate/applications`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) {
+        setApplicationsList(data);
+      }
+    } catch {
+      // silent
+    }
+  };
+
+  const fetchNotifications = async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch(`${API}/candidate/notifications?limit=5`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDashboardNotifications(data.notifications || data || []);
+      }
+    } catch {
+      // silent
+    }
+  };
+
   useEffect(() => {
     fetchProfile();
+    fetchApplications();
+    fetchNotifications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.token]);
+
+  const displayApplications = useMemo(() => {
+    if (applicationsList && applicationsList.length > 0) {
+      return applicationsList;
+    }
+    return profile?.applications || [];
+  }, [applicationsList, profile?.applications]);
+
 
   const verificationStatus = profile?.verification_status || user?.verification_status || 'Pending';
   const availability = profile?.availability_status || user?.availability_status || 'Available';
@@ -213,49 +256,6 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
     return docs.filter(d => ['verified', 'approved'].includes(d.verification_status?.toLowerCase())).length;
   }, [profile]);
 
-  const journeySteps = useMemo(() => {
-    const regDone = true;
-    const profileDone = pct >= 90;
-    const docsDone = profile?.documents && profile.documents.length > 0;
-    const appDone = profile?.applications && profile.applications.length > 0;
-    const interviewDone = profile?.interviews && profile.interviews.length > 0;
-    const selectionDone = (profile?.contracts && profile.contracts.length > 0) ||
-      (profile?.applications && profile.applications.some(a => ['shortlisted', 'offered', 'selected'].includes(String(a.application_status).toLowerCase()))) ||
-      (profile?.interviews && profile.interviews.some(i => String(i.final_decision).toLowerCase() === 'selected'));
-    const joiningDone = profile?.contracts && profile.contracts.some(c =>
-      ['active', 'signed', 'completed'].includes(String(c.contract_status).toLowerCase()) || c.candidate_signed_at
-    );
-
-    const stepsState = [
-      { label: 'Registration', done: regDone },
-      { label: 'Profile Complete', done: profileDone },
-      { label: 'Docs Upload', done: docsDone },
-      { label: 'Application', done: appDone },
-      { label: 'Interview', done: interviewDone },
-      { label: 'Selection', done: selectionDone },
-      { label: 'Joining', done: joiningDone }
-    ];
-
-    const firstNotDoneIdx = stepsState.findIndex(s => !s.done);
-
-    return stepsState.map((s, idx) => {
-      if (s.done) {
-        return { ...s, current: false, future: false };
-      }
-      if (idx === firstNotDoneIdx) {
-        return { ...s, done: false, current: true, future: false };
-      }
-      return { ...s, done: false, current: false, future: true };
-    });
-  }, [pct, profile]);
-
-  const completedStepsCount = useMemo(() => {
-    return journeySteps.filter(s => s.done).length;
-  }, [journeySteps]);
-
-  const journeyProgressPercent = useMemo(() => {
-    return completedStepsCount > 0 ? ((completedStepsCount - 1) / 6) * 100 : 0;
-  }, [completedStepsCount]);
 
   const profilePhotoUrl = useMemo(() => {
     const docs = profile?.documents || [];
@@ -340,7 +340,7 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
               <div className="w-8 h-8 rounded-full bg-violet-50 border border-violet-100/50 flex items-center justify-center mx-auto text-[#6D3BFF]">
                 <FileText size={14} />
               </div>
-              <p className="text-[18px] font-black text-violet-900 mt-2">{profile.applications?.length || 0}</p>
+              <p className="text-[18px] font-black text-violet-900 mt-2">{displayApplications.length}</p>
               <p className="text-[9px] text-slate-400 font-extrabold tracking-tight mt-0.5">Applications</p>
             </div>
 
@@ -447,59 +447,90 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
           </div>
 
           {/* MY APPLICATIONS */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs text-left">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-              <h3 className="text-sm font-black text-slate-800">My Applications</h3>
-              <button onClick={() => onSectionChange('applications')} className="text-[10px] font-black text-violet-650 hover:underline">View All</button>
+          <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs text-left">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
+              <h3 className="text-sm font-black text-slate-800 tracking-tight">My Applications</h3>
+              <button 
+                onClick={() => onSectionChange('applications')} 
+                className="text-xs font-bold text-violet-650 hover:text-violet-750 transition hover:underline cursor-pointer"
+              >
+                View All
+              </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs font-bold text-slate-700">
+            <div className="overflow-x-auto -mx-2">
+              <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-100 text-[10px] uppercase text-slate-400 tracking-wider">
-                    <th className="pb-3 text-left font-black">Company</th>
-                    <th className="pb-3 text-left font-black">Position</th>
-                    <th className="pb-3 text-left font-black">Location</th>
-                    <th className="pb-3 text-left font-black">Status</th>
-                    <th className="pb-3 text-left font-black">Applied On</th>
-                    <th className="pb-3 text-right font-black"></th>
+                  <tr className="border-b border-slate-150 text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">
+                    <th className="px-3 pb-3 text-left w-2/5">Company & Position</th>
+                    <th className="px-3 pb-3 text-left">Location</th>
+                    <th className="px-3 pb-3 text-left">Status</th>
+                    <th className="px-3 pb-3 text-left whitespace-nowrap">Applied On</th>
+                    <th className="px-3 pb-3 text-right"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {(!profile.applications || profile.applications.length === 0) ? (
+                <tbody className="divide-y divide-slate-100">
+                  {(!displayApplications || displayApplications.length === 0) ? (
                     <tr>
-                      <td colSpan="6" className="py-6 text-center text-slate-400 font-bold">
+                      <td colSpan="5" className="py-8 text-center text-slate-400 font-semibold text-xs">
                         No applications submitted yet.
                       </td>
                     </tr>
                   ) : (
-                    profile.applications.map(app => {
+                    displayApplications.slice(0, 5).map(app => {
                       const job = app.EmployerJobPosting || {};
-                      const companyName = job.company_name || 'Even Cargo Partner';
-                      const position = job.job_role || job.job_title || 'Apprentice';
-                      const location = job.location || 'Indore, MP';
-                      const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending';
+                      const companyName = app.company || app.company_name || job.company_name || job.Employer?.company_name || 'Even Cargo Partner';
+                      const position = app.position || job.job_role || job.job_title || 'Apprentice';
+                      const location = app.location || job.location || 'On-site';
+                      const status = app.status || app.application_status || 'Applied';
+                      const rawDate = app.appliedDate || app.applied_at || app.created_at;
+                      const formatDate = (d) => {
+                        if (!d) return 'Pending';
+                        if (typeof d === 'string' && (d.includes(',') || d.includes('-'))) return d;
+                        try {
+                          return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                        } catch {
+                          return d;
+                        }
+                      };
                       return (
-                        <tr key={app.id}>
-                          <td className="py-3.5 flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-[8px] text-slate-600 select-none">
-                              {companyName.substring(0, 2).toUpperCase()}
+                        <tr key={app.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="px-3 py-3.5 align-middle">
+                            <div className="flex items-start gap-3 min-w-[200px]">
+                              <div className="w-8 h-8 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center font-extrabold text-[10px] text-violet-700 shrink-0 select-none shadow-2xs mt-0.5">
+                                {companyName.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-extrabold text-slate-800 text-xs leading-snug line-clamp-1">{companyName}</p>
+                                <p className="text-[11px] font-semibold text-slate-500 mt-0.5 leading-snug line-clamp-1">{position}</p>
+                              </div>
                             </div>
-                            <span>{companyName}</span>
                           </td>
-                          <td className="py-3.5">{position}</td>
-                          <td className="py-3.5 text-slate-500">{location}</td>
-                          <td className="py-3.5">
-                            <span className={`px-2 py-0.5 text-[9px] font-black rounded-lg ${
-                              app.application_status === 'Rejected' ? 'bg-rose-50 border border-rose-100 text-rose-700' :
-                              app.application_status === 'Hired' || app.application_status === 'Selected' ? 'bg-emerald-50 border border-emerald-100 text-emerald-700' :
-                              'bg-blue-50 border border-blue-100 text-blue-700'
+                          <td className="px-3 py-3.5 align-middle text-slate-500 font-medium whitespace-normal">
+                            <span className="line-clamp-2">{location}</span>
+                          </td>
+                          <td className="px-3 py-3.5 align-middle whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black rounded-lg border ${
+                              status === 'Rejected' ? 'bg-rose-50 border-rose-200 text-rose-700' :
+                              status === 'Hired' || status === 'Selected' || status === 'Offered' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                              'bg-indigo-50 border-indigo-200 text-indigo-700'
                             }`}>
-                              {app.application_status || 'Applied'}
+                              {status}
                             </span>
                           </td>
-                          <td className="py-3.5 text-slate-450 font-sans">{formatDate(app.applied_at || app.created_at)}</td>
-                          <td className="py-3.5 text-right"><MoreVertical size={14} className="text-slate-400 cursor-pointer inline" /></td>
+                          <td className="px-3 py-3.5 align-middle text-slate-500 font-semibold whitespace-nowrap text-[11px]">
+                            {formatDate(rawDate)}
+                          </td>
+                          <td className="px-3 py-3.5 align-middle text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => onSectionChange('applications')}
+                              className="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition cursor-pointer"
+                              title="View Details"
+                            >
+                              <MoreVertical size={15} />
+                            </button>
+                          </td>
                         </tr>
                       );
                     })
@@ -508,12 +539,19 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
               </table>
             </div>
 
-            <div className="flex justify-center pt-3 border-t border-slate-100">
-              <button onClick={() => onSectionChange('jobs')} className="text-xs font-black text-violet-650 hover:underline flex items-center gap-1">
-                Browse More Apprenticeships <ArrowRight size={12} />
+            <div className="pt-4 border-t border-slate-100 flex justify-center mt-3">
+              <button
+                type="button"
+                onClick={() => onSectionChange('jobs')}
+                className="text-xs font-black text-violet-650 hover:text-violet-750 flex items-center gap-1.5 hover:gap-2 transition-all duration-200 cursor-pointer"
+              >
+                <span>Browse More Apprenticeships</span>
+                <ArrowRight size={14} />
               </button>
             </div>
           </div>
+
+
           {/* PROFILE COMPLETION CHECKLIST */}
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs text-left flex flex-col justify-between">
             <div>
@@ -595,80 +633,157 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
         <div className="space-y-6">
 
           {/* APPRENTICESHIP READINESS SCORE */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs text-left">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
-              <h3 className="text-sm font-black text-slate-800">Apprenticeship Readiness Score</h3>
-              <button onClick={() => onSectionChange('profile')} className="text-[10px] font-black text-violet-650 hover:underline">View Details</button>
+          <div className="rounded-3xl border border-slate-200/80 bg-white p-5 md:p-6 shadow-xs text-left space-y-5">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <h3 className="text-sm font-black text-slate-800 tracking-tight">Apprenticeship Readiness Score</h3>
+              <button 
+                type="button"
+                onClick={() => onSectionChange('profile')} 
+                className="text-xs font-bold text-violet-650 hover:text-violet-750 transition hover:underline cursor-pointer"
+              >
+                View Details
+              </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-5">
+            {/* Score & Status Top Box */}
+            <div className="flex flex-col xl:flex-row items-center gap-4 bg-slate-50/70 border border-slate-150 p-4 rounded-2xl">
               {/* Circular Gauge */}
-              <div className="relative w-24 h-24 shrink-0 flex items-center justify-center select-none">
+              <div className="relative w-20 h-20 shrink-0 flex items-center justify-center select-none">
                 <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="48" cy="48" r="40" stroke="rgb(243, 244, 246)" strokeWidth="8" fill="transparent" />
-                  <circle cx="48" cy="48" r="40" stroke="rgb(109, 59, 255)" strokeWidth="8" fill="transparent"
-                    strokeDasharray="251.2"
-                    strokeDashoffset={251.2 - (251.2 * readinessScore) / 100}
+                  <circle cx="40" cy="40" r="32" stroke="rgb(226, 232, 240)" strokeWidth="7" fill="transparent" />
+                  <circle 
+                    cx="40" cy="40" r="32" 
+                    stroke="rgb(109, 59, 255)" 
+                    strokeWidth="7" 
+                    fill="transparent"
+                    strokeDasharray="201"
+                    strokeDashoffset={201 - (201 * readinessScore) / 100}
                     strokeLinecap="round"
+                    className="transition-all duration-700 ease-out"
                   />
                 </svg>
                 <div className="absolute text-center">
-                  <p className="text-2xl font-black text-slate-900 leading-none">{readinessScore}</p>
-                  <p className="text-[9px] text-slate-400 font-bold mt-1">/100</p>
+                  <p className="text-xl font-black text-slate-900 leading-none">{readinessScore}</p>
+                  <p className="text-[9px] text-slate-400 font-extrabold mt-0.5">/100</p>
                 </div>
               </div>
 
-              {/* Checklist breakdown */}
-              <div className="flex-1 space-y-2 text-[10px] font-black text-slate-500">
-                <p className="text-xs font-extrabold text-slate-700 leading-tight">
-                  {readinessScore >= 80 ? "Excellent! You're ready to apply." : readinessScore >= 50 ? "Good! You're on the right track." : "Complete more sections to boost your score."}
+              {/* Readiness Message Pill */}
+              <div className="min-w-0 flex-1 text-center xl:text-left">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black leading-tight border ${
+                  readinessScore >= 80 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                    : readinessScore >= 50 
+                      ? 'bg-violet-50 border-violet-200 text-violet-800' 
+                      : 'bg-amber-50 border-amber-200 text-amber-800'
+                }`}>
+                  {readinessScore >= 80 ? (
+                    <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle size={13} className="text-amber-600 shrink-0" />
+                  )}
+                  <span>
+                    {readinessScore >= 80 ? "Excellent! You're ready to apply." : readinessScore >= 50 ? "Good! You're on track." : "Action Needed: Complete profile sections."}
+                  </span>
+                </span>
+                <p className="text-[10px] text-slate-400 font-bold mt-2">
+                  Higher scores increase recruiter selection priority
                 </p>
-                <div className="flex justify-between items-center mt-2.5">
-                  <span className={`flex items-center gap-1 ${pct >= 75 ? 'text-emerald-600' : pct >= 40 ? 'text-violet-600' : 'text-amber-600'}`}>
-                    {pct >= 75 ? <Check size={11} strokeWidth={3} /> : "⚠"} Profile Completion
-                  </span>
-                  <span className="font-sans">{pct}/100</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`flex items-center gap-1 ${docsPct === 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {docsPct === 100 ? <Check size={11} strokeWidth={3} /> : "⚠"} Documents Uploaded
-                  </span>
-                  <span className="font-sans">{docsPct}/100</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`flex items-center gap-1 ${calculatedBreakdown.education ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {calculatedBreakdown.education ? <Check size={11} strokeWidth={3} /> : "⚠"} Education Added
-                  </span>
-                  <span className="font-sans">{calculatedBreakdown.education ? 100 : 0}/100</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`flex items-center gap-1 ${calculatedBreakdown.skills ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    {calculatedBreakdown.skills ? <Check size={11} strokeWidth={3} /> : "⚠"} Skills Added
-                  </span>
-                  <span className="font-sans">{calculatedBreakdown.skills ? 100 : 0}/100</span>
-                </div>
+              </div>
+            </div>
+
+            {/* Structured Criteria Breakdown */}
+            <div className="space-y-1.5 pt-0.5">
+              {/* Profile Completion */}
+              <div className="flex items-center justify-between py-1.5 px-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs">
+                <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                  <div className={`p-0.5 rounded-md ${pct >= 75 ? 'bg-emerald-100/70 text-emerald-700' : 'bg-amber-100/70 text-amber-700'}`}>
+                    {pct >= 75 ? <Check size={11} strokeWidth={3} /> : <AlertCircle size={11} />}
+                  </div>
+                  <span className="text-[11px]">Profile Completion</span>
+                </span>
+                <span className={`font-extrabold text-[10px] ${pct >= 75 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {pct}/100
+                </span>
+              </div>
+
+              {/* Documents Uploaded */}
+              <div className="flex items-center justify-between py-1.5 px-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs">
+                <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                  <div className={`p-0.5 rounded-md ${docsPct === 100 ? 'bg-emerald-100/70 text-emerald-700' : 'bg-amber-100/70 text-amber-700'}`}>
+                    {docsPct === 100 ? <Check size={11} strokeWidth={3} /> : <AlertCircle size={11} />}
+                  </div>
+                  <span className="text-[11px]">Documents Uploaded</span>
+                </span>
+                <span className={`font-extrabold text-[10px] ${docsPct === 100 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {docsPct}/100
+                </span>
+              </div>
+
+              {/* Education Added */}
+              <div className="flex items-center justify-between py-1.5 px-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs">
+                <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                  <div className={`p-0.5 rounded-md ${calculatedBreakdown.education ? 'bg-emerald-100/70 text-emerald-700' : 'bg-amber-100/70 text-amber-700'}`}>
+                    {calculatedBreakdown.education ? <Check size={11} strokeWidth={3} /> : <AlertCircle size={11} />}
+                  </div>
+                  <span className="text-[11px]">Education Added</span>
+                </span>
+                <span className={`font-extrabold text-[10px] ${calculatedBreakdown.education ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {calculatedBreakdown.education ? 100 : 0}/100
+                </span>
+              </div>
+
+              {/* Skills Added */}
+              <div className="flex items-center justify-between py-1.5 px-2.5 rounded-xl border border-slate-100 bg-slate-50/50 text-xs">
+                <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                  <div className={`p-0.5 rounded-md ${calculatedBreakdown.skills ? 'bg-emerald-100/70 text-emerald-700' : 'bg-amber-100/70 text-amber-700'}`}>
+                    {calculatedBreakdown.skills ? <Check size={11} strokeWidth={3} /> : <AlertCircle size={11} />}
+                  </div>
+                  <span className="text-[11px]">Skills Added</span>
+                </span>
+                <span className={`font-extrabold text-[10px] ${calculatedBreakdown.skills ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {calculatedBreakdown.skills ? 100 : 0}/100
+                </span>
               </div>
             </div>
 
             {/* Collapsible How is this calculated */}
-            <div className="pt-3 border-t border-slate-100 mt-4">
+            <div className="pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowReadinessInfo(!showReadinessInfo)}
-                className="w-full flex items-center justify-between text-[10px] font-black text-violet-650 hover:underline cursor-pointer"
+                className="w-full flex items-center justify-between text-xs font-bold text-violet-650 hover:text-violet-750 transition cursor-pointer"
               >
-                <span>How is this calculated?</span>
-                <span>{showReadinessInfo ? 'Hide' : 'Show'}</span>
+                <span className="flex items-center gap-1.5">
+                  <Info size={13} className="text-violet-500" />
+                  <span>How is this calculated?</span>
+                </span>
+                <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">
+                  {showReadinessInfo ? 'Hide' : 'Show'}
+                </span>
               </button>
+
               {showReadinessInfo && (
-                <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] text-slate-500 font-semibold space-y-1.5 text-left leading-relaxed">
-                  <p>Your Readiness Score determines your eligibility for apprenticeships:</p>
-                  <ul className="list-disc list-inside space-y-1 pl-1 font-sans">
-                    <li><span className="font-extrabold text-slate-700">Profile Completion (40%):</span> Progress across basic info, address, bank, etc.</li>
-                    <li><span className="font-extrabold text-slate-700">Required Documents (30%):</span> Uploading Aadhaar, photo, education certificate, and bank proof.</li>
-                    <li><span className="font-extrabold text-slate-700">Education (15%):</span> Degree/school details completed.</li>
-                    <li><span className="font-extrabold text-slate-700">Skills (15%):</span> Core technical or soft skills listed.</li>
-                  </ul>
+                <div className="mt-3 p-3 bg-violet-50/40 border border-violet-100 rounded-2xl text-xs space-y-2 text-left leading-relaxed animate-fade-in">
+                  <p className="font-extrabold text-slate-800 text-[11px]">Score Weight Breakdown:</p>
+                  <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
+                    <div className="bg-white p-2 rounded-xl border border-slate-150 flex items-center justify-between">
+                      <span className="text-slate-600">Profile Info</span>
+                      <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-extrabold">40%</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-xl border border-slate-150 flex items-center justify-between">
+                      <span className="text-slate-600">Documents</span>
+                      <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-extrabold">30%</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-xl border border-slate-150 flex items-center justify-between">
+                      <span className="text-slate-600">Education</span>
+                      <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-extrabold">15%</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-xl border border-slate-150 flex items-center justify-between">
+                      <span className="text-slate-600">Skills</span>
+                      <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 font-extrabold">15%</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -724,52 +839,6 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
             </div>
           </div>
 
-          {/* UPCOMING ACTIVITIES */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs text-left">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
-              <h3 className="text-sm font-black text-slate-800">Upcoming Activities</h3>
-              <button onClick={() => onSectionChange('interviews')} className="text-[10px] font-black text-violet-650 hover:underline">View All</button>
-            </div>
-
-            {/* Vertical timeline */}
-            <div className="relative border-l border-slate-200 pl-4 ml-2.5 py-1 space-y-5 text-xs font-bold text-slate-650">
-              {(!profile.interviews || profile.interviews.filter(i => i.status === 'Upcoming').length === 0) ? (
-                <>
-                  {pct < 100 && (
-                    <div className="relative">
-                      <div className="absolute w-2.5 h-2.5 bg-orange-500 rounded-full -left-5 top-1 border-2 border-white"></div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-450 uppercase text-[9px] tracking-wider font-extrabold">Today</span>
-                      </div>
-                      <p className="text-slate-800 mt-0.5">Complete your profile</p>
-                    </div>
-                  )}
-                  {docsPct < 100 && (
-                    <div className="relative">
-                      <div className="absolute w-2.5 h-2.5 bg-blue-500 rounded-full -left-5 top-1 border-2 border-white"></div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-450 uppercase text-[9px] tracking-wider font-extrabold font-sans">Tomorrow</span>
-                      </div>
-                      <p className="text-slate-800 mt-0.5">Upload missing documents</p>
-                    </div>
-                  )}
-                  {pct === 100 && docsPct === 100 && (
-                    <p className="text-[11px] text-slate-400 font-bold text-center py-3">No upcoming activities</p>
-                  )}
-                </>
-              ) : (
-                profile.interviews.filter(i => i.status === 'Upcoming').slice(0, 3).map((item) => (
-                  <div key={item.id} className="relative">
-                    <div className="absolute w-2.5 h-2.5 bg-violet-600 rounded-full -left-5 top-1 border-2 border-white"></div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-450 uppercase text-[9px] tracking-wider font-extrabold font-sans">{item.date}</span>
-                    </div>
-                    <p className="text-slate-800 mt-0.5">Interview with {item.company}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
 
           {/* RECENT NOTIFICATIONS */}
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs text-left">
@@ -779,17 +848,19 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
             </div>
 
             <div className="space-y-4">
-              {(!profile.notifications || profile.notifications.length === 0) ? (
+              {(!dashboardNotifications || dashboardNotifications.length === 0) ? (
                 <p className="text-[11px] text-slate-400 font-bold text-center py-6">No new notifications</p>
               ) : (
-                profile.notifications.slice(0, 3).map((notif) => (
+                dashboardNotifications.slice(0, 3).map((notif) => (
                   <div key={notif.id} className="flex items-start gap-2.5 text-[11px] font-bold text-slate-600">
                     <div className="p-1.5 bg-violet-50 text-violet-650 rounded-lg shrink-0 mt-0.5">
-                      <Briefcase size={12} />
+                      <Bell size={12} />
                     </div>
                     <div>
-                      <p className="text-slate-850">{notif.title || notif.message}</p>
-                      <p className="text-[9px] text-slate-400 font-semibold font-sans mt-0.5">{notif.time || notif.created_at}</p>
+                      <p className="text-slate-850 font-semibold">{notif.title || notif.message}</p>
+                      <p className="text-[9px] text-slate-400 font-semibold font-sans mt-0.5">
+                        {notif.created_at ? new Date(notif.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                      </p>
                     </div>
                   </div>
                 ))
@@ -806,70 +877,7 @@ export default function CandidateDashboard({ user, onUserUpdate, onSectionChange
         </div>
       </div>
 
-      {/* CANDIDATE JOURNEY TRACKER - Full Width at bottom */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs text-left space-y-6 mt-6">
-        <div>
-          <h3 className="text-sm font-black text-slate-800">Candidate Journey</h3>
 
-          {/* Horizontal stepper with wrapper padding */}
-          <div className="px-2 pt-3 pb-2">
-            <div className="relative flex items-start justify-between gap-1">
-              {/* Background Progress track bar */}
-              <div
-                className="absolute top-[10px] h-0.5 bg-slate-100 rounded-full"
-                style={{ left: '6.25%', right: '6.25%' }}
-              />
-              <div
-                className="absolute top-[10px] h-0.5 bg-gradient-to-r from-emerald-500 to-[#6D3BFF] rounded-full transition-all duration-700"
-                style={{ left: '6.25%', width: `${journeyProgressPercent * 0.875}%` }}
-              />
-
-              {journeySteps.map((step, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center relative">
-                  {/* Circle dot */}
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black z-10 transition-all duration-300 shadow-sm ${step.done
-                    ? 'bg-emerald-500 text-white shadow-xs'
-                    : step.current
-                      ? 'bg-[#6D3BFF] text-white border-2 border-white ring-2 ring-violet-200 scale-105'
-                      : 'bg-slate-100 text-slate-400 border border-slate-200/50'
-                    }`}>
-                    {step.done ? '✓' : idx + 1}
-                  </div>
-
-                  {/* Always visible labels */}
-                  <span className={`text-[7.5px] md:text-[8px] font-bold mt-2 text-center whitespace-normal leading-tight max-w-[52px] select-none tracking-tight ${step.done
-                    ? 'text-emerald-600'
-                    : step.current
-                      ? 'text-[#6D3BFF] font-extrabold'
-                      : 'text-slate-400'
-                    }`}>
-                    {step.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Rocket Banner integrated at the bottom of the card */}
-        <div className="p-4 bg-gradient-to-r from-violet-50/50 via-white to-fuchsia-50/30 border border-violet-100 rounded-2xl flex items-center gap-3.5 text-left">
-          <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 text-lg shrink-0">🚀</div>
-          <div>
-            <p className="text-xs font-black text-violet-850">
-              {completedStepsCount === 7
-                ? 'Congratulations! You have completed all 7 steps of your journey. 🌟'
-                : `Great! You have completed ${completedStepsCount} of 7 steps.`
-              }
-            </p>
-            <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-              {completedStepsCount === 7
-                ? 'Your onboarding, documents, applications, and selection are fully set up!'
-                : 'Keep going to increase your chances of selection.'
-              }
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* ── Document Preview side-drawer ────────────────────── */}
       {selectedPreviewDoc && (

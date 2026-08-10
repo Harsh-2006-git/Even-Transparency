@@ -1,5 +1,7 @@
 import db from '../../models/index.js';
 import { notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
+import notificationService from '../../notifications/notification.service.js';
+import { NOTIFICATION_TYPES } from '../../notifications/notification.constants.js';
 
 /**
  * Helper to serialize form job details for database saving
@@ -144,6 +146,23 @@ export const createJobPosting = async (req, res) => {
       entityType: 'EmployerJobPosting',
       entityId: posting.id
     });
+
+    // Dispatch job posting confirmation email to employer
+    db.EmployerUser.findOne({ where: { employer_id: employerId } }).then(empUser => {
+      if (empUser?.email) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.EMPLOYER_JOB_POSTED,
+          recipient: empUser.email,
+          data: {
+            employer_name: empUser.full_name || 'Employer',
+            job_title: posting.job_title,
+            location: posting.location || 'Pan India',
+            stipend: posting.stipend_amount ? `₹${posting.stipend_amount}` : 'As per NAPS norm'
+          },
+          priority: 'MEDIUM'
+        }).catch(err => console.error('Job posted email trigger error:', err.message));
+      }
+    }).catch(() => null);
 
     return res.status(201).json({
       message: 'Apprenticeship drive created successfully',

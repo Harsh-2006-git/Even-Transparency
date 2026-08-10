@@ -4,6 +4,8 @@ import db from '../../models/index.js';
 import { sendOTP, verifyOTP } from '../../services/otpService.js';
 import { generateTokenPair } from '../../services/tokenService.js';
 import { notifyEmployer, notifyAdmin } from '../../services/notificationService.js';
+import notificationService from '../../notifications/notification.service.js';
+import { NOTIFICATION_TYPES } from '../../notifications/notification.constants.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'even_cargo_secret_key';
 
@@ -274,6 +276,31 @@ export const onboard = async (req, res) => {
       }, { transaction });
 
       await transaction.commit();
+
+      // Trigger Employer Registration Received Email (#9)
+      if (employer.official_email) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.EMPLOYER_REGISTRATION_SENT,
+          recipient: employer.official_email,
+          data: {
+            employer_name: employer.company_name,
+            company_name: employer.company_name
+          },
+          priority: 'HIGH'
+        }).catch(err => console.error('Employer registration sent email error:', err.message));
+      }
+
+      // Trigger Admin Verification Alert Email (#17)
+      notificationService.send({
+        type: NOTIFICATION_TYPES.ADMIN_EMPLOYER_REGISTRATION_REQUEST,
+        recipient: process.env.ADMIN_EMAIL || 'admin@evencargo.in',
+        data: {
+          company_name: employer.company_name,
+          employer_name: employer.company_name,
+          email: employer.official_email
+        },
+        priority: 'HIGH'
+      }).catch(err => console.error('Admin employer registration alert email error:', err.message));
 
       return res.status(201).json({
         message: 'Registration submitted successfully. Your account is pending superadmin approval.',

@@ -1,4 +1,6 @@
 import db from '../models/index.js';
+import notificationService from '../notifications/notification.service.js';
+import { NOTIFICATION_TYPES } from '../notifications/notification.constants.js';
 
 // Helper to generate a random 5 digit code
 const generateCode = (prefix) => {
@@ -98,6 +100,39 @@ export const createGrievance = async (req, res) => {
         evidence_urls: evidence_urls || []
       });
 
+      // Trigger high-priority email alerts
+      if (employerId) {
+        db.Employer.findByPk(employerId).then(emp => {
+          if (emp?.official_email) {
+            notificationService.send({
+              type: NOTIFICATION_TYPES.EMPLOYER_GRIEVANCE_ALERT,
+              recipient: emp.official_email,
+              data: {
+                employer_name: emp.company_name,
+                candidate_name: req.user.full_name || 'Candidate',
+                grievance_id: newGrievance.grievance_code || newGrievance.id,
+                category: grievance_category
+              },
+              priority: 'HIGH'
+            }).catch(err => console.error('Employer grievance alert email error:', err.message));
+          }
+        }).catch(() => null);
+      }
+
+      if (String(severity_level).toLowerCase() === 'critical' || String(grievance_category).toLowerCase().includes('safety')) {
+        notificationService.send({
+          type: NOTIFICATION_TYPES.ADMIN_GRIEVANCE_ESCALATION,
+          recipient: process.env.ADMIN_EMAIL || 'admin@evencargo.in',
+          data: {
+            grievance_id: newGrievance.grievance_code || newGrievance.id,
+            category: grievance_category,
+            candidate_name: req.user.full_name || 'Candidate',
+            employer_name: 'Partner Employer'
+          },
+          priority: 'HIGH'
+        }).catch(err => console.error('Admin grievance escalation email error:', err.message));
+      }
+
       return res.status(201).json(newGrievance);
     }
 
@@ -166,6 +201,22 @@ export const updateGrievanceStatus = async (req, res) => {
         }
       ]
     });
+
+    // Send email update to Candidate on grievance status change
+    if (updatedGrievance.Candidate?.email) {
+      notificationService.send({
+        type: NOTIFICATION_TYPES.CANDIDATE_GRIEVANCE_UPDATE,
+        recipient: updatedGrievance.Candidate.email,
+        data: {
+          candidate_name: updatedGrievance.Candidate.full_name || 'Candidate',
+          grievance_id: updatedGrievance.grievance_code || updatedGrievance.id,
+          category: updatedGrievance.grievance_category,
+          status: updatedGrievance.status,
+          resolution_notes: updatedGrievance.resolution_notes || 'Status updated by grievance officer'
+        },
+        priority: 'HIGH'
+      }).catch(err => console.error('Grievance status email trigger error:', err.message));
+    }
 
     return res.status(200).json(updatedGrievance);
   } catch (error) {

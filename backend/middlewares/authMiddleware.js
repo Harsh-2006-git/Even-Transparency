@@ -14,7 +14,12 @@ export const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     const user = await db.EmployerUser.findByPk(decoded.id, {
-      include: [db.Employer]
+      attributes: ['id', 'employer_id', 'email', 'account_status', 'role', 'full_name', 'mobile_number', 'department'],
+      include: [{
+        model: db.Employer,
+        attributes: ['id', 'company_name', 'employer_code', 'verification_status', 'onboarding_status'],
+        required: false
+      }]
     });
 
     if (!user) {
@@ -28,11 +33,10 @@ export const authMiddleware = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    console.error('Auth middleware error details:', error);
     if (error.name?.includes('Sequelize') || error.code === 'ENOTFOUND') {
-      console.error('Auth middleware database connection error:', error.message);
-      return res.status(503).json({ error: 'Database service temporarily unavailable' });
+      return res.status(503).json({ error: 'Database service temporarily unavailable', message: error.message });
     }
-    console.error('Auth middleware error:', error.message);
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 };

@@ -10,7 +10,7 @@ export const listCandidatesForApproval = async (req, res) => {
 
     const candidates = await db.Candidate.findAll({
       order: [['created_at', 'DESC']],
-      attributes: { exclude: ['password_hash', 'aadhaar_number_encrypted'] },
+      attributes: { exclude: ['password_hash', 'aadhaar_number_encrypted', 'profile_completion_breakdown'] },
       include: [
         { model: db.CandidateAddress },
         { model: db.CandidateEducation },

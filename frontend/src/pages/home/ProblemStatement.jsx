@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-export default function ProblemStatement() {
+export default function ProblemStatement({ onNavigate }) {
   const [femaleShare, setFemaleShare] = useState(0);
-  const [crisisPercent, setCrisisPercent] = useState(0);
   const [hasAnimated, setHasAnimated] = useState(false);
   const sectionRef = useRef(null);
 
@@ -25,13 +24,11 @@ export default function ProblemStatement() {
             const easedProgress = progressPercentage * (2 - progressPercentage);
 
             setFemaleShare(Number((easedProgress * 21.9).toFixed(1)));
-            setCrisisPercent(Math.floor(easedProgress * 41));
 
             if (progress < duration) {
               requestAnimationFrame(animateNumbers);
             } else {
               setFemaleShare(21.9);
-              setCrisisPercent(41);
             }
           };
 
@@ -48,190 +45,113 @@ export default function ProblemStatement() {
     return () => observer.disconnect();
   }, [hasAnimated]);
 
-  // Scaler multiplier for charts
-  const scale = crisisPercent / 41;
-
   return (
-    <section ref={sectionRef} id="about" className="py-12 md:py-16 bg-white flex flex-col items-center">
-      {/* Badge / Why This Exists */}
-      <div className="bg-[#EFF1FF] py-1.5 px-4 rounded-[6px] mb-3">
-        <span className="text-[#0142C8] font-inter text-xs sm:text-sm font-bold tracking-tight">
-          Why This Exists
-        </span>
-      </div>
-
-      {/* Main Title */}
-      <h2 className="text-[#010101] font-dMSerifDisplay text-3xl sm:text-4xl lg:text-[48px] lg:leading-[56px] text-center mb-6 md:mb-10 tracking-tight">
-        The Problem Statement
-      </h2>
-
-      {/* Two Grid Cards */}
-      <div className="w-full max-w-[960px] px-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <section ref={sectionRef} id="about" className="py-8 sm:py-12 md:py-16 bg-white flex flex-col items-center w-full">
+      {/* Main Content Container */}
+      <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 items-center">
         
-        {/* Card 1: Workforce Inequity */}
-        <div className="flex p-5 sm:p-6 flex-col justify-between items-start rounded-xl border border-[#0142C8]/30 bg-white shadow-[0_2px_16px_rgba(1,66,200,0.03)] h-auto min-h-[380px] md:h-[380px]">
-          <div className="w-full">
-            <h3 className="text-[#010101] font-inter text-xl sm:text-2xl font-bold leading-normal tracking-tight">
-              Workforce Inequity
-            </h3>
-            <p className="text-[#434656]/70 font-inter text-xs sm:text-sm mt-1">
-              Participation metrics in Indian apprenticeships.
-            </p>
+        {/* Left Column: Text & CTA */}
+        <div className="lg:col-span-7 flex flex-col items-center lg:items-start text-center lg:text-left gap-3.5 sm:gap-4">
+          <h2 className="text-slate-900 font-dMSerifDisplay text-xl sm:text-3xl md:text-4xl lg:text-[40px] font-normal leading-snug tracking-tight">
+            Bridging the Gap Between Talent and Opportunity
+          </h2>
+          
+          <p className="text-slate-600 font-inter text-xs sm:text-base leading-relaxed max-w-2xl">
+            Thousands of women across India are ready to work but struggle to find safe, verified apprenticeship opportunities. At the same time, employers face challenges in identifying qualified candidates while managing compliance, documentation, and onboarding processes.
+          </p>
 
-            {/* Circular Pie Chart */}
-            <div className="flex py-1.5 justify-center items-center w-full relative">
-              <div className="w-[190px] h-[190px] relative">
-                {/* SVG Radial Progress Tracker */}
-                <svg
-                  width="190"
-                  height="190"
-                  viewBox="0 0 190 190"
-                  className="transform -rotate-90 w-full h-full"
-                >
-                  {/* Background Track */}
-                  <circle
-                    cx="95"
-                    cy="95"
-                    r="78"
-                    stroke="#E5EEFF"
-                    strokeWidth="14"
-                    fill="transparent"
-                  />
-                  {/* Progress Line */}
-                  <circle
-                    cx="95"
-                    cy="95"
-                    r="78"
-                    stroke="#0142C8"
-                    strokeWidth="14"
-                    fill="transparent"
-                    strokeDasharray={2 * Math.PI * 78}
-                    strokeDashoffset={2 * Math.PI * 78 * (1 - femaleShare / 100)}
-                    strokeLinecap="round"
-                    className="transition-all duration-75"
-                  />
-                </svg>
+          <p className="text-slate-600 font-inter text-xs sm:text-base leading-relaxed max-w-2xl">
+            Even Cargo Apprenticeships brings both together on one trusted platform—helping women begin meaningful careers while enabling employers to hire efficiently through a fully compliant apprenticeship ecosystem.
+          </p>
 
-                {/* Inner Text */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[#010101] font-inter text-3xl sm:text-[38px] font-extrabold tracking-tight">
-                    {femaleShare}%
-                  </span>
-                  <span className="text-[#434656] font-inter text-[10px] font-bold uppercase tracking-wider mt-0.5">
-                    Female Share
-                  </span>
+          <div className="pt-1.5 w-full flex justify-center lg:justify-start">
+            <button
+              onClick={() => onNavigate ? onNavigate('candidate') : window.location.hash = '#jobs'}
+              className="cursor-pointer inline-flex items-center justify-center px-5 py-2.5 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl bg-black hover:bg-slate-900 text-white font-inter text-xs sm:text-sm md:text-base font-extrabold tracking-tight shadow-sm hover:shadow transition-all active:scale-95"
+            >
+              Start Your Career
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column: Compact Workforce Inequity Card */}
+        <div className="lg:col-span-5 w-full max-w-md lg:max-w-none mx-auto">
+          <div className="rounded-xl sm:rounded-3xl border border-blue-200/80 bg-blue-50/40 p-3.5 sm:p-6 flex flex-col gap-3.5 sm:gap-4 shadow-xs">
+            
+            {/* Inner White Card */}
+            <div className="bg-white rounded-lg sm:rounded-2xl p-3.5 sm:p-5 border border-slate-200/80 shadow-sm flex flex-col gap-3 text-center sm:text-left">
+              <div>
+                <h3 className="text-slate-900 font-inter text-base sm:text-xl font-bold tracking-tight">
+                  Workforce Inequity
+                </h3>
+                <p className="text-slate-500 font-inter text-[11px] sm:text-sm mt-0.5 font-medium">
+                  Participation metrics in Indian apprenticeships.
+                </p>
+              </div>
+
+              {/* Radial Donut Progress Chart */}
+              <div className="flex justify-center items-center py-1 sm:py-2 w-full">
+                <div className="w-36 h-36 sm:w-44 sm:h-44 relative flex items-center justify-center">
+                  <svg
+                    width="190"
+                    height="190"
+                    viewBox="0 0 190 190"
+                    className="transform -rotate-90 w-full h-full"
+                  >
+                    <circle
+                      cx="95"
+                      cy="95"
+                      r="78"
+                      stroke="#E5EEFF"
+                      strokeWidth="14"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="95"
+                      cy="95"
+                      r="78"
+                      stroke="#0142C8"
+                      strokeWidth="14"
+                      fill="transparent"
+                      strokeDasharray={2 * Math.PI * 78}
+                      strokeDashoffset={2 * Math.PI * 78 * (1 - femaleShare / 100)}
+                      strokeLinecap="round"
+                      className="transition-all duration-75"
+                    />
+                  </svg>
+
+                  {/* Donut Center Percentage */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                    <span className="text-slate-900 font-inter text-2xl sm:text-3xl font-extrabold tracking-tight">
+                      {femaleShare}%
+                    </span>
+                    <span className="text-slate-500 font-inter text-[9px] sm:text-xs font-bold uppercase tracking-wider mt-0.5">
+                      FEMALE SHARE
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Card Footer Line */}
-          <div className="pt-3 border-t border-[rgba(195,197,217,0.25)] w-full">
-            <p className="text-[#434656] font-inter text-xs sm:text-[13px] leading-relaxed">
-              <span className="text-[#0142C8] font-bold">Systemic Disparity:</span> Despite growth in logistics, women represent less than a quarter of the active apprenticeship pool.
-            </p>
-          </div>
-        </div>
-
-        {/* Card 2: The Enrollment Crisis */}
-        <div className="flex p-5 sm:p-6 flex-col justify-between items-start rounded-xl border border-[#0142C8]/30 bg-white shadow-[0_2px_16px_rgba(1,66,200,0.03)] h-auto min-h-[380px] md:h-[380px]">
-          <div className="w-full">
-            {/* Header Title with warning SVG */}
-            <div className="flex items-center gap-2">
-              <svg
-                width="20"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#0142C8"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="shrink-0"
-              >
-                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-              <h3 className="text-[#010101] font-inter text-xl sm:text-2xl font-bold leading-normal tracking-tight">
-                The Enrollment Crisis
-              </h3>
-            </div>
-            
-            <p className="text-[#434656]/70 font-inter text-xs sm:text-sm mt-2 leading-relaxed">
-              The trend in female enrolment has shown a sharp downturn, necessitating immediate structural and policy intervention.
-            </p>
-          </div>
-
-          {/* Stats and Chart directly in the card container */}
-          <div className="w-full flex flex-col gap-3">
-            {/* Decline stats header */}
-            <div className="flex justify-between items-center w-full">
-              <span className="text-[#0142C8] font-inter text-4xl sm:text-5xl font-extrabold tracking-tight">
-                {crisisPercent}%
-              </span>
-
-              {/* Downward trend arrow */}
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#0142C8"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="shrink-0"
-              >
-                <line x1="7" y1="7" x2="17" y2="17" />
-                <polyline points="17 7 17 17 7 17" />
-              </svg>
-            </div>
-
-            {/* Custom bar chart representation */}
-            <div className="w-full">
-              <div className="flex justify-between items-end gap-2 h-20">
-                <div 
-                  className="rounded bg-[#D2E1FF]/80 w-[18%] transition-all duration-300 hover:bg-[#b0ccff]" 
-                  style={{ height: `${100 * scale}%` }}
-                  title="FY 2019-20"
-                ></div>
-                <div 
-                  className="rounded bg-[#D2E1FF]/80 w-[18%] transition-all duration-300 hover:bg-[#b0ccff]" 
-                  style={{ height: `${88 * scale}%` }}
-                  title="FY 2020-21"
-                ></div>
-                <div 
-                  className="rounded bg-[#D2E1FF]/80 w-[18%] transition-all duration-300 hover:bg-[#b0ccff]" 
-                  style={{ height: `${78 * scale}%` }}
-                  title="FY 2021-22"
-                ></div>
-                <div 
-                  className="rounded bg-[#0142C8] w-[18%] transition-all duration-300 hover:bg-[#0135A0]" 
-                  style={{ height: `${58 * scale}%` }}
-                  title="FY 2022-23"
-                ></div>
-                <div 
-                  className="rounded bg-[#0142C8]/75 w-[18%] transition-all duration-300 hover:bg-[#0142C8]" 
-                  style={{ height: `${47 * scale}%` }}
-                  title="FY 2023-24"
-                ></div>
-              </div>
-
-              {/* Chart X axis labels */}
-              <div className="flex justify-between items-start mt-2 text-[#0142C8] font-inter text-[9px] font-bold uppercase tracking-wider">
-                <span>FY 2021-22</span>
-                <span>FY 2023-24</span>
+              {/* Systemic Disparity Note */}
+              <div className="pt-2.5 border-t border-slate-100 w-full text-center sm:text-left">
+                <p className="text-slate-700 font-inter text-[11px] sm:text-xs leading-relaxed">
+                  <span className="text-[#0142C8] font-bold">Systemic Disparity:</span> Despite growth in logistics, women represent less than a quarter of the active apprenticeship pool.
+                </p>
               </div>
             </div>
+
+            {/* Bottom Caption under Card */}
+            <p className="text-slate-600 font-inter text-[11px] sm:text-xs font-medium text-center px-1 leading-relaxed">
+              Female apprenticeship enrolment has declined significantly in recent years, highlighting the need for more inclusive pathways into the workforce.
+            </p>
           </div>
         </div>
 
       </div>
 
-      {/* Quote Banner */}
-      <div className="w-full bg-[#EFF1FF]/50 py-4 md:py-6 px-4 mt-8 md:mt-12 text-center border-y border-[#0142C8]/10">
-        <p className="text-[#0142C8] font-inter text-base sm:text-lg lg:text-[20px] font-semibold leading-relaxed tracking-tight max-w-[900px] mx-auto italic">
+      {/* Full-width Quote Banner */}
+      <div className="w-full bg-[#EFF1FF] py-3.5 sm:py-5 px-4 mt-8 sm:mt-12 text-center border-y border-[#0142C8]/15">
+        <p className="text-[#0142C8] font-inter text-xs sm:text-base lg:text-lg font-semibold leading-relaxed tracking-tight max-w-4xl mx-auto italic">
           &quot;Even Cargo built this portal because the gap is urgent, and technology must close it.&quot;
         </p>
       </div>

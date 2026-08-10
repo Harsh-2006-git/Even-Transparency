@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
 import HomeHeader from './HomeHeader';
 import HomeHero from './HomeHero';
-import ComplianceVerification from './ComplianceVerification';
 import ProblemStatement from './ProblemStatement';
 import HowItWorks from './HowItWorks';
 import KeyFeatures from './KeyFeatures';
-import Benefits from './Benefits';
+import ImpactAndTestimonials from './ImpactAndTestimonials';
 import HomeFooter from './HomeFooter';
 
 export default function HomeLanding({ onNavigate }) {
@@ -222,7 +221,7 @@ export default function HomeLanding({ onNavigate }) {
 
       {/* 4. Problem Statement metrics/charts */}
       <div className="reveal-element">
-        <ProblemStatement />
+        <ProblemStatement onNavigate={onNavigate} />
       </div>
 
       {/* 5. How It Works vertical timelines */}
@@ -235,14 +234,9 @@ export default function HomeLanding({ onNavigate }) {
         <KeyFeatures onNavigate={onNavigate} />
       </div>
 
-      {/* 3. Compliance and badges Verification trust slider */}
-      <div className="reveal-element">
-        <ComplianceVerification />
-      </div>
-
-      {/* 7. Benefits Cards */}
-      <div className="reveal-element">
-        <Benefits />
+      {/* 7. Creating Opportunities That Matter & Testimonials */}
+      <div className="w-full">
+        <ImpactAndTestimonials />
       </div>
 
       {/* 8. Footer component */}

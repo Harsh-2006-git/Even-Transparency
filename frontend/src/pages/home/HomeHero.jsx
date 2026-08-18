@@ -1,11 +1,7 @@
-import React, { useRef, useState } from 'react';
-import { ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react';
+import React from 'react';
 
 export default function HomeHero({ onOpenDemoModal }) {
-  const scrollTrackRef = useRef(null);
-  const [activeSlide, setActiveSlide] = useState(0);
-
-  // 7 lifecycle stages: Dynamic S-curve coordinates for desktop + structured items for mobile sliding
+  // 7 lifecycle stages
   const stages = [
     {
       id: 1,
@@ -65,26 +61,6 @@ export default function HomeHero({ onOpenDemoModal }) {
     }
   ];
 
-  const handleMobileScroll = () => {
-    if (scrollTrackRef.current) {
-      const scrollLeft = scrollTrackRef.current.scrollLeft;
-      const cardWidth = 200;
-      const index = Math.round(scrollLeft / cardWidth);
-      setActiveSlide(Math.min(stages.length - 1, Math.max(0, index)));
-    }
-  };
-
-  const scrollToIndex = (idx) => {
-    if (scrollTrackRef.current) {
-      const cardWidth = 220;
-      scrollTrackRef.current.scrollTo({
-        left: idx * cardWidth,
-        behavior: 'smooth'
-      });
-      setActiveSlide(idx);
-    }
-  };
-
   return (
     <section
       id="platform"
@@ -113,7 +89,7 @@ export default function HomeHero({ onOpenDemoModal }) {
 
       {/* ── 2. Middle Area: Lifecycle Stages ── */}
       
-      {/* Desktop S-Curve View (Preserved exactly for md+ screens) */}
+      {/* Desktop S-Curve View (Preserved for lg+ screens) */}
       <div className="hidden lg:flex flex-1 min-h-0 w-full relative py-0 overflow-x-auto no-scrollbar flex-col justify-center">
         <div className="relative w-full min-w-[1150px] flex flex-col justify-center">
           
@@ -129,13 +105,13 @@ export default function HomeHero({ onOpenDemoModal }) {
             >
               <path
                 d="M -40 150 C 480 -190 840 430 1960 15"
-                stroke="url(#heroCurveGradient)"
+                stroke="url(#heroCurveGradientDesktop)"
                 strokeWidth="44"
                 strokeLinecap="round"
               />
               <defs>
                 <linearGradient
-                  id="heroCurveGradient"
+                  id="heroCurveGradientDesktop"
                   x1="0%"
                   y1="0%"
                   x2="100%"
@@ -188,68 +164,128 @@ export default function HomeHero({ onOpenDemoModal }) {
         </div>
       </div>
 
-      {/* Mobile Swipeable Slider View (Optimized for touch & small screens) */}
-      <div className="lg:hidden w-full my-6 flex flex-col items-center z-10 px-4">
+      {/* Mobile Continuous Auto-Scrolling Main Line & Stages (< lg screens) */}
+      <div className="lg:hidden w-full my-6 flex flex-col items-center z-10 overflow-hidden relative">
         
-        {/* Helper Badge */}
-        <div className="flex items-center gap-1.5 text-xs text-[#FF408A] font-semibold mb-3">
-          <span>Swipe to explore 7 stages</span>
-          <ArrowRight className="w-3.5 h-3.5 animate-pulse" />
-        </div>
+        {/* Soft edge gradient fades */}
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent z-20 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-20 pointer-events-none" />
 
-        {/* Sliding Ribbon Track */}
-        <div 
-          ref={scrollTrackRef}
-          onScroll={handleMobileScroll}
-          className="w-full flex gap-3 overflow-x-auto no-scrollbar py-2 px-2 snap-x snap-mandatory scroll-smooth"
-        >
-          {stages.map((stage, idx) => (
-            <div
-              key={stage.id}
-              onClick={() => scrollToIndex(idx)}
-              className="snap-center shrink-0 w-[210px] bg-white rounded-2xl p-4 border border-[#FF408A]/30 shadow-sm flex flex-col items-center text-center relative overflow-hidden transition-all hover:border-[#FF408A]"
-            >
-              {/* Step indicator badge */}
-              <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-[#FFF8FA] text-[10px] font-bold text-[#FF408A] border border-[#FF408A]/20">
-                Step {stage.id}
+        {/* Continuous Auto-Scrolling Main Line & Carousel Track */}
+        <div className="w-full relative py-6">
+          
+          {/* Main Continuous Connected Gradient Line running across the center of all nodes */}
+          <div 
+            className="absolute top-[38px] left-0 right-0 h-[6px] w-full z-0 pointer-events-none shadow-xs"
+            style={{
+              background: 'linear-gradient(90deg, #250914 0%, #7B1D45 25%, #8E1C4E 50%, #DB2F74 75%, #FF408A 100%)'
+            }}
+          />
+
+          {/* Infinite Marquee Track with connected nodes */}
+          <div className="animate-marquee flex items-start gap-6 sm:gap-8">
+            
+            {/* Set 1 */}
+            {stages.map((stage) => (
+              <div
+                key={`m1-${stage.id}`}
+                className="shrink-0 w-[170px] sm:w-[190px] flex flex-col items-center text-center relative z-10 group"
+              >
+                {/* Circular Node centered on the main line */}
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-dashed border-[#FF408A] bg-white shadow-md flex items-center justify-center p-2 transition-transform group-hover:scale-105">
+                  <img
+                    src={stage.img}
+                    alt={stage.title}
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+                  />
+                </div>
+
+                {/* Step badge */}
+                <span className="mt-1.5 px-2 py-0.5 rounded-full bg-[#FFF8FA] text-[9.5px] font-bold text-[#FF408A] border border-[#FF408A]/30 shadow-2xs">
+                  Stage {stage.id}
+                </span>
+
+                {/* Description Card directly below */}
+                <div className="w-full mt-2 bg-white/95 backdrop-blur-xs p-2.5 rounded-xl border border-slate-100 shadow-2xs">
+                  <h3 className="text-slate-900 font-kaiseiTokumin text-xs sm:text-sm font-bold leading-tight group-hover:text-[#FF408A] transition-colors">
+                    {stage.title}
+                  </h3>
+                  <p className="text-slate-500 font-inter text-[10px] sm:text-[11px] leading-snug mt-1 line-clamp-2">
+                    {stage.subtitle}
+                  </p>
+                </div>
               </div>
+            ))}
 
-              {/* Icon Container */}
-              <div className="w-16 h-16 rounded-full border-2 border-dashed border-[#FF408A] bg-[#FFF8FA] shadow-xs flex items-center justify-center p-2 mt-4 mb-3">
-                <img
-                  src={stage.img}
-                  alt={stage.title}
-                  className="w-10 h-10 object-contain"
-                />
+            {/* Set 2 (for seamless loop) */}
+            {stages.map((stage) => (
+              <div
+                key={`m2-${stage.id}`}
+                className="shrink-0 w-[170px] sm:w-[190px] flex flex-col items-center text-center relative z-10 group"
+              >
+                {/* Circular Node centered on the main line */}
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-dashed border-[#FF408A] bg-white shadow-md flex items-center justify-center p-2 transition-transform group-hover:scale-105">
+                  <img
+                    src={stage.img}
+                    alt={stage.title}
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+                  />
+                </div>
+
+                {/* Step badge */}
+                <span className="mt-1.5 px-2 py-0.5 rounded-full bg-[#FFF8FA] text-[9.5px] font-bold text-[#FF408A] border border-[#FF408A]/30 shadow-2xs">
+                  Stage {stage.id}
+                </span>
+
+                {/* Description Card directly below */}
+                <div className="w-full mt-2 bg-white/95 backdrop-blur-xs p-2.5 rounded-xl border border-slate-100 shadow-2xs">
+                  <h3 className="text-slate-900 font-kaiseiTokumin text-xs sm:text-sm font-bold leading-tight group-hover:text-[#FF408A] transition-colors">
+                    {stage.title}
+                  </h3>
+                  <p className="text-slate-500 font-inter text-[10px] sm:text-[11px] leading-snug mt-1 line-clamp-2">
+                    {stage.subtitle}
+                  </p>
+                </div>
               </div>
+            ))}
 
-              {/* Text info */}
-              <h3 className="text-slate-900 font-kaiseiTokumin text-sm font-bold leading-tight mb-1">
-                {stage.title}
-              </h3>
-              <p className="text-slate-500 font-inter text-[11px] leading-snug">
-                {stage.subtitle}
-              </p>
-            </div>
-          ))}
-        </div>
+            {/* Set 3 (buffer loop) */}
+            {stages.map((stage) => (
+              <div
+                key={`m3-${stage.id}`}
+                className="shrink-0 w-[170px] sm:w-[190px] flex flex-col items-center text-center relative z-10 group"
+              >
+                {/* Circular Node centered on the main line */}
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-dashed border-[#FF408A] bg-white shadow-md flex items-center justify-center p-2 transition-transform group-hover:scale-105">
+                  <img
+                    src={stage.img}
+                    alt={stage.title}
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+                  />
+                </div>
 
-        {/* Mobile Pagination Dots */}
-        <div className="flex items-center gap-1.5 mt-4">
-          {stages.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => scrollToIndex(idx)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                activeSlide === idx ? 'w-6 bg-[#FF408A]' : 'w-1.5 bg-slate-200'
-              }`}
-              aria-label={`Slide ${idx + 1}`}
-            />
-          ))}
+                {/* Step badge */}
+                <span className="mt-1.5 px-2 py-0.5 rounded-full bg-[#FFF8FA] text-[9.5px] font-bold text-[#FF408A] border border-[#FF408A]/30 shadow-2xs">
+                  Stage {stage.id}
+                </span>
+
+                {/* Description Card directly below */}
+                <div className="w-full mt-2 bg-white/95 backdrop-blur-xs p-2.5 rounded-xl border border-slate-100 shadow-2xs">
+                  <h3 className="text-slate-900 font-kaiseiTokumin text-xs sm:text-sm font-bold leading-tight group-hover:text-[#FF408A] transition-colors">
+                    {stage.title}
+                  </h3>
+                  <p className="text-slate-500 font-inter text-[10px] sm:text-[11px] leading-snug mt-1 line-clamp-2">
+                    {stage.subtitle}
+                  </p>
+                </div>
+              </div>
+            ))}
+
+          </div>
         </div>
       </div>
 
-      {/* ── 3. Bottom Gradient Feature Strip (Full Width, Responsive on Mobile) ── */}
+      {/* ── 3. Bottom Gradient Feature Strip (Full Width, Responsive) ── */}
       <div
         className="flex-none w-full py-3 sm:py-3.5 px-4 sm:px-8 md:px-16 flex items-center justify-center z-20 shadow-lg"
         style={{ background: 'linear-gradient(90deg, #250914 0%, #7B1D45 50%, #DF3879 100%)' }}

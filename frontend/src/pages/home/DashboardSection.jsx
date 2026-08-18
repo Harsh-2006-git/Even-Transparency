@@ -143,25 +143,25 @@ export default function DashboardSection({ onNavigate, onOpenDemoModal }) {
           </div>
 
           {/* Main Inner Content Body */}
-          <div className="p-4 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 bg-white">
+          <div className="p-3 sm:p-5 lg:p-6 space-y-3.5 sm:space-y-5 bg-white">
             
-            {/* 1. Stat Cards Grid (4 Cards) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* 1. Stat Cards Grid (2x2 on mobile, 4 in a row on desktop) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               
               {/* Stat 1 */}
-              <div className="flex items-center gap-3 p-3.5 rounded-[16px] border border-[#787878]/30 bg-white shadow-2xs">
-                <div className="flex justify-center items-center shrink-0 rounded-xl bg-[#FFF8FA] border border-[#FF408A]/10 w-9 h-9 text-[#FF408A]">
-                  <Users className="w-4 h-4" />
+              <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 rounded-[14px] sm:rounded-[16px] border border-[#787878]/30 bg-white shadow-2xs">
+                <div className="flex justify-center items-center shrink-0 rounded-lg sm:rounded-xl bg-[#FFF8FA] border border-[#FF408A]/10 w-7 h-7 sm:w-9 sm:h-9 text-[#FF408A]">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#787878] font-inter text-[10px] font-semibold tracking-wider uppercase">
+                  <p className="text-[#787878] font-inter text-[8.5px] sm:text-[10px] font-semibold tracking-wider uppercase truncate">
                     TOTAL CANDIDATES
                   </p>
                   <div className="flex items-center justify-between mt-0.5">
-                    <p className="text-black font-inter text-lg sm:text-xl font-bold tracking-tight">
+                    <p className="text-black font-inter text-sm sm:text-lg lg:text-xl font-bold tracking-tight">
                       12,458
                     </p>
-                    <span className="text-[10px] font-semibold text-black bg-[#FFF8FA] px-1.5 py-0.5 rounded-md border border-[#FF408A]/10">
+                    <span className="text-[9px] sm:text-[10px] font-semibold text-black bg-[#FFF8FA] px-1 sm:px-1.5 py-0.5 rounded border border-[#FF408A]/10">
                       +18%
                     </span>
                   </div>
@@ -169,39 +169,39 @@ export default function DashboardSection({ onNavigate, onOpenDemoModal }) {
               </div>
 
               {/* Stat 2 */}
-              <div className="flex items-center gap-3 p-3.5 rounded-[16px] border border-[#787878]/30 bg-white shadow-2xs">
-                <div className="flex justify-center items-center shrink-0 rounded-xl bg-[#FFF8FA] border border-[#FF408A]/10 w-9 h-9 text-[#FF408A]">
-                  <GraduationCap className="w-4 h-4" />
+              <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 rounded-[14px] sm:rounded-[16px] border border-[#787878]/30 bg-white shadow-2xs">
+                <div className="flex justify-center items-center shrink-0 rounded-lg sm:rounded-xl bg-[#FFF8FA] border border-[#FF408A]/10 w-7 h-7 sm:w-9 sm:h-9 text-[#FF408A]">
+                  <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#787878] font-inter text-[10px] font-semibold tracking-wider uppercase">
+                  <p className="text-[#787878] font-inter text-[8.5px] sm:text-[10px] font-semibold tracking-wider uppercase truncate">
                     In Training
                   </p>
                   <div className="flex items-center justify-between mt-0.5">
-                    <p className="text-black font-inter text-lg sm:text-xl font-bold tracking-tight">
+                    <p className="text-black font-inter text-sm sm:text-lg lg:text-xl font-bold tracking-tight">
                       3,124
                     </p>
-                    <span className="text-[10px] font-semibold text-black bg-[#FFF8FA] px-1.5 py-0.5 rounded-md border border-[#FF408A]/10 whitespace-nowrap">
-                      28 Active Batches
+                    <span className="text-[8.5px] sm:text-[10px] font-semibold text-black bg-[#FFF8FA] px-1 sm:px-1.5 py-0.5 rounded border border-[#FF408A]/10 whitespace-nowrap">
+                      28 Batches
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Stat 3 */}
-              <div className="flex items-center gap-3 p-3.5 rounded-[16px] border border-[#787878]/30 bg-white shadow-2xs">
-                <div className="flex justify-center items-center shrink-0 rounded-xl bg-[#FFF8FA] border border-[#FF408A]/10 w-9 h-9 text-[#FF408A]">
-                  <Target className="w-4 h-4" />
+              <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 rounded-[14px] sm:rounded-[16px] border border-[#787878]/30 bg-white shadow-2xs">
+                <div className="flex justify-center items-center shrink-0 rounded-lg sm:rounded-xl bg-[#FFF8FA] border border-[#FF408A]/10 w-7 h-7 sm:w-9 sm:h-9 text-[#FF408A]">
+                  <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#787878] font-inter text-[10px] font-semibold tracking-wider uppercase">
+                  <p className="text-[#787878] font-inter text-[8.5px] sm:text-[10px] font-semibold tracking-wider uppercase truncate">
                     Placed
                   </p>
                   <div className="flex items-center justify-between mt-0.5">
-                    <p className="text-black font-inter text-lg sm:text-xl font-bold tracking-tight">
+                    <p className="text-black font-inter text-sm sm:text-lg lg:text-xl font-bold tracking-tight">
                       5,048
                     </p>
-                    <span className="text-[10px] font-semibold text-black bg-[#FFF8FA] px-1.5 py-0.5 rounded-md border border-[#FF408A]/10 whitespace-nowrap">
+                    <span className="text-[8.5px] sm:text-[10px] font-semibold text-black bg-[#FFF8FA] px-1 sm:px-1.5 py-0.5 rounded border border-[#FF408A]/10 whitespace-nowrap">
                       91% Rate
                     </span>
                   </div>
@@ -209,19 +209,19 @@ export default function DashboardSection({ onNavigate, onOpenDemoModal }) {
               </div>
 
               {/* Stat 4 */}
-              <div className="flex items-center gap-3 p-3.5 rounded-[16px] border border-[#787878]/30 bg-white shadow-2xs">
-                <div className="flex justify-center items-center shrink-0 rounded-xl bg-[#FFF8FA] border border-[#FF408A]/10 w-9 h-9 text-[#FF408A]">
-                  <Percent className="w-4 h-4" />
+              <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 rounded-[14px] sm:rounded-[16px] border border-[#787878]/30 bg-white shadow-2xs">
+                <div className="flex justify-center items-center shrink-0 rounded-lg sm:rounded-xl bg-[#FFF8FA] border border-[#FF408A]/10 w-7 h-7 sm:w-9 sm:h-9 text-[#FF408A]">
+                  <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[#787878] font-inter text-[10px] font-semibold tracking-wider uppercase">
+                  <p className="text-[#787878] font-inter text-[8.5px] sm:text-[10px] font-semibold tracking-wider uppercase truncate">
                     Retention Rate
                   </p>
                   <div className="flex items-center justify-between mt-0.5">
-                    <p className="text-black font-inter text-lg sm:text-xl font-bold tracking-tight">
+                    <p className="text-black font-inter text-sm sm:text-lg lg:text-xl font-bold tracking-tight">
                       83%
                     </p>
-                    <span className="text-[10px] font-semibold text-black bg-[#FFF8FA] px-1.5 py-0.5 rounded-md border border-[#FF408A]/10 whitespace-nowrap">
+                    <span className="text-[8.5px] sm:text-[10px] font-semibold text-black bg-[#FFF8FA] px-1 sm:px-1.5 py-0.5 rounded border border-[#FF408A]/10 whitespace-nowrap">
                       +6% IMPROV
                     </span>
                   </div>

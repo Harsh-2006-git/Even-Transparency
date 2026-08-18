@@ -137,7 +137,7 @@ async function runMigration() {
 
   // 4. Migrate data table by table
   const modelKeys = Object.keys(db).filter(key => key !== 'sequelize' && key !== 'Sequelize');
-  
+
   console.log(`Found ${modelKeys.length} models to migrate.`);
 
   // We will perform the inserts inside a replica-role transaction to disable foreign key checks
@@ -163,11 +163,11 @@ async function runMigration() {
       console.log(`- Fetched ${records.length} records from source.`);
 
       // Insert into target
-      await targetModel.bulkCreate(records, { 
-        transaction, 
-        validate: false, 
+      await targetModel.bulkCreate(records, {
+        transaction,
+        validate: false,
         hooks: false,
-        returning: false 
+        returning: false
       });
       console.log(`- Successfully inserted ${records.length} records into target.`);
     }
@@ -214,7 +214,7 @@ async function runMigration() {
   console.log('\n=========================================');
   console.log('Migration Completed Successfully!');
   console.log('=========================================');
-  
+
   await targetSequelize.close();
   // Close source connection
   await db.sequelize.close();

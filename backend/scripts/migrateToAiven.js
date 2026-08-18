@@ -48,7 +48,7 @@ import AdminSystemSettingModel from '../models/admin/AdminSystemSetting.js';
 
 dotenv.config();
 
-const AIVEN_DB_URL = 'postgres://avnadmin:AVNS_5wlaG9CNiIJ9f6WiYvv@apprenticeship-harshhmanmode-7621.e.aivencloud.com:19869/defaultdb';
+const AIVEN_DB_URL = process.env.AIVEN_DB_URL || process.env.DATABASE_URL;
 
 async function runMigration() {
   console.log('=== Database Migration: Neon -> Aiven ===');

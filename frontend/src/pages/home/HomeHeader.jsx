@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { Menu, X } from 'lucide-react';
 
-export default function HomeHeader({ onNavigate }) {
+export default function HomeHeader({ onOpenDemoModal }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
@@ -10,191 +11,160 @@ export default function HomeHeader({ onNavigate }) {
   const handleLinkClick = (e, targetId) => {
     e.preventDefault();
     setIsSidebarOpen(false);
+
     const targetElement = document.getElementById(targetId);
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: 'smooth' });
+    const scrollContainer = document.getElementById('scroll-container');
+
+    if (targetElement && scrollContainer) {
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const targetRect = targetElement.getBoundingClientRect();
+      const targetScrollTop = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - 70;
+      scrollContainer.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      });
+    } else if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    if (window.history.pushState) {
+      window.history.pushState(null, '', `#${targetId}`);
     }
   };
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 h-[80px] bg-white border-b border-slate-200 px-4 md:px-8 lg:px-24 flex items-center justify-between z-50 shadow-xs">
-        {/* Logo */}
+      <header className="fixed top-0 left-0 right-0 h-[68px] bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-8 lg:px-16 flex items-center justify-between z-50 shadow-2xs">
+        {/* Brand Logo */}
         <div 
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="cursor-pointer flex items-center gap-0.5 sm:gap-2"
+          onClick={(e) => {
+            const scrollContainer = document.getElementById('scroll-container');
+            if (scrollContainer) {
+              scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+          className="cursor-pointer flex items-center gap-2"
         >
-          <img src="/logo.png" className="h-[36px] sm:h-[48px] w-auto object-contain" alt="Even Cargo Logo" />
-          <div className="flex flex-col text-left justify-center">
-            <span className="text-[#0142C8] font-manrope text-lg sm:text-xl md:text-[22px] font-bold leading-tight tracking-tight">
-              Even Cargo
-            </span>
-            <span className="font-medium text-[#000]/65 text-[11px] sm:text-xs md:text-[15px] font-inter leading-none mt-0.5">
-              Apprenticeships
-            </span>
-          </div>
+          <span className="text-[#010101] font-inriaSerif text-xl sm:text-2xl font-bold tracking-tight">
+            Even Transparency
+          </span>
         </div>
 
-        {/* Desktop Nav Links */}
+        {/* Center Desktop Nav Links */}
         <nav className="hidden lg:flex items-center gap-8">
+          <a 
+            href="#platform" 
+            onClick={(e) => handleLinkClick(e, 'platform')}
+            className="text-[#010101] font-inter text-sm font-semibold hover:text-[#FF408A] transition-colors cursor-pointer"
+          >
+            Platform
+          </a>
           <a 
             href="#candidates" 
             onClick={(e) => handleLinkClick(e, 'candidates')}
-            className="text-[#212121] hover:text-[#0142C8] font-inter text-sm font-semibold leading-7 transition-colors tracking-[-0.03em]"
+            className="text-[#212121] font-inter text-sm font-semibold hover:text-[#FF408A] transition-colors cursor-pointer"
           >
             Candidates
           </a>
           <a 
-            href="#employers" 
-            onClick={(e) => handleLinkClick(e, 'employers')}
-            className="text-[#212121] hover:text-[#0142C8] font-inter text-sm font-semibold leading-7 transition-colors tracking-[-0.03em]"
+            href="#features" 
+            onClick={(e) => handleLinkClick(e, 'features')}
+            className="text-[#212121] font-inter text-sm font-semibold hover:text-[#FF408A] transition-colors cursor-pointer"
           >
-            Employers
-          </a>
-          <a 
-            href="#how-it-works" 
-            onClick={(e) => handleLinkClick(e, 'how-it-works')}
-            className="text-[#212121] hover:text-[#0142C8] font-inter text-sm font-semibold leading-7 transition-colors tracking-[-0.03em]"
-          >
-            How It Works
+            Features
           </a>
           <a 
             href="#about" 
             onClick={(e) => handleLinkClick(e, 'about')}
-            className="text-[#212121] hover:text-[#0142C8] font-inter text-sm font-semibold leading-7 transition-colors tracking-[-0.03em]"
+            className="text-[#212121] font-inter text-sm font-semibold hover:text-[#FF408A] transition-colors cursor-pointer"
           >
-            About Even Cargo
+            About
           </a>
         </nav>
 
-        {/* Action Buttons (Desktop & Mobile) */}
-        <div className="flex items-center gap-2 sm:gap-3.5">
-          {/* Desktop Only Buttons */}
+        {/* Right Action Button: Stays on Landing Page */}
+        <div className="flex items-center gap-3">
           <button 
-            onClick={() => onNavigate('candidate')}
-            className="hidden lg:flex cursor-pointer text-nowrap py-2 px-4 justify-center items-center rounded-[8px] bg-[#0142C8] hover:bg-[#0135A0] text-white font-inter text-sm font-semibold transition shadow-sm"
+            onClick={onOpenDemoModal}
+            className="cursor-pointer text-nowrap py-1.5 px-5 justify-center items-center rounded-full border border-[#000] bg-white hover:bg-black hover:text-white text-[#000] font-plusJakartaSans text-xs sm:text-sm font-bold transition-all shadow-2xs"
           >
-            Register as Candidate
-          </button>
-          <button 
-            onClick={() => onNavigate('employer')}
-            className="hidden lg:flex cursor-pointer text-nowrap py-2 px-4 justify-center items-center rounded-[8px] border border-[#0142C8] hover:bg-[#EFF1FF] text-[#0142C8] font-inter text-sm font-semibold transition"
-          >
-            Partner as Employer
+            Login
           </button>
 
-          {/* Mobile Only CTA Button */}
-          <button 
-            onClick={() => onNavigate('candidate')}
-            className="lg:hidden cursor-pointer text-nowrap py-1.5 px-3 rounded-lg bg-[#0142C8] hover:bg-[#0135A0] text-white font-inter text-xs sm:text-sm font-bold transition shadow-xs"
-          >
-            Register
-          </button>
-
-          {/* Hamburger Icon Button for Mobile */}
+          {/* Mobile Hamburger Button */}
           <button 
             onClick={toggleSidebar}
-            className="lg:hidden cursor-pointer p-1.5 rounded-lg border border-slate-200 hover:bg-[#EFF1FF] text-[#0142C8] transition shrink-0"
+            className="lg:hidden cursor-pointer p-1.5 rounded-lg border border-slate-200 text-[#010101]"
             aria-label="Toggle menu"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
+            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </header>
 
-      {/* Backdrop for Mobile Sidebar Drawer */}
+      {/* Backdrop for Mobile Sidebar */}
       {isSidebarOpen && (
         <div 
           onClick={toggleSidebar}
-          className="fixed inset-0 bg-black/30 backdrop-blur-xs z-50 transition-opacity duration-300 lg:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 transition-opacity lg:hidden"
         />
       )}
 
-      {/* Mobile Sidebar Drawer */}
+      {/* Mobile Drawer */}
       <aside 
-        className={`fixed top-0 right-0 h-full w-[280px] bg-white z-55 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden flex flex-col p-6 border-l border-slate-100 ${
+        className={`fixed top-0 right-0 h-full w-[280px] bg-white z-55 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden flex flex-col p-5 border-l border-slate-100 ${
           isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        {/* Drawer Header */}
-        <div className="flex items-center justify-between pb-6 border-b border-slate-100 gap-2">
-          <div 
-            onClick={() => {
-              setIsSidebarOpen(false);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="cursor-pointer flex items-center gap-1 sm:gap-2"
-          >
-            <img src="/logo.png" className="h-[32px] sm:h-[40px] w-auto object-contain" alt="Even Cargo Logo" />
-            <div className="flex flex-col text-left justify-center">
-              <span className="text-[#0142C8] font-manrope text-sm sm:text-base font-bold leading-tight tracking-tight">
-                Even Cargo
-              </span>
-              <span className="font-medium text-[#000]/65 text-[9px] sm:text-xs font-inter leading-none mt-0.5">
-                Apprenticeships
-              </span>
-            </div>
-          </div>
-          <button 
-            onClick={toggleSidebar}
-            className="cursor-pointer p-1 rounded-lg hover:bg-slate-100 text-slate-500 transition"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <span className="text-[#010101] font-inriaSerif text-lg font-bold">
+            Even Transparency
+          </span>
+          <button onClick={toggleSidebar} className="p-1 rounded-lg text-slate-500 cursor-pointer">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Drawer Navigation Links */}
-        <nav className="flex flex-col gap-4 py-8 flex-1">
+        <nav className="flex flex-col gap-1 py-4 flex-1">
+          <a 
+            href="#platform"
+            onClick={(e) => handleLinkClick(e, 'platform')}
+            className="text-[#010101] font-inter text-sm font-semibold py-2.5 px-3 rounded-lg hover:bg-slate-50"
+          >
+            Platform
+          </a>
           <a 
             href="#candidates"
             onClick={(e) => handleLinkClick(e, 'candidates')}
-            className="text-[#212121] hover:text-[#0142C8] font-inter text-base font-bold transition-colors py-2 border-b border-slate-50"
+            className="text-[#212121] font-inter text-sm font-semibold py-2.5 px-3 rounded-lg hover:bg-slate-50"
           >
             Candidates
           </a>
           <a 
-            href="#employers"
-            onClick={(e) => handleLinkClick(e, 'employers')}
-            className="text-[#212121] hover:text-[#0142C8] font-inter text-base font-bold transition-colors py-2 border-b border-slate-50"
+            href="#features"
+            onClick={(e) => handleLinkClick(e, 'features')}
+            className="text-[#212121] font-inter text-sm font-semibold py-2.5 px-3 rounded-lg hover:bg-slate-50"
           >
-            Employers
-          </a>
-          <a 
-            href="#how-it-works"
-            onClick={(e) => handleLinkClick(e, 'how-it-works')}
-            className="text-[#212121] hover:text-[#0142C8] font-inter text-base font-bold transition-colors py-2 border-b border-slate-50"
-          >
-            How It Works
+            Features
           </a>
           <a 
             href="#about"
             onClick={(e) => handleLinkClick(e, 'about')}
-            className="text-[#212121] hover:text-[#0142C8] font-inter text-base font-bold transition-colors py-2 border-b border-slate-50"
+            className="text-[#212121] font-inter text-sm font-semibold py-2.5 px-3 rounded-lg hover:bg-slate-50"
           >
-            About Even Cargo
+            About
           </a>
         </nav>
 
-        {/* Drawer Auth Actions */}
-        <div className="flex flex-col gap-3 pt-6 border-t border-slate-100">
+        {/* Mobile Login Button: Stays on Landing Page */}
+        <div className="pt-4 border-t border-slate-100">
           <button 
-            onClick={() => { setIsSidebarOpen(false); onNavigate('candidate'); }}
-            className="cursor-pointer w-full py-2.5 px-4 rounded-lg bg-[#0142C8] hover:bg-[#0135A0] text-white font-inter text-sm font-bold transition shadow-xs text-center"
+            onClick={() => { setIsSidebarOpen(false); if (onOpenDemoModal) onOpenDemoModal(); }}
+            className="cursor-pointer w-full py-2.5 px-4 rounded-full border border-black bg-white hover:bg-black hover:text-white text-black font-inter font-bold text-xs text-center transition-colors shadow-2xs"
           >
-            Register as Candidate
-          </button>
-          <button 
-            onClick={() => { setIsSidebarOpen(false); onNavigate('employer'); }}
-            className="cursor-pointer w-full py-2.5 px-4 rounded-lg border-2 border-[#0142C8] hover:bg-[#EFF1FF] text-[#0142C8] font-inter text-sm font-bold transition text-center"
-          >
-            Partner as Employer
+            Login / Book Demo
           </button>
         </div>
       </aside>

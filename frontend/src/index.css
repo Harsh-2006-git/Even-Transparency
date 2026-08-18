@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inria+Serif:ital,wght@0,300;0,400;0,700;1,400&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Kaisei+Tokumin:wght@400;500;700;800&family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 @import "tailwindcss";
 
 html, body, #root {
   margin: 0 !important;
   padding: 0 !important;
   min-height: 100vh !important;
-  background-color: #f8fafc !important;
+  background-color: #ffffff !important;
 }
 
 @theme {
@@ -14,11 +14,14 @@ html, body, #root {
   --font-inter: "Inter", sans-serif;
   --font-dm-serif-display: "DM Serif Display", serif;
   --font-manrope: "Manrope", sans-serif;
+  --font-inriaSerif: "Inria Serif", serif;
   --font-plusJakartaSans: "Plus Jakarta Sans", sans-serif;
+  --font-kaiseiTokumin: "Kaisei Tokumin", serif;
   --font-weight-semibold: 500;
   --font-weight-bold: 600;
   --font-weight-extrabold: 600;
   --font-weight-black: 700;
+  --color-brand-pink: #FF408A;
   --color-violet-650: #6D3BFF;
   --color-violet-655: #5C2FFF;
   --color-violet-750: #5C2FFF;
@@ -70,4 +73,21 @@ html, body, #root {
 
 .overflow-y-auto, .overflow-auto {
   overscroll-behavior: contain !important;
+}
+
+/* Hide scrollbar for Chrome, Safari, Edge and Opera */
+.no-scrollbar::-webkit-scrollbar,
+#scroll-container::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar,
+#scroll-container,
+body {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }

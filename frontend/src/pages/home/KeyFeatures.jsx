@@ -1,282 +1,277 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { LayoutDashboard, Users, ShieldCheck, FileCheck2, Search, SlidersHorizontal, CheckCircle2, ChevronRight, BarChart3, Lock, Bell, Filter, Download } from 'lucide-react';
 
-export default function KeyFeatures({ onNavigate }) {
-  const candidateFeatures = [
+export default function KeyFeatures({ onNavigate, onOpenDemoModal }) {
+  const [activeTab, setActiveTab] = useState('tracking');
+
+  const candidatesData = [
+    { name: 'Priya Sharma', status: 'TRAINING', score: '82%', badgeClass: 'bg-amber-100 text-amber-800' },
+    { name: 'Aisha Khan', status: 'READY', score: '94%', badgeClass: 'bg-emerald-100 text-emerald-800' },
+    { name: 'Neha Singh', status: 'DEPLOYED', score: '88%', badgeClass: 'bg-blue-100 text-blue-800' },
+    { name: 'Kavita Devi', status: 'ASSESSMENT', score: '71%', badgeClass: 'bg-purple-100 text-purple-800' },
+  ];
+
+  const roles = [
     {
-      title: "SEAMLESS ACCESS",
-      desc: "Register with phone + OTP (available in your preferred regional language).",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-          <line x1="12" y1="18" x2="12.01" y2="18" />
-        </svg>
-      )
+      title: "System Administrators",
+      description: "Configure the platform, manage users, maintain master data, and oversee overall system performance."
     },
     {
-      title: "VERIFIED CREDENTIALS",
-      desc: "Securely upload Aadhaar and education documents for immediate verification.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <polyline points="9 15 11 17 15 13" />
-        </svg>
-      )
+      title: "Trainers",
+      description: "Record attendance, update assessments, provide feedback, and evaluate candidate readiness."
     },
     {
-      title: "SMART DISCOVERY",
-      desc: "Browse curated apprenticeships by location, stipend, and specific trades.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-      )
+      title: "Organization Administrators",
+      description: "Monitor programme operations, assign resources, manage partners, and track organizational performance."
     },
     {
-      title: "DIRECT PLACEMENT",
-      desc: "Apply directly, attend structured interviews, and secure your placement.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-        </svg>
-      )
+      title: "Placement Coordinators",
+      description: "Match candidates with employers, manage deployments, and monitor employment status."
     },
     {
-      title: "PROGRESS TRACKING",
-      desc: "Real-time monitoring of attendance, training milestones, and stipend payments.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 3v18h18" />
-          <path d="m18.7 8-5.1 5.2-2.8-2.7L7 14.3" />
-        </svg>
-      )
+      title: "Mobilizers",
+      description: "Register candidates, capture outreach information, upload documents, and monitor candidate progression."
     },
     {
-      title: "SAFE ENVIRONMENT",
-      desc: "Raise grievances through a safe, confidential, and responsive channel.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </svg>
-      )
+      title: "Monitoring & Evaluation Teams",
+      description: "Access organizational dashboards, generate reports, analyse KPIs, and measure programme impact."
     }
   ];
 
-  const employerFeatures = [
-    {
-      title: "INSTANT COMPLIANCE",
-      desc: "Register your entity with automated CIN and GST verification for trust.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          <path d="m9 11 2 2 4-4" />
-        </svg>
-      )
-    },
-    {
-      title: "NAPS INTEGRATION",
-      desc: "Post apprenticeship listings with real-time NAPS compliance checks.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <ellipse cx="12" cy="5" rx="9" ry="3" />
-          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-          <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
-        </svg>
-      )
-    },
-    {
-      title: "VERIFIED TALENT",
-      desc: "Access a database of pre-screened, document-verified women candidates.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
-      )
-    },
-    {
-      title: "WORKFLOW ENGINE",
-      desc: "Schedule interviews and dispatch digital offer letters through the dashboard.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-      )
-    },
-    {
-      title: "OPERATIONS HUB",
-      desc: "Manage attendance logs, training modules, and stipend disbursements seamlessly.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="7" height="9" />
-          <rect x="14" y="3" width="7" height="5" />
-          <rect x="14" y="12" width="7" height="9" />
-          <rect x="3" y="16" width="7" height="5" />
-        </svg>
-      )
-    },
-    {
-      title: "ESG REPORTING",
-      desc: "Download comprehensive ESG impact reports for board-level transparency.",
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0142C8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-          <polyline points="10 9 9 9 8 9" />
-        </svg>
-      )
-    }
+  const featuresList = [
+    "Candidate Registration & Digital Profiles",
+    "Mobilization Tracking",
+    "Readiness Classification Engine",
+    "Automated Training Recommendations",
+    "Training & Assessment Management",
+    "Candidate Progress Dashboard",
+    "Deployment & Placement Tracking",
+    "Employment & Retention Monitoring",
+    "Role-Based User Access",
+    "Configurable Reports & Analytics",
+    "Real-Time Notifications & Alerts",
+    "Advanced Search & Filters",
+    "Exportable Excel & PDF Reports"
   ];
 
   return (
-    <section id="candidates" className="py-12 sm:py-20 bg-[#F5F6FF] flex flex-col items-center">
-      {/* Title */}
-      <h2 className="text-[#000] font-dMSerifDisplay text-2xl sm:text-4xl lg:text-[44px] lg:leading-[56px] text-center mb-8 sm:mb-16 tracking-tight select-none">
-        Key Features
-      </h2>
+    <section id="features" className="py-16 lg:py-24 bg-slate-900 text-white w-full relative overflow-hidden">
+      
+      {/* Background Gradients */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF408A]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Two cards container wrapper */}
-      <div className="w-full max-w-[1200px] px-6 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
-        {/* Left Side: Candidates */}
-        <div className="flex p-4 sm:p-8 flex-col items-start gap-6 rounded-2xl border border-[#C3C5D9] bg-white shadow-[0_4px_30px_rgba(0,0,0,0.02)] w-full">
-          {/* Header */}
-          <div className="flex pb-4 sm:pb-6 items-center gap-4 border-b border-b-[rgba(195,197,217,0.50)] w-full">
-            <div className="flex justify-center items-center rounded-xl bg-[#010101] w-12 h-12 sm:w-14 sm:h-14 shrink-0 shadow-md">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="white" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-[#010101] font-inter text-xl sm:text-2xl font-bold tracking-tight text-left">
-                For Candidates
-              </h3>
-              <p className="text-[#434656] font-inter text-xs sm:text-base mt-0.5 opacity-[70%] font-medium text-left">
-                Accelerate your professional journey
-              </p>
-            </div>
-          </div>
+        {/* 1. SECTION: Complete Programme Visibility Dashboard Preview */}
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <span className="text-[#FF408A] font-inter text-xs sm:text-sm font-bold uppercase tracking-wider bg-[#FF408A]/10 border border-[#FF408A]/20 px-4 py-1.5 rounded-full inline-block mb-3">
+            Real-Time Analytics Showcase
+          </span>
+          <h2 className="text-white font-kaiseiTokumin text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
+            Complete Programme Visibility in One Dashboard
+          </h2>
+          <p className="text-slate-300 font-inter text-base sm:text-lg leading-relaxed">
+            Monitor every candidate, every programme, and every outcome through powerful dashboards that enable faster decisions, proactive interventions, and improved programme performance.
+          </p>
 
-          {/* Sub-grid of Features */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full">
-            {candidateFeatures.map((feat, idx) => (
-              <div key={idx} className="flex p-3 sm:p-4 flex-row sm:flex-col items-start gap-3.5 sm:gap-3 rounded-xl border border-[#C3C5D9]/40 bg-[#F8F9FF] hover:border-[#0142C8]/50 hover:bg-[#EFF1FF]/40 transition-all w-full">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#EFF1FF] flex items-center justify-center shrink-0 border border-[#0142C8]/15 shadow-2xs">
-                  {feat.icon}
-                </div>
-                <div className="flex-1 text-left">
-                  <h4 className="text-[#010101] font-inter text-[13px] sm:text-sm font-bold leading-5 tracking-tight flex items-center gap-1.5">
-                    <span className="text-[#0142C8]/45 font-black text-xs font-mono">{idx + 1}</span>
-                    {feat.title}
-                  </h4>
-                  <p className="text-[#434656] font-inter text-[11px] sm:text-xs leading-relaxed mt-0.5 sm:mt-1 opacity-[85%]">
-                    {feat.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Start Your Application button */}
-          <button
-            onClick={() => onNavigate && onNavigate('candidate')}
-            className="cursor-pointer w-full h-[44px] mt-4 rounded-lg bg-[#0142C8] hover:bg-[#0135A0] text-white font-inter text-sm font-semibold transition flex items-center justify-center gap-2 shadow-xs"
-          >
-            Start Your Application
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
-
-          {/* SOS emergency notice */}
-          <div className="w-full mt-2 pt-4 border-t border-slate-100">
-            <div className="flex p-3 sm:p-4 items-center gap-4 rounded-xl border border-[#0142C8]/20 bg-[#EFF1FF]/50 w-full text-left">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#0142C8] flex items-center justify-center text-white shrink-0 shadow-sm animate-pulse">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="white" />
-                </svg>
-              </div>
-              <div>
-                <h5 className="text-[#0142C8] font-inter text-xs sm:text-sm font-extrabold tracking-wide uppercase">
-                  SOS Emergency Action
-                </h5>
-                <p className="text-[#0142C8]/90 font-inter text-[11px] sm:text-xs mt-0.5 leading-relaxed font-semibold">
-                  Quick-access safety button directly on your dashboard for immediate assistance.
-                </p>
-              </div>
-            </div>
+          {/* Dashboard Tab Switchers */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
+            <button
+              onClick={() => setActiveTab('tracking')}
+              className={`cursor-pointer px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${
+                activeTab === 'tracking' 
+                  ? 'bg-[#FF408A] text-white shadow-lg shadow-[#FF408A]/30' 
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              End-to-End Candidate Tracking
+            </button>
+            <button
+              onClick={() => setActiveTab('dashboards')}
+              className={`cursor-pointer px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${
+                activeTab === 'dashboards' 
+                  ? 'bg-[#FF408A] text-white shadow-lg shadow-[#FF408A]/30' 
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              Real-Time Dashboards
+            </button>
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`cursor-pointer px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${
+                activeTab === 'reports' 
+                  ? 'bg-[#FF408A] text-white shadow-lg shadow-[#FF408A]/30' 
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              Audit-Ready Reports
+            </button>
           </div>
         </div>
 
-        {/* Right Side: Employers */}
-        <div className="flex p-4 sm:p-8 flex-col items-start gap-6 rounded-2xl border border-[#C3C5D9] bg-white shadow-[0_4px_30px_rgba(0,0,0,0.02)] w-full">
-          {/* Header */}
-          <div className="flex pb-4 sm:pb-6 items-center gap-4 border-b border-b-[rgba(195,197,217,0.50)] w-full">
-            <div className="flex justify-center items-center rounded-xl bg-[#0142C8] w-12 h-12 sm:w-14 sm:h-14 shrink-0 shadow-md">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 7V3H2v18h20V7H12zm-2 12H4v-2h6v2zm0-4H4v-2h6v2zm0-4H4V9h6v2zm0-4H4V5h6v2zm10 12h-8v-2h8v2zm0-4h-8v-2h8v2zm0-4h-8V9h8v2zm0-4h-8V5h8v2z" fill="white" />
-              </svg>
+        {/* Dashboard Mock Container */}
+        <div className="bg-slate-950/80 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl mb-24">
+          
+          {/* Top Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            
+            <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Total Candidates</span>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-extrabold text-white font-inter">12,458</span>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">+18%</span>
+              </div>
             </div>
-            <div>
-              <h3 className="text-[#0142C8] font-inter text-xl sm:text-2xl font-bold tracking-tight text-left">
-                For Employers
-              </h3>
-              <p className="text-[#434656] font-inter text-xs sm:text-base mt-0.5 opacity-[70%] font-medium text-left">
-                Optimized talent procurement
-              </p>
+
+            <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">In Training</span>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-extrabold text-white font-inter">3,124</span>
+                <span className="text-xs font-medium text-slate-400">28 Active Batches</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Placed</span>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-extrabold text-white font-inter">5,048</span>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">91% Rate</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Retention Rate</span>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-extrabold text-white font-inter">83%</span>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">+6% IMPROV</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Mock Candidate Table */}
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden mb-6">
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+              <h4 className="text-sm font-bold text-white font-inter flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#FF408A]" />
+                Live Candidate Pipeline Status
+              </h4>
+              <button 
+                onClick={onOpenDemoModal}
+                className="text-xs text-[#FF408A] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                View All Candidates
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-bold uppercase text-[11px] border-b border-slate-800">
+                  <tr>
+                    <th className="px-6 py-3">Candidate</th>
+                    <th className="px-6 py-3">Status</th>
+                    <th className="px-6 py-3">Score</th>
+                    <th className="px-6 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-inter">
+                  {candidatesData.map((c, i) => (
+                    <tr key={i} className="hover:bg-slate-800/50 transition-colors">
+                      <td className="px-6 py-3.5 font-bold text-white">{c.name}</td>
+                      <td className="px-6 py-3.5">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-extrabold ${c.badgeClass}`}>
+                          {c.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3.5 font-semibold text-emerald-400">{c.score}</td>
+                      <td className="px-6 py-3.5 text-right">
+                        <span className="text-xs text-slate-400 hover:text-white cursor-pointer underline">View Details</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* Sub-grid of Features */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 w-full">
-            {employerFeatures.map((feat, idx) => (
-              <div key={idx} className="flex p-3 sm:p-4 flex-row sm:flex-col items-start gap-3.5 sm:gap-3 rounded-xl border border-[#C3C5D9]/40 bg-[#F8F9FF] hover:border-[#0142C8]/50 hover:bg-[#EFF1FF]/40 transition-all w-full">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#EFF1FF] flex items-center justify-center shrink-0 border border-[#0142C8]/15 shadow-2xs">
-                  {feat.icon}
+          {/* Aggregate Readiness Score Banner */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-5 border border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#FF408A]/20 text-[#FF408A] flex items-center justify-center font-black text-lg">
+                4,286
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Candidates Ready for Deployment</p>
+                <p className="text-xs text-slate-400">Based on internal benchmarks and partner requirements across 12 sectors.</p>
+              </div>
+            </div>
+            <button 
+              onClick={onOpenDemoModal}
+              className="cursor-pointer py-2 px-5 rounded-full bg-[#FF408A] hover:bg-[#E02670] text-white font-inter text-xs font-bold transition-all shadow-md shrink-0"
+            >
+              Access Sector Deployments
+            </button>
+          </div>
+
+        </div>
+
+        {/* 2. SECTION: Designed for Every Stakeholder */}
+        <div className="mb-24">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <span className="text-[#FF408A] font-inter text-xs sm:text-sm font-bold uppercase tracking-wider bg-[#FF408A]/10 border border-[#FF408A]/20 px-4 py-1.5 rounded-full inline-block mb-3">
+              Multi-Tenant Security & Governance
+            </span>
+            <h2 className="text-white font-kaiseiTokumin text-3xl sm:text-4xl font-extrabold mb-4">
+              Designed for Every Stakeholder
+            </h2>
+            <p className="text-slate-300 font-inter text-base sm:text-lg">
+              Role-based access ensures every stakeholder has the right tools, insights, and responsibilities to manage candidate journeys efficiently.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {roles.map((role, idx) => (
+              <div 
+                key={idx}
+                className="bg-slate-950/70 rounded-2xl p-6 border border-slate-800 hover:border-[#FF408A]/50 transition-all group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 text-[#FF408A] flex items-center justify-center font-bold text-sm mb-4 group-hover:bg-[#FF408A] group-hover:text-white transition-all">
+                  0{idx + 1}
                 </div>
-                <div className="flex-1 text-left">
-                  <h4 className="text-[#010101] font-inter text-[13px] sm:text-sm font-bold leading-5 tracking-tight flex items-center gap-1.5">
-                    <span className="text-[#0142C8]/45 font-black text-xs font-mono">{idx + 1}</span>
-                    {feat.title}
-                  </h4>
-                  <p className="text-[#434656] font-inter text-[11px] sm:text-xs leading-relaxed mt-0.5 sm:mt-1 opacity-[85%]">
-                    {feat.desc}
-                  </p>
-                </div>
+                <h3 className="text-lg font-bold text-white font-kaiseiTokumin mb-2 group-hover:text-[#FF408A] transition-colors">
+                  {role.title}
+                </h3>
+                <p className="text-slate-400 font-inter text-sm leading-relaxed">
+                  {role.description}
+                </p>
               </div>
             ))}
           </div>
+        </div>
 
-          {/* Hire Apprentices button */}
-          <button
-            onClick={() => onNavigate && onNavigate('employer')}
-            className="cursor-pointer w-full h-[44px] mt-4 rounded-lg border-2 border-[#0142C8] bg-white hover:bg-[#EFF1FF] text-[#0142C8] font-inter text-sm font-semibold transition flex items-center justify-center gap-2 shadow-xs"
-          >
-            Hire Apprentices
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
+        {/* 3. SECTION: Powering Smarter Candidate Management (13 Feature Pills) */}
+        <div>
+          <div className="text-center max-w-3xl mx-auto mb-10">
+            <h2 className="text-white font-kaiseiTokumin text-3xl sm:text-4xl font-extrabold mb-3">
+              Powering Smarter Candidate Management
+            </h2>
+            <p className="text-slate-300 font-inter text-sm sm:text-base">
+              Streamline candidate management with intelligent tools that improve visibility, automate workflows, and deliver better programme outcomes.
+            </p>
+          </div>
 
-          {/* Callout Notice */}
-          <div className="w-full mt-2 pt-4 border-t border-slate-100">
-            <div className="flex p-3 sm:p-4 items-center gap-4 rounded-xl border border-[#0142C8]/20 bg-[#EFF1FF]/50 w-full text-left">
-              <div className="py-0.5 px-2.5 sm:py-1 sm:px-3.5 rounded-full bg-[#0142C8] text-white shrink-0 font-inter text-[10px] sm:text-xs font-black tracking-wide">
-                NEW
+          <div className="flex flex-wrap items-center justify-center gap-3 max-w-5xl mx-auto">
+            {featuresList.map((feat, i) => (
+              <div 
+                key={i}
+                className="bg-slate-950/90 border border-slate-800 hover:border-[#FF408A]/40 text-slate-200 px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all hover:bg-slate-900 hover:text-white"
+              >
+                <CheckCircle2 className="w-4 h-4 text-[#FF408A] shrink-0" />
+                {feat}
               </div>
-              <p className="text-[#0142C8] font-inter text-[11px] sm:text-sm font-bold leading-relaxed">
-                Join 200+ companies already optimizing their CSR via Even Cargo.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
 

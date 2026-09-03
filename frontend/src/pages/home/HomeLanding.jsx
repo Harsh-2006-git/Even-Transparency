@@ -22,8 +22,8 @@ export default function HomeLanding({ onNavigate }) {
   });
 
   const handleOpenDemoModal = () => {
-    setDemoSubmitted(false);
-    setIsDemoModalOpen(true);
+    setIsDemoModalOpen(false);
+    if (onNavigate) onNavigate('portals');
   };
 
   const handleCloseDemoModal = () => {
@@ -42,7 +42,7 @@ export default function HomeLanding({ onNavigate }) {
   useEffect(() => {
     const handleHashScroll = () => {
       const hash = window.location.hash.replace('#', '');
-      if (hash) {
+      if (hash && !hash.startsWith('login') && !hash.startsWith('/')) {
         const element = document.getElementById(hash);
         const scrollContainer = document.getElementById('scroll-container');
         if (element && scrollContainer) {
@@ -155,7 +155,7 @@ export default function HomeLanding({ onNavigate }) {
 
       {/* 4. Designed for Every Stakeholder */}
       <div id="stakeholders" className="reveal-element scroll-mt-20">
-        <StakeholdersSection />
+        <StakeholdersSection onNavigate={onNavigate} />
       </div>
 
       {/* 4.5. Powering Smarter Candidate Management & Features */}
@@ -250,6 +250,7 @@ export default function HomeLanding({ onNavigate }) {
                       <option>Placement Coordinator</option>
                       <option>Mobilizer / Field Lead</option>
                       <option>Monitoring & Evaluation</option>
+                      <option>Candidate / Learner</option>
                     </select>
                   </div>
 

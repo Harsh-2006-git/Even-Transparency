@@ -1,18 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Menu, 
   X, 
   ChevronRight, 
+  ChevronDown,
   Calendar, 
-  Mail 
+  Mail,
+  Shield,
+  Users,
+  GraduationCap,
+  Briefcase,
+  BarChart3,
+  UserCheck,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 
-export default function HomeHeader({ onOpenDemoModal }) {
+export default function HomeHeader({ onNavigate, onOpenDemoModal }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLinkClick = (e, targetId) => {
     e.preventDefault();
@@ -58,6 +80,63 @@ export default function HomeHeader({ onOpenDemoModal }) {
       id: 'about',
       label: 'About',
       sub: 'Why Choose Us'
+    }
+  ];
+
+  const rolePortals = [
+    {
+      id: 'admin',
+      name: 'System Admin',
+      sub: 'Super Admin & Governance',
+      icon: Shield,
+      color: 'text-[#FF408A]',
+      bg: 'bg-[#FFF0F5]',
+      border: 'hover:border-[#FF408A]/40'
+    },
+    {
+      id: 'mobilizer',
+      name: 'Field Mobilizer',
+      sub: 'Candidate Intake & KYC',
+      icon: Users,
+      color: 'text-rose-600',
+      bg: 'bg-rose-50',
+      border: 'hover:border-rose-300'
+    },
+    {
+      id: 'trainer',
+      name: 'Skill Trainer',
+      sub: 'Batches, Attendance & Grading',
+      icon: GraduationCap,
+      color: 'text-indigo-600',
+      bg: 'bg-indigo-50',
+      border: 'hover:border-indigo-300'
+    },
+    {
+      id: 'placement',
+      name: 'Placement Lead',
+      sub: 'Employer Matching & Offers',
+      icon: Briefcase,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+      border: 'hover:border-emerald-300'
+    },
+    {
+      id: 'me',
+      name: 'M&E Team',
+      sub: 'Retention & Audit Analytics',
+      icon: BarChart3,
+      color: 'text-cyan-600',
+      bg: 'bg-cyan-50',
+      border: 'hover:border-cyan-300'
+    },
+    {
+      id: 'candidate',
+      name: 'Candidate Portal',
+      sub: 'Trainee Self-Service & Status',
+      icon: UserCheck,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+      border: 'hover:border-purple-300'
     }
   ];
 
@@ -121,13 +200,65 @@ export default function HomeHeader({ onOpenDemoModal }) {
           </a>
         </nav>
 
-        {/* Right Action Button: Stays on Landing Page */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        {/* Right Action Buttons: Role Login Dropdown & Direct Portals */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          
+          {/* Stakeholder Portals Dropdown */}
+          <div className="relative hidden sm:block" ref={dropdownRef}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="cursor-pointer py-1.5 px-3.5 sm:px-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-inter text-xs sm:text-sm font-bold transition-all shadow-xs flex items-center gap-2"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#FF408A]" />
+              <span>Stakeholder Portals</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-[310px] bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Select Stakeholder Role</span>
+                </div>
+
+                <div className="py-1 space-y-1">
+                  {rolePortals.map((portal) => {
+                    const Icon = portal.icon;
+                    return (
+                      <button
+                        key={portal.id}
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          if (onNavigate) onNavigate(`login/${portal.id}`);
+                        }}
+                        className={`w-full flex items-center gap-3 p-2 rounded-xl text-left hover:bg-slate-50 border border-transparent ${portal.border} transition-all cursor-pointer group`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg ${portal.bg} flex items-center justify-center shrink-0`}>
+                          <Icon className={`w-4 h-4 ${portal.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-800 group-hover:text-[#FF408A] transition-colors truncate">
+                            {portal.name}
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            {portal.sub}
+                          </p>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#FF408A] group-hover:translate-x-0.5 transition-all shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Sign In / Hub */}
           <button 
-            onClick={onOpenDemoModal}
-            className="cursor-pointer text-nowrap py-1 sm:py-1.5 px-3 sm:px-5 justify-center items-center rounded-full border border-[#000] bg-white hover:bg-black hover:text-white text-[#000] font-plusJakartaSans text-[11px] sm:text-sm font-bold transition-all shadow-2xs"
+            onClick={() => onNavigate && onNavigate('login')}
+            className="cursor-pointer text-nowrap py-1.5 px-4 sm:px-5 justify-center items-center rounded-full bg-[#FF408A] hover:bg-[#E02670] text-white font-plusJakartaSans text-xs sm:text-sm font-bold transition-all shadow-xs"
           >
-            Login
+            Sign In
           </button>
 
           {/* Mobile Hamburger Button */}
@@ -151,7 +282,7 @@ export default function HomeHeader({ onOpenDemoModal }) {
 
       {/* Mobile Drawer */}
       <aside 
-        className={`fixed top-0 right-0 h-full w-[290px] sm:w-[320px] bg-white z-55 shadow-2xl transition-transform duration-300 ease-out lg:hidden flex flex-col border-l border-slate-100 ${
+        className={`fixed top-0 right-0 h-full w-[300px] sm:w-[340px] bg-white z-55 shadow-2xl transition-transform duration-300 ease-out lg:hidden flex flex-col border-l border-slate-100 ${
           isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -181,44 +312,67 @@ export default function HomeHeader({ onOpenDemoModal }) {
         </div>
 
         {/* Drawer Navigation List */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col justify-start gap-3">
-          <nav className="flex flex-col gap-1.5">
+        <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col justify-start gap-4">
+          
+          {/* Main Sections */}
+          <div className="space-y-1">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400 px-3 pb-1">Site Navigation</p>
             {navItems.map((item) => (
               <a
                 key={item.id}
                 href={`#${item.id}`}
                 onClick={(e) => handleLinkClick(e, item.id)}
-                className="flex items-center justify-between px-3.5 py-3 rounded-xl hover:bg-[#FFF8FA] border border-transparent hover:border-[#FF408A]/20 transition-all duration-200 group cursor-pointer"
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-[#FFF8FA] border border-transparent hover:border-[#FF408A]/20 transition-all duration-200 group cursor-pointer"
               >
                 <div className="flex flex-col text-left">
-                  <span className="text-slate-900 font-inter text-[15px] font-bold group-hover:text-[#FF408A] transition-colors">
+                  <span className="text-slate-900 font-inter text-sm font-bold group-hover:text-[#FF408A] transition-colors">
                     {item.label}
                   </span>
-                  <span className="text-slate-400 font-inter text-xs mt-0.5">
+                  <span className="text-slate-400 font-inter text-[11px]">
                     {item.sub}
                   </span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#FF408A] group-hover:translate-x-1 transition-all" />
               </a>
             ))}
-          </nav>
+          </div>
+
+          {/* Stakeholder Login Portals List */}
+          <div className="space-y-1 pt-2 border-t border-slate-100">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400 px-3 pb-1">Stakeholder Login Portals</p>
+            <div className="grid grid-cols-2 gap-2">
+              {rolePortals.map((portal) => {
+                const Icon = portal.icon;
+                return (
+                  <button
+                    key={portal.id}
+                    onClick={() => {
+                      setIsSidebarOpen(false);
+                      if (onNavigate) onNavigate(`login/${portal.id}`);
+                    }}
+                    className={`flex flex-col items-start p-2.5 rounded-xl border border-slate-200/80 hover:border-[#FF408A] hover:bg-slate-50 transition cursor-pointer text-left`}
+                  >
+                    <div className={`w-7 h-7 rounded-lg ${portal.bg} flex items-center justify-center mb-1.5`}>
+                      <Icon className={`w-3.5 h-3.5 ${portal.color}`} />
+                    </div>
+                    <span className="text-xs font-bold text-slate-900 leading-tight truncate w-full">{portal.name}</span>
+                    <span className="text-[10px] text-slate-400 truncate w-full">Sign In →</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
         </div>
 
         {/* Drawer Footer Actions */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-2.5">
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-2">
           <button 
-            onClick={() => { setIsSidebarOpen(false); if (onOpenDemoModal) onOpenDemoModal(); }}
-            className="cursor-pointer w-full py-2.5 px-4 rounded-full bg-black hover:bg-[#1a1a1a] text-white font-inter font-bold text-xs flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all"
+            onClick={() => { setIsSidebarOpen(false); if (onNavigate) onNavigate('login/admin'); }}
+            className="cursor-pointer w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-inter font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all"
           >
-            <Calendar className="w-3.5 h-3.5 text-[#FF408A]" />
-            <span>Book a Demo</span>
-          </button>
-
-          <button 
-            onClick={() => { setIsSidebarOpen(false); if (onOpenDemoModal) onOpenDemoModal(); }}
-            className="cursor-pointer w-full py-2.5 px-4 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 hover:text-black font-inter font-bold text-xs text-center transition-all shadow-2xs"
-          >
-            Login to Portal
+            <Shield className="w-3.5 h-3.5 text-[#FF408A]" />
+            <span>Sign In to Portal</span>
           </button>
 
           <div className="flex items-center justify-center gap-2 text-slate-400 font-inter text-[10.5px] pt-1">

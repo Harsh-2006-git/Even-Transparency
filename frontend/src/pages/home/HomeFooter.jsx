@@ -1,7 +1,7 @@
 import React from 'react';
-import { Mail, Phone, Shield } from 'lucide-react';
+import { Mail, Phone, Shield, ArrowRight } from 'lucide-react';
 
-export default function HomeFooter({ onOpenDemoModal }) {
+export default function HomeFooter({ onOpenDemoModal, onNavigate }) {
   const scrollToSection = (targetId) => {
     const targetElement = document.getElementById(targetId);
     const scrollContainer = document.getElementById('scroll-container');
@@ -21,7 +21,7 @@ export default function HomeFooter({ onOpenDemoModal }) {
 
   return (
     <footer className="bg-[#000] text-white pt-16 pb-8 px-6 lg:px-16 border-t border-slate-800 relative z-10 overflow-hidden">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8 pb-12 border-b border-slate-800/80">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-12 border-b border-slate-800/80">
         
         {/* Brand Info Column */}
         <div className="lg:col-span-2 space-y-6">
@@ -58,7 +58,64 @@ export default function HomeFooter({ onOpenDemoModal }) {
           </div>
         </div>
 
-        {/* Column 1: Platform */}
+        {/* Column 1: Stakeholder Login Portals */}
+        <div className="space-y-4">
+          <h4 className="text-white font-inter text-base font-bold tracking-tight">
+            Stakeholder Portals
+          </h4>
+          <ul className="space-y-2.5 font-inter text-sm text-slate-400 font-medium">
+            <li>
+              <button 
+                onClick={() => onNavigate && onNavigate('login/admin')}
+                className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5"
+              >
+                Admin & Governance
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => onNavigate && onNavigate('login/mobilizer')}
+                className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5"
+              >
+                Mobilizer Field Intake
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => onNavigate && onNavigate('login/trainer')}
+                className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5"
+              >
+                Trainer & Assessor
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => onNavigate && onNavigate('login/placement')}
+                className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5"
+              >
+                Placement Coordinator
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => onNavigate && onNavigate('login/me')}
+                className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5"
+              >
+                Monitoring & Evaluation
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => onNavigate && onNavigate('login/candidate')}
+                className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5"
+              >
+                Candidate Self-Service
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        {/* Column 2: Platform Links */}
         <div className="space-y-4">
           <h4 className="text-white font-inter text-base font-bold tracking-tight">
             Platform
@@ -96,39 +153,18 @@ export default function HomeFooter({ onOpenDemoModal }) {
                 Role-Based Access
               </button>
             </li>
-          </ul>
-        </div>
-
-        {/* Column 2: Solutions */}
-        <div className="space-y-4">
-          <h4 className="text-white font-inter text-base font-bold tracking-tight">
-            Solutions
-          </h4>
-          <ul className="space-y-2.5 font-inter text-sm text-slate-400 font-medium">
             <li>
-              <button onClick={onOpenDemoModal} className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5">
-                Skilling Organizations
-              </button>
-            </li>
-            <li>
-              <button onClick={onOpenDemoModal} className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5">
-                Workforce Development
-              </button>
-            </li>
-            <li>
-              <button onClick={onOpenDemoModal} className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5">
-                Logistics
-              </button>
-            </li>
-            <li>
-              <button onClick={onOpenDemoModal} className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5">
-                Employment Programmes
+              <button 
+                onClick={() => onNavigate && onNavigate('login/admin')}
+                className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5 font-semibold text-white"
+              >
+                Sign In to Portal →
               </button>
             </li>
           </ul>
         </div>
 
-        {/* Column 3: Company */}
+        {/* Column 3: Company & Contact */}
         <div className="space-y-4">
           <h4 className="text-white font-inter text-base font-bold tracking-tight">
             Company
@@ -144,7 +180,7 @@ export default function HomeFooter({ onOpenDemoModal }) {
             </li>
             <li>
               <button onClick={onOpenDemoModal} className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5">
-                Contact
+                Contact & Demo
               </button>
             </li>
             <li>
@@ -154,7 +190,7 @@ export default function HomeFooter({ onOpenDemoModal }) {
             </li>
             <li>
               <button onClick={onOpenDemoModal} className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5">
-                Terms of Use
+                Terms of Service
               </button>
             </li>
           </ul>
@@ -165,7 +201,7 @@ export default function HomeFooter({ onOpenDemoModal }) {
       {/* Copyright Bar */}
       <div className="max-w-7xl mx-auto mt-6 pt-4 flex flex-col sm:flex-row items-center justify-between font-inter text-xs text-slate-500 gap-4">
         <p className="text-center sm:text-left">
-          &copy; 2026 Even Transparency. All Rights Reserved.
+          &copy; {new Date().getFullYear()} Even Transparency. All Rights Reserved.
         </p>
         <div className="flex items-center gap-6">
           <button onClick={onOpenDemoModal} className="hover:text-slate-300 transition-colors cursor-pointer">

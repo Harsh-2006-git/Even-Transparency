@@ -1,14 +1,10 @@
-import { Router } from 'express';
-import { login } from '../controllers/admin/authController.js';
-import { refreshTokenHandler } from '../controllers/authController.js';
-import { adminAuthMiddleware } from '../middlewares/adminAuthMiddleware.js';
-import { getDashboardStats, getPlatformReportsSummary } from '../controllers/admin/dashboardController.js';
+import express from 'express';
+import { login, getCurrentUser, logout } from '../controllers/authController.js';
 
-const router = Router();
+const router = express.Router();
 
-router.post('/auth/login', login);
-router.post('/auth/refresh', refreshTokenHandler);
-router.get('/admin/dashboard-stats', adminAuthMiddleware, getDashboardStats);
-router.get('/admin/reports/summary', adminAuthMiddleware, getPlatformReportsSummary);
+router.post('/login', login);
+router.get('/me', getCurrentUser);
+router.post('/logout', logout);
 
 export default router;

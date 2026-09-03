@@ -1,259 +1,106 @@
-// ─── Suppress pg-connection-string SSL deprecation warnings globally ──────────
-const _origEmit = process.emit.bind(process);
-process.emit = function (event, ...args) {
-  if (event === 'warning' && args[0]?.message?.includes('SSL modes')) return false;
-  return _origEmit(event, ...args);
-};
-
 import express from 'express';
-import http from 'http';
 import cors from 'cors';
-import compression from 'compression';
 import dotenv from 'dotenv';
-import crypto from 'crypto';
 import sequelize, { testConnection } from './config/db.js';
-import { Op } from 'sequelize';
-import employerRoutes from './routes/employerRoutes.js';
-import authRoutes from './routes/authRoutes.js';
+import db from './models/index.js';
+import mobilizerRoutes from './routes/mobilizerRoutes.js';
 import candidateRoutes from './routes/candidateRoutes.js';
-import notificationRoutes from './routes/notificationRoutes.js';
-import initScheduler from './notifications/scheduler.js';
-import { initEmailQueue } from './notifications/email.queue.js';
-import { uploadProxy } from './controllers/candidate/documentController.js';
-import './models/index.js';
-
-import path from 'path';
-import { fileURLToPath } from 'url';
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
-app.use('/public', express.static(path.join(__dirname, '../frontend/public')));
-
 const PORT = process.env.PORT || 5000;
 
-async function ensureDbColumnsExist() {
-  const queryInterface = sequelize.getQueryInterface();
-
-  // 1. Check candidates table
-  const candidatesTable = await queryInterface.describeTable('candidates').catch(() => null);
-  if (candidatesTable) {
-    const candidateColumns = [
-      ['password_hash', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['profile_completion_breakdown', { type: sequelize.Sequelize.JSONB, allowNull: true }],
-      ['profile_completion_percentage', { type: sequelize.Sequelize.FLOAT, allowNull: true }],
-      ['onboarding_status', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['verification_status', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['availability_status', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['mobile_otp_verified', { type: sequelize.Sequelize.BOOLEAN, allowNull: true }],
-      ['resume_url', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['category_certificate_url', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['emergency_contact_name', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['emergency_contact_relation', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['emergency_contact_phone', { type: sequelize.Sequelize.STRING, allowNull: true }],
-    ];
-
-    for (const [columnName, definition] of candidateColumns) {
-      if (!candidatesTable[columnName]) {
-        await queryInterface.addColumn('candidates', columnName, definition);
-        console.log(`Added missing candidates.${columnName} column.`);
-      }
-    }
-  }
-
-  // 2. Check adminnotifications table
-  const notificationsTable = await queryInterface.describeTable('adminnotifications').catch(() => null);
-  if (notificationsTable) {
-    const notificationColumns = [
-      ['body', { type: sequelize.Sequelize.TEXT, allowNull: true }],
-      ['channel', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['channels', { type: sequelize.Sequelize.ARRAY(sequelize.Sequelize.STRING), allowNull: true }],
-      ['is_silent', { type: sequelize.Sequelize.BOOLEAN, allowNull: true }],
-      ['sent_by_admin_id', { type: sequelize.Sequelize.UUID, allowNull: true }],
-      ['scheduled_at', { type: sequelize.Sequelize.DATE, allowNull: true }],
-      ['sent_at', { type: sequelize.Sequelize.DATE, allowNull: true }],
-      ['delivered_at', { type: sequelize.Sequelize.DATE, allowNull: true }],
-      ['read_at', { type: sequelize.Sequelize.DATE, allowNull: true }],
-      ['is_read', { type: sequelize.Sequelize.BOOLEAN, allowNull: true }],
-      ['failure_reason', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['retry_count', { type: sequelize.Sequelize.FLOAT, allowNull: true }],
-      ['entity_type', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['entity_id', { type: sequelize.Sequelize.UUID, allowNull: true }],
-      ['action_url', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['fcm_message_id', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['msg91_message_id', { type: sequelize.Sequelize.STRING, allowNull: true }]
-    ];
-
-    for (const [columnName, definition] of notificationColumns) {
-      if (!notificationsTable[columnName]) {
-        await queryInterface.addColumn('adminnotifications', columnName, definition);
-        console.log(`Added missing adminnotifications.${columnName} column.`);
-      }
-    }
-  }
-
-  // 3. Check employerjobpostings table
-  const jobPostingsTable = await queryInterface.describeTable('employerjobpostings').catch(() => null);
-  if (jobPostingsTable) {
-    const jobColumns = [
-      ['location', { type: sequelize.Sequelize.STRING, allowNull: true }],
-      ['benefits', { type: sequelize.Sequelize.JSONB, allowNull: true }],
-      ['preferred_criteria', { type: sequelize.Sequelize.TEXT, allowNull: true }]
-    ];
-
-    for (const [columnName, definition] of jobColumns) {
-      if (!jobPostingsTable[columnName]) {
-        await queryInterface.addColumn('employerjobpostings', columnName, definition);
-        console.log(`Added missing employerjobpostings.${columnName} column.`);
-      }
-    }
-
-    // Alter job_description column type to TEXT if it's currently character varying
-    if (jobPostingsTable['job_description'] && jobPostingsTable['job_description'].type.toLowerCase().includes('varying')) {
-      await queryInterface.changeColumn('employerjobpostings', 'job_description', {
-        type: sequelize.Sequelize.TEXT,
-        allowNull: true
-      });
-      console.log('Altered employerjobpostings.job_description column to TEXT.');
-    }
-  }
-
-  // 4. Check candidategrievances table
-  const grievancesTable = await queryInterface.describeTable('candidategrievances').catch(() => null);
-  if (grievancesTable) {
-    const grievanceColumns = [
-      ['filed_by', { type: sequelize.Sequelize.STRING, allowNull: true, defaultValue: 'Candidate' }],
-      ['evidence_urls', { type: sequelize.Sequelize.JSON, allowNull: true }],
-      ['related_to', { type: sequelize.Sequelize.STRING, allowNull: true }]
-    ];
-
-    for (const [columnName, definition] of grievanceColumns) {
-      if (!grievancesTable[columnName]) {
-        await queryInterface.addColumn('candidategrievances', columnName, definition);
-        console.log(`Added missing candidategrievances.${columnName} column.`);
-      }
-    }
-
-    // Alter grievance_description to TEXT if it's currently character varying
-    if (grievancesTable['grievance_description'] && grievancesTable['grievance_description'].type.toLowerCase().includes('varying')) {
-      await queryInterface.changeColumn('candidategrievances', 'grievance_description', {
-        type: sequelize.Sequelize.TEXT,
-        allowNull: true
-      });
-      console.log('Altered candidategrievances.grievance_description column to TEXT.');
-    }
-
-    // Alter resolution_notes to TEXT if it's currently character varying
-    if (grievancesTable['resolution_notes'] && grievancesTable['resolution_notes'].type.toLowerCase().includes('varying')) {
-      await queryInterface.changeColumn('candidategrievances', 'resolution_notes', {
-        type: sequelize.Sequelize.TEXT,
-        allowNull: true
-      });
-      console.log('Altered candidategrievances.resolution_notes column to TEXT.');
-    }
-
-    // Alter evidence_urls to JSON if it's currently character varying
-    if (grievancesTable['evidence_urls'] && grievancesTable['evidence_urls'].type.toLowerCase().includes('varying')) {
-      await queryInterface.changeColumn('candidategrievances', 'evidence_urls', {
-        type: sequelize.Sequelize.JSON,
-        allowNull: true
-      });
-      console.log('Altered candidategrievances.evidence_urls column to JSON.');
-    }
-  }
-
-  // 5. Check emaillogs table
-  const emailLogsTable = await queryInterface.describeTable('emaillogs').catch(() => null);
-  if (emailLogsTable) {
-    if (!emailLogsTable['priority']) {
-      await queryInterface.addColumn('emaillogs', 'priority', {
-        type: sequelize.Sequelize.STRING,
-        allowNull: false,
-        defaultValue: 'MEDIUM'
-      }).catch(() => null);
-      console.log('Added missing emaillogs.priority column.');
-    }
-    // Safely convert PostgreSQL enum column to VARCHAR(255)
-    await sequelize.query('ALTER TABLE emaillogs ALTER COLUMN status TYPE VARCHAR(255);').catch(() => null);
-  }
-}
-
-// Enable CORS for frontend connectivity
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://even-cargo-apprenticeship-portal.vercel.app'
-  ],
-  credentials: true
+  origin: '*',
+  credentials: true,
 }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Enable gzip compression for all responses
-app.use(compression());
-
-app.use(express.json());
-
-// 1. Health Check Endpoint
-app.get('/api/health', async (req, res) => {
-  const dbStatus = await testConnection();
+// Healthcheck Route
+app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    serverTime: new Date(),
-    database: dbStatus
+    system: 'Even Transparency Candidate Lifecycle Portal API',
+    timestamp: new Date().toISOString(),
+    modelsCount: Object.keys(db).filter(k => k !== 'sequelize' && k !== 'Sequelize').length,
   });
 });
 
-app.put('/api/candidate/documents/upload-proxy', express.raw({ type: '*/*', limit: '10mb' }), uploadProxy);
+// Authentication API
+app.use('/api/auth', authRoutes);
 
-app.use('/api', authRoutes);
-app.use('/api', employerRoutes);
-app.use('/api', candidateRoutes);
-app.use('/api', notificationRoutes);
+// User Management & Verification API
+app.use('/api/users', userRoutes);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Server startup — clean terminal output with icons
-// ─────────────────────────────────────────────────────────────────────────────
-const startServer = () => {
-  app.listen(PORT, () => {
-    console.log('');
-    console.log(`  🚀  Even Cargo Backend`);
-    console.log(`  ⚡  Server running on port ${PORT}`);
+// Document & KYC Upload API (Cloudinary)
+app.use('/api/upload', uploadRoutes);
 
-  });
+// Master Data Helper Routes
+app.get('/api/master/organizations', async (req, res) => {
+  try {
+    const orgs = [
+      { id: 'org-1', name: 'Even Mobility Foundation', type: 'NGO' },
+      { id: 'org-2', name: 'Gujarat Livelihood Mission', type: 'Government' },
+      { id: 'org-3', name: 'Delhi Skill Development Society', type: 'Training Partner' },
+      { id: 'org-4', name: 'Karnataka Women Empowerment Corp', type: 'Government' }
+    ];
+    res.json({ success: true, data: orgs });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
-  // Database init runs in background — does not block server from accepting requests
-  (async () => {
-    try {
-      console.log('  🔌  Connecting to Aiven PostgreSQL...');
-      await sequelize.authenticate();
-      console.log('  ✅  Database connected successfully.');
+app.get('/api/master/partners', async (req, res) => {
+  try {
+    const partners = [
+      { id: 'prt-1', name: 'Mahila Vikas Samiti (NGO)', city: 'Bengaluru' },
+      { id: 'prt-2', name: 'Delhi Skill Development Society', city: 'Delhi' },
+      { id: 'prt-3', name: 'Sakhi Self Help Federation', city: 'Ahmedabad' },
+      { id: 'prt-4', name: 'Prerna Gramin Samiti', city: 'Lucknow' }
+    ];
+    res.json({ success: true, data: partners });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
-      // Ensure all dynamic columns exist (safe no-op if already present)
-      await ensureDbColumnsExist().catch(err => {
-        console.warn(`  ⚠️   Schema column check: ${err.message}`);
-      });
+// Mobilizer Management API
+app.use('/api/mobilizers', mobilizerRoutes);
 
-      // Sync model definitions (CREATE TABLE IF NOT EXISTS)
-      await sequelize.sync().catch(err => {
-        console.warn(`  ⚠️   Schema sync: ${err.message}`);
-      });
+// Candidate Onboarding & Management API
+app.use('/api/candidates', candidateRoutes);
 
-      console.log('  🗄️   Database schema ready.');
-
-      // Initialize Priority Parallel Email Queue
-      await initEmailQueue();
-
-      // Initialize automated email notification scheduler
-      initScheduler();
-      console.log('');
-    } catch (error) {
-      console.error(`  ❌  Database connection failed: ${error.message}`);
-      console.error('  💡  Check DATABASE_URL in your .env file.');
-      console.log('');
+// Start Server & Authenticate DB
+async function startServer() {
+  try {
+    const conn = await testConnection();
+    if (conn.success) {
+      console.log('✅ PostgreSQL Database connected successfully.');
+      try {
+        await sequelize.sync({ alter: true });
+        console.log('✅ Sequelize models synchronized with database schema.');
+      } catch (syncErr) {
+        console.warn('⚠️  Database schema sync notice:', syncErr.message);
+      }
+    } else {
+      console.warn('⚠️  Database connection notice:', conn.message);
     }
-  })();
-};
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Even Transparency Backend running on port ${PORT}`);
+      console.log(`📡 Healthcheck available at http://localhost:${PORT}/api/health`);
+      console.log(`👥 Mobilizer API available at http://localhost:${PORT}/api/mobilizers`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start backend server:', error);
+  }
+}
 
 startServer();
+
+export default app;

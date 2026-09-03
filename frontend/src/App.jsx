@@ -1,1425 +1,439 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
+
+// Stakeholder Login Pages
 import AdminLogin from './pages/admin/Login';
-import EmployerLogin from './pages/employer/Login';
-import EmployerOnboarding from './pages/employer/Onboarding';
+import MobilizerLogin from './pages/mobilizer/Login';
+import TrainerLogin from './pages/trainer/Login';
+import PlacementLogin from './pages/placement/Login';
+import MELogin from './pages/me/Login';
 import CandidateLogin from './pages/candidate/Login';
-import CandidateAuth from './pages/candidate/Auth';
-import CandidateDashboard from './pages/candidate/Dashboard';
-import CandidateProfile from './pages/candidate/Profile';
-import CandidateApplications from './pages/candidate/Applications';
-import CandidateJobs from './pages/candidate/Jobs';
-import CandidateDocuments from './pages/candidate/Documents';
-import CandidateInterviews from './pages/candidate/Interviews';
-import CandidateNotifications from './pages/candidate/Notifications';
-import CandidateSettings from './pages/candidate/Settings';
-import CandidateGrievances from './pages/candidate/Grievances';
-import CandidateStipends from './pages/candidate/Stipends';
-import Dashboard from './pages/Dashboard';
+
+// Stakeholder Dashboard & Management Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
-import Employers from './pages/admin/Employers';
-import Candidates from './pages/admin/Candidates';
-import CompanyManagement from './pages/admin/CompanyManagement';
-import AdminSettings from './pages/admin/Settings';
-import AdminGrievances from './pages/admin/Grievances';
-import AdminApprentices from './pages/admin/Apprentices';
-import AdminOpenings from './pages/admin/Openings';
-import AdminApplications from './pages/admin/Applications';
-import AdminInterviews from './pages/admin/Interviews';
-import AdminContracts from './pages/admin/Contracts';
-import AdminStipend from './pages/admin/Stipend';
-import AdminReports from './pages/admin/Reports';
-import AdminCompliance from './pages/admin/Compliance';
-import AdminUserManagement from './pages/admin/UserManagement';
-import AdminAuditLogs from './pages/admin/AuditLogs';
-import EmailTemplates from './pages/admin/EmailTemplates';
-import EmailQueuePage from './pages/admin/EmailQueuePage';
-import EmployerCompanyManagement from './pages/employer/CompanyManagement';
-import EmployerDashboard from './pages/employer/Dashboard';
-import EmployerDocuments from './pages/employer/Documents';
-import EmployerSettings from './pages/employer/Settings';
-import EmployerNotifications from './pages/employer/Notifications';
-import EmployerGrievances from './pages/employer/Grievances';
-import EmployerCreateDrive from './pages/employer/CreateDrive';
-import EmployerOpenings from './pages/employer/Openings';
-import EmployerCandidates from './pages/employer/Candidates';
-import EmployerInterviews from './pages/employer/Interviews';
-import EmployerApprentices from './pages/employer/Apprentices';
-import EmployerContracts from './pages/employer/Contracts';
-import EmployerStipends from './pages/employer/Stipends';
+import UserManagement from './pages/admin/UserManagement';
+import MobilizerAdmin from './pages/admin/MobilizerAdmin';
+import MobilizerDashboard from './pages/mobilizer/Dashboard';
+import CandidateManagement from './pages/mobilizer/CandidateManagement';
+import CandidateOnboarding from './pages/mobilizer/CandidateOnboarding';
+import DocumentManagement from './pages/mobilizer/DocumentManagement';
+import ReadinessManagement from './pages/mobilizer/ReadinessManagement';
+import TrainerDashboard from './pages/trainer/Dashboard';
+import PlacementDashboard from './pages/placement/Dashboard';
+import MEDashboard from './pages/me/Dashboard';
+import CandidateDashboard from './pages/candidate/Dashboard';
+import GenericAdminSection from './pages/admin/GenericAdminSection';
+import StakeholderManagement from './pages/admin/StakeholderManagement';
 import HomeLanding from './pages/home/HomeLanding';
-import { db } from './db/indexedDB';
-import { RefreshCw, Clock, AlertCircle, Check, CheckCircle, Edit, X } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_BASE_URL;
-
-const getAuthViewFromPath = () => {
-  const path = window.location.pathname.replace(/\/+$/, '');
-  if (path === '' || path === '/') return 'home';
-  if (path === '/candidate/register') return 'candidate-auth';
-  if (path === '/candidate') return 'candidate';
-  if (path === '/employer/onboarding') return 'employer-onboarding';
-  if (path === '/employer') return 'employer';
-  if (path === '/email-templates') return 'email-templates';
-  if (path === '/email-queue') return 'email-queue';
-  return 'staff';
-};
-
-function App() {
-  // Session State
+export default function App() {
+  // Session State (persisted in localStorage)
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('evencargo_session');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('eventransparency_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
-  // Auth screen view comes from the public URL route.
-  const [authView, setAuthView] = useState(getAuthViewFromPath);
+  // Helper to extract section from hash
+  const extractSectionFromHash = (hash) => {
+    if (!hash) return null;
+    const clean = hash.replace(/^#\/?/, '').replace(/^(admin|mobilizer|trainer|placement|me|candidate)\//, '');
+    if (clean && !clean.startsWith('login') && clean !== 'landing' && clean !== 'home') {
+      return clean;
+    }
+    return null;
+  };
 
-  // Holds candidate session when they have logged in but still have pending onboarding.
-  // Renders CandidateAuth in onboarding-resume mode instead of the main dashboard.
-  const [pendingOnboardingUser, setPendingOnboardingUser] = useState(null);
+  // Current view: 'landing' | 'login' | 'app'
+  const [currentView, setCurrentView] = useState(() => {
+    const hash = window.location.hash;
+    if (hash === '#landing' || hash === '#home') return 'landing';
+    if (hash.startsWith('#login') || hash.startsWith('#/login')) return 'login';
 
-  // Connection and Sync states
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const savedSession = localStorage.getItem('eventransparency_session');
+    if (savedSession) {
+      return 'app';
+    }
 
-  // PWA Install states
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
+    if (hash.startsWith('#/')) return 'login';
+    return 'landing';
+  });
 
-  // Layout navigation states
+  // Active Login Role: 'admin' | 'mobilizer' | 'trainer' | 'placement' | 'me' | 'candidate'
+  const [activeLoginRole, setActiveLoginRole] = useState(() => {
+    const hash = window.location.hash;
+    if (hash.includes('mobilizer')) return 'mobilizer';
+    if (hash.includes('trainer')) return 'trainer';
+    if (hash.includes('placement')) return 'placement';
+    if (hash.includes('me')) return 'me';
+    if (hash.includes('candidate')) return 'candidate';
+    return 'admin';
+  });
+
+  // Layout states for workspace
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
-  const [editingJob, setEditingJob] = useState(null);
 
-  // Parse initial section from URL hash or default to 'overview'
+  // Active section inside workspace (persisted across reloads)
   const [activeSection, setActiveSection] = useState(() => {
-    const hash = window.location.hash;
-    return hash.startsWith('#/') ? hash.slice(2) : 'overview';
+    const hashSection = extractSectionFromHash(window.location.hash);
+    if (hashSection) return hashSection;
+
+    const savedSection = localStorage.getItem('eventransparency_active_section');
+    if (savedSection) return savedSection;
+
+    return 'overview';
   });
 
-  const getSectionsForRole = (role) => {
-    switch (role) {
-      case 'Admin':
-        return [
-          'overview', 'employers', 'apprentices', 'candidates',
-          'openings', 'applications', 'interviews', 'contracts',
-          'stipend', 'reports', 'compliance',
-          'user-management', 'settings', 'audit-logs',
-          'company-management', 'grievances', 'email-queue', 'email-templates'
-        ];
-      case 'Employer':
-        return ['overview', 'company-management', 'profile', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'documents', 'contracts', 'stipends', 'reports', 'notifications', 'grievances', 'settings', 'email-templates'];
-      case 'Candidate':
-        return ['overview', 'profile', 'applications', 'stipends', 'jobs', 'documents', 'interviews', 'grievances', 'notifications', 'settings', 'email-templates'];
-      case 'Mobiliser':
-        return ['overview'];
-      default:
-        return ['overview'];
-    }
-  };
-
-  const canAccessCompanyManagement = (currentUser) => {
-    const accessLevel = (currentUser?.userType || '').toLowerCase();
-    const designation = (currentUser?.role || '').toLowerCase();
-    return accessLevel === 'company admin' || designation === 'company admin';
-  };
-
-  const handleToggleSidebar = () => {
-    if (window.innerWidth < 768) {
-      setSidebarOpen(!sidebarOpen);
-    } else {
-      setDesktopCollapsed(!desktopCollapsed);
-    }
-  };
-
-  const handleSectionChange = (sectionId) => {
-    if (sectionId === 'notifications') setUnreadNotifCount(0);
-    window.location.hash = '/' + sectionId;
-  };
-
-  const navigateAuth = (path) => {
-    const cleanPath = path.startsWith('/') ? path : '/' + path;
-    window.history.pushState({}, '', cleanPath);
-    setAuthView(getAuthViewFromPath());
-  };
-
+  // Ensure current URL hash stays in sync with active section
   useEffect(() => {
-    const handlePopState = () => setAuthView(getAuthViewFromPath());
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    if (currentView === 'app' && activeSection) {
+      localStorage.setItem('eventransparency_active_section', activeSection);
+      if (window.location.hash !== `#/${activeSection}`) {
+        window.history.replaceState(null, '', `#/${activeSection}`);
+      }
+    }
+  }, [currentView, activeSection]);
 
-  // Sync state with URL hash changes (navigation via sidebar links)
+  // Sync hash changes
   useEffect(() => {
     const handleHashChange = () => {
-      if (!isOnline) {
-        setActiveSection('overview');
-        if (window.location.hash !== '#/overview') {
-          window.location.hash = '/overview';
-        }
-        return;
-      }
-
       const hash = window.location.hash;
-      const section = hash.startsWith('#/') ? hash.slice(2) : 'overview';
 
-      const role = user?.userType || 'Mobiliser';
-      const allowedSections = getSectionsForRole(role);
-      const targetSection = allowedSections.includes(section) ? section : 'overview';
-      const guardedSection = targetSection === 'company-management' && !canAccessCompanyManagement(user)
-        ? 'overview'
-        : targetSection;
-
-      setActiveSection(guardedSection);
-    };
-
-    if (user) {
-      if (!isOnline) {
-        setActiveSection('overview');
-        if (window.location.hash !== '#/overview') {
-          window.location.hash = '/overview';
-        }
-      } else if (!window.location.hash) {
-        window.location.hash = '/' + activeSection;
-      }
-      window.addEventListener('hashchange', handleHashChange);
-    }
-
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isOnline]);
-
-  // Scroll to top when navigating to a new section (but do NOT reset hash on load)
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    const contentBox = document.getElementById('main-content-scroll');
-    if (contentBox) {
-      contentBox.scrollTop = 0;
-    }
-  }, [activeSection]);
-
-  // Sync the URL path to the logged-in user's role.
-  // Ensures employer sessions always live at /employer#/section
-  // and candidate sessions at /candidate#/section — both on fresh
-  // login AND after a page refresh that restores from localStorage.
-  useEffect(() => {
-    if (!user) return;
-    const currentPath = window.location.pathname.replace(/\/+$/, '');
-    if (currentPath === '/email-templates') return;
-    if (user.userType === 'Employer' && !currentPath.startsWith('/employer')) {
-      window.history.replaceState({}, '', '/employer' + (window.location.hash || ''));
-    } else if (user.userType === 'Candidate' && !currentPath.startsWith('/candidate')) {
-      window.history.replaceState({}, '', '/candidate' + (window.location.hash || ''));
-    }
-  }, [user]);
-
-  // Connection health states
-  const [backendStatus, setBackendStatus] = useState('checking');
-  const [dbStatus, setDbStatus] = useState('checking');
-  const [dbError, setDbError] = useState(null);
-
-  // Candidate DB pipelines
-  const [candidates, setCandidates] = useState([]);
-
-
-
-  const [unsyncedCandidates, setUnsyncedCandidates] = useState([]);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState([]);
-  const [syncFinished, setSyncFinished] = useState(false);
-  const [syncError, setSyncError] = useState(null);
-  const [offlineEditCandidate, setOfflineEditCandidate] = useState(null);
-
-  // Custom Toast and Confirmation engine
-  const [toasts, setToasts] = useState([]);
-  const [confirmModal, setConfirmModal] = useState(null);
-
-  // Unread notification count for sidebar badge
-  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-
-  const fetchUnreadNotifCount = async (currentUser) => {
-    if (!currentUser) return;
-    try {
-      const token = currentUser.token || '';
-      const isCandidate = currentUser.userType === 'Candidate';
-      const isEmployer = currentUser.userType === 'Employer';
-      const endpoint = isCandidate
-        ? '/candidate/notifications?limit=100'
-        : isEmployer
-        ? '/employer/notifications?limit=100'
-        : null;
-      if (!endpoint) return;
-      const res = await fetch(`${API}${endpoint}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      const list = data.notifications || data || [];
-      setUnreadNotifCount(data.unreadCount ?? list.filter(n => !n.is_read).length);
-    } catch { /* silent */ }
-  };
-
-  const showToast = (message, type = 'success') => {
-    const id = Date.now() + Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4500);
-  };
-
-  const showConfirm = (title, message, onConfirm) => {
-    setConfirmModal({ title, message, onConfirm });
-  };
-
-  // Check backend server and db status
-  const checkHealth = async () => {
-    try {
-      setBackendStatus('checking');
-      setDbStatus('checking');
-      const res = await fetch(`${API}/health`);
-      if (!res.ok) throw new Error('API offline');
-      const data = await res.json();
-      setBackendStatus('connected');
-
-      if (data.database && data.database.success) {
-        setDbStatus('connected');
-        setDbError(null);
+      // 1. Auth routes
+      if (hash === '#login' || hash === '#/login') {
+        setCurrentView('login');
+        setActiveLoginRole('admin');
+      } else if (hash.startsWith('#login/') || hash.startsWith('#/login/')) {
+        setCurrentView('login');
+        const role = hash.replace(/^#\/?login\//, '');
+        setActiveLoginRole(role || 'admin');
+      } else if (hash === '#landing' || hash === '#home') {
+        setCurrentView('landing');
       } else {
-        setDbStatus('disconnected');
-        setDbError(data.database?.message || 'Database connection error.');
-      }
-    } catch (err) {
-      setBackendStatus('disconnected');
-      setDbStatus('disconnected');
-      setDbError('Cannot reach the backend Express server. Please make sure it is running.');
-    }
-  };
-
-  // Fetch candidate list from DB (with background caching)
-  const fetchCandidates = async () => {
-    try {
-      // 1. Fetch unsynced local candidates from IndexedDB
-      let localCandidates = [];
-      try {
-        localCandidates = await db.candidates.toArray();
-      } catch (dbErr) {
-        console.error('Failed to retrieve candidates from IndexedDB:', dbErr);
-      }
-      const mappedLocal = localCandidates.map(c => ({
-        ...c,
-        id: c.tempId
-      }));
-
-      // 2. Fetch cached server candidates from IndexedDB cache
-      let cachedCandidatesList = [];
-      try {
-        cachedCandidatesList = await db.candidatesCache.toArray();
-      } catch (dbErr) {
-        console.error('Failed to retrieve candidates cache from IndexedDB:', dbErr);
-      }
-
-      // Combine local unsynced and cached candidates for immediate UI rendering (no delay!)
-      const combinedInitial = [...mappedLocal];
-      cachedCandidatesList.forEach(cachedCand => {
-        const exists = combinedInitial.some(c => c.phone === cachedCand.phone || c.id === cachedCand.id);
-        if (!exists) {
-          combinedInitial.push(cachedCand);
-        }
-      });
-
-      combinedInitial.sort((a, b) => {
-        const dateA = new Date(a.createdAt || a.created_at || 0);
-        const dateB = new Date(b.createdAt || b.created_at || 0);
-        return dateB - dateA;
-      });
-
-      // Set initial UI state immediately
-      setCandidates(combinedInitial);
-
-      // 3. Perform background API call in parallel if online
-      if (isOnline) {
-        fetch(`${API}/candidates`)
-          .then(async (res) => {
-            if (res.ok) {
-              const apiCandidates = await res.json();
-
-              // Update IndexedDB cache in background
-              db.candidatesCache.clear()
-                .then(() => db.candidatesCache.bulkPut(apiCandidates))
-                .catch(err => console.error('Failed to update candidate cache:', err));
-
-              // Combine fresh API candidates with unsynced candidates
-              const combinedFresh = [...mappedLocal];
-              apiCandidates.forEach(apiCand => {
-                const exists = combinedFresh.some(c => c.phone === apiCand.phone || c.id === apiCand.id);
-                if (!exists) {
-                  combinedFresh.push(apiCand);
-                }
-              });
-
-              combinedFresh.sort((a, b) => {
-                const dateA = new Date(a.createdAt || a.created_at || 0);
-                const dateB = new Date(b.createdAt || b.created_at || 0);
-                return dateB - dateA;
-              });
-
-              // Set the final fresh state
-              setCandidates(combinedFresh);
-            }
-          })
-          .catch(err => {
-            console.warn('Background candidate sync fetch failed:', err);
-          });
-      }
-    } catch (err) {
-      console.error('Error combining candidate lists:', err);
-    }
-  };
-
-  // Monitor real-time online status
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  // Capture PWA installation prompts
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      setDeferredPrompt(e);
-      const dismissed = sessionStorage.getItem('evencargo_install_dismissed');
-      if (!dismissed) {
-        setShowInstallBanner(true);
-      }
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    const handleAppInstalled = () => {
-      setDeferredPrompt(null);
-      setShowInstallBanner(false);
-      showToast('Even Cargo App installed successfully!', 'success');
-    };
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  const handleInstallApp = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User choice outcome: ${outcome}`);
-    setDeferredPrompt(null);
-    setShowInstallBanner(false);
-  };
-
-  // Poll IndexedDB for unsynced candidates to keep the badge and dropdown reactive
-  const fetchUnsyncedCandidates = async () => {
-    try {
-      const unsynced = await db.candidates.where({ synced: 0 }).toArray();
-      setUnsyncedCandidates(unsynced || []);
-    } catch (err) {
-      console.error('Failed to retrieve offline queue:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchUnsyncedCandidates();
-    const interval = setInterval(fetchUnsyncedCandidates, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Poll unread notification count every 60 seconds
-  useEffect(() => {
-    if (!user || !isOnline) return;
-    fetchUnreadNotifCount(user);
-    const interval = setInterval(() => fetchUnreadNotifCount(user), 60000);
-    return () => clearInterval(interval);
-  }, [user, isOnline]);
-
-  // Sync data to backend
-  const triggerSync = async () => {
-    if (unsyncedCandidates.length === 0 || isSyncing) return;
-
-    setIsSyncing(true);
-    setSyncFinished(false);
-    setSyncError(null);
-
-    // Initialize progress tracking
-    const progressList = unsyncedCandidates.map(c => ({
-      tempId: c.tempId,
-      name: c.fullName || 'Unnamed Candidate',
-      phone: c.phone,
-      isAssessment: c.wcpAnswers && Object.keys(c.wcpAnswers).length > 0,
-      status: 'pending' // 'pending' | 'syncing' | 'done' | 'error'
-    }));
-    setSyncProgress(progressList);
-
-    try {
-      // 1. Post to bulk sync API
-      const res = await fetch(`${API}/candidates/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(unsyncedCandidates)
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Server error occurred during sync');
-      }
-
-      const syncResult = await res.json();
-      const resultsList = syncResult.results || [];
-
-      // 2. Play sequential check-off animation
-      for (let i = 0; i < progressList.length; i++) {
-        const item = progressList[i];
-        const itemResult = resultsList.find(r => r.tempId === item.tempId);
-
-        // Mark current item as syncing
-        setSyncProgress(prev => prev.map((pItem, idx) => idx === i ? { ...pItem, status: 'syncing' } : pItem));
-
-        // Wait 600ms for visual transition
-        await new Promise(resolve => setTimeout(resolve, 600));
-
-        // Mark current item as done or error
-        const nextStatus = itemResult && itemResult.status === 'success' ? 'done' : 'error';
-        setSyncProgress(prev => prev.map((pItem, idx) => idx === i ? { ...pItem, status: nextStatus } : pItem));
-      }
-
-      // Delay slightly before marking sync complete
-      await new Promise(resolve => setTimeout(resolve, 400));
-
-      // 3. Clear successful ones and update failed ones in local IndexedDB
-      const successIds = resultsList.filter(r => r.status === 'success').map(r => r.tempId);
-      if (successIds.length > 0) {
-        await db.candidates.where('tempId').anyOf(successIds).delete();
-      }
-
-      const failedItemsList = resultsList.filter(r => r.status === 'error');
-      for (const fail of failedItemsList) {
-        const localRecord = await db.candidates.get(fail.tempId);
-        if (localRecord) {
-          await db.candidates.put({
-            ...localRecord,
-            syncError: fail.message || 'Validation error'
-          });
+        const session = localStorage.getItem('eventransparency_session');
+        if (session) {
+          setCurrentView('app');
+          const section = extractSectionFromHash(hash) || localStorage.getItem('eventransparency_active_section') || 'overview';
+          setActiveSection(section);
+          localStorage.setItem('eventransparency_active_section', section);
+        } else if (hash.startsWith('#/')) {
+          if (hash.includes('mobilizer')) setActiveLoginRole('mobilizer');
+          else if (hash.includes('trainer')) setActiveLoginRole('trainer');
+          else if (hash.includes('placement')) setActiveLoginRole('placement');
+          else if (hash.includes('me')) setActiveLoginRole('me');
+          else if (hash.includes('candidate')) setActiveLoginRole('candidate');
+          else setActiveLoginRole('admin');
+          setCurrentView('login');
         }
       }
-
-      // 4. Reload candidate directory list & local queue state
-      await fetchCandidates();
-      await fetchUnsyncedCandidates();
-
-      const failedItems = resultsList.filter(r => r.status === 'error');
-      if (failedItems.length > 0) {
-        const detailedErrorsSummary = failedItems.map(f => {
-          const matchedItem = progressList.find(p => p.tempId === f.tempId);
-          const name = matchedItem ? matchedItem.name : 'Unknown Candidate';
-          return `• ${name}: ${f.message || 'Validation error'}`;
-        }).join('\n');
-
-        setSyncError(`Sync completed with errors:\n${detailedErrorsSummary}`);
-      } else {
-        setSyncFinished(true);
-      }
-    } catch (err) {
-      console.error('Data synchronization failed:', err);
-      setSyncError(err.message || 'Synchronization failed.');
-      // Mark active and pending tasks as failed
-      setSyncProgress(prev => prev.map(item => item.status === 'syncing' || item.status === 'pending' ? { ...item, status: 'error' } : item));
-    }
-  };
-
-  // Automatically trigger sync when back online
-  useEffect(() => {
-    if (isOnline && unsyncedCandidates.length > 0 && !isSyncing && !syncFinished && !syncError) {
-      triggerSync();
-    }
-  }, [isOnline, unsyncedCandidates.length]);
-
-  // Staff DB pipelines
-  const [staffList, setStaffList] = useState([]);
-
-  // Fetch staff list from DB
-  const fetchStaff = async () => {
-    if (!user) return;
-    try {
-      const res = await fetch(`${API}/auth/staff`, {
-        headers: {
-          'x-admin-id': user.id
-        }
-      });
-      if (!res.ok) throw new Error('Failed to fetch staff.');
-      const data = await res.json();
-      setStaffList(data || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Run health check on mount
-  useEffect(() => {
-    checkHealth();
-  }, []);
-
-  // Fetch initial data when user becomes authenticated
-  useEffect(() => {
-    if (user && user.userType === 'Mobiliser') {
-      fetchCandidates();
-    }
-    if (user && user.userType === 'Employer' && !user.employer?.employer_code) {
-      fetch(`${API}/employer/company`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.employer) {
-            setUser(prev => {
-              const updated = {
-                ...prev,
-                employer: {
-                  ...prev.employer,
-                  ...data.employer
-                }
-              };
-              localStorage.setItem('evencargo_session', JSON.stringify(updated));
-              return updated;
-            });
-          }
-        })
-        .catch(err => console.error('Failed to sync employer details cache:', err));
-    }
-  }, [user]);
-
-  // Handle successful login
-  const handleLoginSuccess = (userData) => {
-    const normalizedUser = {
-      ...userData,
-      token: userData?.token || userData?.accessToken || userData?.authToken || null,
-      username: userData?.username || userData?.full_name || userData?.user?.full_name || userData?.user?.email || userData?.email,
-      full_name: userData?.full_name || userData?.user?.full_name || userData?.username || userData?.email,
-      email: userData?.email || userData?.user?.email || '',
-      userType: userData?.userType || userData?.user?.userType || (userData?.user?.role === 'admin' ? 'Employer' : userData?.role) || 'Employer',
-      role: userData?.role || userData?.user?.role || 'admin',
-      employer: userData?.employer || null
     };
 
-    // If a Candidate logged in normally but their onboarding is still pending,
-    // hold off on setting the main session and show the onboarding form instead.
-    const onboardingStatus =
-      userData?.candidate?.onboarding_status ||
-      userData?.onboarding_status;
-    if (normalizedUser.userType === 'Candidate' && onboardingStatus === 'pending') {
-      setPendingOnboardingUser(normalizedUser);
-      return;
-    }
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
-    setUser(normalizedUser);
-    localStorage.setItem('evencargo_session', JSON.stringify(normalizedUser));
-
-    // Navigate to the role-specific base path so section hashes
-    // are always scoped under /employer or /candidate.
-    if (normalizedUser.userType === 'Employer') {
-      window.history.pushState({}, '', '/employer');
-    } else if (normalizedUser.userType === 'Candidate') {
-      window.history.pushState({}, '', '/candidate');
-    }
+  // Handle Login Success
+  const handleLoginSuccess = (userData, token) => {
+    setUser(userData);
+    localStorage.setItem('eventransparency_session', JSON.stringify(userData));
+    if (token) localStorage.setItem('eventransparency_token', token);
+    setCurrentView('app');
+    
+    const targetSection = localStorage.getItem('eventransparency_active_section') || 'overview';
+    setActiveSection(targetSection);
+    window.location.hash = `#/${targetSection}`;
   };
 
-  // Handle logout — navigate back to the typed login page
+  // Handle Logout
   const handleLogout = () => {
-    const userType = user?.userType;
     setUser(null);
-    setCandidates([]);
-    setStaffList([]);
-    localStorage.removeItem('evencargo_session');
-    // Navigate to the appropriate login screen
-    if (userType === 'Employer') {
-      window.history.pushState({}, '', '/employer');
-      setAuthView('employer');
-    } else if (userType === 'Candidate') {
-      window.history.pushState({}, '', '/candidate');
-      setAuthView('candidate');
+    localStorage.removeItem('eventransparency_session');
+    localStorage.removeItem('eventransparency_token');
+    localStorage.removeItem('eventransparency_active_section');
+    setCurrentView('login');
+    setActiveLoginRole('admin');
+    window.location.hash = '#login/admin';
+  };
+
+  // Toggle Sidebar (Mobile vs Desktop Collapse)
+  const handleToggleSidebar = () => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(prev => !prev);
     } else {
-      window.location.hash = '';
+      setDesktopCollapsed(prev => !prev);
     }
   };
 
-  // Global fetch interceptor for handling 401 status and auto-refresh/logout
-  useEffect(() => {
-    if (window.fetch.__isDecorated) return;
-
-    const originalFetch = window.fetch;
-    let isRefreshing = false;
-    let refreshQueue = [];
-
-    const decoratedFetch = async (input, init) => {
-      const url = typeof input === 'string' ? input : input?.url || '';
-      
-      // Determine if it is a backend API request that requires authentication
-      const isApiRequest = url.includes('/api/');
-      const isAuthRequest = url.includes('/api/auth/') || url.includes('/auth/');
-
-      if (!isApiRequest || isAuthRequest) {
-        return originalFetch(input, init);
-      }
-
-      // Check current session
-      let currentSession = null;
-      try {
-        const saved = localStorage.getItem('evencargo_session');
-        if (saved) {
-          currentSession = JSON.parse(saved);
-        }
-      } catch (err) {
-        console.error('Interceptor session parse error:', err);
-      }
-
-      if (!currentSession?.token) {
-        return originalFetch(input, init);
-      }
-
-      // Attach access token automatically if request headers exist and don't already have authorization
-      let updatedInit = { ...init };
-      if (currentSession.token) {
-        if (!updatedInit.headers) {
-          updatedInit.headers = { 'Authorization': `Bearer ${currentSession.token}` };
-        } else {
-          // If headers exist, format it appropriately
-          if (updatedInit.headers instanceof Headers) {
-            if (!updatedInit.headers.has('Authorization')) {
-              updatedInit.headers.set('Authorization', `Bearer ${currentSession.token}`);
-            }
-          } else if (Array.isArray(updatedInit.headers)) {
-            const hasAuth = updatedInit.headers.some(([k]) => k.toLowerCase() === 'authorization');
-            if (!hasAuth) {
-              updatedInit.headers.push(['Authorization', `Bearer ${currentSession.token}`]);
-            }
-          } else {
-            const hasAuth = Object.keys(updatedInit.headers).some(k => k.toLowerCase() === 'authorization');
-            if (!hasAuth) {
-              updatedInit.headers = {
-                ...updatedInit.headers,
-                'Authorization': `Bearer ${currentSession.token}`
-              };
-            }
-          }
-        }
-      }
-
-      let response;
-      try {
-        response = await originalFetch(input, updatedInit);
-      } catch (err) {
-        throw err;
-      }
-
-      if (response.status === 401) {
-        const refreshToken = currentSession.refreshToken;
-
-        if (!refreshToken) {
-          console.warn('Unauthorized error (401) received and no refresh token found. Logging out.');
-          localStorage.removeItem('evencargo_session');
-          setUser(null);
-          if (window.location.pathname.includes('/employer')) {
-            window.history.pushState({}, '', '/employer');
-            setAuthView('employer');
-          } else if (window.location.pathname.includes('/candidate')) {
-            window.history.pushState({}, '', '/candidate');
-            setAuthView('candidate');
-          } else {
-            window.history.pushState({}, '', '/employer');
-            setAuthView('employer');
-          }
-          return response;
-        }
-
-        if (isRefreshing) {
-          return new Promise((resolve) => {
-            refreshQueue.push((newToken) => {
-              const retryInit = { ...init };
-              if (!retryInit.headers) {
-                retryInit.headers = { 'Authorization': `Bearer ${newToken}` };
-              } else {
-                if (retryInit.headers instanceof Headers) {
-                  retryInit.headers.set('Authorization', `Bearer ${newToken}`);
-                } else if (Array.isArray(retryInit.headers)) {
-                  const authIdx = retryInit.headers.findIndex(([k]) => k.toLowerCase() === 'authorization');
-                  if (authIdx !== -1) retryInit.headers[authIdx][1] = `Bearer ${newToken}`;
-                  else retryInit.headers.push(['Authorization', `Bearer ${newToken}`]);
-                } else {
-                  // Find existing auth header case-insensitively and remove/overwrite it
-                  const cleanHeaders = {};
-                  Object.keys(retryInit.headers).forEach(k => {
-                    if (k.toLowerCase() !== 'authorization') {
-                      cleanHeaders[k] = retryInit.headers[k];
-                    }
-                  });
-                  retryInit.headers = {
-                    ...cleanHeaders,
-                    'Authorization': `Bearer ${newToken}`
-                  };
-                }
-              }
-              resolve(originalFetch(input, retryInit));
-            });
-          });
-        }
-
-        isRefreshing = true;
-        console.log('Access token expired. Attempting token refresh...');
-
-        try {
-          const refreshRes = await originalFetch(`${API}/auth/refresh`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ refreshToken })
-          });
-
-          if (refreshRes.ok) {
-            const data = await refreshRes.json();
-            const { token: newToken, refreshToken: newRefreshToken } = data;
-
-            const updatedSession = {
-              ...currentSession,
-              token: newToken,
-              refreshToken: newRefreshToken
-            };
-
-            localStorage.setItem('evencargo_session', JSON.stringify(updatedSession));
-            setUser(updatedSession);
-            console.log('Token refreshed successfully. Retrying original request.');
-
-            isRefreshing = false;
-            
-            // Resolve all queued requests
-            refreshQueue.forEach((cb) => cb(newToken));
-            refreshQueue = [];
-
-            // Retry the current request
-            const retryInit = { ...init };
-            if (!retryInit.headers) {
-              retryInit.headers = { 'Authorization': `Bearer ${newToken}` };
-            } else {
-              if (retryInit.headers instanceof Headers) {
-                retryInit.headers.set('Authorization', `Bearer ${newToken}`);
-              } else if (Array.isArray(retryInit.headers)) {
-                const authIdx = retryInit.headers.findIndex(([k]) => k.toLowerCase() === 'authorization');
-                if (authIdx !== -1) retryInit.headers[authIdx][1] = `Bearer ${newToken}`;
-                else retryInit.headers.push(['Authorization', `Bearer ${newToken}`]);
-              } else {
-                const cleanHeaders = {};
-                Object.keys(retryInit.headers).forEach(k => {
-                  if (k.toLowerCase() !== 'authorization') {
-                    cleanHeaders[k] = retryInit.headers[k];
-                  }
-                });
-                retryInit.headers = {
-                  ...cleanHeaders,
-                  'Authorization': `Bearer ${newToken}`
-                };
-              }
-            }
-            return originalFetch(input, retryInit);
-          } else {
-            console.error('Refresh token request failed with status:', refreshRes.status);
-            isRefreshing = false;
-            refreshQueue = [];
-            localStorage.removeItem('evencargo_session');
-            setUser(null);
-            if (window.location.pathname.includes('/employer')) {
-              window.history.pushState({}, '', '/employer');
-              setAuthView('employer');
-            } else if (window.location.pathname.includes('/candidate')) {
-              window.history.pushState({}, '', '/candidate');
-              setAuthView('candidate');
-            } else {
-              window.history.pushState({}, '', '/employer');
-              setAuthView('employer');
-            }
-            return response;
-          }
-        } catch (refreshErr) {
-          console.error('Network error during token refresh:', refreshErr);
-          isRefreshing = false;
-          refreshQueue = [];
-          localStorage.removeItem('evencargo_session');
-          setUser(null);
-          if (window.location.pathname.includes('/employer')) {
-            window.history.pushState({}, '', '/employer');
-            setAuthView('employer');
-          } else if (window.location.pathname.includes('/candidate')) {
-            window.history.pushState({}, '', '/candidate');
-            setAuthView('candidate');
-          } else {
-            window.history.pushState({}, '', '/employer');
-            setAuthView('employer');
-          }
-          return response;
-        }
-      }
-
-      return response;
-    };
-
-    decoratedFetch.__isDecorated = true;
-    window.fetch = decoratedFetch;
-
-    return () => {
-      window.fetch = originalFetch;
-    };
-  }, [setUser]);
-
-  const handleCandidateAdded = (newCandidate) => {
-    setCandidates(prev => [newCandidate, ...prev]);
+  // Section Change inside dashboard
+  const handleSectionChange = (sectionId) => {
+    setActiveSection(sectionId);
+    localStorage.setItem('eventransparency_active_section', sectionId);
+    window.location.hash = `#/${sectionId}`;
   };
 
-  const handleUserUpdate = (updates) => {
-    setUser((prev) => {
-      const next = { ...prev, ...updates };
-      localStorage.setItem('evencargo_session', JSON.stringify(next));
-      return next;
-    });
+  // Switch to Public Site
+  const handleGoToLanding = () => {
+    setCurrentView('landing');
+    window.location.hash = '#landing';
   };
 
-  const handleEditOfflineCandidate = (candidate) => {
-    const editPayload = {
-      ...candidate,
-      id: candidate.tempId
+  // Switch to specific Login role portal
+  const handleSelectLoginRole = (roleId) => {
+    setActiveLoginRole(roleId || 'admin');
+    window.location.hash = `#login/${roleId || 'admin'}`;
+    setCurrentView('login');
+  };
+
+  // Switch to Portal for logged-in or navigate to role login
+  const handleGoToAdmin = (initialSection = 'overview', role = 'admin') => {
+    if (user) {
+      setActiveSection(initialSection);
+      setCurrentView('app');
+      window.location.hash = `#/${initialSection}`;
+    } else {
+      handleSelectLoginRole(role);
+    }
+  };
+
+  // Switch Role View on the fly (for multi-role dashboard testing)
+  const handleSwitchRole = (newRoleType, newRoleLabel) => {
+    const updatedUser = {
+      ...user,
+      userType: newRoleType,
+      role: newRoleLabel,
+      full_name: `${newRoleLabel} User`,
     };
-    setOfflineEditCandidate(editPayload);
+    setUser(updatedUser);
+    localStorage.setItem('eventransparency_session', JSON.stringify(updatedUser));
     setActiveSection('overview');
-    window.location.hash = '/overview';
+    window.location.hash = '#/overview';
   };
 
-  // Standalone public Email Templates Directory Page route
-  if (window.location.pathname.replace(/\/+$/, '') === '/email-templates') {
+  // 1. Render Public Landing View
+  if (currentView === 'landing') {
     return (
-      <div id="public-email-templates-scroll" className="fixed inset-0 overflow-y-auto bg-slate-100 p-3 sm:p-4 md:p-8 scroll-smooth z-50">
-        <div className="max-w-7xl mx-auto pb-24">
-          <EmailTemplates showToast={showToast} />
-        </div>
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <HomeLanding
+          onNavigate={(view) => {
+            if (view === 'admin-mobilizers' || view === 'mobilizers') {
+              if (user) handleGoToAdmin('mobilizers');
+              else handleSelectLoginRole('mobilizer');
+            } else if (view === 'user-management') {
+              if (user) handleGoToAdmin('user-management');
+              else handleSelectLoginRole('admin');
+            } else if (view === 'login/admin' || view === 'admin') {
+              handleSelectLoginRole('admin');
+            } else if (view === 'login/mobilizer' || view === 'mobilizer') {
+              handleSelectLoginRole('mobilizer');
+            } else if (view === 'login/trainer' || view === 'trainer') {
+              handleSelectLoginRole('trainer');
+            } else if (view === 'login/placement' || view === 'placement') {
+              handleSelectLoginRole('placement');
+            } else if (view === 'login/me' || view === 'me') {
+              handleSelectLoginRole('me');
+            } else if (view === 'login/candidate' || view === 'candidate') {
+              handleSelectLoginRole('candidate');
+            } else {
+              handleSelectLoginRole('admin');
+            }
+          }}
+          onOpenDemoModal={() => handleSelectLoginRole('admin')}
+        />
       </div>
     );
   }
 
-  // If not logged in, render the secure Login gate
-  if (!user) {
-    if (authView === 'home') {
+  // 2. Render Login Views directly for the 6 Stakeholder Roles
+  if (currentView === 'login' || !user) {
+    if (activeLoginRole === 'mobilizer') {
       return (
-        <HomeLanding
-          onNavigate={navigateAuth}
-        />
-      );
-    }
-    if (authView === 'employer-onboarding') {
-      return (
-        <EmployerOnboarding
-          onOnboardingSuccess={() => navigateAuth('/employer')}
-          onCancel={() => navigateAuth('/employer')}
-        />
-      );
-    }
-    if (authView === 'employer') {
-      return (
-        <EmployerLogin
+        <MobilizerLogin
           onLoginSuccess={handleLoginSuccess}
-          onStartOnboarding={() => navigateAuth('/employer/onboarding')}
-          deferredPrompt={deferredPrompt}
-          onInstall={handleInstallApp}
+          onGoToLanding={handleGoToLanding}
+          onSwitchRole={handleSelectLoginRole}
         />
       );
     }
-    if (authView === 'candidate-auth') {
+
+    if (activeLoginRole === 'trainer') {
       return (
-        <CandidateAuth
-          onAuthSuccess={handleLoginSuccess}
-          onBackToLogin={() => navigateAuth('/candidate')}
+        <TrainerLogin
+          onLoginSuccess={handleLoginSuccess}
+          onGoToLanding={handleGoToLanding}
+          onSwitchRole={handleSelectLoginRole}
         />
       );
     }
-    // Candidate logged in from Login page but onboarding is still pending.
-    // Show the CandidateAuth form in resume-onboarding mode.
-    if (pendingOnboardingUser) {
+
+    if (activeLoginRole === 'placement') {
       return (
-        <CandidateAuth
-          onAuthSuccess={(data) => {
-            setPendingOnboardingUser(null);
-            handleLoginSuccess(data);
-          }}
-          onBackToLogin={() => {
-            setPendingOnboardingUser(null);
-            navigateAuth('/candidate');
-          }}
-          resumeSession={pendingOnboardingUser}
+        <PlacementLogin
+          onLoginSuccess={handleLoginSuccess}
+          onGoToLanding={handleGoToLanding}
+          onSwitchRole={handleSelectLoginRole}
         />
       );
     }
-    if (authView === 'candidate') {
+
+    if (activeLoginRole === 'me') {
+      return (
+        <MELogin
+          onLoginSuccess={handleLoginSuccess}
+          onGoToLanding={handleGoToLanding}
+          onSwitchRole={handleSelectLoginRole}
+        />
+      );
+    }
+
+    if (activeLoginRole === 'candidate') {
       return (
         <CandidateLogin
           onLoginSuccess={handleLoginSuccess}
-          onStartAuth={() => navigateAuth('/candidate/register')}
+          onGoToLanding={handleGoToLanding}
+          onSwitchRole={handleSelectLoginRole}
         />
       );
     }
-    if (authView === 'email-templates') {
-      return (
-        <div className="min-h-screen bg-slate-50 p-6 md:p-10">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white font-black flex items-center justify-center text-sm shadow-md">
-                  EC
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900">Even Cargo Portal</h2>
-                  <p className="text-xs text-slate-500">Public Email Templates Directory</p>
-                </div>
-              </div>
-              <button
-                onClick={() => navigateAuth('/')}
-                className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-              >
-                ← Back to Home
-              </button>
-            </div>
-            <EmailTemplates showToast={showToast} />
-          </div>
-        </div>
-      );
-    }
+
+    // Default: Admin Login Page
     return (
       <AdminLogin
         onLoginSuccess={handleLoginSuccess}
-        deferredPrompt={deferredPrompt}
-        onInstall={handleInstallApp}
+        onGoToLanding={handleGoToLanding}
+        onSwitchRole={handleSelectLoginRole}
       />
     );
   }
 
-  return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50 text-slate-800 selection:bg-indigo-150 selection:text-indigo-900 font-sans">
+  const currentUserType = user?.userType || user?.role || 'Admin';
 
-      {/* Header component */}
+  // 3. Render Multi-Role Portal Layout
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans selection:bg-[#FF408A]/20 selection:text-[#FF408A]">
+      {/* Fixed Header */}
       <Header
         user={user}
         onLogout={handleLogout}
         onToggleSidebar={handleToggleSidebar}
-        isOnline={isOnline}
-        unsyncedCandidates={unsyncedCandidates}
-        triggerSync={triggerSync}
-        onEditCandidate={handleEditOfflineCandidate}
         onSectionChange={handleSectionChange}
-        notificationBadge={unreadNotifCount > 0 ? unreadNotifCount : null}
+        activeSection={activeSection}
+        onGoToLanding={handleGoToLanding}
+        onSwitchRole={handleSwitchRole}
       />
 
-      {/* Spacer to prevent fixed header from overlapping content */}
-      <div className="h-20 md:h-16 shrink-0" />
+      {/* Body: Sidebar + Main Content */}
+      <div className="flex flex-1 pt-16">
+        {/* Collapsible Sidebar */}
+        <Sidebar
+          user={user}
+          activeSection={activeSection}
+          onSectionChange={handleSectionChange}
+          isOpen={sidebarOpen}
+          toggleSidebar={setSidebarOpen}
+          isCollapsed={desktopCollapsed}
+          onLogout={handleLogout}
+        />
 
+        {/* Main Content Area */}
+        <main
+          className={`flex-1 transition-all duration-300 ${
+            desktopCollapsed ? 'md:ml-0' : 'md:ml-0'
+          } p-4 sm:p-5 lg:p-6 overflow-x-hidden min-h-[calc(100vh-64px)]`}
+        >
+          {/* A. Role-Specific Dashboards for 'overview' */}
+          {activeSection === 'overview' && (
+            <>
+              {currentUserType === 'Mobilizer' && <MobilizerDashboard user={user} onSectionChange={handleSectionChange} />}
+              {currentUserType === 'Trainer' && <TrainerDashboard user={user} />}
+              {(currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && <PlacementDashboard user={user} />}
+              {(currentUserType === 'ME' || currentUserType === 'M&E Team') && <MEDashboard user={user} />}
+              {currentUserType === 'Candidate' && <CandidateDashboard user={user} />}
+              {currentUserType === 'Admin' && <AdminDashboard onSectionChange={handleSectionChange} user={user} />}
+            </>
+          )}
 
+          {/* B. Specific Stakeholder Management Sections (Full CRUD + Dedicated Form Pages) */}
+          {activeSection === 'mobilizers' && (
+            <StakeholderManagement categoryKey="mobilizers" onSectionChange={handleSectionChange} />
+          )}
 
-      {/* Grid container with sidebar and content */}
-      <div className="flex flex-1 overflow-hidden relative">
+          {activeSection === 'trainers' && (
+            <StakeholderManagement categoryKey="trainers" onSectionChange={handleSectionChange} />
+          )}
 
-        {/* Left Sidebar */}
-        {isOnline && (
-          <Sidebar
-            user={user}
-            activeSection={activeSection}
-            onSectionChange={handleSectionChange}
-            isOpen={sidebarOpen}
-            toggleSidebar={setSidebarOpen}
-            isCollapsed={desktopCollapsed}
-            notificationBadge={unreadNotifCount > 0 ? unreadNotifCount : null}
-          />
-        )}
+          {activeSection === 'placement-coordinators' && (
+            <StakeholderManagement categoryKey="placement-coordinators" onSectionChange={handleSectionChange} />
+          )}
 
-        {/* Right workspace: Main Scrollable Panel + Fixed Footer */}
-        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+          {activeSection === 'partners' && (
+            <StakeholderManagement categoryKey="partners" onSectionChange={handleSectionChange} />
+          )}
 
-          {/* Scrollable content box */}
-          <main
-            id="main-content-scroll"
-            className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 scroll-smooth"
-          >
-            {dbError && (
-              <div className="bg-amber-50 border border-amber-250 text-amber-800 rounded-2xl p-4 text-xs font-semibold">
-                {dbError}
-              </div>
-            )}
+          {activeSection === 'employers' && (
+            <StakeholderManagement categoryKey="employers" onSectionChange={handleSectionChange} />
+          )}
 
-            {user.userType === 'Admin' ? (
-              <>
-                {activeSection === 'overview' && <AdminDashboard adminUser={user} />}
-                {activeSection === 'employers' && <CompanyManagement adminUser={user} showToast={showToast} />}
-                {activeSection === 'candidates' && <Candidates adminUser={user} showToast={showToast} />}
-                {activeSection === 'settings' && <AdminSettings adminUser={user} onUserUpdate={handleUserUpdate} showToast={showToast} />}
-                {activeSection === 'company-management' && canAccessCompanyManagement(user) && <CompanyManagement adminUser={user} showToast={showToast} />}
-                {activeSection === 'grievances' && <AdminGrievances adminUser={user} showToast={showToast} />}
-                {activeSection === 'apprentices' && <AdminApprentices adminUser={user} showToast={showToast} />}
-                {activeSection === 'openings' && <AdminOpenings adminUser={user} showToast={showToast} />}
-                {activeSection === 'applications' && <AdminApplications adminUser={user} showToast={showToast} />}
-                {activeSection === 'interviews' && <AdminInterviews adminUser={user} showToast={showToast} />}
-                {activeSection === 'contracts' && <AdminContracts adminUser={user} showToast={showToast} />}
-                {activeSection === 'stipend' && <AdminStipend adminUser={user} showToast={showToast} />}
-                {activeSection === 'reports' && <AdminReports adminUser={user} showToast={showToast} />}
-                {activeSection === 'compliance' && <AdminCompliance adminUser={user} showToast={showToast} />}
-                {activeSection === 'user-management' && <AdminUserManagement adminUser={user} showToast={showToast} />}
-                {activeSection === 'audit-logs' && <AdminAuditLogs adminUser={user} showToast={showToast} />}
-                {activeSection === 'email-queue' && <EmailQueuePage showToast={showToast} />}
-                {activeSection === 'email-templates' && <EmailTemplates showToast={showToast} />}
-              </>
-            ) : user.userType === 'Employer' ? (
-              <>
-                {activeSection === 'overview' && (
-                  <EmployerDashboard 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                    setEditingJob={setEditingJob}
-                    showToast={showToast} 
-                  />
-                )}
-                {(activeSection === 'company-management' || activeSection === 'profile') && (
-                  <EmployerCompanyManagement 
-                    user={user} 
-                    showToast={showToast} 
-                  />
-                )}
-                {activeSection === 'documents' && (
-                  <EmployerDocuments 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                  />
-                )}
-                {activeSection === 'settings' && (
-                  <EmployerSettings 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                    onUserUpdate={handleUserUpdate}
-                  />
-                )}
-                {activeSection === 'notifications' && (
-                  <EmployerNotifications 
-                    onSectionChange={handleSectionChange} 
-                  />
-                )}
-                {activeSection === 'grievances' && (
-                  <EmployerGrievances 
-                    user={user} 
-                  />
-                )}
-                {activeSection === 'openings' && (
-                  <EmployerOpenings 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                    setEditingJob={setEditingJob}
-                    showToast={showToast} 
-                  />
-                )}
-                {activeSection === 'create-opening' && (
-                  <EmployerCreateDrive 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                    editingJob={editingJob}
-                    setEditingJob={setEditingJob}
-                    showToast={showToast}
-                  />
-                )}
-                {activeSection === 'candidates' && (
-                  <EmployerCandidates 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                    showToast={showToast} 
-                  />
-                )}
-                {activeSection === 'interviews' && (
-                  <EmployerInterviews 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                    showToast={showToast} 
-                  />
-                )}
-                {activeSection === 'apprentices' && (
-                  <EmployerApprentices 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                    showToast={showToast} 
-                  />
-                )}
-                {activeSection === 'contracts' && (
-                  <EmployerContracts 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                  />
-                )}
-                {activeSection === 'stipends' && (
-                  <EmployerStipends 
-                    user={user} 
-                    showToast={showToast} 
-                  />
-                )}
-                {activeSection === 'email-templates' && (
-                  <EmailTemplates showToast={showToast} />
-                )}
-                {!['overview', 'company-management', 'profile', 'documents', 'settings', 'notifications', 'grievances', 'openings', 'create-opening', 'candidates', 'interviews', 'apprentices', 'contracts', 'stipends', 'email-templates'].includes(activeSection) && (
-                  <EmployerDashboard 
-                    user={user} 
-                    onSectionChange={handleSectionChange} 
-                    showToast={showToast} 
-                  />
-                )}
-              </>
-            ) : user.userType === 'Candidate' ? (
-              <>
-                {activeSection === 'overview' && <CandidateDashboard user={user} onUserUpdate={handleUserUpdate} onSectionChange={handleSectionChange} />}
-                {activeSection === 'profile' && <CandidateProfile user={user} onUserUpdate={handleUserUpdate} />}
-                {activeSection === 'applications' && <CandidateApplications user={user} onSectionChange={handleSectionChange} />}
-                {activeSection === 'stipends' && <CandidateStipends user={user} showToast={showToast} />}
-                {activeSection === 'jobs' && <CandidateJobs user={user} />}
-                {activeSection === 'documents' && <CandidateDocuments user={user} onUserUpdate={handleUserUpdate} onSectionChange={handleSectionChange} />}
-                {activeSection === 'interviews' && <CandidateInterviews onSectionChange={handleSectionChange} />}
-                {activeSection === 'grievances' && <CandidateGrievances user={user} />}
-                {activeSection === 'notifications' && <CandidateNotifications onSectionChange={handleSectionChange} />}
-                {activeSection === 'email-templates' && <EmailTemplates showToast={showToast} />}
-                {activeSection === 'settings' && <CandidateSettings user={user} onSectionChange={handleSectionChange} onUserUpdate={handleUserUpdate} />}
-              </>
-            ) : (
-              <Dashboard
-                user={user}
-                candidates={candidates}
-                fetchCandidates={fetchCandidates}
-                onCandidateAdded={handleCandidateAdded}
-                dbStatus={dbStatus}
-                showToast={showToast}
-              />
-            )}
-          </main>
+          {activeSection === 'user-management' && (
+            <StakeholderManagement categoryKey="user-management" onSectionChange={handleSectionChange} />
+          )}
 
-          {/* Fixed Footer */}
-          <footer className="hidden lg:block border-t border-slate-200 py-3.5 text-center text-[10px] text-slate-500 bg-white shrink-0 select-none shadow-xs">
-            <p className="hidden lg:block">&copy; {new Date().getFullYear()} Even Cargo Logistics Recruitment Platform. All Rights Reserved.</p>
-          </footer>
+          {/* C. Candidate Lifecycle Management Sections */}
+          {activeSection === 'candidates' && (
+            <CandidateManagement
+              mobilizerUser={user}
+              onNavigateToOnboard={() => handleSectionChange('onboard-candidate')}
+            />
+          )}
 
-        </div>
+          {(activeSection === 'onboard-candidate' || activeSection === 'candidate-onboarding') && (
+            <CandidateOnboarding
+              mobilizerUser={user}
+              onBackToRoster={() => handleSectionChange('candidates')}
+              onCandidateCreated={() => handleSectionChange('candidates')}
+            />
+          )}
 
+          {(activeSection === 'documents' || activeSection === 'document-verification') && (
+            <DocumentManagement
+              mobilizerUser={user}
+              onSectionChange={handleSectionChange}
+            />
+          )}
+
+          {(activeSection === 'readiness' || activeSection === 'assessments') && (
+            <ReadinessManagement
+              mobilizerUser={user}
+              onSectionChange={handleSectionChange}
+            />
+          )}
+
+          {/* D. Other Super Admin Sections (Training batches, Deployments, Retention, Analytics, etc.) */}
+          {activeSection !== 'overview' &&
+            activeSection !== 'mobilizers' &&
+            activeSection !== 'trainers' &&
+            activeSection !== 'placement-coordinators' &&
+            activeSection !== 'partners' &&
+            activeSection !== 'employers' &&
+            activeSection !== 'user-management' &&
+            activeSection !== 'candidates' &&
+            activeSection !== 'onboard-candidate' &&
+            activeSection !== 'candidate-onboarding' &&
+            activeSection !== 'documents' &&
+            activeSection !== 'document-verification' &&
+            activeSection !== 'readiness' &&
+            activeSection !== 'assessments' && (
+            <GenericAdminSection
+              sectionId={activeSection}
+              onSectionChange={handleSectionChange}
+            />
+          )}
+        </main>
       </div>
-
-      {/* Synchronization Overlay Modal */}
-      {isSyncing && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md shadow-2xl p-6 flex flex-col space-y-6 animate-scale-up text-xs">
-            {/* Header */}
-            <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
-              <div className="p-2.5 bg-indigo-50 text-indigo-650 rounded-2xl">
-                <RefreshCw className="w-5 h-5 animate-spin" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-sm text-slate-800">Pushing Offline Queue to Cloud</h3>
-                <p className="text-[10px] text-slate-400 font-bold mt-0.5">Please keep the browser open while we sync.</p>
-              </div>
-            </div>
-
-            {/* Sync Progress List */}
-            <div className="max-h-60 overflow-y-auto space-y-3 pr-1">
-              {syncProgress.map((item) => (
-                <div key={item.tempId} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-2xl">
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-slate-250 flex items-center justify-center font-bold text-slate-600 text-[10px]">
-                      {item.name.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-slate-800 truncate">{item.name}</div>
-                      <div className="text-[9px] text-slate-400 font-semibold mt-0.5 truncate">
-                        {item.isAssessment ? 'Complete 28-Question Assessment' : 'Register Candidate Profile'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="shrink-0 pl-2">
-                    {item.status === 'pending' && (
-                      <div className="flex items-center text-slate-450 space-x-1 font-bold text-[9px] uppercase tracking-wider bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg">
-                        <Clock className="w-3 h-3" />
-                        <span>Queued</span>
-                      </div>
-                    )}
-                    {item.status === 'syncing' && (
-                      <div className="flex items-center text-indigo-600 space-x-1 font-bold text-[9px] uppercase tracking-wider bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg animate-pulse">
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        <span>Syncing</span>
-                      </div>
-                    )}
-                    {item.status === 'done' && (
-                      <div className="flex items-center text-emerald-600 space-x-1 font-bold text-[9px] uppercase tracking-wider bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
-                        <Check className="w-3 h-3 animate-scale-up" strokeWidth={3} />
-                        <span>Done</span>
-                      </div>
-                    )}
-                    {item.status === 'error' && (
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center text-rose-600 space-x-1 font-bold text-[9px] uppercase tracking-wider bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg">
-                          <AlertCircle className="w-3 h-3" />
-                          <span>Failed</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cand = unsyncedCandidates.find(c => c.tempId === item.tempId);
-                            if (cand) {
-                              setIsSyncing(false);
-                              setSyncError(null);
-                              handleEditOfflineCandidate(cand);
-                            }
-                          }}
-                          className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 border border-indigo-200 bg-white rounded-lg transition cursor-pointer shadow-xs shrink-0"
-                          title="Edit Candidate Details"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Status Footer */}
-            {syncFinished && (
-              <div className="space-y-4 pt-2 border-t border-slate-100">
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl p-4 flex items-center space-x-3">
-                  <CheckCircle className="w-8 h-8 text-emerald-600 shrink-0" />
-                  <div>
-                    <h4 className="font-extrabold text-xs">All Sync Operations Completed</h4>
-                    <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">Your offline queue was successfully pushed to PostgreSQL.</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSyncing(false);
-                    setSyncFinished(false);
-                  }}
-                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition shadow-md text-center cursor-pointer"
-                >
-                  Dismiss & Continue
-                </button>
-              </div>
-            )}
-
-            {syncError && (
-              <div className="space-y-4 pt-2 border-t border-slate-100">
-                <div className="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 flex items-center space-x-3">
-                  <AlertCircle className="w-8 h-8 text-rose-600 shrink-0" />
-                  <div>
-                    <h4 className="font-extrabold text-xs">Sync Failed</h4>
-                    <p className="text-[10px] text-rose-700 font-semibold mt-0.5">{syncError}</p>
-                  </div>
-                </div>
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    onClick={triggerSync}
-                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md text-center cursor-pointer"
-                  >
-                    Retry Sync
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSyncing(false);
-                      setSyncError(null);
-                    }}
-                    className="px-4 py-2.5 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 text-slate-700 transition cursor-pointer text-center"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notification Container */}
-      <div className="fixed top-24 right-4 left-4 md:left-auto md:max-w-sm z-[9999] flex flex-col gap-2 pointer-events-none">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`p-3 md:p-4 rounded-xl md:rounded-2xl border shadow-xl flex items-start gap-2.5 md:gap-3 pointer-events-auto animate-slide-in-right transition-all duration-300 ${toast.type === 'success'
-                ? 'bg-emerald-50 border-emerald-250 text-emerald-800'
-                : toast.type === 'error'
-                  ? 'bg-rose-50 border-rose-250 text-rose-800'
-                  : toast.type === 'warning'
-                    ? 'bg-amber-50 border-amber-200 text-amber-800'
-                    : 'bg-indigo-50 border-indigo-200 text-indigo-800'
-              }`}
-          >
-            {toast.type === 'success' && <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-emerald-600 shrink-0 mt-0.5" />}
-            {toast.type === 'error' && <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-rose-600 shrink-0 mt-0.5" />}
-            {toast.type === 'warning' && <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-amber-600 shrink-0 mt-0.5" />}
-            {toast.type === 'info' && <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-indigo-600 shrink-0 mt-0.5" />}
-
-            <div className="flex-1 text-[11px] md:text-xs font-semibold leading-normal">
-              {toast.message}
-            </div>
-
-            <button
-              onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-              className="text-slate-400 hover:text-slate-600 transition cursor-pointer shrink-0"
-            >
-              <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Custom Confirmation Modal */}
-      {confirmModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-sm shadow-2xl p-6 flex flex-col items-center text-center space-y-4 animate-scale-up">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
-              <CheckCircle className="w-10 h-10 text-emerald-600" />
-            </div>
-
-            <div className="space-y-1.5">
-              <h3 className="font-extrabold text-sm text-slate-800">{confirmModal.title || 'Saved Successfully'}</h3>
-              <p className="text-[10px] text-slate-500 font-semibold leading-relaxed px-2">
-                {confirmModal.message}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (confirmModal.onConfirm) confirmModal.onConfirm();
-                setConfirmModal(null);
-              }}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-md text-center cursor-pointer text-xs"
-            >
-              Understand & Continue
-            </button>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
-
-export default App;

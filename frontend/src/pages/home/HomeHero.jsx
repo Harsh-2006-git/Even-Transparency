@@ -1,6 +1,7 @@
 import React from 'react';
+import { ArrowRight } from 'lucide-react';
 
-export default function HomeHero({ onOpenDemoModal }) {
+export default function HomeHero({ onOpenDemoModal, onNavigate }) {
   // 7 lifecycle stages
   const stages = [
     {
@@ -118,24 +119,33 @@ export default function HomeHero({ onOpenDemoModal }) {
       id="platform"
       className="relative mt-[60px] sm:mt-[68px] w-full min-h-[calc(100svh-60px)] sm:min-h-[calc(100svh-68px)] lg:h-[calc(100vh-68px)] lg:max-h-[calc(100vh-68px)] bg-white overflow-hidden flex flex-col justify-between"
     >
-      {/* ── 1. Top Section: Title, Subtitle, CTA Button ── */}
-      <div className="flex-none pt-8 sm:pt-6 md:pt-8 px-4 flex flex-col items-center text-center z-20 max-w-4xl mx-auto">
-        <h1 className="mt-4 sm:mt-0 text-black font-kaiseiTokumin text-[21px] min-[360px]:text-[23px] min-[390px]:text-[26px] sm:text-[36px] lg:text-[44px] xl:text-[48px] font-extrabold leading-[1.18] tracking-tight max-w-[820px] mb-3.5 sm:mb-4">
+      {/* ── 1. Top Section: Title, Subtitle, CTA Buttons & Stakeholder Pill Bar ── */}
+      <div className="flex-none pt-6 sm:pt-4 md:pt-6 px-4 flex flex-col items-center text-center z-20 max-w-4xl mx-auto">
+        <h1 className="mt-2 sm:mt-0 text-black font-kaiseiTokumin text-[21px] min-[360px]:text-[23px] min-[390px]:text-[26px] sm:text-[34px] lg:text-[42px] xl:text-[46px] font-extrabold leading-[1.18] tracking-tight max-w-[820px] mb-2 sm:mb-3">
           <span className="block">One Platform for the Entire</span>
           <span className="block text-[#FF408A]">Candidate Journey</span>
         </h1>
-        <p className="mt-3.5 sm:mt-0 text-[#787878] font-inter text-[11.5px] min-[360px]:text-[12px] sm:text-sm md:text-[14.5px] leading-relaxed max-w-[700px] px-2 text-center">
+        <p className="mt-2 sm:mt-0 text-[#787878] font-inter text-[11px] min-[360px]:text-[11.5px] sm:text-xs md:text-[13.5px] leading-relaxed max-w-[700px] px-2 text-center">
           Manage every stage of the candidate lifecycle—from registration and mobilization to
           training, placement, and long-term tracking—all in one centralized platform with real-time
-          visibility and actionable insight
+          visibility and actionable insight.
         </p>
 
-        <div className="mt-5 sm:mt-4 flex items-center justify-center">
+        {/* CTA Buttons */}
+        <div className="mt-4 sm:mt-4 flex flex-wrap items-center justify-center gap-2.5">
+          <button
+            onClick={() => onNavigate && onNavigate('login')}
+            className="cursor-pointer px-7 py-2.5 sm:py-2.5 rounded-full bg-black hover:bg-[#1a1a1a] text-white font-inter text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-1.5"
+          >
+            <span>Sign In to Portal</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#FF408A]" />
+          </button>
+          
           <button
             onClick={onOpenDemoModal}
-            className="cursor-pointer px-7 sm:px-7 py-2.5 sm:py-2.5 rounded-full bg-black hover:bg-[#1a1a1a] text-white font-inter text-sm sm:text-base font-bold shadow-md hover:shadow-lg transition-all duration-200"
+            className="cursor-pointer px-6 py-2.5 sm:py-2.5 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-inter text-xs sm:text-sm font-bold shadow-2xs transition-all duration-200"
           >
-            Get Started
+            Explore All Roles
           </button>
         </div>
       </div>

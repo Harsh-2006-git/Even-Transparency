@@ -8,6 +8,8 @@ import candidateRoutes from './routes/candidateRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import trainingBatchRoutes from './routes/trainingBatchRoutes.js';
+import employerRoutes from './routes/employerRoutes.js';
 
 dotenv.config();
 
@@ -74,6 +76,12 @@ app.use('/api/mobilizers', mobilizerRoutes);
 
 // Candidate Onboarding & Management API
 app.use('/api/candidates', candidateRoutes);
+
+// Training Batch Management, Modules, Attendance & Assessment API
+app.use('/api/training', trainingBatchRoutes);
+
+// Hiring Employer Partners & Job Openings API
+app.use('/api/employers', employerRoutes);
 
 // Start Server & Authenticate DB
 async function startServer() {

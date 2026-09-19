@@ -128,7 +128,10 @@ export default function MobilizerDashboard({ user, onSectionChange }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 w-full">
         
         {/* 1. TOTAL CANDIDATES */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-200 transition">
+        <div 
+          onClick={() => onSectionChange && onSectionChange('candidates')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-300 hover:shadow-sm cursor-pointer transition"
+        >
           <div>
             <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               TOTAL CANDIDATES
@@ -144,7 +147,10 @@ export default function MobilizerDashboard({ user, onSectionChange }) {
         </div>
 
         {/* 2. NEW THIS MONTH */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-200 transition">
+        <div 
+          onClick={() => onSectionChange && onSectionChange('onboard-candidate')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-300 hover:shadow-sm cursor-pointer transition"
+        >
           <div>
             <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               NEW THIS MONTH
@@ -160,7 +166,10 @@ export default function MobilizerDashboard({ user, onSectionChange }) {
         </div>
 
         {/* 3. ASSESSMENTS DONE */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-200 transition">
+        <div 
+          onClick={() => onSectionChange && onSectionChange('assessments')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-300 hover:shadow-sm cursor-pointer transition"
+        >
           <div>
             <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               ASSESSMENTS DONE
@@ -176,7 +185,10 @@ export default function MobilizerDashboard({ user, onSectionChange }) {
         </div>
 
         {/* 4. NF1 / NF2 / NF3 */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-200 transition">
+        <div 
+          onClick={() => onSectionChange && onSectionChange('candidates')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-300 hover:shadow-sm cursor-pointer transition"
+        >
           <div>
             <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               NF1 / NF2 / NF3
@@ -192,7 +204,10 @@ export default function MobilizerDashboard({ user, onSectionChange }) {
         </div>
 
         {/* 5. READY FOR TRAINING */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-200 transition">
+        <div 
+          onClick={() => onSectionChange && onSectionChange('training')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-300 hover:shadow-sm cursor-pointer transition"
+        >
           <div>
             <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               READY FOR TRAINING
@@ -208,7 +223,10 @@ export default function MobilizerDashboard({ user, onSectionChange }) {
         </div>
 
         {/* 6. DEPLOYED CANDIDATES */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-200 transition">
+        <div 
+          onClick={() => onSectionChange && onSectionChange('deployments')}
+          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between hover:border-pink-300 hover:shadow-sm cursor-pointer transition"
+        >
           <div>
             <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               DEPLOYED CANDIDATES

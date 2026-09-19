@@ -59,9 +59,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
       id: 'candidates',
       title: 'TOTAL CANDIDATES',
       value: '12,548',
-      change: '+1,245 this month',
+      change: '+11.0%',
       changeType: 'positive',
-      comparison: 'vs last month (+11.03%)',
       icon: Users,
       accentBg: 'bg-[#FFF0F5]',
       accentText: 'text-[#F72570]',
@@ -72,9 +71,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
       id: 'mobilisers',
       title: 'ACTIVE MOBILISERS',
       value: '286',
-      change: '+18 (6.72%)',
+      change: '+6.7%',
       changeType: 'positive',
-      comparison: 'vs last month',
       icon: UserCheck,
       accentBg: 'bg-purple-50',
       accentText: 'text-purple-600',
@@ -85,9 +83,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
       id: 'trainers',
       title: 'TRAINERS',
       value: '124',
-      change: '+7 (5.98%)',
+      change: '+6.0%',
       changeType: 'positive',
-      comparison: 'vs last month',
       icon: GraduationCap,
       accentBg: 'bg-blue-50',
       accentText: 'text-blue-600',
@@ -98,9 +95,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
       id: 'employers',
       title: 'EMPLOYERS',
       value: '169',
-      change: '+11 (6.94%)',
+      change: '+6.9%',
       changeType: 'positive',
-      comparison: 'vs last month',
       icon: Building2,
       accentBg: 'bg-emerald-50',
       accentText: 'text-emerald-600',
@@ -111,9 +107,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
       id: 'placements',
       title: 'PLACEMENTS',
       value: '3,842',
-      change: '+382 (11.03%)',
+      change: '+11.0%',
       changeType: 'positive',
-      comparison: 'vs last month',
       icon: Briefcase,
       accentBg: 'bg-amber-50',
       accentText: 'text-amber-600',
@@ -124,9 +119,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
       id: 'employed',
       title: 'ACTIVE EMPLOYED',
       value: '2,918',
-      change: '+271 (10.25%)',
+      change: '+10.3%',
       changeType: 'positive',
-      comparison: 'vs last month (76% retention)',
       icon: ShieldCheck,
       accentBg: 'bg-pink-50',
       accentText: 'text-[#F72570]',
@@ -585,34 +579,31 @@ export default function AdminDashboard({ onSectionChange, user }) {
       </div>
 
       {/* ─── 2. EXECUTIVE KPI STRIP (6 COMPACT CARDS) ─────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
         {executiveKpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
             <div
               key={kpi.id}
               onClick={kpi.onClick}
-              className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-[#F72570]/40 transition duration-150 cursor-pointer flex flex-col justify-between group"
+              className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs hover:border-[#F72570]/40 hover:shadow-xs transition duration-150 cursor-pointer flex flex-col justify-between group"
             >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10.5px] font-bold text-slate-400 tracking-wider uppercase group-hover:text-slate-600 transition-colors">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[9.5px] font-bold text-slate-400 tracking-wider uppercase group-hover:text-slate-600 transition-colors truncate pr-1">
                   {kpi.title}
                 </span>
-                <div className={`w-8 h-8 rounded-xl ${kpi.accentBg} ${kpi.accentText} flex items-center justify-center shrink-0`}>
-                  <Icon className="w-4 h-4" />
+                <div className={`w-7.5 h-7.5 rounded-lg ${kpi.accentBg} ${kpi.accentText} flex items-center justify-center shrink-0`}>
+                  <Icon className="w-4.5 h-4.5" />
                 </div>
               </div>
 
-              <div>
-                <div className="text-2xl font-extrabold text-slate-900 tracking-tight">
+              <div className="flex items-baseline justify-between gap-1.5 flex-wrap mt-1">
+                <span className="text-xl font-black text-slate-900 tracking-tight leading-none">
                   {kpi.value}
-                </div>
-                <div className="mt-1 flex items-center gap-1 text-[11px] font-bold text-emerald-600">
-                  <span>↑ {kpi.change}</span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-0.5 truncate">
-                  {kpi.comparison}
-                </p>
+                </span>
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/70 shrink-0">
+                  ↑ {kpi.change}
+                </span>
               </div>
             </div>
           );
@@ -620,48 +611,51 @@ export default function AdminDashboard({ onSectionChange, user }) {
       </div>
 
       {/* ─── 3. TOP ANALYTICS ROW: FUNNEL + ACTIVITY TREND + GEO MAP ──────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
         
         {/* A. Candidate Lifecycle Funnel (4 Columns) */}
-        <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <div className="lg:col-span-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
             <div>
-              <h2 className="text-base font-bold text-slate-900">
+              <h2 className="text-sm font-bold text-slate-900">
                 Candidate Lifecycle Funnel
               </h2>
-              <p className="text-xs text-slate-400">Complete programme conversion stages</p>
+              <p className="text-[11px] text-slate-400">Complete programme conversion stages</p>
             </div>
+            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              23.2% Rate
+            </span>
           </div>
 
-          {/* Visual Step Funnel */}
-          <div className="space-y-2.5 my-2">
+          {/* Visual Step Funnel - Compact Rows */}
+          <div className="space-y-1.5 my-1">
             {funnelStages.map((stg, idx) => (
               <div
                 key={idx}
                 onMouseEnter={() => setHoveredFunnelStage(stg.stage)}
                 onMouseLeave={() => setHoveredFunnelStage(null)}
-                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                className={`px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
                   hoveredFunnelStage === stg.stage
-                    ? 'border-[#F72570] bg-[#FFF0F5]/50 shadow-xs'
+                    ? 'border-[#F72570] bg-[#FFF0F5]/50 shadow-2xs'
                     : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
                 }`}
               >
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between text-[11px] mb-1">
+                  <div className="flex items-center gap-1.5">
                     <span
-                      className="w-2.5 h-2.5 rounded-full"
+                      className="w-2 h-2 rounded-full shrink-0"
                       style={{ backgroundColor: stg.color }}
                     />
                     <span className="font-bold text-slate-800">{stg.stage}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-extrabold text-slate-900">{stg.formattedCount}</span>
-                    <span className="text-[11px] font-bold text-slate-500">{stg.conversion}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-slate-900 text-xs">{stg.formattedCount}</span>
+                    <span className="text-[10px] font-bold text-slate-500 w-11 text-right">{stg.conversion}</span>
                   </div>
                 </div>
 
-                {/* Progress Bar Funnel Effect */}
-                <div className="w-full h-2 bg-slate-200/70 rounded-full overflow-hidden">
+                {/* Slim Progress Bar */}
+                <div className="w-full h-1.5 bg-slate-200/60 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
@@ -674,144 +668,144 @@ export default function AdminDashboard({ onSectionChange, user }) {
             ))}
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">
-              Overall Conversion Rate: <span className="font-bold text-emerald-600">23.24%</span>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs mt-1">
+            <span className="text-slate-500 text-[11px] font-medium">
+              Overall: <span className="font-bold text-emerald-600">23.24%</span>
             </span>
             <button
               onClick={() => setActiveModal('funnelDetails')}
-              className="text-[#F72570] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-[#F72570] text-[11px] font-bold hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <span>View Full Funnel Report</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>View Full Report</span>
+              <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>
 
         {/* B. Platform Activity Trend (4 Columns) */}
-        <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
+        <div className="lg:col-span-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-1.5">
             <div>
-              <h2 className="text-base font-bold text-slate-900">Platform Activity Trend</h2>
-              <p className="text-xs text-slate-400">Monthly cross-channel operational velocity</p>
+              <h2 className="text-sm font-bold text-slate-900">Platform Activity Trend</h2>
+              <p className="text-[11px] text-slate-400">Monthly cross-channel operational velocity</p>
             </div>
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[10.5px] font-semibold">
               <span>{timeRange}</span>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </div>
           </div>
 
-          {/* Chart Series Legend */}
-          <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-slate-600 my-2">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#F72570]" />
+          {/* Chart Series Legend - Compact */}
+          <div className="flex flex-wrap items-center gap-2.5 text-[10px] font-semibold text-slate-600 my-1">
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#F72570]" />
               <span>Registrations</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-purple-600" />
               <span>Assessments</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
               <span>Placements</span>
             </div>
           </div>
 
-          {/* Clean Vector Multi-line SVG Analytics Chart */}
-          <div className="relative w-full h-44 my-2 flex items-end">
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 320 140">
+          {/* Compact Vector Multi-line SVG Analytics Chart */}
+          <div className="relative w-full h-28 my-1 flex items-end">
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 320 115">
               {/* Grid Lines */}
-              <line x1="0" y1="20" x2="320" y2="20" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="0" y1="60" x2="320" y2="60" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="0" y1="100" x2="320" y2="100" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="0" y1="130" x2="320" y2="130" stroke="#E2E8F0" strokeWidth="1" />
+              <line x1="0" y1="15" x2="320" y2="15" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1="0" y1="45" x2="320" y2="45" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1="0" y1="75" x2="320" y2="75" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1="0" y1="100" x2="320" y2="100" stroke="#E2E8F0" strokeWidth="1" />
 
               {/* Axis Labels */}
-              <text x="5" y="24" fontSize="9" fill="#94A3B8" fontWeight="600">800</text>
-              <text x="5" y="64" fontSize="9" fill="#94A3B8" fontWeight="600">600</text>
-              <text x="5" y="104" fontSize="9" fill="#94A3B8" fontWeight="600">400</text>
-              <text x="5" y="128" fontSize="9" fill="#94A3B8" fontWeight="600">0</text>
+              <text x="5" y="18" fontSize="8" fill="#94A3B8" fontWeight="600">800</text>
+              <text x="5" y="48" fontSize="8" fill="#94A3B8" fontWeight="600">600</text>
+              <text x="5" y="78" fontSize="8" fill="#94A3B8" fontWeight="600">400</text>
+              <text x="5" y="98" fontSize="8" fill="#94A3B8" fontWeight="600">0</text>
 
               {/* Line 1: Registrations (Pink/Magenta #F72570) */}
               <path
-                d="M 40 85 Q 110 70 180 60 T 300 25"
+                d="M 40 65 Q 110 52 180 44 T 300 18"
                 fill="none"
                 stroke="#F72570"
-                strokeWidth="2.5"
+                strokeWidth="2"
                 strokeLinecap="round"
               />
-              <circle cx="40" cy="85" r="3.5" fill="#F72570" stroke="#FFF" strokeWidth="1.5" />
-              <circle cx="110" cy="70" r="3.5" fill="#F72570" stroke="#FFF" strokeWidth="1.5" />
-              <circle cx="180" cy="60" r="3.5" fill="#F72570" stroke="#FFF" strokeWidth="1.5" />
-              <circle cx="300" cy="25" r="4.5" fill="#F72570" stroke="#FFF" strokeWidth="2" />
+              <circle cx="40" cy="65" r="3" fill="#F72570" stroke="#FFF" strokeWidth="1" />
+              <circle cx="110" cy="52" r="3" fill="#F72570" stroke="#FFF" strokeWidth="1" />
+              <circle cx="180" cy="44" r="3" fill="#F72570" stroke="#FFF" strokeWidth="1" />
+              <circle cx="300" cy="18" r="3.5" fill="#F72570" stroke="#FFF" strokeWidth="1.5" />
 
               {/* Line 2: Assessments (Purple #8B5CF6) */}
               <path
-                d="M 40 100 Q 110 95 180 92 T 300 75"
+                d="M 40 76 Q 110 72 180 68 T 300 52"
                 fill="none"
                 stroke="#8B5CF6"
-                strokeWidth="2.5"
+                strokeWidth="2"
                 strokeLinecap="round"
               />
-              <circle cx="40" cy="100" r="3.5" fill="#8B5CF6" stroke="#FFF" strokeWidth="1.5" />
-              <circle cx="110" cy="95" r="3.5" fill="#8B5CF6" stroke="#FFF" strokeWidth="1.5" />
-              <circle cx="180" cy="92" r="3.5" fill="#8B5CF6" stroke="#FFF" strokeWidth="1.5" />
-              <circle cx="300" cy="75" r="4" fill="#8B5CF6" stroke="#FFF" strokeWidth="2" />
+              <circle cx="40" cy="76" r="3" fill="#8B5CF6" stroke="#FFF" strokeWidth="1" />
+              <circle cx="110" cy="72" r="3" fill="#8B5CF6" stroke="#FFF" strokeWidth="1" />
+              <circle cx="180" cy="68" r="3" fill="#8B5CF6" stroke="#FFF" strokeWidth="1" />
+              <circle cx="300" cy="52" r="3.5" fill="#8B5CF6" stroke="#FFF" strokeWidth="1.5" />
 
               {/* Line 3: Placements (Amber #F59E0B) */}
               <path
-                d="M 40 115 Q 110 108 180 108 T 300 95"
+                d="M 40 88 Q 110 83 180 82 T 300 70"
                 fill="none"
                 stroke="#F59E0B"
-                strokeWidth="2.5"
+                strokeWidth="2"
                 strokeLinecap="round"
               />
-              <circle cx="40" cy="115" r="3.5" fill="#F59E0B" stroke="#FFF" strokeWidth="1.5" />
-              <circle cx="110" cy="108" r="3.5" fill="#F59E0B" stroke="#FFF" strokeWidth="1.5" />
-              <circle cx="180" cy="108" r="3.5" fill="#F59E0B" stroke="#FFF" strokeWidth="1.5" />
-              <circle cx="300" cy="95" r="4" fill="#F59E0B" stroke="#FFF" strokeWidth="2" />
+              <circle cx="40" cy="88" r="3" fill="#F59E0B" stroke="#FFF" strokeWidth="1" />
+              <circle cx="110" cy="83" r="3" fill="#F59E0B" stroke="#FFF" strokeWidth="1" />
+              <circle cx="180" cy="82" r="3" fill="#F59E0B" stroke="#FFF" strokeWidth="1" />
+              <circle cx="300" cy="70" r="3.5" fill="#F59E0B" stroke="#FFF" strokeWidth="1.5" />
             </svg>
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold px-2 mb-2">
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold px-2 mb-1">
             <span>1 May</span>
             <span>5 May</span>
             <span>10 May</span>
             <span>15 May</span>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Updated 10 mins ago</span>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs mt-1">
+            <span className="text-slate-500 text-[11px] font-medium">Updated 10 mins ago</span>
             <button
               onClick={() => onSectionChange('analytics')}
-              className="text-[#F72570] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-[#F72570] text-[11px] font-bold hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <span>View Activity Report</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>View Report</span>
+              <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>
 
         {/* C. State-Wise Candidate Distribution Circular Bar Graph (4 Columns) */}
-        <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
+        <div className="lg:col-span-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-1.5">
             <div>
-              <h2 className="text-base font-bold text-slate-900">State-wise Distribution</h2>
-              <p className="text-xs text-slate-400">Candidate concentration by top regions</p>
+              <h2 className="text-sm font-bold text-slate-900">State-wise Distribution</h2>
+              <p className="text-[11px] text-slate-400">Candidate concentration by top regions</p>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-[#FFF0F5] text-[#F72570] text-[10px] font-bold">
               Top 5 States
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center my-2">
-            {/* Single Segmented Circular Donut Ring (100% Complete 360° Circle) */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center my-1">
+            {/* Donut Ring (Compact) */}
             <div className="sm:col-span-5 relative flex items-center justify-center">
-              <svg viewBox="0 0 160 160" className="w-36 h-36 transform -rotate-90">
+              <svg viewBox="0 0 160 160" className="w-28 h-28 transform -rotate-90">
                 {/* Background base track */}
                 <circle cx="80" cy="80" r="60" stroke="#F1F5F9" strokeWidth="14" fill="none" />
 
-                {/* Segment 1: Uttar Pradesh (2,845 / 12,548 = 22.67%) */}
+                {/* Segment 1: Uttar Pradesh (22.67%) */}
                 <circle
                   cx="80"
                   cy="80"
@@ -824,7 +818,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   className="transition-all duration-300 hover:opacity-90 cursor-pointer"
                 />
 
-                {/* Segment 2: Maharashtra (1,892 / 12,548 = 15.08%) */}
+                {/* Segment 2: Maharashtra (15.08%) */}
                 <circle
                   cx="80"
                   cy="80"
@@ -837,7 +831,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   className="transition-all duration-300 hover:opacity-90 cursor-pointer"
                 />
 
-                {/* Segment 3: Karnataka (1,256 / 12,548 = 10.01%) */}
+                {/* Segment 3: Karnataka (10.01%) */}
                 <circle
                   cx="80"
                   cy="80"
@@ -850,7 +844,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   className="transition-all duration-300 hover:opacity-90 cursor-pointer"
                 />
 
-                {/* Segment 4: Madhya Pradesh (965 / 12,548 = 7.69%) */}
+                {/* Segment 4: Madhya Pradesh (7.69%) */}
                 <circle
                   cx="80"
                   cy="80"
@@ -863,7 +857,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   className="transition-all duration-300 hover:opacity-90 cursor-pointer"
                 />
 
-                {/* Segment 5: Rajasthan (842 / 12,548 = 6.71%) */}
+                {/* Segment 5: Rajasthan (6.71%) */}
                 <circle
                   cx="80"
                   cy="80"
@@ -876,7 +870,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   className="transition-all duration-300 hover:opacity-90 cursor-pointer"
                 />
 
-                {/* Segment 6: Other States (4,748 / 12,548 = 37.84%) */}
+                {/* Segment 6: Other States (37.84%) */}
                 <circle
                   cx="80"
                   cy="80"
@@ -892,85 +886,85 @@ export default function AdminDashboard({ onSectionChange, user }) {
 
               {/* Center Total Counter */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                <span className="text-sm font-black text-slate-900 leading-tight">12.5k</span>
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">TOTAL</span>
+                <span className="text-xs font-black text-slate-900 leading-tight">12.5k</span>
+                <span className="text-[8px] font-extrabold text-slate-400 uppercase tracking-wider">TOTAL</span>
               </div>
             </div>
 
-            {/* State Progress Legend & Stats */}
-            <div className="sm:col-span-7 space-y-1.5 text-xs">
+            {/* State Progress Legend & Stats - Compact Rows */}
+            <div className="sm:col-span-7 space-y-1 text-xs">
               {/* UP */}
-              <div className="flex items-center justify-between py-1 border-b border-slate-100">
+              <div className="flex items-center justify-between py-0.5 border-b border-slate-100">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#F72570]" />
-                  <span className="font-semibold text-slate-800">Uttar Pradesh</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#F72570]" />
+                  <span className="font-semibold text-slate-800 text-[11px]">Uttar Pradesh</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-[#F72570]">2,845</span>
-                  <span className="text-[10px] text-slate-400 font-bold">36.5%</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-[#F72570] text-[11px]">2,845</span>
+                  <span className="text-[9.5px] text-slate-400 font-bold">36.5%</span>
                 </div>
               </div>
 
               {/* MH */}
-              <div className="flex items-center justify-between py-1 border-b border-slate-100">
+              <div className="flex items-center justify-between py-0.5 border-b border-slate-100">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#8B5CF6]" />
-                  <span className="font-semibold text-slate-800">Maharashtra</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]" />
+                  <span className="font-semibold text-slate-800 text-[11px]">Maharashtra</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-slate-800">1,892</span>
-                  <span className="text-[10px] text-slate-400 font-bold">24.2%</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-slate-800 text-[11px]">1,892</span>
+                  <span className="text-[9.5px] text-slate-400 font-bold">24.2%</span>
                 </div>
               </div>
 
               {/* KA */}
-              <div className="flex items-center justify-between py-1 border-b border-slate-100">
+              <div className="flex items-center justify-between py-0.5 border-b border-slate-100">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#06B6D4]" />
-                  <span className="font-semibold text-slate-800">Karnataka</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#06B6D4]" />
+                  <span className="font-semibold text-slate-800 text-[11px]">Karnataka</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-slate-800">1,256</span>
-                  <span className="text-[10px] text-slate-400 font-bold">16.1%</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-slate-800 text-[11px]">1,256</span>
+                  <span className="text-[9.5px] text-slate-400 font-bold">16.1%</span>
                 </div>
               </div>
 
               {/* MP */}
-              <div className="flex items-center justify-between py-1 border-b border-slate-100">
+              <div className="flex items-center justify-between py-0.5 border-b border-slate-100">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-                  <span className="font-semibold text-slate-800">Madhya Pradesh</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                  <span className="font-semibold text-slate-800 text-[11px]">Madhya Pradesh</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-slate-800">965</span>
-                  <span className="text-[10px] text-slate-400 font-bold">12.4%</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-slate-800 text-[11px]">965</span>
+                  <span className="text-[9.5px] text-slate-400 font-bold">12.4%</span>
                 </div>
               </div>
 
               {/* RJ */}
-              <div className="flex items-center justify-between py-1">
+              <div className="flex items-center justify-between py-0.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-                  <span className="font-semibold text-slate-800">Rajasthan</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                  <span className="font-semibold text-slate-800 text-[11px]">Rajasthan</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-slate-800">842</span>
-                  <span className="text-[10px] text-slate-400 font-bold">10.8%</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-slate-800 text-[11px]">842</span>
+                  <span className="text-[9.5px] text-slate-400 font-bold">10.8%</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs mt-1">
             <span className="text-[10.5px] text-slate-500 font-medium">
-              Top 5 States account for <span className="font-bold text-slate-900">62.2%</span> of volume
+              Top 5: <span className="font-bold text-slate-900">62.2%</span> volume
             </span>
             <button
               onClick={() => onSectionChange('retention')}
-              className="text-[#F72570] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-[#F72570] text-[11px] font-bold hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <span>View All States</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>View All</span>
+              <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>

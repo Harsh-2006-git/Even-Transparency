@@ -1,5 +1,6 @@
 import db from '../models/index.js';
 import { v4 as uuidv4 } from 'uuid';
+import { localCandidates } from './candidateController.js';
 
 // Predefined demo accounts for all stakeholder roles
 const ROLE_ACCOUNTS = {
@@ -115,6 +116,44 @@ export const login = async (req, res) => {
         message: `${matchedAccount.role} authentication successful`,
         token: 'jwt_mock_token_' + Date.now(),
         user: matchedAccount
+      });
+    }
+
+    // 1b. Check Candidates list if candidate login or matching code/phone/email
+    const cleanPhone = email.replace(/[\s+-]/g, '');
+    const matchedCandidate = Array.isArray(localCandidates) && localCandidates.find(c => {
+      const cEmail = (c.email || '').toLowerCase().trim();
+      const cCode = (c.candidate_code || '').toLowerCase().trim();
+      const cPhone = (c.mobile_number || '').replace(/[\s+-]/g, '');
+      return cEmail === cleanEmail || cCode === cleanEmail || (cleanPhone.length > 5 && cPhone.includes(cleanPhone));
+    });
+
+    if (matchedCandidate) {
+      const candidateUser = {
+        id: matchedCandidate.id,
+        candidate_id: matchedCandidate.id,
+        candidate_code: matchedCandidate.candidate_code,
+        full_name: matchedCandidate.full_name,
+        first_name: matchedCandidate.first_name,
+        last_name: matchedCandidate.last_name,
+        email: matchedCandidate.email,
+        mobile_number: matchedCandidate.mobile_number,
+        role: 'Candidate',
+        userType: 'Candidate',
+        stage: matchedCandidate.current_stage || 'IN_TRAINING',
+        nf_category: matchedCandidate.nf_category || 'NF1',
+        city: matchedCandidate.city,
+        state: matchedCandidate.state,
+        avatar_url: matchedCandidate.photo_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+        status: matchedCandidate.status || 'active',
+        permissions: { candidatePortal: true }
+      };
+
+      return res.json({
+        success: true,
+        message: 'Candidate authentication successful',
+        token: 'jwt_mock_token_' + Date.now(),
+        user: candidateUser
       });
     }
 

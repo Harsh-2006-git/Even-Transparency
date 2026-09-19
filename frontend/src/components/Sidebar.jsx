@@ -38,7 +38,13 @@ import {
   FileText,
   BadgeCheck,
   SearchCheck,
-  CalendarCheck
+  CalendarCheck,
+  Target,
+  Home,
+  Bike,
+  ClipboardCheck,
+  Headphones,
+  ChevronDown
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -135,23 +141,29 @@ export default function Sidebar({
           { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
           { id: 'candidates', label: 'Candidate List', icon: Users },
           { id: 'onboard-candidate', label: 'Add Candidate', icon: UserPlus, badge: 'New' },
-          { id: 'documents', label: 'Manage Candidate Documents', icon: ScrollText },
-          { id: 'assessments', label: 'Assessments', icon: ShieldCheck },
+          { id: 'documents', label: ' Candidate Documents', icon: ScrollText },
+          { id: 'assessments', label: 'Candidate Assessments', icon: ShieldCheck },
           { id: 'training', label: 'Training & Batches', icon: GraduationCap },
-          { id: 'deployments', label: 'Deployments & Jobs', icon: Briefcase },
-          { id: 'follow-ups', label: 'Follow-ups & Retention', icon: HeartHandshake },
-          { id: 'outreach', label: 'Mobilization Outreach', icon: MapPin },
-          { id: 'targets', label: 'My Targets & Goals', icon: Award },
+          { id: 'deployments', label: 'Candidate Placements', icon: Briefcase },
+          { id: 'targets', label: 'My Targets & Goals', icon: Target, badge: '84%' },
           { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
-          { id: 'notifications', label: 'Notifications', icon: Bell, badge: '3' },
+          { id: 'notifications', label: 'Notifications', icon: Bell, },
           { id: 'support', label: 'Support & Help', icon: HelpCircle },
         ];
       case 'Trainer':
         return [
-          { id: 'overview', label: 'Trainer Workspace', icon: LayoutDashboard },
-          { id: 'batches', label: 'Training Batches', icon: GraduationCap, badge: 'Ongoing' },
-          { id: 'attendance', label: 'Daily Attendance', icon: CheckSquare },
-          { id: 'assessments', label: 'Module Assessments', icon: Award },
+          { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'batches', label: 'My Batches', icon: Layers },
+          { id: 'batch-calendar', label: 'Batch Calendar', icon: CalendarCheck },
+          { id: 'candidates', label: 'My Candidates', icon: Users },
+          { id: 'attendance', label: 'Attendance', icon: CheckSquare },
+          { id: 'assessments', label: 'Assessments', icon: ShieldCheck },
+          { id: 'training-modules', label: 'Training Modules', icon: BookOpen },
+          { id: 'practical-sessions', label: 'Practical Sessions', icon: Radio },
+          { id: 'feedback', label: 'Feedback & Notes', icon: FileText },
+          { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
+          { id: 'notifications', label: 'Notifications', icon: Bell, badge: '8' },
+          { id: 'support', label: 'Support & Help', icon: HelpCircle },
         ];
       case 'PlacementCoordinator':
       case 'Placement Coordinator':
@@ -171,10 +183,25 @@ export default function Sidebar({
         ];
       case 'Candidate':
         return [
-          { id: 'overview', label: 'Candidate Portal', icon: LayoutDashboard },
-          { id: 'profile', label: 'My Profile & KYC', icon: User },
-          { id: 'training', label: 'My Training Batches', icon: GraduationCap },
-          { id: 'offers', label: 'Job Placement Offers', icon: Briefcase },
+          { id: 'dashboard', label: 'Dashboard', icon: Home },
+          { id: 'profile', label: 'My Profile', icon: User },
+          { id: 'documents', label: 'My Documents', icon: FileText },
+          { id: 'nf-status', label: 'My NF Status', icon: Bike },
+          {
+            id: 'training',
+            label: 'My Training',
+            icon: GraduationCap,
+            hasSubItems: true,
+            subItems: [
+              { id: 'my-batch', label: 'My Batch' },
+              { id: 'attendance', label: 'Attendance' },
+              { id: 'training-progress', label: 'Training Progress' }
+            ]
+          },
+          { id: 'assessments', label: 'My Assessments', icon: ClipboardCheck },
+          { id: 'offers', label: 'My Job / Offer', icon: Briefcase },
+          { id: 'notifications', label: 'Notifications', icon: Bell, badge: '3' },
+          { id: 'support', label: 'Help & Support', icon: Headphones },
         ];
       default:
         return [];
@@ -205,9 +232,8 @@ export default function Sidebar({
       >
         {/* Navigation List */}
         <div
-          className={`flex-1 overflow-y-auto py-3 space-y-3 no-scrollbar transition-all duration-300 ${
-            isCollapsed ? 'px-1.5' : 'px-3'
-          }`}
+          className={`flex-1 overflow-y-auto py-3 space-y-3 no-scrollbar transition-all duration-300 ${isCollapsed ? 'px-1.5' : 'px-3'
+            }`}
         >
           {isSuperAdmin ? (
             adminNavGroups.map((group, gIdx) => (
@@ -249,9 +275,8 @@ export default function Sidebar({
                       </div>
 
                       {item.badge && !isCollapsed && (
-                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none ${
-                          isActive ? 'bg-white/25 text-white' : 'bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/20'
-                        }`}>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none ${isActive ? 'bg-white/25 text-white' : 'bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/20'
+                          }`}>
                           {item.badge}
                         </span>
                       )}
@@ -263,49 +288,81 @@ export default function Sidebar({
           ) : (
             <div className="space-y-0.5">
               {!isCollapsed && (
-                <div className="px-2.5 py-1 mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  {userType === 'Mobilizer' ? 'MOBILISER WORKSPACE' : `${userType} WORKSPACE`}
+                <div className="px-2.5 py-1 mb-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  {userType === 'Candidate' ? 'CANDIDATE PORTAL' : userType === 'Mobilizer' ? 'MOBILISER WORKSPACE' : `${userType} WORKSPACE`}
                 </div>
               )}
               {getOtherRoleMenuItems().map((item) => {
                 const Icon = item.icon;
-                const isActive = activeSection === item.id;
+                const isCand = userType === 'Candidate';
+                const isActive = isCand
+                  ? (item.id === 'dashboard' ? (activeSection === 'dashboard' || activeSection === 'overview') : activeSection === item.id)
+                  : (activeSection === item.id);
 
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      onSectionChange(item.id);
-                      toggleSidebar(false);
-                    }}
-                    className={`
-                      w-full flex items-center justify-between h-9 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer text-left
-                      ${isActive
-                        ? 'bg-[#F72570] text-white font-bold shadow-sm shadow-[#F72570]/30'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                      }
-                      ${isCollapsed ? 'md:justify-center md:px-0 px-2.5' : 'px-2.5'}
-                    `}
-                    title={isCollapsed ? item.label : ''}
-                  >
-                    <div className={`flex items-center ${isCollapsed ? 'md:space-x-0 md:justify-center' : 'space-x-2.5'}`}>
-                      <Icon
-                        className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`}
-                        strokeWidth={isActive ? 2.5 : 1.75}
-                      />
-                      <span className={`transition-opacity duration-200 ${isCollapsed ? 'md:hidden block' : 'block'}`}>
-                        {item.label}
-                      </span>
-                    </div>
+                  <div key={item.id} className="space-y-0.5">
+                    <button
+                      onClick={() => {
+                        onSectionChange(item.id);
+                        toggleSidebar(false);
+                      }}
+                      className={`
+                        w-full flex items-center justify-between h-9 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer text-left
+                        ${isActive
+                          ? isCand
+                            ? 'bg-[#FFF0F5] text-[#F72570] font-bold border border-[#F72570]/30 shadow-2xs'
+                            : 'bg-[#F72570] text-white font-bold shadow-sm shadow-[#F72570]/30'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
+                        }
+                        ${isCollapsed ? 'md:justify-center md:px-0 px-2.5' : 'px-2.5'}
+                      `}
+                      title={isCollapsed ? item.label : ''}
+                    >
+                      <div className={`flex items-center ${isCollapsed ? 'md:space-x-0 md:justify-center' : 'space-x-2.5'}`}>
+                        <Icon
+                          className={`w-4 h-4 shrink-0 ${isActive ? (isCand ? 'text-[#F72570]' : 'text-white') : 'text-slate-400'}`}
+                          strokeWidth={isActive ? 2.5 : 1.75}
+                        />
+                        <span className={`truncate transition-opacity duration-200 ${isCollapsed ? 'md:hidden block' : 'block'}`}>
+                          {item.label}
+                        </span>
+                      </div>
 
-                    {item.badge && !isCollapsed && (
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold leading-none ${
-                        isActive ? 'bg-white/25 text-white' : 'bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/20'
-                      }`}>
-                        {item.badge}
-                      </span>
+                      {item.hasSubItems && !isCollapsed && (
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+
+                      {item.badge && !isCollapsed && (
+                        <span className="w-4.5 h-4.5 rounded-full text-[10px] font-extrabold flex items-center justify-center bg-[#F72570] text-white shrink-0">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+
+                    {item.hasSubItems && !isCollapsed && (
+                      <div className="pl-9 pt-0.5 pb-1 space-y-0.5">
+                        {item.subItems.map((sub) => {
+                          const isSubActive = activeSection === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSectionChange(sub.id);
+                                toggleSidebar(false);
+                              }}
+                              className={`w-full flex items-center gap-2 py-1 text-xs transition cursor-pointer text-left ${
+                                isSubActive ? 'text-[#F72570] font-bold' : 'text-slate-500 hover:text-slate-800'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${isSubActive ? 'bg-[#F72570]' : 'bg-slate-300'}`} />
+                              <span>{sub.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -318,14 +375,20 @@ export default function Sidebar({
             <div className="space-y-2">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-[#F72570] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                  {isSuperAdmin ? 'SA' : (user?.full_name ? user.full_name.substring(0, 2).toUpperCase() : 'AM')}
+                  {userType === 'Candidate'
+                    ? (user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'PS')
+                    : isSuperAdmin ? 'SA' : (user?.full_name ? user.full_name.substring(0, 2).toUpperCase() : 'AM')}
                 </div>
                 <div className="flex flex-col leading-tight truncate">
                   <span className="text-xs font-bold text-slate-900 truncate">
-                    {isSuperAdmin ? 'Super Admin' : (user?.full_name || 'Administrator')}
+                    {userType === 'Candidate'
+                      ? (user?.full_name || 'Priya Sharma')
+                      : isSuperAdmin ? 'Super Admin' : (user?.full_name || 'Administrator')}
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium truncate">
-                    {isSuperAdmin ? 'Administrator' : (user?.role || 'Staff')}
+                    {userType === 'Candidate'
+                      ? 'Candidate Portal'
+                      : isSuperAdmin ? 'Administrator' : (user?.role || 'Staff')}
                   </span>
                 </div>
               </div>

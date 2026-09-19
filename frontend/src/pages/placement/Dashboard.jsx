@@ -16,7 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-export default function PlacementDashboard({ user }) {
+export default function PlacementDashboard({ user, onSectionChange }) {
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -136,13 +136,21 @@ export default function PlacementDashboard({ user }) {
         {/* Employers Overview */}
         <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-2xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="text-base font-bold font-kaiseiTokumin text-slate-900">Hiring Partners</h3>
-            <span className="text-xs font-bold text-blue-600">Active</span>
+            <div>
+              <h3 className="text-base font-bold font-kaiseiTokumin text-slate-900">Hiring Partners</h3>
+              <p className="text-xs text-slate-500">Commercial EV fleet aggregators</p>
+            </div>
+            <button
+              onClick={() => onSectionChange && onSectionChange('employers')}
+              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+            >
+              <span>Manage Employers →</span>
+            </button>
           </div>
 
           <div className="space-y-3">
             {employers.map(emp => (
-              <div key={emp.id} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5">
+              <div key={emp.id} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5 hover:border-emerald-200 transition">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900 text-xs sm:text-sm">{emp.name}</span>
                   <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
@@ -150,10 +158,20 @@ export default function PlacementDashboard({ user }) {
                   </span>
                 </div>
                 <div className="text-xs text-slate-500">{emp.industry} • {emp.city}</div>
-                <div className="text-[11px] text-slate-400 pt-1">Total Placed: {emp.active_deployments} candidates</div>
+                <div className="text-[11px] text-slate-400 pt-1 flex justify-between items-center">
+                  <span>Total Placed: {emp.active_deployments} candidates</span>
+                </div>
               </div>
             ))}
           </div>
+
+          <button
+            onClick={() => onSectionChange && onSectionChange('employers')}
+            className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1.5"
+          >
+            <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Add Employer & Post Job Roles</span>
+          </button>
         </div>
 
         {/* Live Deployments Table */}

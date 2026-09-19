@@ -23,8 +23,37 @@ import TrainerDashboard from './pages/trainer/Dashboard';
 import PlacementDashboard from './pages/placement/Dashboard';
 import MEDashboard from './pages/me/Dashboard';
 import CandidateDashboard from './pages/candidate/Dashboard';
+import CandidateProfilePage from './pages/candidate/Profile';
+import CandidateDocumentsPage from './pages/candidate/Documents';
+import CandidateNFStatusPage from './pages/candidate/NFStatus';
+import CandidateTrainingPage from './pages/candidate/Training';
+import CandidateAssessmentsPage from './pages/candidate/Assessments';
+import CandidateJobOffersPage from './pages/candidate/JobOffers';
+import CandidateSupportPage from './pages/candidate/Support';
+import CandidateNotificationsPage from './pages/candidate/Notifications';
 import GenericAdminSection from './pages/admin/GenericAdminSection';
 import StakeholderManagement from './pages/admin/StakeholderManagement';
+import BatchManagement from './pages/admin/BatchManagement';
+import BatchCreate from './pages/admin/BatchCreate';
+import TrainingModules from './pages/admin/TrainingModules';
+import TrainingCentres from './pages/admin/TrainingCentres';
+import TrainingAttendance from './pages/admin/TrainingAttendance';
+import TrainingAssessments from './pages/admin/TrainingAssessments';
+import TrainingCertifications from './pages/admin/TrainingCertifications';
+import MobilizerBatchView from './pages/mobilizer/MobilizerBatchView';
+import BatchCalendar from './pages/trainer/BatchCalendar';
+import TrainerCandidates from './pages/trainer/TrainerCandidates';
+import PracticalSessions from './pages/trainer/PracticalSessions';
+import TrainerFeedback from './pages/trainer/TrainerFeedback';
+import TrainerReports from './pages/trainer/TrainerReports';
+import TrainerNotifications from './pages/trainer/TrainerNotifications';
+import TrainerSupport from './pages/trainer/TrainerSupport';
+import CandidateAssessments from './pages/mobilizer/CandidateAssessments';
+import CandidatePlacements from './pages/mobilizer/CandidatePlacements';
+import MobilizerTargets from './pages/mobilizer/MobilizerTargets';
+import MobilizerReports from './pages/mobilizer/MobilizerReports';
+import EmployerManagement from './pages/placement/EmployerManagement';
+import PlacementDeployments from './pages/placement/PlacementDeployments';
 import HomeLanding from './pages/home/HomeLanding';
 
 export default function App() {
@@ -343,19 +372,53 @@ export default function App() {
         <main
           className={`flex-1 transition-all duration-300 ${
             desktopCollapsed ? 'md:ml-0' : 'md:ml-0'
-          } p-4 sm:p-5 lg:p-6 overflow-x-hidden min-h-[calc(100vh-64px)]`}
+          } p-3 sm:p-5 lg:p-6 overflow-x-hidden min-h-[calc(100vh-64px)] bg-[#FDFBFE]`}
         >
-          {/* A. Role-Specific Dashboards for 'overview' */}
-          {activeSection === 'overview' && (
+          {/* Candidate Experience: Dedicated Portal with separate pages for each candidate section */}
+          {currentUserType === 'Candidate' ? (
             <>
-              {currentUserType === 'Mobilizer' && <MobilizerDashboard user={user} onSectionChange={handleSectionChange} />}
-              {currentUserType === 'Trainer' && <TrainerDashboard user={user} />}
-              {(currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && <PlacementDashboard user={user} />}
-              {(currentUserType === 'ME' || currentUserType === 'M&E Team') && <MEDashboard user={user} />}
-              {currentUserType === 'Candidate' && <CandidateDashboard user={user} />}
-              {currentUserType === 'Admin' && <AdminDashboard onSectionChange={handleSectionChange} user={user} />}
+              {(!['profile', 'documents', 'nf-status', 'training', 'my-batch', 'attendance', 'training-progress', 'assessments', 'offers', 'notifications', 'support'].includes(activeSection)) && (
+                <CandidateDashboard user={user} onSectionChange={handleSectionChange} />
+              )}
+              {activeSection === 'profile' && (
+                <CandidateProfilePage user={user} onSectionChange={handleSectionChange} />
+              )}
+              {activeSection === 'documents' && (
+                <CandidateDocumentsPage user={user} onSectionChange={handleSectionChange} />
+              )}
+              {activeSection === 'nf-status' && (
+                <CandidateNFStatusPage user={user} onSectionChange={handleSectionChange} />
+              )}
+              {(activeSection === 'training' || activeSection === 'my-batch' || activeSection === 'attendance' || activeSection === 'training-progress') && (
+                <CandidateTrainingPage user={user} activeSection={activeSection} onSectionChange={handleSectionChange} />
+              )}
+              {activeSection === 'assessments' && (
+                <CandidateAssessmentsPage user={user} onSectionChange={handleSectionChange} />
+              )}
+              {activeSection === 'offers' && (
+                <CandidateJobOffersPage user={user} onSectionChange={handleSectionChange} />
+              )}
+              {activeSection === 'notifications' && (
+                <CandidateNotificationsPage user={user} onSectionChange={handleSectionChange} />
+              )}
+              {activeSection === 'support' && (
+                <CandidateSupportPage user={user} onSectionChange={handleSectionChange} />
+              )}
             </>
-          )}
+          ) : (
+            <>
+              {/* A. Role-Specific Dashboards for 'overview' */}
+              {activeSection === 'overview' && (
+                <>
+                  {currentUserType === 'Mobilizer' && <MobilizerDashboard user={user} onSectionChange={handleSectionChange} />}
+                  {currentUserType === 'Trainer' && <TrainerDashboard user={user} onSectionChange={handleSectionChange} />}
+                  {(currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && (
+                    <PlacementDashboard user={user} onSectionChange={handleSectionChange} />
+                  )}
+                  {(currentUserType === 'ME' || currentUserType === 'M&E Team') && <MEDashboard user={user} />}
+                  {currentUserType === 'Admin' && <AdminDashboard onSectionChange={handleSectionChange} user={user} />}
+                </>
+              )}
 
           {/* B. Specific Stakeholder Management Sections (Full CRUD + Dedicated Form Pages) */}
           {activeSection === 'mobilizers' && (
@@ -375,7 +438,15 @@ export default function App() {
           )}
 
           {activeSection === 'employers' && (
-            <StakeholderManagement categoryKey="employers" onSectionChange={handleSectionChange} />
+            (currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') ? (
+              <EmployerManagement placementUser={user} onSectionChange={handleSectionChange} initialTab="employers" />
+            ) : (
+              <StakeholderManagement categoryKey="employers" onSectionChange={handleSectionChange} />
+            )
+          )}
+
+          {activeSection === 'openings' && (
+            <EmployerManagement placementUser={user} onSectionChange={handleSectionChange} initialTab="roles" />
           )}
 
           {activeSection === 'user-management' && (
@@ -384,10 +455,14 @@ export default function App() {
 
           {/* C. Candidate Lifecycle Management Sections */}
           {activeSection === 'candidates' && (
-            <CandidateManagement
-              mobilizerUser={user}
-              onNavigateToOnboard={() => handleSectionChange('onboard-candidate')}
-            />
+            currentUserType === 'Trainer' ? (
+              <TrainerCandidates user={user} onSectionChange={handleSectionChange} />
+            ) : (
+              <CandidateManagement
+                mobilizerUser={user}
+                onNavigateToOnboard={() => handleSectionChange('onboard-candidate')}
+              />
+            )
           )}
 
           {(activeSection === 'onboard-candidate' || activeSection === 'candidate-onboarding') && (
@@ -405,14 +480,111 @@ export default function App() {
             />
           )}
 
-          {(activeSection === 'readiness' || activeSection === 'assessments') && (
+          {/* C. Candidate Readiness (Mobilizer flow) */}
+          {activeSection === 'readiness' && (
             <ReadinessManagement
               mobilizerUser={user}
               onSectionChange={handleSectionChange}
             />
           )}
 
-          {/* D. Other Super Admin Sections (Training batches, Deployments, Retention, Analytics, etc.) */}
+          {/* D. Training Management Suite */}
+          {activeSection === 'training-modules' && (
+            <TrainingModules onSectionChange={handleSectionChange} />
+          )}
+
+          {(activeSection === 'training' || activeSection === 'batches' || activeSection === 'training-batches') && (
+            <>
+              {currentUserType === 'Mobilizer' ? (
+                <MobilizerBatchView mobilizerUser={user} />
+              ) : (
+                <BatchManagement user={user} onSectionChange={handleSectionChange} />
+              )}
+            </>
+          )}
+
+          {(activeSection === 'batch-create' || activeSection === 'create-batch') && (
+            <BatchCreate
+              onBack={() => handleSectionChange('training')}
+              onBatchCreated={() => handleSectionChange('training')}
+            />
+          )}
+
+          {activeSection === 'training-centres' && (
+            <TrainingCentres onSectionChange={handleSectionChange} />
+          )}
+
+          {(activeSection === 'batch-calendar' || activeSection === 'calendar' || activeSection === 'timetable') && (
+            <BatchCalendar user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {activeSection === 'attendance' && (
+            <TrainingAttendance user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {activeSection === 'assessments' && (
+            <>
+              {currentUserType === 'Mobilizer' ? (
+                <CandidateAssessments
+                  mobilizerUser={user}
+                  onSectionChange={handleSectionChange}
+                />
+              ) : (
+                <TrainingAssessments user={user} onSectionChange={handleSectionChange} />
+              )}
+            </>
+          )}
+
+          {(activeSection === 'deployments' || activeSection === 'placements') && currentUserType === 'Mobilizer' && (
+            <CandidatePlacements
+              mobilizerUser={user}
+              onSectionChange={handleSectionChange}
+            />
+          )}
+
+          {(activeSection === 'deployments' || activeSection === 'placements') && (currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && (
+            <PlacementDeployments
+              placementUser={user}
+              onSectionChange={handleSectionChange}
+            />
+          )}
+
+          {(activeSection === 'targets' || activeSection === 'goals') && (
+            <MobilizerTargets
+              mobilizerUser={user}
+              onSectionChange={handleSectionChange}
+            />
+          )}
+
+          {activeSection === 'practical-sessions' && (
+            <PracticalSessions user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {activeSection === 'feedback' && (
+            <TrainerFeedback user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {activeSection === 'reports' && currentUserType === 'Trainer' && (
+            <TrainerReports user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {activeSection === 'reports' && currentUserType === 'Mobilizer' && (
+            <MobilizerReports user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {activeSection === 'notifications' && currentUserType === 'Trainer' && (
+            <TrainerNotifications user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {activeSection === 'support' && currentUserType === 'Trainer' && (
+            <TrainerSupport user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {activeSection === 'certifications' && (
+            <TrainingCertifications onSectionChange={handleSectionChange} />
+          )}
+
+          {/* E. Other Super Admin Sections (Deployments, Retention, Analytics, etc.) */}
           {activeSection !== 'overview' &&
             activeSection !== 'mobilizers' &&
             activeSection !== 'trainers' &&
@@ -426,11 +598,31 @@ export default function App() {
             activeSection !== 'documents' &&
             activeSection !== 'document-verification' &&
             activeSection !== 'readiness' &&
-            activeSection !== 'assessments' && (
+            activeSection !== 'training' &&
+            activeSection !== 'batches' &&
+            activeSection !== 'training-batches' &&
+            activeSection !== 'batch-create' &&
+            activeSection !== 'create-batch' &&
+            activeSection !== 'training-modules' &&
+            activeSection !== 'training-centres' &&
+            activeSection !== 'attendance' &&
+            activeSection !== 'assessments' &&
+            activeSection !== 'targets' &&
+            activeSection !== 'goals' &&
+            activeSection !== 'openings' &&
+            !((activeSection === 'deployments' || activeSection === 'placements') && currentUserType === 'Mobilizer') &&
+            activeSection !== 'practical-sessions' &&
+            activeSection !== 'feedback' &&
+            activeSection !== 'certifications' &&
+            !(activeSection === 'reports' && (currentUserType === 'Trainer' || currentUserType === 'Mobilizer')) &&
+            !(activeSection === 'notifications' && currentUserType === 'Trainer') &&
+            !(activeSection === 'support' && currentUserType === 'Trainer') && (
             <GenericAdminSection
               sectionId={activeSection}
               onSectionChange={handleSectionChange}
             />
+          )}
+            </>
           )}
         </main>
       </div>

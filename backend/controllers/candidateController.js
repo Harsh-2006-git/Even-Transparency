@@ -2,7 +2,7 @@ import db from '../models/index.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // In-memory initial data matching Candidate model
-let localCandidates = [
+export let localCandidates = [
   {
     id: 'cand-101',
     candidate_code: 'ET-2026-001',

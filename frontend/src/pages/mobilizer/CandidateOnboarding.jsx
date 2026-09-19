@@ -365,10 +365,12 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
       });
 
       const json = await res.json();
+      const savedCandidate = json.data || payload;
+      localStorage.setItem('even_latest_candidate', JSON.stringify(savedCandidate));
       if (json.success) {
-        setSuccessData(json.data || payload);
+        setSuccessData(savedCandidate);
         if (onCandidateCreated) {
-          onCandidateCreated(json.data || payload);
+          onCandidateCreated(savedCandidate);
         }
       } else {
         throw new Error(json.message || 'Failed to onboard candidate');
@@ -376,6 +378,7 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
     } catch (err) {
       console.warn('Backend endpoint error, using client fallback:', err.message);
       // Fallback for seamless frontend experience
+      localStorage.setItem('even_latest_candidate', JSON.stringify(payload));
       setSuccessData(payload);
       if (onCandidateCreated) {
         onCandidateCreated(payload);

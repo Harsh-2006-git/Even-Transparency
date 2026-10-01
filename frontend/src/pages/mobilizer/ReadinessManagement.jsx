@@ -23,79 +23,6 @@ import {
 } from 'lucide-react';
 import { evaluateNFClassification, NF_CATEGORIES } from '../../utils/nfClassification';
 
-const INITIAL_CANDIDATES = [
-  {
-    id: 'cand-1',
-    candidate_code: 'ET-2026-001',
-    full_name: 'Priya Sharma',
-    phone_number: '+91 98765 11111',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    current_stage: 'IN_TRAINING',
-    driving_skill: 'Yes / Verified',
-    has_scooty_access: 'Yes',
-    has_driving_licence: 'Yes',
-    nf_category: 'NF1',
-    nf_classification_score: 88,
-    readiness_status: 'DEPLOYMENT_READY',
-    risk_engine_tier: 'NORMAL',
-    account_status: 'ACTIVE',
-    training_modules: [
-      '2W EV Riding & Safety Basics',
-      'Advanced Defensive EV Driving',
-      'Smartphone & Navigation Apps',
-      'Battery Swapping & Basic Maintenance'
-    ],
-    remarks: 'High potential candidate. Recommended for commercial fleet placement after batch completion.'
-  },
-  {
-    id: 'cand-2',
-    candidate_code: 'ET-2026-002',
-    full_name: 'Aisha Khan',
-    phone_number: '+91 98765 22222',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    current_stage: 'READINESS_ASSESSMENT',
-    driving_skill: 'Basic',
-    has_scooty_access: 'No',
-    has_driving_licence: 'No',
-    nf_category: 'NF2',
-    nf_classification_score: 74,
-    readiness_status: 'IN_PROGRESS',
-    risk_engine_tier: 'NORMAL',
-    account_status: 'ACTIVE',
-    training_modules: [
-      '2W EV Riding & Safety Basics',
-      'Smartphone & Navigation Apps',
-      'Customer Experience & Communication'
-    ],
-    remarks: 'Candidate scheduled for permanent driving license test next month.'
-  },
-  {
-    id: 'cand-3',
-    candidate_code: 'ET-2026-003',
-    full_name: 'Kavita Devi',
-    phone_number: '+91 98765 33333',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    current_stage: 'MOBILIZED',
-    driving_skill: 'No',
-    has_scooty_access: 'No',
-    has_driving_licence: 'No',
-    nf_category: 'NF3',
-    nf_classification_score: 62,
-    readiness_status: 'NOT_STARTED',
-    risk_engine_tier: 'MODERATE',
-    account_status: 'ACTIVE',
-    training_modules: [
-      '2W EV Riding & Safety Basics',
-      'Smartphone & Navigation Apps',
-      'Financial Literacy & Savings'
-    ],
-    remarks: 'Needs baseline riding foundation and digital literacy before batch onboarding.'
-  }
-];
-
 const TRAINING_MODULE_OPTIONS = [
   '2W EV Riding & Safety Basics',
   'Advanced Defensive EV Driving',
@@ -108,25 +35,30 @@ const TRAINING_MODULE_OPTIONS = [
 ];
 
 export default function ReadinessManagement({ mobilizerUser, onSectionChange }) {
-  const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
+  const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
+  const fetchCandidates = () => {
+    setLoading(true);
     fetch('http://localhost:5000/api/candidates')
       .then(r => r.json())
       .then(res => {
-        if (res.success && res.data && res.data.length > 0) {
+        if (res.success && res.data) {
           const mapped = res.data.map(c => ({
-            id: c.id || `cand-${c.candidate_code}`,
+            id: c.id,
             candidate_code: c.candidate_code || 'ET-2026-001',
             full_name: c.full_name || 'Candidate',
             phone_number: c.mobile_number || c.phone_number || '+91 98765 00000',
             city: c.city || 'Bengaluru',
             state: c.state || 'Karnataka',
             current_stage: c.current_stage || c.stage || 'MOBILIZED',
+            driving_skill: c.driving_skill || (c.has_driving_licence === 'Yes' ? 'Yes / Verified' : 'Basic'),
+            has_scooty_access: c.has_scooty_access || 'No',
+            has_driving_licence: c.has_driving_licence || 'No',
             nf_category: c.nf_category || 'NF1',
             nf_classification_score: c.nf_classification_score || c.readiness_score || 80,
             readiness_status: c.readiness_status || 'DEPLOYMENT_READY',
@@ -139,10 +71,21 @@ export default function ReadinessManagement({ mobilizerUser, onSectionChange }) 
             remarks: c.remarks || ''
           }));
           setCandidates(mapped);
+        } else {
+          setCandidates([]);
         }
       })
-      .catch(err => console.warn('Candidate readiness API notice:', err.message));
+      .catch(err => {
+        console.warn('Candidate readiness API notice:', err.message);
+        setCandidates([]);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchCandidates();
   }, []);
+
 
   const showToast = (msg) => {
     setToast(msg);

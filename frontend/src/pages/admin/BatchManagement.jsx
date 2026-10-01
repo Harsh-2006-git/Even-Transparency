@@ -27,7 +27,6 @@ import {
   RefreshCw,
   LayoutGrid,
   List,
-  Rows3,
   SlidersHorizontal,
   X,
   Phone,
@@ -257,7 +256,6 @@ export default function BatchManagement({ user, onSectionChange }) {
 
   // View state: 'list' or 'create'
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create'
-  const [displayLayout, setDisplayLayout] = useState('table'); // 'table' | 'rows'
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -279,6 +277,19 @@ export default function BatchManagement({ user, onSectionChange }) {
   ]);
   const [trainers, setTrainers] = useState([]);
   const [centers, setCenters] = useState([]);
+
+  // Editing Batch State
+  const [editingBatch, setEditingBatch] = useState(null);
+  const [editBatchFormData, setEditBatchFormData] = useState({});
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  // Enrolling Candidates State
+  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
+  const [eligibleCandidates, setEligibleCandidates] = useState([]);
+  const [loadingEligible, setLoadingEligible] = useState(false);
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState([]);
+  const [enrollSearch, setEnrollSearch] = useState('');
+  const [isSubmittingEnroll, setIsSubmittingEnroll] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -382,6 +393,144 @@ export default function BatchManagement({ user, onSectionChange }) {
       showToast('Batch deleted successfully');
     }
     if (sidebarBatch?.id === batchId) setSidebarBatch(null);
+  };
+
+  // Open Edit Batch modal
+  const handleOpenEditModal = (batch, e) => {
+    if (e) e.stopPropagation();
+    setEditingBatch(batch);
+    setEditBatchFormData({
+      batch_code: batch.batch_code || '',
+      title: batch.title || '',
+      module_id: batch.module_id || batch.module?.id || (modules[0]?.id || ''),
+      trainer_id: batch.trainer_id || batch.trainer?.id || (trainers[0]?.id || ''),
+      training_center_id: batch.training_center_id || batch.trainingCenter?.id || (centers[0]?.id || ''),
+      start_date: batch.start_date ? batch.start_date.split('T')[0] : '',
+      end_date: batch.end_date ? batch.end_date.split('T')[0] : '',
+      daily_start_time: batch.daily_start_time || '09:00',
+      daily_end_time: batch.daily_end_time || '13:00',
+      capacity: batch.capacity || 25,
+      status: batch.status || 'ONGOING',
+      remarks: batch.remarks || ''
+    });
+  };
+
+  // Submit Edit Batch modifications
+  const handleSaveEditBatch = async (e) => {
+    e.preventDefault();
+    if (!editingBatch) return;
+    try {
+      setIsSubmittingEdit(true);
+      const res = await fetch(`${API_BASE}/batches/${editingBatch.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editBatchFormData)
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        showToast(`🎉 Batch "${json.data.batch_code}" updated successfully!`);
+        setBatches(prev => prev.map(b => b.id === editingBatch.id ? json.data : b));
+        if (sidebarBatch?.id === editingBatch.id) {
+          setSidebarBatch(json.data);
+        }
+        setEditingBatch(null);
+        fetchBatches();
+      } else {
+        showToast(json.message || 'Failed to update batch', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving batch edit:', err);
+      showToast('Error saving batch modifications', 'error');
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  // Open Enroll Candidates modal
+  const handleOpenEnrollModal = async (batch, e) => {
+    if (e) e.stopPropagation();
+    setIsEnrollModalOpen(true);
+    setSelectedCandidateIds([]);
+    setEnrollSearch('');
+    try {
+      setLoadingEligible(true);
+      const res = await fetch(`${API_BASE}/eligible-candidates`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        // Exclude candidates already enrolled in this batch
+        const alreadyEnrolledIds = new Set(
+          (batch?.enrolled_candidates || []).map(c => c.candidate_id || c.id)
+        );
+        setEligibleCandidates(json.data.filter(c => !alreadyEnrolledIds.has(c.id)));
+      }
+    } catch (err) {
+      console.warn('Could not fetch eligible candidates:', err);
+    } finally {
+      setLoadingEligible(false);
+    }
+  };
+
+  // Submit Candidate Enrollment
+  const handleEnrollCandidatesSubmit = async (e) => {
+    e.preventDefault();
+    if (!sidebarBatch || selectedCandidateIds.length === 0) return;
+    try {
+      setIsSubmittingEnroll(true);
+      const res = await fetch(`${API_BASE}/batches/${sidebarBatch.id}/enroll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidate_ids: selectedCandidateIds })
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast(json.message || 'Candidates enrolled successfully!');
+        if (json.data) {
+          setSidebarBatch(json.data);
+          setBatches(prev => prev.map(b => b.id === sidebarBatch.id ? json.data : b));
+        }
+        setIsEnrollModalOpen(false);
+        setSelectedCandidateIds([]);
+        fetchBatches();
+      } else {
+        showToast(json.message || 'Failed to enroll candidates', 'error');
+      }
+    } catch (err) {
+      console.error('Error enrolling candidates:', err);
+      showToast('Error enrolling candidates into batch', 'error');
+    } finally {
+      setIsSubmittingEnroll(false);
+    }
+  };
+
+  // Remove single candidate from batch
+  const handleRemoveCandidate = async (candId, candName, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to remove candidate "${candName}" from this cohort?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/batches/${sidebarBatch.id}/candidates/${candId}`, {
+        method: 'DELETE'
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast(json.message || 'Candidate removed from batch');
+        if (json.data) {
+          setSidebarBatch(json.data);
+          setBatches(prev => prev.map(b => b.id === sidebarBatch.id ? json.data : b));
+        } else {
+          setSidebarBatch(prev => ({
+            ...prev,
+            enrolled_candidates: (prev.enrolled_candidates || []).filter(c => (c.candidate_id || c.id) !== candId),
+            enrolled_count: Math.max(0, (prev.enrolled_count || 1) - 1)
+          }));
+        }
+        fetchBatches();
+      } else {
+        showToast(json.message || 'Failed to remove candidate', 'error');
+      }
+    } catch (err) {
+      console.error('Error removing candidate:', err);
+      showToast('Error removing candidate from batch', 'error');
+    }
   };
 
   // Scoped Batches: strictly assigned cohorts if user is Trainer, all cohorts if Admin
@@ -624,30 +773,6 @@ export default function BatchManagement({ user, onSectionChange }) {
               </button>
             ))}
           </div>
-
-          {/* Format View Switcher (Table vs Row Cards) */}
-          <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl shrink-0">
-            <button
-              onClick={() => setDisplayLayout('table')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                displayLayout === 'table' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-              }`}
-              title="Clean Table Format"
-            >
-              <List className="w-3.5 h-3.5" />
-              <span>Table</span>
-            </button>
-            <button
-              onClick={() => setDisplayLayout('rows')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                displayLayout === 'rows' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-              }`}
-              title="Compact Row Cards"
-            >
-              <Rows3 className="w-3.5 h-3.5" />
-              <span>Row Cards</span>
-            </button>
-          </div>
         </div>
 
         {/* Filter Dropdowns */}
@@ -731,9 +856,9 @@ export default function BatchManagement({ user, onSectionChange }) {
             Clear Filters
           </button>
         </div>
-      ) : displayLayout === 'table' ? (
+      ) : (
         /* ═════════════════════════════════════════════════════════════════════════
-           1. CLEAN TABLE FORMAT (Minimal Columns + View Details Sidebar Opener)
+           CLEAN TABLE FORMAT (Minimal Columns + View Details Sidebar Opener)
            ═════════════════════════════════════════════════════════════════════════ */
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
@@ -830,18 +955,36 @@ export default function BatchManagement({ user, onSectionChange }) {
                         </span>
                       </td>
 
-                      {/* Action: Open Sidebar */}
+                      {/* Action: Open Sidebar & Actions */}
                       <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setSidebarBatch(batch)}
-                            className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold text-xs transition flex items-center gap-1.5 cursor-pointer border border-indigo-200/60 shadow-2xs"
+                            className="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold text-xs transition flex items-center gap-1 cursor-pointer border border-indigo-200/60 shadow-2xs"
                             title="View Full Details in Sidebar"
                           >
                             <Eye className="w-3.5 h-3.5" />
-                            <span>View Details</span>
+                            <span>Details</span>
                             <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
                           </button>
+                          {!isTrainer && (
+                            <>
+                              <button
+                                onClick={(e) => handleOpenEditModal(batch, e)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer border border-slate-200"
+                                title="Edit Cohort"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteBatch(batch.id, e)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer border border-slate-200"
+                                title="Delete Cohort"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -850,89 +993,6 @@ export default function BatchManagement({ user, onSectionChange }) {
               </tbody>
             </table>
           </div>
-        </div>
-      ) : (
-        /* ═════════════════════════════════════════════════════════════════════════
-           2. CLEAN ROW CARDS (Concise strip rows + View Details button)
-           ═════════════════════════════════════════════════════════════════════════ */
-        <div className="space-y-2">
-          {filteredBatches.map((batch) => {
-            const enrolledList = batch.enrolled_candidates || [];
-            const enrolledCount = batch.enrolled_count !== undefined ? batch.enrolled_count : enrolledList.length;
-            const capacity = batch.capacity || 25;
-            const capacityPercent = Math.round((enrolledCount / capacity) * 100);
-            const isSelected = sidebarBatch?.id === batch.id;
-
-            return (
-              <div
-                key={batch.id}
-                onClick={() => setSidebarBatch(batch)}
-                className={`p-3.5 sm:p-4 rounded-xl border border-slate-200/90 shadow-2xs transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
-                  isSelected ? 'bg-indigo-50/70 border-indigo-300' : 'bg-white hover:border-slate-300 hover:shadow-xs'
-                }`}
-              >
-                {/* Left: Code & Title */}
-                <div className="flex items-center gap-3 sm:w-1/3 min-w-0">
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-100 text-slate-800 border border-slate-200 shrink-0">
-                    {batch.batch_code}
-                  </span>
-                  <div className="min-w-0">
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition truncate">
-                      {batch.title}
-                    </h4>
-                    {isTrainer && (
-                      <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
-                        <Sparkles className="w-2.5 h-2.5" /> Assigned to You
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Trainer & Location */}
-                <div className="flex items-center gap-4 text-xs text-slate-600 sm:w-1/4">
-                  <span className="font-bold text-slate-800 flex items-center gap-1.5 truncate">
-                    <GraduationCap className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                    <span className="truncate">{batch.trainer?.full_name || user?.full_name || 'Trainer'}</span>
-                  </span>
-                  <span className="text-slate-400">•</span>
-                  <span className="text-slate-500 truncate">{batch.trainingCenter?.city}</span>
-                </div>
-
-                {/* Capacity */}
-                <div className="text-xs sm:w-1/6">
-                  <div className="flex justify-between text-[11px] font-bold mb-1">
-                    <span className="text-slate-500">Seats</span>
-                    <span className="text-slate-800">{enrolledCount} / {capacity}</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${capacityPercent >= 100 ? 'bg-emerald-500' : 'bg-[#F72570]'}`}
-                      style={{ width: `${Math.min(100, capacityPercent)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Right: Status & View Action */}
-                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0" onClick={e => e.stopPropagation()}>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                    batch.status === 'ONGOING' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                    batch.status === 'UPCOMING' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
-                    'bg-purple-50 text-purple-700 border border-purple-200'
-                  }`}>
-                    {batch.status}
-                  </span>
-
-                  <button
-                    onClick={() => setSidebarBatch(batch)}
-                    className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold text-xs transition flex items-center gap-1 cursor-pointer border border-indigo-200/60"
-                  >
-                    <span>View Details</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
 
@@ -1136,21 +1196,42 @@ export default function BatchManagement({ user, onSectionChange }) {
                 ) : (
                   /* ─── TAB 2: ENROLLED CANDIDATE ROSTER ─────────────── */
                   <div className="space-y-3">
-                    {/* Candidate search inside sidebar */}
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Search candidate in this cohort..."
-                        value={sidebarCandidateSearch}
-                        onChange={(e) => setSidebarCandidateSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
+                    {/* Candidate search & enroll button inside sidebar */}
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search candidate in this cohort..."
+                          value={sidebarCandidateSearch}
+                          onChange={(e) => setSidebarCandidateSearch(e.target.value)}
+                          className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+                      {!isTrainer && (
+                        <button
+                          onClick={(e) => handleOpenEnrollModal(sidebarBatch, e)}
+                          className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 transition shrink-0 cursor-pointer shadow-xs"
+                          title="Enroll candidates from pipeline"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>Enroll</span>
+                        </button>
+                      )}
                     </div>
 
                     {(!sidebarBatch.enrolled_candidates || sidebarBatch.enrolled_candidates.length === 0) ? (
-                      <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
-                        No candidates currently assigned to this batch cohort.
+                      <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                        <p>No candidates currently assigned to this batch cohort.</p>
+                        {!isTrainer && (
+                          <button
+                            onClick={(e) => handleOpenEnrollModal(sidebarBatch, e)}
+                            className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>Enroll Candidates Now</span>
+                          </button>
+                        )}
                       </div>
                     ) : sidebarCandidates.length === 0 ? (
                       <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
@@ -1160,7 +1241,7 @@ export default function BatchManagement({ user, onSectionChange }) {
                       <div className="space-y-2.5">
                         {sidebarCandidates.map((cand) => (
                           <div
-                            key={cand.candidate_id || cand.candidate_code}
+                            key={cand.candidate_id || cand.candidate_code || cand.id}
                             className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2 text-xs hover:border-slate-300 transition"
                           >
                             <div className="flex items-start justify-between gap-2">
@@ -1170,9 +1251,20 @@ export default function BatchManagement({ user, onSectionChange }) {
                                   {cand.candidate_code} • {cand.mobile_number}
                                 </div>
                               </div>
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                                {cand.nf_category || 'NF1'}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                                  {cand.nf_category || 'NF1'}
+                                </span>
+                                {!isTrainer && (
+                                  <button
+                                    onClick={(e) => handleRemoveCandidate(cand.candidate_id || cand.id, cand.full_name, e)}
+                                    className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                                    title="Remove candidate from this batch"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center text-[11px]">
@@ -1209,15 +1301,24 @@ export default function BatchManagement({ user, onSectionChange }) {
               </div>
 
               {/* Sidebar Footer with Quick Actions */}
-              <div className="p-4 border-t border-slate-200 bg-slate-50/90 flex items-center justify-between gap-3">
+              <div className="p-4 border-t border-slate-200 bg-slate-50/90 flex items-center justify-between gap-2">
                 {!isTrainer && (
-                  <button
-                    onClick={(e) => handleDeleteBatch(sidebarBatch.id, e)}
-                    className="px-3.5 py-2 rounded-xl text-red-600 hover:bg-red-50 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-red-200"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Delete Batch</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => handleOpenEditModal(sidebarBatch, e)}
+                      className="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-indigo-200/80"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>Edit Batch</span>
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteBatch(sidebarBatch.id, e)}
+                      className="px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 text-xs font-bold transition flex items-center gap-1 cursor-pointer border border-red-200"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
                 )}
 
                 {isTrainer && onSectionChange && (
@@ -1250,6 +1351,345 @@ export default function BatchManagement({ user, onSectionChange }) {
                     Close
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── EDIT BATCH MODAL (Pure Light Theme) ─────────────────────────────────────────────────── */}
+      {editingBatch && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-4 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-slate-100 text-slate-800 border border-slate-200">
+                    {editingBatch.batch_code}
+                  </span>
+                  <span className="text-xs font-bold text-indigo-600">Edit Training Cohort</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold font-kaiseiTokumin text-slate-900 truncate max-w-md">
+                  {editingBatch.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingBatch(null)}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditBatch} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="font-bold text-slate-700 block mb-1">Cohort Batch Title <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={editBatchFormData.title}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Batch Code <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={editBatchFormData.batch_code}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, batch_code: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono font-bold bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Curriculum Track Module <span className="text-red-500">*</span></label>
+                <select
+                  value={editBatchFormData.module_id}
+                  onChange={(e) => setEditBatchFormData(prev => ({ ...prev, module_id: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold bg-slate-50/50"
+                >
+                  {modules.map(m => (
+                    <option key={m.id} value={m.id}>{m.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Master Trainer</label>
+                  <select
+                    value={editBatchFormData.trainer_id}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, trainer_id: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold bg-slate-50/50"
+                  >
+                    {trainers.map(t => (
+                      <option key={t.id} value={t.id}>{t.full_name || t.name} ({t.city || 'Hub'})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Training Campus Hub</label>
+                  <select
+                    value={editBatchFormData.training_center_id}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, training_center_id: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold bg-slate-50/50"
+                  >
+                    {centers.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.city})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={editBatchFormData.start_date}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={editBatchFormData.end_date}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Daily Start</label>
+                  <input
+                    type="time"
+                    value={editBatchFormData.daily_start_time}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, daily_start_time: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Daily End</label>
+                  <input
+                    type="time"
+                    value={editBatchFormData.daily_end_time}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, daily_end_time: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Capacity</label>
+                  <input
+                    type="number"
+                    value={editBatchFormData.capacity}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-center font-bold bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Cohort Status</label>
+                  <select
+                    value={editBatchFormData.status}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold bg-slate-50/50"
+                  >
+                    <option value="UPCOMING">UPCOMING</option>
+                    <option value="ONGOING">ONGOING</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Operational Remarks</label>
+                  <input
+                    type="text"
+                    value={editBatchFormData.remarks}
+                    onChange={(e) => setEditBatchFormData(prev => ({ ...prev, remarks: e.target.value }))}
+                    placeholder="e.g. Safety gear kits distributed"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingBatch(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEdit}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {isSubmittingEdit ? 'Saving...' : 'Save Cohort Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ENROLL CANDIDATES MODAL (Pure Light Theme) ─────────────────────────────────────────── */}
+      {isEnrollModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    {sidebarBatch?.batch_code}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-600">Candidate Enrollment</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold font-kaiseiTokumin text-slate-900">
+                  Select Candidates to Enroll
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsEnrollModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter candidate by name, code, or mobilizer..."
+                  value={enrollSearch}
+                  onChange={(e) => setEnrollSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
+                <span>{eligibleCandidates.length} eligible candidates in pipeline</span>
+                {eligibleCandidates.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedCandidateIds.length === eligibleCandidates.length) {
+                        setSelectedCandidateIds([]);
+                      } else {
+                        setSelectedCandidateIds(eligibleCandidates.map(c => c.id));
+                      }
+                    }}
+                    className="text-indigo-600 font-bold hover:underline cursor-pointer"
+                  >
+                    {selectedCandidateIds.length === eligibleCandidates.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 min-h-[220px] max-h-[350px] pr-1">
+              {loadingEligible ? (
+                <div className="py-12 text-center text-xs text-slate-400 space-y-2">
+                  <div className="inline-block animate-spin w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full" />
+                  <p>Loading candidate pipeline...</p>
+                </div>
+              ) : eligibleCandidates.length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                  No unassigned eligible candidates found in the pipeline.
+                </div>
+              ) : (
+                eligibleCandidates
+                  .filter(c => {
+                    if (!enrollSearch.trim()) return true;
+                    const q = enrollSearch.toLowerCase();
+                    return (
+                      c.full_name?.toLowerCase().includes(q) ||
+                      c.candidate_code?.toLowerCase().includes(q) ||
+                      c.city?.toLowerCase().includes(q) ||
+                      c.mobilizer?.full_name?.toLowerCase().includes(q)
+                    );
+                  })
+                  .map(candidate => {
+                    const isSelected = selectedCandidateIds.includes(candidate.id);
+                    return (
+                      <div
+                        key={candidate.id}
+                        onClick={() => {
+                          setSelectedCandidateIds(prev =>
+                            prev.includes(candidate.id)
+                              ? prev.filter(id => id !== candidate.id)
+                              : [...prev, candidate.id]
+                          );
+                        }}
+                        className={`p-3 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${
+                          isSelected
+                            ? 'bg-indigo-50/70 border-indigo-300 shadow-2xs'
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {}} // Handled by parent div click
+                            className="rounded text-indigo-600 w-4 h-4 cursor-pointer"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 text-xs truncate">
+                              {candidate.full_name}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              {candidate.candidate_code} • {candidate.city || 'Hub'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                            {candidate.nf_category || 'NF1'}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {candidate.mobilizer?.full_name ? `Mob: ${candidate.mobilizer.full_name.split(' ')[0]}` : ''}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-600">
+                <span className="text-indigo-600 font-black">{selectedCandidateIds.length}</span> candidate{selectedCandidateIds.length === 1 ? '' : 's'} selected
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEnrollModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEnrollCandidatesSubmit}
+                  disabled={selectedCandidateIds.length === 0 || isSubmittingEnroll}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingEnroll ? 'Enrolling...' : `Enroll Selected (${selectedCandidateIds.length})`}
+                </button>
               </div>
             </div>
           </div>

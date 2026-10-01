@@ -98,14 +98,6 @@ export default function HomeFooter({ onOpenDemoModal, onNavigate }) {
             </li>
             <li>
               <button 
-                onClick={() => onNavigate && onNavigate('login/me')}
-                className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5"
-              >
-                Monitoring & Evaluation
-              </button>
-            </li>
-            <li>
-              <button 
                 onClick={() => onNavigate && onNavigate('login/candidate')}
                 className="hover:text-[#FF408A] transition-colors cursor-pointer text-left block w-full py-0.5"
               >

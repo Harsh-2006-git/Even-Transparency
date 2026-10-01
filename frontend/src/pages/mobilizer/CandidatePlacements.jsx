@@ -66,254 +66,25 @@ export default function CandidatePlacements({ mobilizerUser, onSectionChange }) 
   const [checkInStatus, setCheckInStatus] = useState('Satisfied & Thriving');
   const [checkInSuccessToast, setCheckInSuccessToast] = useState(false);
 
-  // Fallback initial placements data
-  const fallbackPlacements = [
-    {
-      id: 'plc-101',
-      candidate_id: 'cand-101',
-      candidate_code: 'ET-2026-001',
-      candidate_name: 'Priya Sharma',
-      photo_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
-      mobile_number: '+91 98765 11111',
-      alternate_phone: '+91 98765 11112',
-      email: 'priya.sharma@candidate.org',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      nf_category: 'NF1',
-      mobilizer_id: 'mob-101',
-      mobilizer_name: 'Sunita Verma',
-      batch_code: 'BAT-2026-BLR-01',
-      employer_id: 'emp-01',
-      employer_name: 'Zomato Green Fleet',
-      employer_logo: 'https://images.unsplash.com/photo-1526367790999-0150786686a2?w=80&auto=format&fit=crop&q=80',
-      industry: 'EV Hyperlocal Food Delivery',
-      job_role: 'EV Last-Mile Pilot Lead',
-      employment_type: 'Full-Time (Permanent)',
-      monthly_earnings: 21500,
-      monthly_stipend_or_salary: 21500,
-      base_pay: 16000,
-      performance_incentives: 5500,
-      shift_assigned: 'DAY',
-      shift_timings: '08:00 AM - 04:30 PM (Day Shift)',
-      hub_name: 'Koramangala 4th Block Green Hub',
-      hub_address: 'Plot 18, 80 Feet Road, 4th Block Koramangala, Bengaluru',
-      hub_city: 'Bengaluru',
-      offer_date: '2026-02-20',
-      joining_date: '2026-03-01',
-      deployment_status: 'ACTIVE_EMPLOYED',
-      vehicle_provided_by_employer: true,
-      vehicle_model: 'Ather 450X Commercial Spec (Smart EV)',
-      is_green_job: true,
-      placement_coordinator: 'Kavita Sundaram',
-      offer_letter_url: '#',
-      retention_milestone: '30_DAYS_COMPLETED',
-      retention_score: 98,
-      days_on_job: 14,
-      supervisor_name: 'Anand R. (Hub Operations Lead)',
-      supervisor_phone: '+91 98765 99001',
-      notes: 'On track with zero customer complaints and perfect 100% attendance during first two weeks.'
-    },
-    {
-      id: 'plc-102',
-      candidate_id: 'cand-102',
-      candidate_code: 'ET-2026-002',
-      candidate_name: 'Aisha Khan',
-      photo_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80',
-      mobile_number: '+91 98765 22222',
-      alternate_phone: '+91 98765 22223',
-      email: 'aisha.khan@candidate.org',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      nf_category: 'NF2',
-      mobilizer_id: 'mob-101',
-      mobilizer_name: 'Sunita Verma',
-      batch_code: 'BAT-2026-BLR-01',
-      employer_id: 'emp-02',
-      employer_name: 'BigBasket Electric (BB Now)',
-      employer_logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=80&auto=format&fit=crop&q=80',
-      industry: 'Quick Commerce EV Grocery Logistics',
-      job_role: 'Express Dark Store EV Pilot',
-      employment_type: 'Full-Time (Regular)',
-      monthly_earnings: 19800,
-      monthly_stipend_or_salary: 19800,
-      base_pay: 15000,
-      performance_incentives: 4800,
-      shift_assigned: 'DAY',
-      shift_timings: '07:00 AM - 03:30 PM (Morning Express)',
-      hub_name: 'Indiranagar 100ft Road Micro-Hub',
-      hub_address: '142, 100 Feet Rd, HAL 2nd Stage, Indiranagar, Bengaluru',
-      hub_city: 'Bengaluru',
-      offer_date: '2026-02-22',
-      joining_date: '2026-03-03',
-      deployment_status: 'ACTIVE_EMPLOYED',
-      vehicle_provided_by_employer: true,
-      vehicle_model: 'Hero Electric Nyx Heavy Cargo',
-      is_green_job: true,
-      placement_coordinator: 'Kavita Sundaram',
-      offer_letter_url: '#',
-      retention_milestone: 'IN_PROGRESS',
-      retention_score: 95,
-      days_on_job: 11,
-      supervisor_name: 'Manish Verma (Logistics Manager)',
-      supervisor_phone: '+91 98765 99002',
-      notes: 'Successfully managing morning grocery delivery routes with high dispatch speed.'
-    },
-    {
-      id: 'plc-103',
-      candidate_id: 'cand-103',
-      candidate_code: 'ET-2026-003',
-      candidate_name: 'Kavita Devi',
-      photo_url: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=200&auto=format&fit=crop&q=80',
-      mobile_number: '+91 98765 33333',
-      alternate_phone: '+91 98765 33334',
-      email: 'kavita.devi@candidate.org',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      nf_category: 'NF3',
-      mobilizer_id: 'mob-101',
-      mobilizer_name: 'Sunita Verma',
-      batch_code: 'BAT-2026-BLR-01',
-      employer_id: 'emp-03',
-      employer_name: 'Blinkit Smart Logistics',
-      employer_logo: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=80&auto=format&fit=crop&q=80',
-      industry: 'Instant Delivery & Supply Logistics',
-      job_role: 'Hub Dispatch & Delivery Associate',
-      employment_type: 'Full-Time',
-      monthly_earnings: 18500,
-      monthly_stipend_or_salary: 18500,
-      base_pay: 14500,
-      performance_incentives: 4000,
-      shift_assigned: 'DAY',
-      shift_timings: '09:00 AM - 05:30 PM (General Shift)',
-      hub_name: 'BTM 2nd Stage Fulfillment Hub',
-      hub_address: 'Survey 22, 7th Main, BTM 2nd Stage, Bengaluru',
-      hub_city: 'Bengaluru',
-      offer_date: '2026-03-01',
-      joining_date: '2026-03-10',
-      deployment_status: 'JOINED',
-      vehicle_provided_by_employer: true,
-      vehicle_model: 'TVS iQube Commercial Cargo',
-      is_green_job: true,
-      placement_coordinator: 'Kavita Sundaram',
-      offer_letter_url: '#',
-      retention_milestone: 'DAY_1_ONBOARDED',
-      retention_score: 92,
-      days_on_job: 4,
-      supervisor_name: 'Rajiv Nambiar (Shift Lead)',
-      supervisor_phone: '+91 98765 99003',
-      notes: 'Completed first week induction orientation; receiving mentorship from senior rider.'
-    },
-    {
-      id: 'plc-104',
-      candidate_id: 'cand-104',
-      candidate_code: 'ET-2026-004',
-      candidate_name: 'Pooja Hegde',
-      photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-      mobile_number: '+91 98765 44444',
-      alternate_phone: '+91 98765 44445',
-      email: 'pooja.hegde@candidate.org',
-      city: 'Lucknow',
-      state: 'Uttar Pradesh',
-      nf_category: 'NF2',
-      mobilizer_id: 'mob-104',
-      mobilizer_name: 'Anil Mishra',
-      batch_code: 'BAT-2026-LKO-02',
-      employer_id: 'emp-04',
-      employer_name: 'Shadowfax EV Express',
-      employer_logo: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=80&auto=format&fit=crop&q=80',
-      industry: 'E-Commerce Package Logistics',
-      job_role: 'EV Parcel Delivery Specialist',
-      employment_type: 'Full-Time (Permanent)',
-      monthly_earnings: 19200,
-      monthly_stipend_or_salary: 19200,
-      base_pay: 15000,
-      performance_incentives: 4200,
-      shift_assigned: 'DAY',
-      shift_timings: '08:30 AM - 05:00 PM',
-      hub_name: 'Gomti Nagar Extension Hub',
-      hub_address: 'Sector 4, Gomti Nagar Extension, Lucknow',
-      hub_city: 'Lucknow',
-      offer_date: '2026-03-04',
-      joining_date: '2026-03-15',
-      deployment_status: 'OFFERED',
-      vehicle_provided_by_employer: true,
-      vehicle_model: 'Euler Motors HiLoad EV',
-      is_green_job: true,
-      placement_coordinator: 'Siddharth Rao',
-      offer_letter_url: '#',
-      retention_milestone: 'OFFER_ACCEPTED',
-      retention_score: 90,
-      days_on_job: 0,
-      supervisor_name: 'Rakesh Shukla (Hub Manager)',
-      supervisor_phone: '+91 98765 99004',
-      notes: 'Offer letter signed; induction kit issued; joining hub on March 15.'
-    },
-    {
-      id: 'plc-106',
-      candidate_id: 'cand-106',
-      candidate_code: 'ET-2026-006',
-      candidate_name: 'Ritu Sen',
-      photo_url: 'https://images.unsplash.com/photo-1548142813-c348350df52b?w=200&auto=format&fit=crop&q=80',
-      mobile_number: '+91 98765 66666',
-      alternate_phone: '+91 98765 66667',
-      email: 'ritu.sen@candidate.org',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      nf_category: 'NF1',
-      mobilizer_id: 'mob-101',
-      mobilizer_name: 'Sunita Verma',
-      batch_code: 'BAT-2026-BLR-01',
-      employer_id: 'emp-05',
-      employer_name: 'Uber Green Mobility',
-      employer_logo: 'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?w=80&auto=format&fit=crop&q=80',
-      industry: 'Clean Urban Ride Hailing',
-      job_role: 'Women EV Ride Fleet Captain',
-      employment_type: 'Flexible Shift (Partner)',
-      monthly_earnings: 24000,
-      monthly_stipend_or_salary: 24000,
-      base_pay: 18000,
-      performance_incentives: 6000,
-      shift_assigned: 'FLEXIBLE',
-      shift_timings: 'Flexible (6-8 hours daily on demand)',
-      hub_name: 'KIAL Airport Clean Hub',
-      hub_address: 'Terminal 1 Dedicated EV Station, Devanahalli, Bengaluru',
-      hub_city: 'Bengaluru',
-      offer_date: '2026-02-18',
-      joining_date: '2026-02-25',
-      deployment_status: 'ACTIVE_EMPLOYED',
-      vehicle_provided_by_employer: true,
-      vehicle_model: 'BluSmart / Tata Tigor EV Fleet',
-      is_green_job: true,
-      placement_coordinator: 'Kavita Sundaram',
-      offer_letter_url: '#',
-      retention_milestone: '30_DAYS_COMPLETED',
-      retention_score: 99,
-      days_on_job: 18,
-      supervisor_name: 'Geetha Raman (Fleet Community Manager)',
-      supervisor_phone: '+91 98765 99005',
-      notes: 'Top performing EV captain in South Bengaluru corridor. High rider feedback rating 4.95/5.0.'
-    }
-  ];
-
   const fetchPlacements = async () => {
     setLoading(true);
     try {
-      const mobId = mobilizerUser?.id || mobilizerUser?.mobilizer_id || 'mob-101';
+      const mobId = mobilizerUser?.id || mobilizerUser?.mobilizer_id || 'all';
       const res = await fetch(`${API_BASE}/mobilizers/placements?mobilizer_id=${mobId}`);
       if (res.ok) {
         const json = await res.json();
-        if (json.success && json.data && json.data.length > 0) {
+        if (json.success && Array.isArray(json.data)) {
           setPlacements(json.data);
           if (json.stats) setStats(json.stats);
         } else {
-          setPlacements(fallbackPlacements);
+          setPlacements([]);
         }
       } else {
-        setPlacements(fallbackPlacements);
+        setPlacements([]);
       }
     } catch (err) {
-      console.warn('Using local placement data fallback:', err.message);
-      setPlacements(fallbackPlacements);
+      console.warn('Error fetching placements from API:', err.message);
+      setPlacements([]);
     } finally {
       setLoading(false);
     }
@@ -1195,7 +966,7 @@ export default function CandidatePlacements({ mobilizerUser, onSectionChange }) 
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 text-[11px] text-slate-500 border border-slate-200">
-                Logging this check-in updates the candidate's post-placement retention score and notifies the M&E and Placement Coordinators.
+                Logging this check-in updates the candidate's post-placement retention score and notifies the Placement Coordinators.
               </div>
 
               <div className="pt-2 flex justify-end gap-2">

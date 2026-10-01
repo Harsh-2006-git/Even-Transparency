@@ -74,13 +74,11 @@ export default (sequelize, DataTypes) => {
         'mobilizer',
         'trainer',
         'placement_coordinator',
-        'me_team',
         'Super Admin',
         'Organization Admin',
         'Mobilizer',
         'Trainer',
-        'Placement Coordinator',
-        'M&E Team'
+        'Placement Coordinator'
       ),
       allowNull: false,
       defaultValue: 'org_admin',

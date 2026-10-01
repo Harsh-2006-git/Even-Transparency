@@ -70,38 +70,9 @@ const STANDARD_DOCUMENTS = [
   }
 ];
 
-const INITIAL_CANDIDATES = [
-  {
-    id: 'cand-1',
-    candidate_code: 'ET-2026-001',
-    full_name: 'Priya Sharma',
-    phone_number: '+91 98765 11111',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    documents: []
-  },
-  {
-    id: 'cand-2',
-    candidate_code: 'ET-2026-002',
-    full_name: 'Aisha Khan',
-    phone_number: '+91 98765 22222',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    documents: []
-  },
-  {
-    id: 'cand-3',
-    candidate_code: 'ET-2026-003',
-    full_name: 'Kavita Devi',
-    phone_number: '+91 98765 33333',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    documents: []
-  }
-];
-
 export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
-  const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
+  const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState(null);
@@ -117,13 +88,14 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
   const rowFileInputRefs = useRef({});
 
   // Fetch candidates from backend API
-  useEffect(() => {
+  const fetchCandidates = () => {
+    setLoading(true);
     fetch('http://localhost:5000/api/candidates')
       .then(r => r.json())
       .then(res => {
-        if (res.success && res.data && res.data.length > 0) {
+        if (res.success && res.data) {
           const mapped = res.data.map(c => ({
-            id: c.id || `cand-${c.candidate_code}`,
+            id: c.id,
             candidate_code: c.candidate_code || 'ET-2026-001',
             full_name: c.full_name || 'Candidate',
             phone_number: c.mobile_number || c.phone_number || '+91 98765 00000',
@@ -132,10 +104,24 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
             documents: Array.isArray(c.documents) ? c.documents : []
           }));
           setCandidates(mapped);
+          if (mapped.length > 0) {
+            setSelectedCandidate(mapped[0]);
+          }
+        } else {
+          setCandidates([]);
         }
       })
-      .catch(err => console.warn('Candidate API notice:', err.message));
+      .catch(err => {
+        console.warn('Candidate API notice:', err.message);
+        setCandidates([]);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchCandidates();
   }, []);
+
 
   const showToast = (msg) => {
     setToast(msg);

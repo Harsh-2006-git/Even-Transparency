@@ -20,10 +20,10 @@ import RoleLoginNav from '../../components/RoleLoginNav';
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function CandidateLogin({ onLoginSuccess, onGoToLanding, onSwitchRole, onGoToHub }) {
-  const [email, setEmail] = useState('priya.sharma@candidate.org');
-  const [password, setPassword] = useState('candidate@pass123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' | 'phone'
-  const [phoneNumber, setPhoneNumber] = useState('+91 98765 11111');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -78,56 +78,18 @@ export default function CandidateLogin({ onLoginSuccess, onGoToLanding, onSwitch
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Authentication failed. Please check your candidate details.');
+        throw new Error(data.message || 'No candidate found with this identifier.');
+      }
+
+      // Dedicated portal check: ensure only Candidate role is admitted
+      const userRole = (data.user?.role || data.user?.userType || '').toLowerCase();
+      if (!userRole.includes('cand')) {
+        throw new Error('No candidate found with this identifier.');
       }
 
       onLoginSuccess(data.user, data.token);
     } catch (err) {
-      console.warn('Network issue or offline candidate login fallback:', err.message);
-      // Check if newly onboarded candidate exists in localStorage
-      let fallbackUser = null;
-      try {
-        const saved = localStorage.getItem('even_latest_candidate');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          fallbackUser = {
-            id: parsed.id || 'cand-latest',
-            candidate_id: parsed.id || 'cand-latest',
-            candidate_code: parsed.candidate_code || 'ET-2026-NEW',
-            full_name: parsed.full_name || `${parsed.first_name || ''} ${parsed.last_name || ''}`.trim() || 'Candidate User',
-            first_name: parsed.first_name || 'Candidate',
-            last_name: parsed.last_name || '',
-            email: parsed.email || identifier,
-            mobile_number: parsed.mobile_number || identifier,
-            role: 'Candidate',
-            userType: 'Candidate',
-            stage: parsed.current_stage || 'MOBILIZED',
-            nf_category: parsed.nf_category || 'NF3',
-            status: 'active'
-          };
-        }
-      } catch (e) {
-        // ignore
-      }
-
-      if (!fallbackUser) {
-        fallbackUser = {
-          id: 'cand-101',
-          candidate_id: 'cand-101',
-          candidate_code: identifier.startsWith('ET-') ? identifier : 'ET-2026-001',
-          full_name: 'Priya Sharma',
-          first_name: 'Priya',
-          last_name: 'Sharma',
-          email: identifier.includes('@') ? identifier : 'priya.sharma@candidate.org',
-          mobile_number: '+91 98765 11111',
-          role: 'Candidate',
-          userType: 'Candidate',
-          stage: 'Training',
-          nf_category: 'NF3',
-          status: 'active'
-        };
-      }
-      onLoginSuccess(fallbackUser, 'mock_token_candidate');
+      setError(err.message || 'No candidate found with this identifier.');
     } finally {
       setLoading(false);
     }
@@ -242,15 +204,6 @@ export default function CandidateLogin({ onLoginSuccess, onGoToLanding, onSwitch
               >
                 Mobile Number
               </button>
-            </div>
-
-            {/* Quick Demo Credentials Pill */}
-            <div className="p-2.5 bg-[#FFF8FA] rounded-xl border border-pink-200/80 text-[11px] space-y-0.5">
-              <div className="flex justify-between items-center text-slate-800">
-                <span className="font-bold text-[10.5px] text-slate-900">Demo Candidate:</span>
-                <span className="text-[9.5px] text-[#F72570] font-bold bg-[#FFF0F5] px-1.5 py-0.5 rounded border border-[#F72570]/20">Pre-filled</span>
-              </div>
-              <p className="text-[10.5px] text-slate-700 font-mono">priya.sharma@candidate.org / candidate@pass123</p>
             </div>
 
             {/* Form */}

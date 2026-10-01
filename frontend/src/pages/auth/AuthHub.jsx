@@ -4,7 +4,6 @@ import {
   Users, 
   GraduationCap, 
   Briefcase, 
-  BarChart3, 
   UserCheck, 
   ArrowRight, 
   Layers, 
@@ -24,44 +23,44 @@ export default function AuthHub({ onSelectRole, onGoToLanding }) {
       icon: <Shield className="w-5 h-5 text-[#FF408A]" />,
       badge: 'Admin',
       badgeColor: 'bg-[#FFF0F5] text-[#FF408A] border-[#FF408A]/30',
-      gradient: 'from-[#FFF5F8] to-[#FFF0F5]',
-      borderColor: 'border-[#FF408A]/20 hover:border-[#FF408A]',
+      gradient: 'from-pink-500/10 to-rose-500/10',
+      borderColor: 'border-[#FF408A]/30 hover:border-[#FF408A]',
       buttonColor: 'bg-[#FF408A] hover:bg-[#E02670] text-white',
       credentials: 'admin@evenshift.org / admin@pass123'
     },
     {
       id: 'mobilizer',
       roleType: 'Mobilizer',
-      title: 'Mobilizer & Field Portal',
-      subtitle: 'Partner Mobilizers & Intake',
-      desc: 'Candidate sourcing, community mobilization, registration, and KYC verification.',
+      title: 'Field Mobilizer Portal',
+      subtitle: 'Field Outreach & Sourcing',
+      desc: 'Candidate field registration, household survey tracking, and batch enrollment.',
       icon: <Users className="w-5 h-5 text-rose-600" />,
-      badge: 'Field Intake',
+      badge: 'Field Ops',
       badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
       gradient: 'from-rose-50/50 to-pink-50/50',
       borderColor: 'border-rose-200 hover:border-rose-500',
       buttonColor: 'bg-rose-600 hover:bg-rose-700 text-white',
-      credentials: 'mobilizer@evenshift.org / mobilizer@pass123'
+      credentials: 'sunita.verma@evenshift.org / mob@pass123'
     },
     {
       id: 'trainer',
       roleType: 'Trainer',
-      title: 'Trainer & Assessor Portal',
-      subtitle: 'Skill Instructors & Leads',
-      desc: 'Batch schedules, student attendance, module tests, and readiness grading.',
+      title: 'Training & Skill Portal',
+      subtitle: 'Trainer & Assessor Hub',
+      desc: 'Attendance logs, practical evaluation metrics, and batch certifications.',
       icon: <GraduationCap className="w-5 h-5 text-indigo-600" />,
-      badge: 'Skill Training',
+      badge: 'Academics',
       badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-      gradient: 'from-indigo-50/50 to-blue-50/50',
+      gradient: 'from-indigo-50/50 to-purple-50/50',
       borderColor: 'border-indigo-200 hover:border-indigo-500',
       buttonColor: 'bg-indigo-600 hover:bg-indigo-700 text-white',
-      credentials: 'trainer@evenshift.org / trainer@pass123'
+      credentials: 'ramesh.sen@evenshift.org / train@pass123'
     },
     {
       id: 'placement',
       roleType: 'PlacementCoordinator',
-      title: 'Placement Coordinator Portal',
-      subtitle: 'Employer Relations & Jobs',
+      title: 'Corporate Placement Portal',
+      subtitle: 'Employer Hiring & Matching',
       desc: 'Corporate hiring pipelines, candidate matching, interviews, and job offers.',
       icon: <Briefcase className="w-5 h-5 text-emerald-600" />,
       badge: 'Employment',
@@ -70,20 +69,6 @@ export default function AuthHub({ onSelectRole, onGoToLanding }) {
       borderColor: 'border-emerald-200 hover:border-emerald-500',
       buttonColor: 'bg-emerald-600 hover:bg-emerald-700 text-white',
       credentials: 'placement@evenshift.org / placement@pass123'
-    },
-    {
-      id: 'me',
-      roleType: 'ME',
-      title: 'M&E & Impact Portal',
-      subtitle: 'Monitoring, Evaluation & Audit',
-      desc: 'Retention milestones (1M, 3M, 6M, 12M), live KPIs, and audit analytics.',
-      icon: <BarChart3 className="w-5 h-5 text-cyan-600" />,
-      badge: 'Audit & Impact',
-      badgeColor: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-      gradient: 'from-cyan-50/50 to-sky-50/50',
-      borderColor: 'border-cyan-200 hover:border-cyan-500',
-      buttonColor: 'bg-cyan-600 hover:bg-cyan-700 text-white',
-      credentials: 'me@evenshift.org / me@pass123'
     },
     {
       id: 'candidate',
@@ -193,7 +178,7 @@ export default function AuthHub({ onSelectRole, onGoToLanding }) {
                   onClick={() => onSelectRole(portal.id)}
                   className={`w-full py-1.5 px-3 rounded-xl ${portal.buttonColor} text-xs font-bold shadow-2xs hover:shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer`}
                 >
-                  <span>Sign In as {portal.roleType === 'PlacementCoordinator' ? 'Placement' : portal.roleType === 'ME' ? 'M&E Lead' : portal.roleType}</span>
+                  <span>Sign In as {portal.roleType === 'PlacementCoordinator' ? 'Placement' : portal.roleType}</span>
                   <ArrowRight className="w-3 h-3 transition-transform" />
                 </button>
               </div>

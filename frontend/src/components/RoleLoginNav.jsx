@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Users, GraduationCap, Briefcase, BarChart3, UserCheck, Home } from 'lucide-react';
+import { Shield, Users, GraduationCap, Briefcase, UserCheck, Home } from 'lucide-react';
 
 export const ROLE_CONFIGS = {
   admin: {
@@ -49,18 +49,6 @@ export const ROLE_CONFIGS = {
     btnGradient: 'from-emerald-600 to-teal-700',
     accentBorder: 'focus:border-emerald-600 focus:ring-emerald-600/10',
     icon: Briefcase
-  },
-  me: {
-    id: 'me',
-    userType: 'ME',
-    name: 'M&E Team',
-    fullName: 'M&E Impact Team',
-    path: '#login/me',
-    color: '#06B6D4',
-    badgeClass: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    btnGradient: 'from-cyan-600 to-sky-700',
-    accentBorder: 'focus:border-cyan-600 focus:ring-cyan-600/10',
-    icon: BarChart3
   },
   candidate: {
     id: 'candidate',

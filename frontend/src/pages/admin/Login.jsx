@@ -18,8 +18,8 @@ import RoleLoginNav from '../../components/RoleLoginNav';
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function AdminLogin({ onLoginSuccess, onGoToLanding, onSwitchRole, onGoToHub }) {
-  const [email, setEmail] = useState('admin@evenshift.org');
-  const [password, setPassword] = useState('admin@pass123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -72,21 +72,18 @@ export default function AdminLogin({ onLoginSuccess, onGoToLanding, onSwitchRole
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Authentication failed. Please check credentials.');
+        throw new Error(data.message || 'No admin found with this email.');
+      }
+
+      // Dedicated portal check: ensure only Admin role is admitted
+      const userRole = (data.user?.role || data.user?.userType || '').toLowerCase();
+      if (!userRole.includes('admin')) {
+        throw new Error('No admin found with this email.');
       }
 
       onLoginSuccess(data.user, data.token);
     } catch (err) {
-      console.warn('Network issue, using admin offline login:', err.message);
-      const fallbackUser = {
-        id: 'usr-admin-001',
-        full_name: 'Administrator',
-        email: email.trim() || 'admin@evenshift.org',
-        role: 'Super Admin',
-        userType: 'Admin',
-        status: 'active'
-      };
-      onLoginSuccess(fallbackUser, 'mock_token_admin');
+      setError(err.message || 'No admin found with this email.');
     } finally {
       setLoading(false);
     }
@@ -179,15 +176,6 @@ export default function AdminLogin({ onLoginSuccess, onGoToLanding, onSwitchRole
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Enter administrative credentials to continue
               </p>
-            </div>
-
-            {/* Quick Demo Credentials Pill */}
-            <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-[11px] space-y-0.5">
-              <div className="flex justify-between items-center text-slate-500">
-                <span className="font-semibold text-[10.5px] text-slate-700">Demo Admin:</span>
-                <span className="text-[9.5px] text-emerald-600 font-bold bg-emerald-50 px-1 py-0.2 rounded">Pre-filled</span>
-              </div>
-              <p className="text-[10.5px] text-slate-600 font-mono">admin@evenshift.org / admin@pass123</p>
             </div>
 
             {/* Form */}

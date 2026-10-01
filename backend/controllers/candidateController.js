@@ -2,210 +2,7 @@ import db from '../models/index.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // In-memory initial data matching Candidate model
-export let localCandidates = [
-  {
-    id: 'cand-101',
-    candidate_code: 'ET-2026-001',
-    first_name: 'Priya',
-    middle_name: 'Rani',
-    last_name: 'Sharma',
-    full_name: 'Priya Sharma',
-    photo_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
-    mobile_number: '+91 98765 11111',
-    alternate_mobile: '+91 98765 11112',
-    email: 'priya.sharma@candidate.org',
-    aadhaar_number: '5423-8891-4829',
-    age: 26,
-    date_of_birth: '1999-04-12',
-    gender: 'Female',
-    marital_status: 'Unmarried',
-    family_dependents_count: 3,
-    monthly_household_income: 8500,
-    address_line_1: 'Flat 402, Shanti Nagar',
-    address_line_2: 'Near Anganwadi Center, Outer Ring Road',
-    address: 'Flat 402, Shanti Nagar, Near Anganwadi Center, Outer Ring Road, Bengaluru',
-    city_id: 'city-blr-01',
-    city: 'Bengaluru',
-    state_id: 'state-ka-01',
-    state: 'Karnataka',
-    pincode: '560037',
-    education_level: '12th Pass',
-    employment_status: 'Unemployed',
-    current_employment_status: 'Unemployed',
-    current_stage: 'IN_TRAINING',
-    nf_category: 'NF1',
-    nf_classification_score: 88,
-    nf_classified_at: '2026-01-16T10:00:00.000Z',
-    recommended_trainings: ['2W EV Riding & Safety Basics', 'Smartphone & Navigation Apps', 'Customer Experience & Communication'],
-    organization_id: 'org-1',
-    partner_id: 'prt-1',
-    assigned_partner_id: 'prt-1',
-    training_center_id: 'tc-blr-01',
-    mobilizer_id: 'usr-mob-001',
-    assigned_mobilizer_id: 'mob-101',
-    trainer_id: 'usr-tr-001',
-    assigned_trainer_id: 'tr-101',
-    placement_coordinator_id: 'usr-pc-001',
-    assigned_placement_coordinator_id: 'pc-101',
-    training_progress_percentage: 65,
-    overall_attendance_rate: 94,
-    readiness_score: 88,
-    readiness_status: 'DEPLOYMENT_READY',
-    deployment_status: 'NOT_DEPLOYED',
-    risk_level: 'NORMAL',
-    risk_reasons: [],
-    risk_updated_at: '2026-01-15T00:00:00.000Z',
-    last_activity_at: new Date().toISOString(),
-    registered_at: '2026-01-15T00:00:00.000Z',
-    status: 'active',
-    notes: 'Motivated candidate with prior 2W bicycle riding experience. Fast learner in EV safety.',
-    // Mobilization record fields
-    source: 'NGO_PARTNER',
-    camp_or_event_name: 'Mahila Sashaktikaran Drive - Koramangala',
-    location_details: 'Ward 151 Community Hall',
-    initial_interest_level: 'HIGH',
-    has_valid_license: 'Yes (2W Permanent)',
-    license_number: 'KA-05-2022-0048192',
-    driving_experience: '2 Years 2W Scooter',
-    has_smartphone: 'Yes (Android 4G/5G)',
-    emergency_contact_name: 'Sunita Sharma (Mother)',
-    emergency_contact_phone: '+91 98765 11112',
-    emergency_contact_relation: 'Mother',
-    documents: []
-  },
-  {
-    id: 'cand-102',
-    candidate_code: 'ET-2026-002',
-    first_name: 'Aisha',
-    middle_name: '',
-    last_name: 'Khan',
-    full_name: 'Aisha Khan',
-    photo_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80',
-    mobile_number: '+91 98765 22222',
-    alternate_mobile: '+91 98765 22223',
-    email: 'aisha.khan@candidate.org',
-    aadhaar_number: '7721-3310-9102',
-    age: 29,
-    date_of_birth: '1996-08-25',
-    gender: 'Female',
-    marital_status: 'Married',
-    family_dependents_count: 2,
-    monthly_household_income: 11000,
-    address_line_1: 'House 18, 4th Cross',
-    address_line_2: 'Indiranagar Stage 2',
-    address: 'House 18, 4th Cross, Indiranagar Stage 2, Bengaluru',
-    city_id: 'city-blr-01',
-    city: 'Bengaluru',
-    state_id: 'state-ka-01',
-    state: 'Karnataka',
-    pincode: '560038',
-    education_level: 'Graduate',
-    employment_status: 'Unemployed',
-    current_employment_status: 'Unemployed',
-    current_stage: 'READINESS_ASSESSMENT',
-    nf_category: 'NF2',
-    nf_classification_score: 74,
-    nf_classified_at: '2026-01-22T10:00:00.000Z',
-    recommended_trainings: ['2W EV Riding & Safety Basics', 'Smartphone & Navigation Apps', 'Battery Swapping & Basic Maintenance'],
-    organization_id: 'org-1',
-    partner_id: 'prt-3',
-    assigned_partner_id: 'prt-3',
-    training_center_id: 'tc-blr-01',
-    mobilizer_id: 'usr-mob-001',
-    assigned_mobilizer_id: 'mob-101',
-    trainer_id: 'usr-tr-001',
-    assigned_trainer_id: 'tr-101',
-    training_progress_percentage: 85,
-    overall_attendance_rate: 90,
-    readiness_score: 74,
-    readiness_status: 'NEEDS_ADDITIONAL_TRAINING',
-    deployment_status: 'NOT_DEPLOYED',
-    risk_level: 'LOW',
-    risk_reasons: ['Learner license requires permanent DL conversion'],
-    risk_updated_at: '2026-01-20T00:00:00.000Z',
-    last_activity_at: new Date().toISOString(),
-    registered_at: '2026-01-20T00:00:00.000Z',
-    status: 'active',
-    notes: 'Graduate candidate keen on part-time EV hyper-local delivery shifts.',
-    source: 'SHG',
-    camp_or_event_name: 'Sakhi SHG Federation Camp',
-    location_details: 'Community Center Indiranagar',
-    initial_interest_level: 'HIGH',
-    has_valid_license: 'Learner Permit (LLR Active)',
-    license_number: 'KA-01-LL-2025-9921',
-    driving_experience: 'Bicycle Only',
-    has_smartphone: 'Yes (Android 4G/5G)',
-    emergency_contact_name: 'Imran Khan (Spouse)',
-    emergency_contact_phone: '+91 98765 22223',
-    emergency_contact_relation: 'Spouse',
-    documents: []
-  },
-  {
-    id: 'cand-103',
-    candidate_code: 'ET-2026-003',
-    first_name: 'Kavita',
-    middle_name: '',
-    last_name: 'Devi',
-    full_name: 'Kavita Devi',
-    photo_url: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=200&auto=format&fit=crop&q=80',
-    mobile_number: '+91 98765 33333',
-    alternate_mobile: '',
-    email: 'kavita.devi@candidate.org',
-    aadhaar_number: '9918-2041-3819',
-    age: 32,
-    date_of_birth: '1993-11-04',
-    gender: 'Female',
-    marital_status: 'Married',
-    family_dependents_count: 4,
-    monthly_household_income: 6000,
-    address_line_1: 'No 45, BTM Layout 1st Stage',
-    address_line_2: 'Behind Govt High School',
-    address: 'No 45, BTM Layout 1st Stage, Behind Govt High School, Bengaluru',
-    city_id: 'city-blr-01',
-    city: 'Bengaluru',
-    state_id: 'state-ka-01',
-    state: 'Karnataka',
-    pincode: '560068',
-    education_level: '10th Pass',
-    employment_status: 'Daily Wage',
-    current_employment_status: 'Daily Wage',
-    current_stage: 'MOBILIZED',
-    nf_category: 'NF3',
-    nf_classification_score: 62,
-    nf_classified_at: '2026-02-03T10:00:00.000Z',
-    recommended_trainings: ['2W EV Riding & Safety Basics', 'Smartphone & Navigation Apps', 'Financial Literacy & Savings'],
-    organization_id: 'org-1',
-    partner_id: 'prt-1',
-    assigned_partner_id: 'prt-1',
-    training_center_id: 'tc-blr-01',
-    mobilizer_id: 'usr-mob-001',
-    assigned_mobilizer_id: 'mob-101',
-    training_progress_percentage: 10,
-    overall_attendance_rate: 100,
-    readiness_score: 62,
-    readiness_status: 'NEEDS_ADDITIONAL_TRAINING',
-    deployment_status: 'NOT_DEPLOYED',
-    risk_level: 'NORMAL',
-    risk_reasons: [],
-    risk_updated_at: '2026-02-02T00:00:00.000Z',
-    last_activity_at: new Date().toISOString(),
-    registered_at: '2026-02-02T00:00:00.000Z',
-    status: 'active',
-    notes: 'Mobilized via door-to-door campaign. Shows high eagerness to become financially independent.',
-    source: 'COMMUNITY_OUTREACH',
-    camp_or_event_name: 'BTM Layout Door-to-Door Drive',
-    location_details: 'Ward 176',
-    initial_interest_level: 'HIGH',
-    has_valid_license: 'No License (Needs Full LLR+DL Training)',
-    license_number: '',
-    driving_experience: 'No Prior Experience',
-    has_smartphone: 'Yes (Android 4G/5G)',
-    emergency_contact_name: 'Rajesh Devi (Spouse)',
-    emergency_contact_phone: '+91 98765 33334',
-    emergency_contact_relation: 'Spouse',
-    documents: []
-  }
-];
+export let localCandidates = [];
 
 // Helper to generate candidate code
 const generateCandidateCode = () => {
@@ -233,26 +30,63 @@ export const getCandidates = async (req, res) => {
           include: [
             { model: db.CandidateDocument, as: 'documents', required: false },
             { model: db.MobilizationRecord, as: 'mobilization', required: false },
+            { model: db.CandidateReadiness, as: 'readinessProfile', required: false },
             { model: db.Organization, as: 'organization', required: false },
             { model: db.Partner, as: 'partner', required: false }
           ],
           order: [['created_at', 'DESC']]
         });
 
-        if (candidates && candidates.length > 0) {
-          let filtered = candidates.map(c => c.toJSON());
-          if (search) {
-            const s = search.toLowerCase();
-            filtered = filtered.filter(c =>
-              c.full_name?.toLowerCase().includes(s) ||
-              c.candidate_code?.toLowerCase().includes(s) ||
-              c.mobile_number?.includes(s) ||
-              c.email?.toLowerCase().includes(s) ||
-              c.city?.toLowerCase().includes(s)
-            );
+        let filtered = (candidates || []).map(c => {
+          const json = c.toJSON();
+          if (json.mobilization) {
+            json.source = json.source || json.mobilization.source;
+            json.camp_or_event_name = json.camp_or_event_name || json.mobilization.camp_or_event_name;
+            json.location_details = json.location_details || json.mobilization.location_details;
+            json.initial_interest_level = json.initial_interest_level || json.mobilization.initial_interest_level;
+            json.counseling_notes = json.counseling_notes || json.mobilization.counseling_notes;
+            json.referrer_name = json.referrer_name || json.mobilization.referrer_name;
+            json.referrer_contact = json.referrer_contact || json.mobilization.referrer_contact;
           }
-          return res.json({ success: true, count: filtered.length, data: filtered });
+          const rp = json.readinessProfile;
+          if (rp) {
+            json.license_number = json.license_number || rp.license_number;
+            json.driving_experience = json.driving_experience || rp.driving_experience;
+            if (rp.has_driving_license !== undefined && !json.has_driving_licence) {
+              json.has_driving_licence = rp.has_driving_license ? 'Yes' : 'No';
+            }
+            if (rp.can_ride_two_wheeler !== undefined && !json.driving_skill) {
+              json.driving_skill = rp.can_ride_two_wheeler ? 'Yes / Verified' : 'No';
+            }
+          }
+          if (!json.has_valid_license) {
+            if (rp?.license_number) {
+              json.has_valid_license = `Permanent (${rp.license_number})`;
+            } else if (rp?.has_driving_license) {
+              json.has_valid_license = 'Yes (2W Permanent)';
+            } else if (rp?.license_type === 'LEARNER' || rp?.driving_license_status === 'Learner') {
+              json.has_valid_license = 'Learner (LLR)';
+            } else if (json.nf_category === 'NF1') {
+              json.has_valid_license = 'Yes (2W Permanent)';
+            } else if (json.nf_category === 'NF2') {
+              json.has_valid_license = 'Learner (LLR)';
+            } else {
+              json.has_valid_license = 'No License';
+            }
+          }
+          return json;
+        });
+        if (search) {
+          const s = search.toLowerCase();
+          filtered = filtered.filter(c =>
+            c.full_name?.toLowerCase().includes(s) ||
+            c.candidate_code?.toLowerCase().includes(s) ||
+            c.mobile_number?.includes(s) ||
+            c.email?.toLowerCase().includes(s) ||
+            c.city?.toLowerCase().includes(s)
+          );
         }
+        return res.json({ success: true, count: filtered.length, data: filtered });
       } catch (dbErr) {
         console.warn('DB candidate query failed, falling back to localCandidates:', dbErr.message);
       }
@@ -300,16 +134,41 @@ export const getCandidateById = async (req, res) => {
 
     if (db.Candidate) {
       try {
-        const candidate = await db.Candidate.findByPk(id, {
+        const candidate = await db.Candidate.findOne({
+          where: {
+            [db.Sequelize.Op.or]: [{ id }, { candidate_code: id }]
+          },
           include: [
             { model: db.CandidateDocument, as: 'documents', required: false },
             { model: db.MobilizationRecord, as: 'mobilization', required: false },
+            { model: db.CandidateReadiness, as: 'readinessProfile', required: false },
             { model: db.Organization, as: 'organization', required: false },
             { model: db.Partner, as: 'partner', required: false }
           ]
         });
         if (candidate) {
-          return res.json({ success: true, data: candidate.toJSON() });
+          const candJson = candidate.toJSON();
+          if (candJson.mobilization) {
+            candJson.source = candJson.source || candJson.mobilization.source;
+            candJson.camp_or_event_name = candJson.camp_or_event_name || candJson.mobilization.camp_or_event_name;
+            candJson.location_details = candJson.location_details || candJson.mobilization.location_details;
+            candJson.initial_interest_level = candJson.initial_interest_level || candJson.mobilization.initial_interest_level;
+            candJson.counseling_notes = candJson.counseling_notes || candJson.mobilization.counseling_notes;
+            candJson.referrer_name = candJson.referrer_name || candJson.mobilization.referrer_name;
+            candJson.referrer_contact = candJson.referrer_contact || candJson.mobilization.referrer_contact;
+          }
+          const rp = candJson.readinessProfile;
+          if (rp) {
+            candJson.license_number = candJson.license_number || rp.license_number;
+            candJson.driving_experience = candJson.driving_experience || rp.driving_experience;
+            if (rp.has_driving_license !== undefined && !candJson.has_driving_licence) {
+              candJson.has_driving_licence = rp.has_driving_license ? 'Yes' : 'No';
+            }
+            if (rp.can_ride_two_wheeler !== undefined && !candJson.driving_skill) {
+              candJson.driving_skill = rp.can_ride_two_wheeler ? 'Yes / Verified' : 'No';
+            }
+          }
+          return res.json({ success: true, data: candJson });
         }
       } catch (dbErr) {
         console.warn('DB get candidate failed, checking local:', dbErr.message);
@@ -360,7 +219,7 @@ const evaluateNFClassificationBackend = (drivingSkill, scootyAccess, drivingLice
     return {
       category: 'NF2',
       score: 74,
-      readinessStatus: 'IN_PROGRESS',
+      readinessStatus: 'NEEDS_ADDITIONAL_TRAINING',
       recommendedTrainings: [
         '2W EV Riding & Safety Basics',
         'Smartphone & Navigation Apps',
@@ -374,7 +233,7 @@ const evaluateNFClassificationBackend = (drivingSkill, scootyAccess, drivingLice
   return {
     category: 'NF3',
     score: 60,
-    readinessStatus: 'NOT_STARTED',
+    readinessStatus: 'NOT_EVALUATED',
     recommendedTrainings: [
       '2W EV Riding & Safety Basics',
       'Smartphone & Navigation Apps',
@@ -384,11 +243,25 @@ const evaluateNFClassificationBackend = (drivingSkill, scootyAccess, drivingLice
   };
 };
 
+const mapReadinessStatus = (status) => {
+  if (!status) return 'NOT_EVALUATED';
+  const s = String(status).toUpperCase().replace(/[\s_-]+/g, '_');
+  if (s.includes('DEPLOY') || s === 'DEPLOYMENT_READY') return 'DEPLOYMENT_READY';
+  if (s.includes('TRAIN') || s === 'NEEDS_ADDITIONAL_TRAINING' || s === 'IN_PROGRESS') return 'NEEDS_ADDITIONAL_TRAINING';
+  if (s === 'HOLD') return 'HOLD';
+  if (s.includes('DOC') || s === 'PENDING_DOCUMENTS') return 'PENDING_DOCUMENTS';
+  if (s.includes('ELIG') || s === 'NOT_ELIGIBLE') return 'NOT_ELIGIBLE';
+  return 'NOT_EVALUATED';
+};
+
+const isUUID = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+const safeUUID = (val) => (isUUID(val) ? val : null);
+
 // 3. CREATE / ONBOARD CANDIDATE
 export const createCandidate = async (req, res) => {
   try {
     const payload = req.body;
-    const candidateId = payload.id || uuidv4();
+    const candidateId = isUUID(payload.id) ? payload.id : uuidv4();
     const candidateCode = payload.candidate_code || generateCandidateCode();
     const fullName = payload.full_name || `${payload.first_name || ''} ${payload.last_name || ''}`.trim() || 'New Candidate';
 
@@ -403,6 +276,94 @@ export const createCandidate = async (req, res) => {
       ? payload.nf_category
       : evaluatedNF.category;
 
+    // Resolve valid UUID foreign keys to prevent PostgreSQL syntax and FK constraint errors
+    let validOrgId = safeUUID(payload.organization_id);
+    if (validOrgId && db.Organization) {
+      const o = await db.Organization.findByPk(validOrgId);
+      if (!o) validOrgId = null;
+    }
+    if (!validOrgId && db.Organization) {
+      try {
+        const org = await db.Organization.findOne();
+        if (org) validOrgId = org.id;
+      } catch (e) {}
+    }
+
+    let validPartnerId = safeUUID(payload.partner_id || payload.assigned_partner_id);
+    if (validPartnerId && db.Partner) {
+      const p = await db.Partner.findByPk(validPartnerId);
+      if (!p) validPartnerId = null;
+    }
+    if (!validPartnerId && db.Partner) {
+      try {
+        const prt = await db.Partner.findOne();
+        if (prt) validPartnerId = prt.id;
+      } catch (e) {}
+    }
+
+    let validUserId = null;
+    let validMobilizerRecordId = null;
+    if (db.Mobilizer && db.User) {
+      try {
+        const inputMob = payload.mobilizer_id || payload.assigned_mobilizer_id;
+        if (isUUID(inputMob)) {
+          const mobRec = await db.Mobilizer.findByPk(inputMob);
+          if (mobRec) {
+            validMobilizerRecordId = mobRec.id;
+            validUserId = mobRec.user_id;
+          } else {
+            const uRec = await db.User.findByPk(inputMob);
+            if (uRec) {
+              validUserId = uRec.id;
+              const associatedMob = await db.Mobilizer.findOne({ where: { user_id: uRec.id } });
+              if (associatedMob) validMobilizerRecordId = associatedMob.id;
+            }
+          }
+        }
+        if (!validMobilizerRecordId) {
+          const defaultMob = await db.Mobilizer.findOne();
+          if (defaultMob) {
+            validMobilizerRecordId = defaultMob.id;
+            validUserId = validUserId || defaultMob.user_id;
+          }
+        }
+      } catch (e) {
+        console.warn('Mobilizer resolution error:', e.message);
+      }
+    }
+
+    let validTrainingCenterId = null;
+    if (safeUUID(payload.training_center_id) && db.TrainingCenter) {
+      const tc = await db.TrainingCenter.findByPk(payload.training_center_id);
+      if (tc) validTrainingCenterId = tc.id;
+    }
+
+    let validTrainerUserId = null;
+    let validTrainerProfileId = null;
+    if (safeUUID(payload.trainer_id) && db.User) {
+      const tu = await db.User.findByPk(payload.trainer_id);
+      if (tu) validTrainerUserId = tu.id;
+    }
+    if (safeUUID(payload.assigned_trainer_id) && db.Trainer) {
+      const tp = await db.Trainer.findByPk(payload.assigned_trainer_id);
+      if (tp) validTrainerProfileId = tp.id;
+    }
+
+    let validPlacementUserId = null;
+    let validPlacementProfileId = null;
+    if (safeUUID(payload.placement_coordinator_id) && db.User) {
+      const pu = await db.User.findByPk(payload.placement_coordinator_id);
+      if (pu) validPlacementUserId = pu.id;
+    }
+    if (safeUUID(payload.assigned_placement_coordinator_id) && db.PlacementCoordinator) {
+      const pp = await db.PlacementCoordinator.findByPk(payload.assigned_placement_coordinator_id);
+      if (pp) validPlacementProfileId = pp.id;
+    }
+
+    const candidatePhotoUrl = payload.photo_url && String(payload.photo_url).trim() !== ''
+      ? String(payload.photo_url).trim()
+      : null;
+
     const newCandidate = {
       id: candidateId,
       candidate_code: candidateCode,
@@ -410,7 +371,7 @@ export const createCandidate = async (req, res) => {
       middle_name: payload.middle_name || '',
       last_name: payload.last_name || '',
       full_name: fullName,
-      photo_url: payload.photo_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+      photo_url: candidatePhotoUrl,
       mobile_number: payload.mobile_number || '',
       alternate_mobile: payload.alternate_mobile || '',
       email: payload.email || `${(payload.first_name || 'cand').toLowerCase()}.${Date.now()}@candidate.org`,
@@ -424,9 +385,9 @@ export const createCandidate = async (req, res) => {
       address_line_1: payload.address_line_1 || '',
       address_line_2: payload.address_line_2 || '',
       address: payload.address || `${payload.address_line_1 || ''} ${payload.address_line_2 || ''}`.trim(),
-      city_id: payload.city_id || null,
+      city_id: safeUUID(payload.city_id),
       city: payload.city || 'Bengaluru',
-      state_id: payload.state_id || null,
+      state_id: safeUUID(payload.state_id),
       state: payload.state || 'Karnataka',
       pincode: payload.pincode || '',
       education_level: payload.education_level || '10th Pass',
@@ -443,20 +404,20 @@ export const createCandidate = async (req, res) => {
       recommended_trainings: Array.isArray(payload.recommended_trainings) && payload.recommended_trainings.length > 0
         ? payload.recommended_trainings
         : evaluatedNF.recommendedTrainings,
-      organization_id: payload.organization_id || null,
-      partner_id: payload.partner_id || null,
-      assigned_partner_id: payload.assigned_partner_id || payload.partner_id || null,
-      training_center_id: payload.training_center_id || null,
-      mobilizer_id: payload.mobilizer_id || null,
-      assigned_mobilizer_id: payload.assigned_mobilizer_id || payload.mobilizer_id || null,
-      trainer_id: payload.trainer_id || null,
-      assigned_trainer_id: payload.assigned_trainer_id || null,
-      placement_coordinator_id: payload.placement_coordinator_id || null,
-      assigned_placement_coordinator_id: payload.assigned_placement_coordinator_id || null,
+      organization_id: validOrgId,
+      partner_id: validPartnerId,
+      assigned_partner_id: validPartnerId,
+      training_center_id: validTrainingCenterId,
+      mobilizer_id: validUserId,
+      assigned_mobilizer_id: validMobilizerRecordId,
+      trainer_id: validTrainerUserId,
+      assigned_trainer_id: validTrainerProfileId,
+      placement_coordinator_id: validPlacementUserId,
+      assigned_placement_coordinator_id: validPlacementProfileId,
       training_progress_percentage: 0,
       overall_attendance_rate: 0,
       readiness_score: payload.readiness_score ? parseFloat(payload.readiness_score) : evaluatedNF.score,
-      readiness_status: payload.readiness_status || evaluatedNF.readinessStatus,
+      readiness_status: mapReadinessStatus(payload.readiness_status || evaluatedNF.readinessStatus),
       deployment_status: payload.deployment_status || 'NOT_DEPLOYED',
       risk_level: payload.risk_level || 'NORMAL',
       risk_reasons: Array.isArray(payload.risk_reasons) ? payload.risk_reasons : [],
@@ -505,7 +466,9 @@ export const createCandidate = async (req, res) => {
           address_line_1: newCandidate.address_line_1,
           address_line_2: newCandidate.address_line_2,
           address: newCandidate.address,
+          city_id: newCandidate.city_id,
           city: newCandidate.city,
+          state_id: newCandidate.state_id,
           state: newCandidate.state,
           pincode: newCandidate.pincode,
           education_level: newCandidate.education_level,
@@ -524,7 +487,27 @@ export const createCandidate = async (req, res) => {
           deployment_status: newCandidate.deployment_status,
           risk_level: newCandidate.risk_level,
           status: newCandidate.status,
-          notes: newCandidate.notes
+          notes: newCandidate.notes,
+          aadhaar_number: newCandidate.aadhaar_number,
+          family_dependents_count: newCandidate.family_dependents_count,
+          monthly_household_income: newCandidate.monthly_household_income,
+          emergency_contact_name: newCandidate.emergency_contact_name,
+          emergency_contact_phone: newCandidate.emergency_contact_phone,
+          emergency_contact_relation: newCandidate.emergency_contact_relation,
+          driving_skill: newCandidate.driving_skill,
+          has_scooty_access: newCandidate.has_scooty_access,
+          has_driving_licence: newCandidate.has_driving_licence,
+          has_valid_license: newCandidate.has_valid_license,
+          license_number: newCandidate.license_number,
+          driving_experience: newCandidate.driving_experience,
+          has_smartphone: newCandidate.has_smartphone,
+          source: newCandidate.source,
+          camp_or_event_name: newCandidate.camp_or_event_name,
+          location_details: newCandidate.location_details,
+          initial_interest_level: newCandidate.initial_interest_level,
+          referrer_name: newCandidate.referrer_name,
+          referrer_contact: newCandidate.referrer_contact,
+          counseling_notes: newCandidate.counseling_notes
         });
 
         // Also create mobilization record if table exists
@@ -543,6 +526,32 @@ export const createCandidate = async (req, res) => {
           }).catch(e => console.warn('MobilizationRecord creation notice:', e.message));
         }
 
+        // Also create readiness record if table exists
+        if (db.CandidateReadiness) {
+          const hasLicenseBool = newCandidate.has_driving_licence === 'Yes' || (newCandidate.has_valid_license && !newCandidate.has_valid_license.toLowerCase().includes('no'));
+          const licenseStatus = newCandidate.has_valid_license?.toLowerCase().includes('learn')
+            ? 'Learner'
+            : hasLicenseBool
+            ? 'Valid'
+            : 'None';
+          const licenseType = newCandidate.has_valid_license?.toLowerCase().includes('learn')
+            ? 'LEARNER'
+            : hasLicenseBool
+            ? 'PERMANENT_2W'
+            : 'NONE';
+
+          await db.CandidateReadiness.create({
+            candidate_id: newCandidate.id,
+            has_driving_license: Boolean(hasLicenseBool),
+            driving_license_status: licenseStatus,
+            license_type: licenseType,
+            license_number: newCandidate.license_number || '',
+            driving_experience: newCandidate.driving_experience || '',
+            can_ride_two_wheeler: newCandidate.driving_skill === 'Yes / Verified' || newCandidate.driving_skill === 'Basic',
+            has_smartphone: Boolean(newCandidate.has_smartphone && !newCandidate.has_smartphone.toLowerCase().includes('no'))
+          }).catch(e => console.warn('CandidateReadiness creation notice:', e.message));
+        }
+
         localCandidates.unshift(newCandidate);
         return res.status(201).json({
           success: true,
@@ -550,7 +559,11 @@ export const createCandidate = async (req, res) => {
           data: newCandidate
         });
       } catch (dbErr) {
-        console.warn('DB candidate create error, saving in local fallback:', dbErr.message);
+        console.error('DB candidate create error:', dbErr.message);
+        return res.status(400).json({
+          success: false,
+          message: `Database error during candidate onboarding: ${dbErr.message}`
+        });
       }
     }
 
@@ -582,9 +595,220 @@ export const updateCandidate = async (req, res) => {
 
     if (db.Candidate) {
       try {
-        await db.Candidate.update(payload, { where: { id } });
+        const candidateRecord = await db.Candidate.findOne({
+          where: {
+            [db.Sequelize.Op.or]: [{ id }, { candidate_code: id }]
+          }
+        });
+
+        if (candidateRecord) {
+          const targetId = candidateRecord.id;
+          const firstName = payload.first_name !== undefined ? payload.first_name : candidateRecord.first_name;
+          const middleName = payload.middle_name !== undefined ? payload.middle_name : candidateRecord.middle_name;
+          const lastName = payload.last_name !== undefined ? payload.last_name : candidateRecord.last_name;
+          const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim() || payload.full_name || candidateRecord.full_name;
+
+          // Prepare candidate attributes that exist in portal_candidates table
+          const updateData = {};
+          const allowedFields = [
+            'first_name', 'middle_name', 'last_name', 'full_name',
+            'email', 'photo_url', 'mobile_number', 'alternate_mobile',
+            'age', 'date_of_birth', 'gender', 'marital_status',
+            'address_line_1', 'address_line_2', 'address', 'city', 'state', 'pincode',
+            'education_level', 'employment_status', 'current_employment_status',
+            'current_stage', 'nf_category', 'nf_classification_score',
+            'recommended_trainings', 'readiness_score', 'readiness_status',
+            'deployment_status', 'risk_level', 'status', 'notes',
+            'aadhaar_number', 'family_dependents_count', 'monthly_household_income',
+            'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relation',
+            'driving_skill', 'has_scooty_access', 'has_driving_licence', 'has_valid_license',
+            'license_number', 'driving_experience', 'has_smartphone',
+            'source', 'camp_or_event_name', 'location_details', 'initial_interest_level',
+            'referrer_name', 'referrer_contact', 'counseling_notes'
+          ];
+
+          allowedFields.forEach(f => {
+            if (payload[f] !== undefined) {
+              updateData[f] = payload[f];
+            }
+          });
+
+          updateData.full_name = fullName;
+
+          // Sanitize UUID FKs
+          const uuidFields = [
+            'organization_id', 'partner_id', 'assigned_partner_id',
+            'training_center_id', 'trainer_id', 'assigned_trainer_id',
+            'placement_coordinator_id', 'assigned_placement_coordinator_id', 'city_id', 'state_id'
+          ];
+          uuidFields.forEach(f => {
+            if (payload[f] !== undefined) {
+              updateData[f] = safeUUID(payload[f]);
+            }
+          });
+
+          // Resolve mobilizer IDs correctly:
+          // mobilizer_id -> portal_users(id)
+          // assigned_mobilizer_id -> portal_mobilizers(id)
+          let validUserId = null;
+          let validMobilizerRecordId = null;
+          if (db.Mobilizer && db.User) {
+            const inputMob = payload.assigned_mobilizer_id || payload.mobilizer_id;
+            if (isUUID(inputMob)) {
+              const mobRec = await db.Mobilizer.findByPk(inputMob);
+              if (mobRec) {
+                validMobilizerRecordId = mobRec.id;
+                validUserId = mobRec.user_id;
+              } else {
+                const uRec = await db.User.findByPk(inputMob);
+                if (uRec) {
+                  validUserId = uRec.id;
+                  const associatedMob = await db.Mobilizer.findOne({ where: { user_id: uRec.id } });
+                  if (associatedMob) validMobilizerRecordId = associatedMob.id;
+                }
+              }
+            }
+            if (!validMobilizerRecordId) {
+              const defaultMob = await db.Mobilizer.findOne();
+              if (defaultMob) {
+                validMobilizerRecordId = defaultMob.id;
+                if (!validUserId) validUserId = defaultMob.user_id;
+              }
+            }
+          }
+
+          updateData.mobilizer_id = validUserId;
+          updateData.assigned_mobilizer_id = validMobilizerRecordId;
+
+          if (updateData.readiness_status !== undefined) {
+            updateData.readiness_status = mapReadinessStatus(updateData.readiness_status);
+          }
+          if (updateData.age !== undefined && updateData.age !== '') {
+            updateData.age = parseInt(updateData.age, 10) || null;
+          }
+          if (updateData.readiness_score !== undefined && updateData.readiness_score !== '') {
+            updateData.readiness_score = parseFloat(updateData.readiness_score) || 0;
+          }
+          if (updateData.family_dependents_count !== undefined && updateData.family_dependents_count !== '') {
+            updateData.family_dependents_count = parseInt(updateData.family_dependents_count, 10) || 0;
+          }
+          if (updateData.monthly_household_income !== undefined && updateData.monthly_household_income !== '') {
+            updateData.monthly_household_income = parseFloat(updateData.monthly_household_income) || 0;
+          }
+          if (!updateData.photo_url) {
+            updateData.photo_url = null;
+          }
+
+          // Perform Candidate update
+          await db.Candidate.update(updateData, { where: { id: targetId } });
+
+          // Synchronize MobilizationRecord
+          if (db.MobilizationRecord) {
+            try {
+              const mobSource = payload.source || 'COMMUNITY_OUTREACH';
+              const mobData = {
+                candidate_id: targetId,
+                source: mobSource,
+                camp_or_event_name: payload.camp_or_event_name || '',
+                location_details: payload.location_details || '',
+                initial_interest_level: payload.initial_interest_level || 'HIGH',
+                counseling_notes: payload.counseling_notes || '',
+                referrer_name: payload.referrer_name || '',
+                referrer_contact: payload.referrer_contact || '',
+                partner_id: safeUUID(payload.partner_id),
+                mobilizer_id: safeUUID(payload.mobilizer_id)
+              };
+
+              const existingMob = await db.MobilizationRecord.findOne({ where: { candidate_id: targetId } });
+              if (existingMob) {
+                await existingMob.update(mobData);
+              } else {
+                await db.MobilizationRecord.create(mobData);
+              }
+            } catch (mobErr) {
+              console.warn('MobilizationRecord update notice:', mobErr.message);
+            }
+          }
+
+          // Synchronize CandidateReadiness
+          if (db.CandidateReadiness) {
+            try {
+              const hasLicenseBool = payload.has_driving_licence === 'Yes' || (payload.has_valid_license && !payload.has_valid_license.toLowerCase().includes('no'));
+              const licenseStatus = payload.has_valid_license?.toLowerCase().includes('learn')
+                ? 'Learner'
+                : hasLicenseBool
+                ? 'Valid'
+                : 'None';
+              const licenseType = payload.has_valid_license?.toLowerCase().includes('learn')
+                ? 'LEARNER'
+                : hasLicenseBool
+                ? 'PERMANENT_2W'
+                : 'NONE';
+
+              const readinessData = {
+                candidate_id: targetId,
+                has_driving_license: Boolean(hasLicenseBool),
+                driving_license_status: licenseStatus,
+                license_type: licenseType,
+                license_number: payload.license_number || '',
+                driving_experience: payload.driving_experience || payload.prior_driving_experience || '',
+                can_ride_two_wheeler: payload.driving_skill === 'Yes / Verified' || payload.driving_skill === 'Basic',
+                has_smartphone: Boolean(payload.has_smartphone && !payload.has_smartphone.toLowerCase().includes('no'))
+              };
+
+              const existingReadiness = await db.CandidateReadiness.findOne({ where: { candidate_id: targetId } });
+              if (existingReadiness) {
+                await existingReadiness.update(readinessData);
+              } else {
+                await db.CandidateReadiness.create(readinessData);
+              }
+            } catch (readinessErr) {
+              console.warn('CandidateReadiness update notice:', readinessErr.message);
+            }
+          }
+
+          const updated = await db.Candidate.findByPk(targetId, {
+            include: [
+              { model: db.CandidateDocument, as: 'documents', required: false },
+              { model: db.MobilizationRecord, as: 'mobilization', required: false },
+              { model: db.CandidateReadiness, as: 'readinessProfile', required: false }
+            ]
+          });
+
+          let updatedJson = updated ? updated.toJSON() : { id: targetId, ...payload };
+          if (updatedJson && updatedJson.mobilization) {
+            updatedJson.source = updatedJson.source || updatedJson.mobilization.source;
+            updatedJson.camp_or_event_name = updatedJson.camp_or_event_name || updatedJson.mobilization.camp_or_event_name;
+            updatedJson.location_details = updatedJson.location_details || updatedJson.mobilization.location_details;
+            updatedJson.initial_interest_level = updatedJson.initial_interest_level || updatedJson.mobilization.initial_interest_level;
+            updatedJson.counseling_notes = updatedJson.counseling_notes || updatedJson.mobilization.counseling_notes;
+            updatedJson.referrer_name = updatedJson.referrer_name || updatedJson.mobilization.referrer_name;
+            updatedJson.referrer_contact = updatedJson.referrer_contact || updatedJson.mobilization.referrer_contact;
+          }
+          if (updatedJson && updatedJson.readinessProfile) {
+            const rp = updatedJson.readinessProfile;
+            updatedJson.license_number = updatedJson.license_number || rp.license_number;
+            updatedJson.driving_experience = updatedJson.driving_experience || rp.driving_experience;
+            if (rp.has_driving_license !== undefined && !updatedJson.has_driving_licence) {
+              updatedJson.has_driving_licence = rp.has_driving_license ? 'Yes' : 'No';
+            }
+            if (rp.can_ride_two_wheeler !== undefined && !updatedJson.driving_skill) {
+              updatedJson.driving_skill = rp.can_ride_two_wheeler ? 'Yes / Verified' : 'No';
+            }
+          }
+
+          return res.json({
+            success: true,
+            message: 'Candidate updated successfully in database!',
+            data: updatedJson
+          });
+        }
       } catch (dbErr) {
-        console.warn('DB candidate update notice:', dbErr.message);
+        console.error('DB candidate update error:', dbErr.message);
+        return res.status(400).json({
+          success: false,
+          message: `Database update failed: ${dbErr.message}`
+        });
       }
     }
 
@@ -606,7 +830,14 @@ export const deleteCandidate = async (req, res) => {
 
     if (db.Candidate) {
       try {
+        if (db.MobilizationRecord) {
+          await db.MobilizationRecord.destroy({ where: { candidate_id: id } }).catch(() => {});
+        }
+        if (db.CandidateDocument) {
+          await db.CandidateDocument.destroy({ where: { candidate_id: id } }).catch(() => {});
+        }
         await db.Candidate.destroy({ where: { id } });
+        return res.json({ success: true, message: 'Candidate deleted successfully from database' });
       } catch (dbErr) {
         console.warn('DB candidate delete notice:', dbErr.message);
       }
@@ -621,6 +852,32 @@ export const deleteCandidate = async (req, res) => {
 // 6. CANDIDATE STATS
 export const getCandidateStats = async (req, res) => {
   try {
+    if (db.Candidate) {
+      try {
+        const candidates = await db.Candidate.findAll();
+        const total = candidates.length;
+        const mobilized = candidates.filter(c => c.current_stage === 'MOBILIZED').length;
+        const inTraining = candidates.filter(c => c.current_stage === 'IN_TRAINING').length;
+        const ready = candidates.filter(c => c.readiness_status === 'DEPLOYMENT_READY').length;
+        const nf1 = candidates.filter(c => c.nf_category === 'NF1').length;
+        const nf2 = candidates.filter(c => c.nf_category === 'NF2').length;
+        const nf3 = candidates.filter(c => c.nf_category === 'NF3').length;
+
+        return res.json({
+          success: true,
+          data: {
+            total,
+            mobilized,
+            inTraining,
+            ready,
+            nfBreakdown: { nf1, nf2, nf3 }
+          }
+        });
+      } catch (dbErr) {
+        console.warn('DB candidate stats error:', dbErr.message);
+      }
+    }
+
     const total = localCandidates.length;
     const mobilized = localCandidates.filter(c => c.current_stage === 'MOBILIZED').length;
     const inTraining = localCandidates.filter(c => c.current_stage === 'IN_TRAINING').length;

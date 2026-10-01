@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { normalizeRole, isSuperAdminRole } from '../utils/roleUtils';
 import {
   Menu,
   Bell,
@@ -24,7 +25,6 @@ const AVAILABLE_ROLES = [
   { id: 'Mobilizer', label: 'Field Mobilizer', userType: 'Mobilizer' },
   { id: 'Trainer', label: 'Trainer / Assessor', userType: 'Trainer' },
   { id: 'PlacementCoordinator', label: 'Placement Officer', userType: 'PlacementCoordinator' },
-  { id: 'ME', label: 'M&E / Impact Lead', userType: 'ME' },
   { id: 'Candidate', label: 'Candidate Portal', userType: 'Candidate' },
 ];
 
@@ -39,21 +39,16 @@ export default function Header({
   notificationBadge = 12
 }) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   const profileRef = useRef(null);
-  const notifRef = useRef(null);
   const roleRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(event) {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setShowProfileDropdown(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
-        setShowNotifications(false);
       }
       if (roleRef.current && !roleRef.current.contains(event.target)) {
         setShowRoleSwitcher(false);
@@ -63,8 +58,9 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const isCandidate = user?.userType === 'Candidate';
-  const isSuperAdmin = !isCandidate && (!user?.userType || user?.userType === 'Admin' || user?.role === 'Super Admin' || user?.role === 'Administrator');
+  const normalizedType = normalizeRole(user?.userType || user?.role);
+  const isCandidate = normalizedType === 'Candidate';
+  const isSuperAdmin = normalizedType === 'Admin';
   const fullName = isCandidate ? (user?.full_name || 'Priya Sharma') : isSuperAdmin ? 'Super Admin' : (user?.full_name || 'Administrator');
   const email = isCandidate ? (user?.email || 'priya.sharma@candidate.org') : (user?.email || 'admin@eventransparency.org');
   const roleName = isCandidate ? 'Candidate' : isSuperAdmin ? 'Super Admin' : (user?.role || user?.userType || 'Super Admin');
@@ -196,111 +192,6 @@ export default function Header({
             <span className="hidden lg:inline text-xs text-slate-600">Help</span>
           </button>
 
-          {/* Notification Bell with Badge */}
-          <div className="relative" ref={notifRef}>
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="cursor-pointer h-9 w-9 rounded-full hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition flex items-center justify-center relative shadow-2xs active:scale-95"
-              title="System Notifications"
-            >
-              <Bell className="w-4 h-4 text-slate-600" />
-              <span className="absolute -top-1 -right-1 bg-[#F72570] text-white rounded-full text-[9px] font-black h-4 w-4 flex items-center justify-center border-2 border-white shadow-xs">
-                {isCandidate ? 3 : notificationBadge}
-              </span>
-            </button>
-
-            {/* Notifications Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 top-12 w-80 sm:w-88 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-2 animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">Notifications & Alerts</span>
-                    <span className="px-2 py-0.5 rounded-full bg-[#FFF0F5] text-[#F72570] text-[10px] font-bold">
-                      {isCandidate ? '3 new' : '12 unread'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-[#F72570] font-semibold cursor-pointer hover:underline">Mark all read</span>
-                </div>
-                
-                {isCandidate ? (
-                  <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
-                    <div 
-                      onClick={() => {
-                        setShowNotifications(false);
-                        if (onSectionChange) onSectionChange('attendance');
-                      }}
-                      className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer text-xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-emerald-600 text-[10px] uppercase tracking-wider">Attendance Logged</span>
-                        <span className="text-[9.5px] text-slate-400">16 May • 10:24 AM</span>
-                      </div>
-                      <p className="font-semibold text-slate-800 mt-0.5">Attendance marked for Training Session</p>
-                      <p className="text-[11px] text-slate-500">Present — Driving Fundamentals module</p>
-                    </div>
-
-                    <div 
-                      onClick={() => {
-                        setShowNotifications(false);
-                        if (onSectionChange) onSectionChange('assessments');
-                      }}
-                      className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer text-xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-[#F72570] text-[10px] uppercase tracking-wider">Assessment Score</span>
-                        <span className="text-[9.5px] text-slate-400">14 May • 04:52 PM</span>
-                      </div>
-                      <p className="font-semibold text-slate-800 mt-0.5">Assessment result updated: 82% (Passed)</p>
-                      <p className="text-[11px] text-slate-500">Driving Competency Assessment verified by Trainer</p>
-                    </div>
-
-                    <div 
-                      onClick={() => {
-                        setShowNotifications(false);
-                        if (onSectionChange) onSectionChange('documents');
-                      }}
-                      className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer text-xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-amber-600 text-[10px] uppercase tracking-wider">KYC Document</span>
-                        <span className="text-[9.5px] text-slate-400">10 May • 03:20 PM</span>
-                      </div>
-                      <p className="font-semibold text-slate-800 mt-0.5">Driving Licence document pending verification</p>
-                      <p className="text-[11px] text-slate-500">LLR receipt uploaded — processing at RTO</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
-                    <div className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-rose-600 text-[11px] uppercase tracking-wider">Critical Drop-off</span>
-                        <span className="text-[9.5px] text-slate-400">10 min ago</span>
-                      </div>
-                      <p className="font-semibold text-slate-800 mt-0.5">23% candidates dropped in Lucknow batch</p>
-                      <p className="text-[11px] text-slate-500">Requires immediate mobilizer intervention</p>
-                    </div>
-                    <div className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-amber-600 text-[11px] uppercase tracking-wider">Document Alert</span>
-                        <span className="text-[9.5px] text-slate-400">25 min ago</span>
-                      </div>
-                      <p className="font-semibold text-slate-800 mt-0.5">58 driving licences expiring in 30 days</p>
-                      <p className="text-[11px] text-slate-500">Auto-reminder sent to candidates</p>
-                    </div>
-                    <div className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-emerald-600 text-[11px] uppercase tracking-wider">Deployment Ready</span>
-                        <span className="text-[9.5px] text-slate-400">1 hr ago</span>
-                      </div>
-                      <p className="font-semibold text-slate-800 mt-0.5">48 candidates cleared readiness in Batch MOB-2026-018</p>
-                      <p className="text-[11px] text-slate-500">Ready for placement matching</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* Super Admin Avatar & Profile Dropdown */}
           <div className="relative" ref={profileRef}>
             <button
@@ -371,17 +262,6 @@ export default function Header({
                     </>
                   ) : (
                     <>
-                      <button
-                        onClick={() => {
-                          setShowProfileDropdown(false);
-                          if (onSectionChange) onSectionChange('settings');
-                        }}
-                        className="w-full flex items-center gap-2 px-3.5 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer text-left"
-                      >
-                        <Settings className="w-4 h-4 text-slate-400" />
-                        <span>System Settings</span>
-                      </button>
-
                       <button
                         onClick={() => {
                           setShowProfileDropdown(false);

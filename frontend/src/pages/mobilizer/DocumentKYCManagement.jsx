@@ -27,126 +27,6 @@ import {
   Upload
 } from 'lucide-react';
 
-const INITIAL_CANDIDATES = [
-  {
-    id: 'cand-1',
-    candidate_code: 'ET-2026-001',
-    full_name: 'Priya Sharma',
-    phone_number: '+91 98765 11111',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    current_stage: 'IN_TRAINING',
-    nf_category: 'NF1',
-    nf_classification_score: 88,
-    readiness_status: 'DEPLOYMENT_READY',
-    risk_engine_tier: 'NORMAL',
-    account_status: 'ACTIVE',
-    training_modules: [
-      '2W EV Riding & Safety Basics',
-      'Advanced Defensive EV Driving',
-      'Smartphone & Navigation Apps',
-      'Battery Swapping & Basic Maintenance'
-    ],
-    documents: [
-      {
-        id: 'doc-1',
-        document_type: 'Driving License / LLR',
-        document_number: 'KA-05-2022-0048192',
-        file_name: 'priya_dl_permanent.pdf',
-        file_url: 'https://res.cloudinary.com/dy6hcbcuz/image/upload/v1724480000/sample_dl.pdf',
-        verification_status: 'VERIFIED',
-        issue_date: '2022-05-14',
-        expiry_date: '2042-05-13'
-      },
-      {
-        id: 'doc-2',
-        document_type: 'Aadhaar Card',
-        document_number: '5423-8891-4829',
-        file_name: 'priya_aadhaar.pdf',
-        file_url: 'https://res.cloudinary.com/dy6hcbcuz/image/upload/v1724480000/sample_aadhaar.pdf',
-        verification_status: 'VERIFIED',
-        issue_date: '2018-01-10',
-        expiry_date: ''
-      }
-    ],
-    remarks: 'Eligible for instant batch enrollment in Bengaluru Hub Cohort 4.'
-  },
-  {
-    id: 'cand-2',
-    candidate_code: 'ET-2026-002',
-    full_name: 'Aisha Khan',
-    phone_number: '+91 98765 22222',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    current_stage: 'READINESS_ASSESSMENT',
-    nf_category: 'NF2',
-    nf_classification_score: 74,
-    readiness_status: 'IN_PROGRESS',
-    risk_engine_tier: 'NORMAL',
-    account_status: 'ACTIVE',
-    training_modules: [
-      '2W EV Riding & Safety Basics',
-      'Smartphone & Navigation Apps',
-      'Customer Experience & Communication'
-    ],
-    documents: [
-      {
-        id: 'doc-3',
-        document_type: 'Driving License / LLR',
-        document_number: 'KA-01-LL-2025-9921',
-        file_name: 'aisha_llr_active.pdf',
-        file_url: '',
-        verification_status: 'VERIFIED',
-        issue_date: '2025-09-12',
-        expiry_date: '2026-03-12'
-      },
-      {
-        id: 'doc-4',
-        document_type: 'Aadhaar Card',
-        document_number: '7721-9902-1144',
-        file_name: 'aisha_aadhaar.pdf',
-        file_url: '',
-        verification_status: 'VERIFIED',
-        issue_date: '2019-03-20',
-        expiry_date: ''
-      }
-    ],
-    remarks: 'Candidate scheduled for permanent driving license test next month.'
-  },
-  {
-    id: 'cand-3',
-    candidate_code: 'ET-2026-003',
-    full_name: 'Kavita Devi',
-    phone_number: '+91 98765 33333',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    current_stage: 'MOBILIZED',
-    nf_category: 'NF3',
-    nf_classification_score: 62,
-    readiness_status: 'NOT_STARTED',
-    risk_engine_tier: 'MODERATE',
-    account_status: 'ACTIVE',
-    training_modules: [
-      '2W EV Riding & Safety Basics',
-      'Smartphone & Navigation Apps',
-      'Financial Literacy & Savings'
-    ],
-    documents: [
-      {
-        id: 'doc-5',
-        document_type: 'Aadhaar Card',
-        document_number: '3312-4455-8899',
-        file_name: 'kavita_aadhaar_scan.jpg',
-        file_url: '',
-        verification_status: 'PENDING',
-        issue_date: '',
-        expiry_date: ''
-      }
-    ],
-    remarks: 'Needs full LLR documentation and baseline driving school enrollment.'
-  }
-];
-
 const TRAINING_MODULE_OPTIONS = [
   '2W EV Riding & Safety Basics',
   'Advanced Defensive EV Driving',
@@ -159,8 +39,9 @@ const TRAINING_MODULE_OPTIONS = [
 ];
 
 export default function DocumentKYCManagement({ mobilizerUser, onSectionChange }) {
-  const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
-  const [selectedCandidateId, setSelectedCandidateId] = useState('cand-1');
+  const [candidates, setCandidates] = useState([]);
+  const [selectedCandidateId, setSelectedCandidateId] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('documents'); // 'documents' or 'nf_stage'
   const [toast, setToast] = useState(null);
@@ -170,14 +51,15 @@ export default function DocumentKYCManagement({ mobilizerUser, onSectionChange }
 
   const fileInputRefs = useRef({});
 
-  // Fetch candidates from backend API if available
-  useEffect(() => {
+  // Fetch candidates from backend API
+  const fetchCandidates = () => {
+    setLoading(true);
     fetch('http://localhost:5000/api/candidates')
       .then(r => r.json())
       .then(res => {
-        if (res.success && res.data && res.data.length > 0) {
+        if (res.success && res.data) {
           const mapped = res.data.map(c => ({
-            id: c.id || `cand-${c.candidate_code}`,
+            id: c.id,
             candidate_code: c.candidate_code || 'ET-2026-001',
             full_name: c.full_name || 'Candidate',
             phone_number: c.mobile_number || c.phone_number || '+91 98765 00000',
@@ -195,14 +77,24 @@ export default function DocumentKYCManagement({ mobilizerUser, onSectionChange }
             ],
             documents: c.documents && c.documents.length > 0 ? c.documents : [
               {
-                id: 'doc-init',
+                id: `doc-${c.id}-aadhaar`,
                 document_type: 'Aadhaar Card',
                 document_number: c.aadhaar_number || 'XXXX-XXXX-0000',
-                file_name: 'aadhaar_doc.pdf',
+                file_name: 'aadhaar_verification.pdf',
                 file_url: '',
                 verification_status: 'VERIFIED',
-                issue_date: '',
+                issue_date: '2024-01-15',
                 expiry_date: ''
+              },
+              {
+                id: `doc-${c.id}-dl`,
+                document_type: 'Driving License / LLR',
+                document_number: c.has_driving_licence === 'Yes' ? 'KA-01-2024-0012' : 'LLR-IN-PROGRESS',
+                file_name: 'license_permit.pdf',
+                file_url: '',
+                verification_status: c.has_driving_licence === 'Yes' ? 'VERIFIED' : 'PENDING',
+                issue_date: '2024-02-01',
+                expiry_date: '2044-01-31'
               }
             ],
             remarks: c.remarks || ''
@@ -211,12 +103,23 @@ export default function DocumentKYCManagement({ mobilizerUser, onSectionChange }
           if (mapped.length > 0) {
             setSelectedCandidateId(mapped[0].id);
           }
+        } else {
+          setCandidates([]);
         }
       })
-      .catch(err => console.warn('Candidate list load notice:', err.message));
+      .catch(err => {
+        console.warn('Candidate list load notice:', err.message);
+        setCandidates([]);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchCandidates();
   }, []);
 
-  const selectedCandidate = candidates.find(c => c.id === selectedCandidateId) || candidates[0];
+  const selectedCandidate = candidates.find(c => c.id === selectedCandidateId) || candidates[0] || null;
+
 
   const showToast = (msg) => {
     setToast(msg);

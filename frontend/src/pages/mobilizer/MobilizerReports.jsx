@@ -44,102 +44,181 @@ export default function MobilizerReports({ mobilizerUser, onSectionChange }) {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [selectedAuditStatement, setSelectedAuditStatement] = useState(null);
 
-  // Core Analytics Dataset for Q1 2026
-  const analyticsData = {
+  const [analyticsData, setAnalyticsData] = useState({
     overview: {
-      total_mobilized: 116,
-      target_mobilized: 120,
-      intake_achievement_rate: 96.7,
-      kyc_verified: 110,
-      kyc_compliance_rate: 94.8,
-      inducted_in_training: 96,
-      placed_in_jobs: 83,
-      placement_conversion_rate: 86.5,
+      total_mobilized: 0,
+      target_mobilized: 10,
+      intake_achievement_rate: 0,
+      kyc_verified: 0,
+      kyc_compliance_rate: 0,
+      inducted_in_training: 0,
+      placed_in_jobs: 0,
+      placement_conversion_rate: 0,
       retention_90_days: 94.0,
       avg_monthly_wage: 20600,
-      total_incentives_earned: 182500,
-      field_camps_run: 21,
-      total_shg_meetings: 34
+      total_incentives_earned: 0,
+      field_camps_run: 2,
+      total_shg_meetings: 5
     },
     monthly_trends: [
-      { month: 'Jan 2026', target: 35, registered: 36, verified: 34, placed: 28, bonus: 54000, rate: 102.8 },
-      { month: 'Feb 2026', target: 40, registered: 42, verified: 41, placed: 35, bonus: 68500, rate: 105.0 },
-      { month: 'Mar 2026 (Live)', target: 45, registered: 38, verified: 35, placed: 20, bonus: 60000, rate: 84.4 },
-      { month: 'Apr 2026 (Est)', target: 50, registered: 48, verified: 45, placed: 38, bonus: 75000, rate: 96.0, isForecast: true }
+      { month: 'Live Target', target: 10, registered: 0, verified: 0, placed: 0, bonus: 0, rate: 0 }
     ],
     funnel_stages: [
-      { stage: '1. Community Outreach & Intake', count: 116, percentage: 100, color: 'bg-indigo-500', dropRate: '0% drop' },
-      { stage: '2. Aadhaar & DL KYC Verification', count: 110, percentage: 94.8, color: 'bg-teal-500', dropRate: '5.2% pending documents' },
-      { stage: '3. EV Academy Training Induction', count: 96, percentage: 82.7, color: 'bg-blue-500', dropRate: '12.1% awaiting batch slot' },
-      { stage: '4. Riding Dynamics & Certified', count: 89, percentage: 76.7, color: 'bg-purple-500', dropRate: '6.0% in remedial practice' },
-      { stage: '5. Commercial Green Fleet Placed', count: 83, percentage: 71.5, color: 'bg-emerald-500', dropRate: '5.2% offer joining pending' },
-      { stage: '6. 90-Day Livelihood Retained', count: 78, percentage: 67.2, color: 'bg-emerald-600', dropRate: '94% on-job retention index' }
+      { stage: '1. Community Outreach & Intake', count: 0, percentage: 100, color: 'bg-indigo-500', dropRate: '0% drop' },
+      { stage: '2. Aadhaar & DL KYC Verification', count: 0, percentage: 100, color: 'bg-teal-500', dropRate: '0% pending documents' },
+      { stage: '3. EV Academy Training Induction', count: 0, percentage: 100, color: 'bg-blue-500', dropRate: '0% awaiting batch slot' },
+      { stage: '4. Riding Dynamics & Certified', count: 0, percentage: 100, color: 'bg-purple-500', dropRate: '0% in remedial practice' },
+      { stage: '5. Commercial Green Fleet Placed', count: 0, percentage: 100, color: 'bg-emerald-500', dropRate: '0% offer joining pending' },
+      { stage: '6. 90-Day Livelihood Retained', count: 0, percentage: 100, color: 'bg-emerald-600', dropRate: '94% on-job retention index' }
     ],
     nf_breakdown: [
-      { tier: 'NF1', label: 'Job Ready EV Drivers', count: 41, share: 35.3, avg_days_to_place: 8, color: 'bg-emerald-500', textColor: 'text-emerald-700', bgSoft: 'bg-emerald-50' },
-      { tier: 'NF2', label: 'Upskilling EV Riders', count: 51, share: 44.0, avg_days_to_place: 18, color: 'bg-indigo-500', textColor: 'text-indigo-700', bgSoft: 'bg-indigo-50' },
-      { tier: 'NF3', label: 'Foundational Training', count: 24, share: 20.7, avg_days_to_place: 28, color: 'bg-purple-500', textColor: 'text-purple-700', bgSoft: 'bg-purple-50' }
+      { tier: 'NF1', label: 'Job Ready EV Drivers', count: 0, share: 0, avg_days_to_place: 8, color: 'bg-emerald-500', textColor: 'text-emerald-700', bgSoft: 'bg-emerald-50' },
+      { tier: 'NF2', label: 'Upskilling EV Riders', count: 0, share: 0, avg_days_to_place: 18, color: 'bg-indigo-500', textColor: 'text-indigo-700', bgSoft: 'bg-indigo-50' },
+      { tier: 'NF3', label: 'Foundational Training', count: 0, share: 0, avg_days_to_place: 28, color: 'bg-purple-500', textColor: 'text-purple-700', bgSoft: 'bg-purple-50' }
     ],
     lead_sources: [
-      { name: 'Gram Panchayat & Ward Camps', count: 68, percentage: 58.6, cost_per_lead: '₹140', conversion: '88%' },
-      { name: 'Women SHG / Mahila Samitis', count: 33, percentage: 28.4, cost_per_lead: '₹95', conversion: '94%' },
-      { name: 'Placed Pilot Referrals', count: 15, percentage: 13.0, cost_per_lead: '₹50', conversion: '97%' }
+      { name: 'Gram Panchayat & Ward Camps', count: 2, percentage: 67, cost_per_lead: '₹140', conversion: '88%' },
+      { name: 'Women SHG / Mahila Samitis', count: 0, percentage: 0, cost_per_lead: '₹95', conversion: '94%' },
+      { name: 'Placed Pilot Referrals', count: 1, percentage: 33, cost_per_lead: '₹50', conversion: '97%' }
     ],
     employers_hiring: [
-      { name: 'Zomato Green Fleet', logo_text: 'ZG', candidates: 34, share: 41.0, avg_salary: 21500, roles: 'EV Last-Mile Pilot Leads', rating: 4.9 },
-      { name: 'BigBasket Electric (BB Now)', logo_text: 'BB', candidates: 28, share: 33.7, avg_salary: 19800, roles: 'Express Dark Store EV Pilots', rating: 4.8 },
-      { name: 'Blinkit Smart Logistics', logo_text: 'BL', candidates: 15, share: 18.1, avg_salary: 18500, roles: 'Instant Fulfillment Drivers', rating: 4.7 },
-      { name: 'Uber Green Mobility', logo_text: 'UB', candidates: 6, share: 7.2, avg_salary: 24000, roles: 'Clean Ride Fleet Captains', rating: 5.0 }
+      { name: 'Zomato Green Fleet', logo_text: 'ZG', candidates: 1, share: 100, avg_salary: 21500, roles: 'EV Last-Mile Pilot Leads', rating: 4.9 },
+      { name: 'BigBasket Electric (BB Now)', logo_text: 'BB', candidates: 0, share: 0, avg_salary: 19800, roles: 'Express Dark Store EV Pilots', rating: 4.8 },
+      { name: 'Blinkit Smart Logistics', logo_text: 'BL', candidates: 0, share: 0, avg_salary: 18500, roles: 'Instant Fulfillment Drivers', rating: 4.7 }
     ],
     territory_performance: [
-      { ward: 'Koramangala & HSR Cluster', camps: 8, registered: 45, placed: 36, rate: 93, incentive: '₹58,000', status: 'Exceeding' },
-      { ward: 'BTM & Bommanahalli Belt', camps: 7, registered: 42, placed: 31, rate: 86, incentive: '₹52,000', status: 'On Track' },
-      { ward: 'Electronic City Rural', camps: 6, registered: 29, placed: 16, rate: 78, incentive: '₹38,500', status: 'Expanding' }
+      { ward: 'Bengaluru South Cluster', camps: 2, registered: 3, placed: 1, rate: 33, incentive: '₹6,000', status: 'Active' }
     ],
     audit_statements: [
       {
-        id: 'stmt-mar-2026',
-        period: 'March 2026 (Live Audit)',
-        statement_no: 'AUDIT-MOB-2026-M03',
-        mobilized: 38,
-        target: 45,
-        placed: 20,
-        bonus_accrued: 60000,
+        id: 'stmt-live',
+        period: 'Live Audit',
+        statement_no: 'AUDIT-MOB-LIVE',
+        mobilized: 3,
+        target: 10,
+        placed: 1,
+        bonus_accrued: 6000,
         status: 'Active Audit',
-        supervisor: 'Rahul Sharma (State Head)',
-        verified_date: '2026-03-14'
-      },
-      {
-        id: 'stmt-feb-2026',
-        period: 'February 2026',
-        statement_no: 'AUDIT-MOB-2026-M02',
-        mobilized: 42,
-        target: 40,
-        placed: 35,
-        bonus_accrued: 68500,
-        status: 'Approved & Disbursed',
-        supervisor: 'Rahul Sharma (State Head)',
-        verified_date: '2026-03-01'
-      },
-      {
-        id: 'stmt-jan-2026',
-        period: 'January 2026',
-        statement_no: 'AUDIT-MOB-2026-M01',
-        mobilized: 36,
-        target: 35,
-        placed: 28,
-        bonus_accrued: 54000,
-        status: 'Approved & Disbursed',
-        supervisor: 'Rahul Sharma (State Head)',
-        verified_date: '2026-02-01'
+        supervisor: 'Sunita Verma (Field Mobilizer)',
+        verified_date: new Date().toISOString().split('T')[0]
       }
     ]
+  });
+
+  const fetchLiveReports = async () => {
+    try {
+      setIsRefreshing(true);
+      const res = await fetch(`${API_BASE}/mobilizers/reports`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data && json.data.length > 0) {
+          const rep = json.data[0];
+          const stats = json.stats || {};
+          const total = rep.candidates_registered || stats.total_mobilized_ytd || 0;
+          const kyc = rep.verified_kyc_count || 0;
+          const inducted = rep.batch_inductions || 0;
+          const placed = rep.candidates_placed || stats.total_placed_ytd || 0;
+          const nf1 = rep.nf_breakdown?.nf1_job_ready || 0;
+          const nf2 = rep.nf_breakdown?.nf2_upskilling || 0;
+          const nf3 = rep.nf_breakdown?.nf3_foundational || 0;
+
+          setAnalyticsData({
+            overview: {
+              total_mobilized: total,
+              target_mobilized: rep.candidates_target || 10,
+              intake_achievement_rate: rep.intake_achievement_rate || 0,
+              kyc_verified: kyc,
+              kyc_compliance_rate: rep.kyc_compliance_rate || 0,
+              inducted_in_training: inducted,
+              placed_in_jobs: placed,
+              placement_conversion_rate: rep.placement_conversion_rate || 0,
+              retention_90_days: 94.0,
+              avg_monthly_wage: rep.avg_monthly_wage || 20600,
+              total_incentives_earned: rep.estimated_mobilizer_incentive || stats.total_incentives_earned || 0,
+              field_camps_run: rep.camps_conducted || 2,
+              total_shg_meetings: 5
+            },
+            monthly_trends: [
+              {
+                month: rep.period || 'Live Cohort',
+                target: rep.candidates_target || 10,
+                registered: total,
+                verified: kyc,
+                placed: placed,
+                bonus: rep.estimated_mobilizer_incentive || 0,
+                rate: rep.intake_achievement_rate || 0
+              }
+            ],
+            funnel_stages: [
+              { stage: '1. Community Outreach & Intake', count: total, percentage: 100, color: 'bg-indigo-500', dropRate: '0% drop' },
+              { stage: '2. Aadhaar & DL KYC Verification', count: kyc, percentage: total > 0 ? Math.round((kyc / total) * 100) : 0, color: 'bg-teal-500', dropRate: `${total > 0 ? Math.max(0, 100 - Math.round((kyc / total) * 100)) : 0}% pending` },
+              { stage: '3. EV Academy Training Induction', count: inducted, percentage: total > 0 ? Math.round((inducted / total) * 100) : 0, color: 'bg-blue-500', dropRate: `${total > 0 ? Math.max(0, 100 - Math.round((inducted / total) * 100)) : 0}% awaiting batch` },
+              { stage: '4. Riding Dynamics & Certified', count: inducted, percentage: total > 0 ? Math.round((inducted / total) * 100) : 0, color: 'bg-purple-500', dropRate: '0% in remedial' },
+              { stage: '5. Commercial Green Fleet Placed', count: placed, percentage: total > 0 ? Math.round((placed / total) * 100) : 0, color: 'bg-emerald-500', dropRate: 'Placement active' },
+              { stage: '6. 90-Day Livelihood Retained', count: placed, percentage: total > 0 ? Math.round((placed / total) * 100) : 0, color: 'bg-emerald-600', dropRate: '94% on-job retention index' }
+            ],
+            nf_breakdown: [
+              { tier: 'NF1', label: 'Job Ready EV Drivers', count: nf1, share: total > 0 ? Math.round((nf1 / total) * 100) : 0, avg_days_to_place: 8, color: 'bg-emerald-500', textColor: 'text-emerald-700', bgSoft: 'bg-emerald-50' },
+              { tier: 'NF2', label: 'Upskilling EV Riders', count: nf2, share: total > 0 ? Math.round((nf2 / total) * 100) : 0, avg_days_to_place: 18, color: 'bg-indigo-500', textColor: 'text-indigo-700', bgSoft: 'bg-indigo-50' },
+              { tier: 'NF3', label: 'Foundational Training', count: nf3, share: total > 0 ? Math.round((nf3 / total) * 100) : 0, avg_days_to_place: 28, color: 'bg-purple-500', textColor: 'text-purple-700', bgSoft: 'bg-purple-50' }
+            ],
+            lead_sources: [
+              { name: 'Gram Panchayat & Ward Camps', count: rep.lead_source_breakdown?.community_camps || 0, percentage: 60, cost_per_lead: '₹140', conversion: '88%' },
+              { name: 'Women SHG / Mahila Samitis', count: rep.lead_source_breakdown?.shg_women_networks || 0, percentage: 25, cost_per_lead: '₹95', conversion: '94%' },
+              { name: 'Placed Pilot Referrals', count: rep.lead_source_breakdown?.referrals || 0, percentage: 15, cost_per_lead: '₹50', conversion: '97%' }
+            ],
+            employers_hiring: rep.top_employers?.map((emp, i) => ({
+              name: emp.name,
+              logo_text: emp.name.substring(0, 2).toUpperCase(),
+              candidates: emp.count,
+              share: placed > 0 ? Math.round((emp.count / placed) * 100) : 0,
+              avg_salary: emp.avg_salary || 20000,
+              roles: 'EV Last-Mile Pilot Leads',
+              rating: 4.8
+            })) || [],
+            territory_performance: [
+              {
+                ward: rep.territory || 'Bengaluru Cluster',
+                camps: rep.camps_conducted || 2,
+                registered: total,
+                placed: placed,
+                rate: rep.placement_conversion_rate || 0,
+                incentive: `₹${(rep.estimated_mobilizer_incentive || 0).toLocaleString('en-IN')}`,
+                status: 'Active Audit'
+              }
+            ],
+            audit_statements: [
+              {
+                id: rep.id || 'stmt-live',
+                period: rep.period || 'Live Audit',
+                statement_no: rep.report_code || 'AUDIT-MOB-LIVE',
+                mobilized: total,
+                target: rep.candidates_target || 10,
+                placed: placed,
+                bonus_accrued: rep.estimated_mobilizer_incentive || 0,
+                status: rep.status || 'Active Audit',
+                supervisor: 'Rahul Sharma (State Head)',
+                verified_date: rep.generated_date || new Date().toISOString().split('T')[0]
+              }
+            ]
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Error fetching live mobilizer reports:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
+  useEffect(() => {
+    fetchLiveReports();
+  }, []);
+
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 600);
+    fetchLiveReports();
   };
+
 
   const handleExportCSV = () => {
     const csvContent = "data:text/csv;charset=utf-8,"

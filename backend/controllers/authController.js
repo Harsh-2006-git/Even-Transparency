@@ -1,176 +1,229 @@
 import db from '../models/index.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { localCandidates } from './candidateController.js';
 
-// Predefined demo accounts for all stakeholder roles
-const ROLE_ACCOUNTS = {
-  // Admin
-  'admin@evenshift.org': {
-    id: 'usr-admin-001',
-    full_name: 'Administrator',
-    first_name: 'Super',
-    last_name: 'Admin',
-    role: 'Super Admin',
-    userType: 'Admin',
-    status: 'active',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    permissions: { all: true }
-  },
-  'admin@evencargo.in': {
-    id: 'usr-admin-002',
-    full_name: 'Organization Admin',
-    first_name: 'Org',
-    last_name: 'Admin',
-    role: 'Admin',
-    userType: 'Admin',
-    status: 'active',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    permissions: { all: true }
-  },
-  // Mobilizer
-  'mobilizer@evenshift.org': {
-    id: 'usr-mob-001',
-    full_name: 'Pooja Sharma',
-    first_name: 'Pooja',
-    last_name: 'Sharma',
-    role: 'Partner Mobilizer',
-    userType: 'Mobilizer',
-    territory: 'Delhi NCR (South & West)',
-    partner_org: 'Jan Vikas Samiti',
-    status: 'active',
-    avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    permissions: { candidates: true, mobilization: true, uploadKYC: true }
-  },
-  // Trainer
-  'trainer@evenshift.org': {
-    id: 'usr-tr-001',
-    full_name: 'Rajesh Kumar Verma',
-    first_name: 'Rajesh',
-    last_name: 'Verma',
-    role: 'Master Skill Trainer',
-    userType: 'Trainer',
-    centre: 'Okhla Skill Hub, Delhi',
-    batch: 'Batch #2026-EV-04',
-    status: 'active',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    permissions: { batches: true, assessments: true, attendance: true }
-  },
-  // Placement Coordinator
-  'placement@evenshift.org': {
-    id: 'usr-plc-001',
-    full_name: 'Sunita Rao',
-    first_name: 'Sunita',
-    last_name: 'Rao',
-    role: 'Placement Coordinator',
-    userType: 'PlacementCoordinator',
-    department: 'Corporate Partnerships & Placements',
-    status: 'active',
-    avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    permissions: { employers: true, interviews: true, deployments: true }
-  },
-  // M&E Team
-  'me@evenshift.org': {
-    id: 'usr-me-001',
-    full_name: 'Vikram Sengupta',
-    first_name: 'Vikram',
-    last_name: 'Sengupta',
-    role: 'M&E Lead Analyst',
-    userType: 'ME',
-    department: 'Monitoring, Evaluation & Quality Audit',
-    status: 'active',
-    avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    permissions: { analytics: true, retention: true, audit: true }
-  },
-  // Candidate
-  'candidate@evenshift.org': {
-    id: 'usr-cand-001',
-    full_name: 'Priya Devi',
-    first_name: 'Priya',
-    last_name: 'Devi',
-    role: 'Trainee Candidate',
-    userType: 'Candidate',
-    candidate_id: 'ET-2026-DL-0842',
-    trade: 'EV Two-Wheeler Logistics Specialist',
-    stage: 'Stage 4: Skill Training',
-    status: 'active',
-    avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    permissions: { candidatePortal: true }
+const JWT_SECRET = process.env.JWT_SECRET || 'even_transparency_secure_jwt_secret_2026_key';
+
+const normalizeRoleKey = (roleStr) => {
+  if (!roleStr) return '';
+  const clean = String(roleStr).toLowerCase().trim().replace(/[\s_-]+/g, '');
+  if (clean.includes('admin') || clean === 'superadmin' || clean === 'orgadmin') return 'admin';
+  if (clean.includes('mobiliz') || clean.includes('mobilis')) return 'mobilizer';
+  if (clean.includes('train')) return 'trainer';
+  if (clean.includes('placement') || clean.includes('coord')) return 'placement_coordinator';
+  if (clean.includes('cand')) return 'candidate';
+  return clean;
+};
+
+const getRoleNotFoundMessage = (roleKey) => {
+  switch (roleKey) {
+    case 'mobilizer':
+      return 'No mobiliser found with this email.';
+    case 'admin':
+      return 'No admin found with this email.';
+    case 'trainer':
+      return 'No trainer found with this email.';
+    case 'placement_coordinator':
+      return 'No placement coordinator found with this email.';
+    case 'candidate':
+      return 'No candidate found with this identifier.';
+    default:
+      return 'User does not exist in database or invalid credentials.';
   }
 };
 
+// Proper Real Database Login
 export const login = async (req, res) => {
   try {
-    const { email, password, userType: requestedUserType } = req.body;
+    const { email, password, userType: requestedUserType, role: requestedRole } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Email/Identifier and password are required.'
+      });
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+    const targetRoleKey = normalizeRoleKey(requestedUserType || requestedRole);
 
-    // 1. Check known role accounts first
-    if (ROLE_ACCOUNTS[cleanEmail]) {
-      const matchedAccount = { ...ROLE_ACCOUNTS[cleanEmail], email: cleanEmail };
-      return res.json({
-        success: true,
-        message: `${matchedAccount.role} authentication successful`,
-        token: 'jwt_mock_token_' + Date.now(),
-        user: matchedAccount
-      });
+    // 1. If Candidate portal login or candidate requested
+    if (targetRoleKey === 'candidate') {
+      if (db.Candidate) {
+        try {
+          const cleanPhone = cleanEmail.replace(/[\s+-]/g, '');
+          const candidateRecord = await db.Candidate.findOne({
+            where: db.Sequelize.or(
+              { email: cleanEmail },
+              { candidate_code: email.trim().toUpperCase() },
+              { mobile_number: cleanPhone.length > 5 ? cleanPhone : 'NONE' }
+            )
+          });
+
+          if (!candidateRecord) {
+            return res.status(401).json({
+              success: false,
+              message: 'No candidate found with this identifier.'
+            });
+          }
+
+          const c = candidateRecord.toJSON();
+          
+          // Generate genuine JWT token for candidate
+          const token = jwt.sign(
+            {
+              id: c.id,
+              candidate_code: c.candidate_code,
+              role: 'Candidate'
+            },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+          );
+
+          const candidateUser = {
+            id: c.id,
+            candidate_id: c.id,
+            candidate_code: c.candidate_code,
+            full_name: c.full_name,
+            first_name: c.first_name,
+            last_name: c.last_name,
+            email: c.email,
+            mobile_number: c.mobile_number,
+            role: 'Candidate',
+            userType: 'Candidate',
+            stage: c.current_stage || 'MOBILIZED',
+            nf_category: c.nf_category || 'UNCLASSIFIED',
+            city: c.city,
+            state: c.state,
+            avatar_url: c.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.candidate_code || c.id)}`,
+            status: c.status || 'active',
+            permissions: { candidatePortal: true }
+          };
+
+          return res.json({
+            success: true,
+            message: 'Candidate authentication successful',
+            token,
+            user: candidateUser
+          });
+        } catch (cErr) {
+          console.warn('Candidate DB lookup error:', cErr.message);
+          return res.status(500).json({
+            success: false,
+            message: 'Database query failed during candidate lookup.'
+          });
+        }
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'No candidate found with this identifier.'
+        });
+      }
     }
 
-    // 1b. Check Candidates list if candidate login or matching code/phone/email
-    const cleanPhone = email.replace(/[\s+-]/g, '');
-    const matchedCandidate = Array.isArray(localCandidates) && localCandidates.find(c => {
-      const cEmail = (c.email || '').toLowerCase().trim();
-      const cCode = (c.candidate_code || '').toLowerCase().trim();
-      const cPhone = (c.mobile_number || '').replace(/[\s+-]/g, '');
-      return cEmail === cleanEmail || cCode === cleanEmail || (cleanPhone.length > 5 && cPhone.includes(cleanPhone));
-    });
-
-    if (matchedCandidate) {
-      const candidateUser = {
-        id: matchedCandidate.id,
-        candidate_id: matchedCandidate.id,
-        candidate_code: matchedCandidate.candidate_code,
-        full_name: matchedCandidate.full_name,
-        first_name: matchedCandidate.first_name,
-        last_name: matchedCandidate.last_name,
-        email: matchedCandidate.email,
-        mobile_number: matchedCandidate.mobile_number,
-        role: 'Candidate',
-        userType: 'Candidate',
-        stage: matchedCandidate.current_stage || 'IN_TRAINING',
-        nf_category: matchedCandidate.nf_category || 'NF1',
-        city: matchedCandidate.city,
-        state: matchedCandidate.state,
-        avatar_url: matchedCandidate.photo_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-        status: matchedCandidate.status || 'active',
-        permissions: { candidatePortal: true }
-      };
-
-      return res.json({
-        success: true,
-        message: 'Candidate authentication successful',
-        token: 'jwt_mock_token_' + Date.now(),
-        user: candidateUser
-      });
-    }
-
-    // 2. Check DB User if available
+    // 2. Staff / Portal User lookup in portal_users table
     if (db.User) {
       try {
-        const userRecord = await db.User.findOne({ where: { email: cleanEmail } });
-        if (userRecord) {
+        const userRecord = await db.User.findOne({
+          where: { email: cleanEmail }
+        });
+
+        // If target role was specified but no user exists with this email
+        if (!userRecord) {
+          if (targetRoleKey) {
+            return res.status(401).json({
+              success: false,
+              message: getRoleNotFoundMessage(targetRoleKey)
+            });
+          }
+          // If no target role specified, check candidate before failing
+        } else {
+          // User record was found - strictly check role if target role was specified
+          if (targetRoleKey) {
+            const actualRoleKey = normalizeRoleKey(userRecord.role);
+            if (actualRoleKey !== targetRoleKey) {
+              return res.status(401).json({
+                success: false,
+                message: getRoleNotFoundMessage(targetRoleKey)
+              });
+            }
+          }
+
+          // Check user status
+          const status = (userRecord.status || 'active').toLowerCase();
+          if (status === 'inactive' || status === 'suspended') {
+            return res.status(403).json({
+              success: false,
+              message: 'Your account is inactive or suspended. Please contact the administrator.'
+            });
+          }
+
+          // Verify password using bcryptjs or plaintext fallback
+          let isMatch = false;
+          if (userRecord.password_hash) {
+            try {
+              isMatch = await bcrypt.compare(cleanPassword, userRecord.password_hash);
+            } catch (bErr) {
+              isMatch = false;
+            }
+
+            // Fallback for unhashed legacy/seed passwords or placeholder hashes
+            if (!isMatch) {
+              const isLegacyMatch = 
+                userRecord.password_hash === cleanPassword ||
+                ((userRecord.password_hash === 'default_hash_123' || userRecord.password_hash === '$2b$10$defaultPasswordHashPlaceholder') && 
+                  (cleanPassword === 'Password@123' || cleanPassword === 'default_hash_123'));
+              if (isLegacyMatch) {
+                isMatch = true;
+                try {
+                  const newHash = await bcrypt.hash(cleanPassword, 10);
+                  await userRecord.update({ password_hash: newHash });
+                } catch (uErr) {
+                  // Ignore upgrade error
+                }
+              }
+            }
+          }
+
+          if (!isMatch) {
+            return res.status(401).json({
+              success: false,
+              message: 'Invalid password. Please verify your credentials.'
+            });
+          }
+
+          // Generate genuine JWT token
+          const token = jwt.sign(
+            {
+              id: userRecord.id,
+              email: userRecord.email,
+              role: userRecord.role
+            },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+          );
+
+          // Update last_login_at
+          try {
+            await userRecord.update({ last_login_at: new Date() });
+          } catch (tErr) {
+            // Ignore timestamp update error
+          }
+
           const u = userRecord.toJSON();
+          delete u.password_hash;
+
           const userObj = {
             id: u.id,
             full_name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Portal User',
             first_name: u.first_name || '',
             last_name: u.last_name || '',
             email: u.email,
+            mobile_number: u.mobile_number || '',
             role: u.role || requestedUserType || 'User',
-            userType: u.userType || requestedUserType || 'Admin',
+            userType: u.role || requestedUserType || 'Admin',
             status: u.status || 'active',
             avatar_url: u.avatar_url || u.profile_photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.email)}`,
             permissions: u.permissions || {}
@@ -179,60 +232,194 @@ export const login = async (req, res) => {
           return res.json({
             success: true,
             message: 'Authentication successful',
-            token: 'jwt_mock_token_' + Date.now(),
+            token,
             user: userObj
           });
         }
       } catch (dbErr) {
-        console.warn('DB User lookup notice:', dbErr.message);
+        console.error('Database error during user authentication:', dbErr);
+        return res.status(500).json({
+          success: false,
+          message: 'Database query failed during authentication: ' + dbErr.message
+        });
       }
     }
 
-    // 3. Fallback dynamically according to requested userType or email naming
-    let inferredType = requestedUserType || 'Admin';
-    if (cleanEmail.includes('mobil')) inferredType = 'Mobilizer';
-    else if (cleanEmail.includes('train')) inferredType = 'Trainer';
-    else if (cleanEmail.includes('place')) inferredType = 'PlacementCoordinator';
-    else if (cleanEmail.includes('me@') || cleanEmail.includes('eval')) inferredType = 'ME';
-    else if (cleanEmail.includes('cand') || cleanEmail.includes('student')) inferredType = 'Candidate';
+    // 3. Fallback for un-targeted login checking Candidate table
+    if (!targetRoleKey && db.Candidate) {
+      try {
+        const cleanPhone = email.replace(/[\s+-]/g, '');
+        const candidateRecord = await db.Candidate.findOne({
+          where: db.Sequelize.or(
+            { email: cleanEmail },
+            { candidate_code: email.trim().toUpperCase() },
+            { mobile_number: cleanPhone.length > 5 ? cleanPhone : 'NONE' }
+          )
+        });
 
-    const fallbackUser = {
-      id: uuidv4(),
-      full_name: cleanEmail.split('@')[0].toUpperCase(),
-      first_name: cleanEmail.split('@')[0],
-      last_name: inferredType,
-      email: cleanEmail,
-      role: inferredType === 'PlacementCoordinator' ? 'Placement Coordinator' : inferredType === 'ME' ? 'M&E Team' : inferredType,
-      userType: inferredType,
-      status: 'active',
-      avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(cleanEmail)}`,
-      permissions: { all: true }
-    };
+        if (candidateRecord) {
+          const c = candidateRecord.toJSON();
+          
+          const token = jwt.sign(
+            {
+              id: c.id,
+              candidate_code: c.candidate_code,
+              role: 'Candidate'
+            },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+          );
 
-    return res.json({
-      success: true,
-      message: `${fallbackUser.role} authentication successful`,
-      token: 'jwt_mock_token_' + Date.now(),
-      user: fallbackUser
+          const candidateUser = {
+            id: c.id,
+            candidate_id: c.id,
+            candidate_code: c.candidate_code,
+            full_name: c.full_name,
+            first_name: c.first_name,
+            last_name: c.last_name,
+            email: c.email,
+            mobile_number: c.mobile_number,
+            role: 'Candidate',
+            userType: 'Candidate',
+            stage: c.current_stage || 'MOBILIZED',
+            nf_category: c.nf_category || 'UNCLASSIFIED',
+            city: c.city,
+            state: c.state,
+            avatar_url: c.photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.candidate_code || c.id)}`,
+            status: c.status || 'active',
+            permissions: { candidatePortal: true }
+          };
+
+          return res.json({
+            success: true,
+            message: 'Candidate authentication successful',
+            token,
+            user: candidateUser
+          });
+        }
+      } catch (cErr) {
+        console.warn('Candidate DB lookup error:', cErr.message);
+      }
+    }
+
+    // 4. Default rejection
+    return res.status(401).json({
+      success: false,
+      message: getRoleNotFoundMessage(targetRoleKey)
     });
+
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// Current User Profile Verification from JWT
 export const getCurrentUser = async (req, res) => {
-  res.json({
-    success: true,
-    user: {
-      id: 'usr-admin-001',
-      full_name: 'Administrator',
-      email: 'admin@evenshift.org',
-      role: 'Super Admin',
-      userType: 'Admin',
-      status: 'active'
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization header missing or invalid format.' });
     }
-  });
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (jwtErr) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
+    }
+
+    if (!decoded || !decoded.id) {
+      return res.status(401).json({ success: false, message: 'Invalid token payload.' });
+    }
+
+    // Check User table
+    if (db.User) {
+      const userRecord = await db.User.findByPk(decoded.id, {
+        attributes: { exclude: ['password_hash'] }
+      });
+      if (userRecord) {
+        const u = userRecord.toJSON();
+        return res.json({
+          success: true,
+          user: {
+            ...u,
+            userType: u.role || 'Admin'
+          }
+        });
+      }
+    }
+
+    // Check Candidate table
+    if (db.Candidate) {
+      const cand = await db.Candidate.findByPk(decoded.id);
+      if (cand) {
+        return res.json({
+          success: true,
+          user: {
+            id: cand.id,
+            candidate_id: cand.id,
+            candidate_code: cand.candidate_code,
+            full_name: cand.full_name,
+            email: cand.email,
+            role: 'Candidate',
+            userType: 'Candidate'
+          }
+        });
+      }
+    }
+
+    return res.status(404).json({ success: false, message: 'User not found in database.' });
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Register / Create Real User (Admin or Stakeholder)
+export const registerUser = async (req, res) => {
+  try {
+    const { email, password, full_name, role, mobile_number, designation } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check if user already exists
+    const existing = await db.User.findOne({ where: { email: cleanEmail } });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'User with this email already exists in database.' });
+    }
+
+    const password_hash = await bcrypt.hash(password.trim(), 10);
+
+    const newUser = await db.User.create({
+      id: uuidv4(),
+      email: cleanEmail,
+      password_hash,
+      full_name: full_name ? full_name.trim() : cleanEmail.split('@')[0],
+      role: role || 'Super Admin',
+      mobile_number: mobile_number || null,
+      designation: designation || 'System User',
+      status: 'active',
+      permissions: { all: true }
+    });
+
+    const u = newUser.toJSON();
+    delete u.password_hash;
+
+    return res.status(201).json({
+      success: true,
+      message: 'User created successfully in database.',
+      user: u
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 export const logout = async (req, res) => {

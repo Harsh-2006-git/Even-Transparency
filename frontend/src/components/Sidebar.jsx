@@ -1,4 +1,5 @@
 import React from 'react';
+import { normalizeRole, isSuperAdminRole } from '../utils/roleUtils';
 import {
   LayoutDashboard,
   Users,
@@ -56,8 +57,8 @@ export default function Sidebar({
   isCollapsed,
   onLogout
 }) {
-  const userType = user?.userType || user?.role || 'Admin';
-  const isSuperAdmin = userType === 'Admin' || userType === 'Super Admin' || userType === 'Administrator';
+  const userType = normalizeRole(user?.userType || user?.role);
+  const isSuperAdmin = userType === 'Admin' || isSuperAdminRole(user?.role);
 
   // Admin Structured Navigation Sections
   const adminNavGroups = [
@@ -75,7 +76,8 @@ export default function Sidebar({
         { id: 'placement-coordinators', label: 'Placement Coordinators', icon: Briefcase },
         { id: 'partners', label: 'Partners', icon: Handshake },
         { id: 'employers', label: 'Employers', icon: Building2 },
-        { id: 'user-management', label: 'Admin Users', icon: UserCog, badge: 'KYC Hub' },
+        { id: 'user-management', label: 'Admin Users', icon: UserCog },
+
       ]
     },
     {
@@ -83,8 +85,7 @@ export default function Sidebar({
       items: [
         { id: 'candidates', label: 'All Candidates', icon: Users },
         { id: 'document-verification', label: 'Candidate Verification', icon: SearchCheck },
-        { id: 'documents', label: 'Candidate Documents', icon: ScrollText },
-        { id: 'bulk-operations', label: 'Bulk Operations', icon: FolderSync },
+
       ]
     },
     {
@@ -108,30 +109,8 @@ export default function Sidebar({
         { id: 'employment-tracking', label: 'Employment Tracking', icon: HeartHandshake },
       ]
     },
-    {
-      groupTitle: 'MONITORING',
-      items: [
-        { id: 'retention', label: 'Retention & Impact', icon: Activity },
-        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-        { id: 'reports', label: 'Reports', icon: FileText },
-      ]
-    },
-    {
-      groupTitle: 'COMMUNICATION',
-      items: [
-        { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '12' },
-        { id: 'notifications', label: 'Notifications', icon: Bell },
-        { id: 'announcements', label: 'Announcements', icon: Radio },
-      ]
-    },
-    {
-      groupTitle: 'SYSTEM',
-      items: [
-        { id: 'settings', label: 'System Settings', icon: Sliders },
-        { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText },
-        { id: 'activity-logs', label: 'Activity Logs', icon: History },
-      ]
-    }
+
+
   ];
 
   const getOtherRoleMenuItems = () => {
@@ -141,14 +120,8 @@ export default function Sidebar({
           { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
           { id: 'candidates', label: 'Candidate List', icon: Users },
           { id: 'onboard-candidate', label: 'Add Candidate', icon: UserPlus, badge: 'New' },
-          { id: 'documents', label: ' Candidate Documents', icon: ScrollText },
-          { id: 'assessments', label: 'Candidate Assessments', icon: ShieldCheck },
-          { id: 'training', label: 'Training & Batches', icon: GraduationCap },
-          { id: 'deployments', label: 'Candidate Placements', icon: Briefcase },
-          { id: 'targets', label: 'My Targets & Goals', icon: Target, badge: '84%' },
-          { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
-          { id: 'notifications', label: 'Notifications', icon: Bell, },
-          { id: 'support', label: 'Support & Help', icon: HelpCircle },
+          { id: 'documents', label: 'Candidate Documents', icon: ScrollText },
+          { id: 'assessments-placements', label: 'Assessments & Placements', icon: Award },
         ];
       case 'Trainer':
         return [
@@ -162,7 +135,6 @@ export default function Sidebar({
           { id: 'practical-sessions', label: 'Practical Sessions', icon: Radio },
           { id: 'feedback', label: 'Feedback & Notes', icon: FileText },
           { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
-          { id: 'notifications', label: 'Notifications', icon: Bell, badge: '8' },
           { id: 'support', label: 'Support & Help', icon: HelpCircle },
         ];
       case 'PlacementCoordinator':
@@ -172,14 +144,6 @@ export default function Sidebar({
           { id: 'employers', label: 'Hiring Employers', icon: Building2 },
           { id: 'deployments', label: 'Candidate Deployments', icon: Briefcase, badge: 'Offers' },
           { id: 'openings', label: 'Job Opportunities', icon: Award },
-        ];
-      case 'ME':
-      case 'M&E Team':
-        return [
-          { id: 'overview', label: 'M&E Analytics', icon: LayoutDashboard },
-          { id: 'retention', label: 'Retention Milestones', icon: ShieldCheck, badge: '1M-24M' },
-          { id: 'incidents', label: 'Safety Incidents', icon: AlertTriangle },
-          { id: 'reports', label: 'Impact Reports', icon: BarChart3 },
         ];
       case 'Candidate':
         return [
@@ -200,7 +164,6 @@ export default function Sidebar({
           },
           { id: 'assessments', label: 'My Assessments', icon: ClipboardCheck },
           { id: 'offers', label: 'My Job / Offer', icon: Briefcase },
-          { id: 'notifications', label: 'Notifications', icon: Bell, badge: '3' },
           { id: 'support', label: 'Help & Support', icon: Headphones },
         ];
       default:
@@ -351,9 +314,8 @@ export default function Sidebar({
                                 onSectionChange(sub.id);
                                 toggleSidebar(false);
                               }}
-                              className={`w-full flex items-center gap-2 py-1 text-xs transition cursor-pointer text-left ${
-                                isSubActive ? 'text-[#F72570] font-bold' : 'text-slate-500 hover:text-slate-800'
-                              }`}
+                              className={`w-full flex items-center gap-2 py-1 text-xs transition cursor-pointer text-left ${isSubActive ? 'text-[#F72570] font-bold' : 'text-slate-500 hover:text-slate-800'
+                                }`}
                             >
                               <span className={`w-1.5 h-1.5 rounded-full ${isSubActive ? 'bg-[#F72570]' : 'bg-slate-300'}`} />
                               <span>{sub.label}</span>

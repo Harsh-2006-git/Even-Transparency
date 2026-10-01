@@ -19,8 +19,8 @@ import RoleLoginNav from '../../components/RoleLoginNav';
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function MobilizerLogin({ onLoginSuccess, onGoToLanding, onSwitchRole, onGoToHub }) {
-  const [email, setEmail] = useState('mobilizer@evenshift.org');
-  const [password, setPassword] = useState('mobilizer@pass123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -73,25 +73,18 @@ export default function MobilizerLogin({ onLoginSuccess, onGoToLanding, onSwitch
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Authentication failed. Please check credentials.');
+        throw new Error(data.message || 'No mobiliser found with this email.');
+      }
+
+      // Dedicated portal check: ensure only Mobilizer role is admitted
+      const userRole = (data.user?.role || data.user?.userType || '').toLowerCase();
+      if (!userRole.includes('mobiliz') && !userRole.includes('mobilis')) {
+        throw new Error('No mobiliser found with this email.');
       }
 
       onLoginSuccess(data.user, data.token);
     } catch (err) {
-      console.warn('Network issue, using mobilizer offline login:', err.message);
-      const fallbackUser = {
-        id: 'usr-mob-001',
-        full_name: 'Pooja Sharma',
-        first_name: 'Pooja',
-        last_name: 'Sharma',
-        email: email.trim() || 'mobilizer@evenshift.org',
-        role: 'Partner Mobilizer',
-        userType: 'Mobilizer',
-        territory: 'Delhi NCR (South & West)',
-        partner_org: 'Jan Vikas Samiti',
-        status: 'active'
-      };
-      onLoginSuccess(fallbackUser, 'mock_token_mobilizer');
+      setError(err.message || 'No mobiliser found with this email.');
     } finally {
       setLoading(false);
     }
@@ -184,15 +177,6 @@ export default function MobilizerLogin({ onLoginSuccess, onGoToLanding, onSwitch
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Enter mobilizer credentials to manage candidates
               </p>
-            </div>
-
-            {/* Quick Demo Credentials Pill */}
-            <div className="p-2 bg-rose-50/60 rounded-xl border border-rose-200/80 text-[11px] space-y-0.5">
-              <div className="flex justify-between items-center text-rose-800">
-                <span className="font-semibold text-[10.5px] text-rose-900">Demo Mobilizer:</span>
-                <span className="text-[9.5px] text-rose-700 font-bold bg-rose-100 px-1 py-0.2 rounded">Pre-filled</span>
-              </div>
-              <p className="text-[10.5px] text-slate-700 font-mono">mobilizer@evenshift.org / mobilizer@pass123</p>
             </div>
 
             {/* Form */}

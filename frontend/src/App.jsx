@@ -7,7 +7,6 @@ import AdminLogin from './pages/admin/Login';
 import MobilizerLogin from './pages/mobilizer/Login';
 import TrainerLogin from './pages/trainer/Login';
 import PlacementLogin from './pages/placement/Login';
-import MELogin from './pages/me/Login';
 import CandidateLogin from './pages/candidate/Login';
 
 // Stakeholder Dashboard & Management Pages
@@ -21,7 +20,6 @@ import DocumentManagement from './pages/mobilizer/DocumentManagement';
 import ReadinessManagement from './pages/mobilizer/ReadinessManagement';
 import TrainerDashboard from './pages/trainer/Dashboard';
 import PlacementDashboard from './pages/placement/Dashboard';
-import MEDashboard from './pages/me/Dashboard';
 import CandidateDashboard from './pages/candidate/Dashboard';
 import CandidateProfilePage from './pages/candidate/Profile';
 import CandidateDocumentsPage from './pages/candidate/Documents';
@@ -30,7 +28,6 @@ import CandidateTrainingPage from './pages/candidate/Training';
 import CandidateAssessmentsPage from './pages/candidate/Assessments';
 import CandidateJobOffersPage from './pages/candidate/JobOffers';
 import CandidateSupportPage from './pages/candidate/Support';
-import CandidateNotificationsPage from './pages/candidate/Notifications';
 import GenericAdminSection from './pages/admin/GenericAdminSection';
 import StakeholderManagement from './pages/admin/StakeholderManagement';
 import BatchManagement from './pages/admin/BatchManagement';
@@ -40,21 +37,17 @@ import TrainingCentres from './pages/admin/TrainingCentres';
 import TrainingAttendance from './pages/admin/TrainingAttendance';
 import TrainingAssessments from './pages/admin/TrainingAssessments';
 import TrainingCertifications from './pages/admin/TrainingCertifications';
-import MobilizerBatchView from './pages/mobilizer/MobilizerBatchView';
 import BatchCalendar from './pages/trainer/BatchCalendar';
 import TrainerCandidates from './pages/trainer/TrainerCandidates';
 import PracticalSessions from './pages/trainer/PracticalSessions';
 import TrainerFeedback from './pages/trainer/TrainerFeedback';
 import TrainerReports from './pages/trainer/TrainerReports';
-import TrainerNotifications from './pages/trainer/TrainerNotifications';
 import TrainerSupport from './pages/trainer/TrainerSupport';
-import CandidateAssessments from './pages/mobilizer/CandidateAssessments';
-import CandidatePlacements from './pages/mobilizer/CandidatePlacements';
-import MobilizerTargets from './pages/mobilizer/MobilizerTargets';
-import MobilizerReports from './pages/mobilizer/MobilizerReports';
+import AssessmentsAndPlacements from './pages/mobilizer/AssessmentsAndPlacements';
 import EmployerManagement from './pages/placement/EmployerManagement';
 import PlacementDeployments from './pages/placement/PlacementDeployments';
 import HomeLanding from './pages/home/HomeLanding';
+import { normalizeRole, isSuperAdminRole } from './utils/roleUtils';
 
 export default function App() {
   // Session State (persisted in localStorage)
@@ -66,6 +59,8 @@ export default function App() {
       return null;
     }
   });
+
+  const currentUserType = normalizeRole(user?.userType || user?.role);
 
   // Helper to extract section from hash
   const extractSectionFromHash = (hash) => {
@@ -102,6 +97,9 @@ export default function App() {
     if (hash.includes('candidate')) return 'candidate';
     return 'admin';
   });
+
+  // Active candidate being edited in full form
+  const [candidateToEdit, setCandidateToEdit] = useState(null);
 
   // Layout states for workspace
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -147,14 +145,22 @@ export default function App() {
         const session = localStorage.getItem('eventransparency_session');
         if (session) {
           setCurrentView('app');
-          const section = extractSectionFromHash(hash) || localStorage.getItem('eventransparency_active_section') || 'overview';
+          let section = extractSectionFromHash(hash) || localStorage.getItem('eventransparency_active_section') || 'overview';
+          try {
+            const parsed = JSON.parse(session);
+            if (parsed?.userType === 'Mobilizer' && (section === 'training' || section === 'batches' || section === 'training-batches')) {
+              section = 'candidates';
+              window.location.hash = '#/candidates';
+            }
+          } catch (e) {
+            // ignore
+          }
           setActiveSection(section);
           localStorage.setItem('eventransparency_active_section', section);
         } else if (hash.startsWith('#/')) {
           if (hash.includes('mobilizer')) setActiveLoginRole('mobilizer');
           else if (hash.includes('trainer')) setActiveLoginRole('trainer');
           else if (hash.includes('placement')) setActiveLoginRole('placement');
-          else if (hash.includes('me')) setActiveLoginRole('me');
           else if (hash.includes('candidate')) setActiveLoginRole('candidate');
           else setActiveLoginRole('admin');
           setCurrentView('login');
@@ -166,8 +172,57 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Validate session against real database on mount
+  useEffect(() => {
+    const token = localStorage.getItem('eventransparency_token');
+    if (token) {
+      fetch('http://localhost:5000/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success || !data.user) {
+            // Token is invalid or user does not exist in DB
+            localStorage.removeItem('eventransparency_session');
+            localStorage.removeItem('eventransparency_token');
+            setUser(null);
+            setCurrentView('login');
+          } else {
+            setUser(data.user);
+            localStorage.setItem('eventransparency_session', JSON.stringify(data.user));
+          }
+        })
+        .catch(() => {
+          // If network offline, do not clear
+        });
+    }
+  }, []);
+
+  // Prevent mobilizer from accessing training sections
+  useEffect(() => {
+    if (currentUserType === 'Mobilizer' && (activeSection === 'training' || activeSection === 'batches' || activeSection === 'training-batches')) {
+      setActiveSection('candidates');
+      localStorage.setItem('eventransparency_active_section', 'candidates');
+      window.location.hash = '#/candidates';
+    }
+  }, [currentUserType, activeSection]);
+
   // Handle Login Success
   const handleLoginSuccess = (userData, token) => {
+    const userRoleNormalized = normalizeRole(userData?.userType || userData?.role);
+    const expectedRoleMap = {
+      admin: 'Admin',
+      mobilizer: 'Mobilizer',
+      trainer: 'Trainer',
+      placement: 'PlacementCoordinator',
+      candidate: 'Candidate'
+    };
+    const expected = expectedRoleMap[activeLoginRole];
+    if (expected && userRoleNormalized !== expected) {
+      console.warn(`Role mismatch in handleLoginSuccess: expected ${expected}, got ${userRoleNormalized}`);
+      return;
+    }
+
     setUser(userData);
     localStorage.setItem('eventransparency_session', JSON.stringify(userData));
     if (token) localStorage.setItem('eventransparency_token', token);
@@ -263,8 +318,6 @@ export default function App() {
               handleSelectLoginRole('trainer');
             } else if (view === 'login/placement' || view === 'placement') {
               handleSelectLoginRole('placement');
-            } else if (view === 'login/me' || view === 'me') {
-              handleSelectLoginRole('me');
             } else if (view === 'login/candidate' || view === 'candidate') {
               handleSelectLoginRole('candidate');
             } else {
@@ -277,7 +330,7 @@ export default function App() {
     );
   }
 
-  // 2. Render Login Views directly for the 6 Stakeholder Roles
+  // 2. Render Login Views directly for the 5 Stakeholder Roles
   if (currentView === 'login' || !user) {
     if (activeLoginRole === 'mobilizer') {
       return (
@@ -309,16 +362,6 @@ export default function App() {
       );
     }
 
-    if (activeLoginRole === 'me') {
-      return (
-        <MELogin
-          onLoginSuccess={handleLoginSuccess}
-          onGoToLanding={handleGoToLanding}
-          onSwitchRole={handleSelectLoginRole}
-        />
-      );
-    }
-
     if (activeLoginRole === 'candidate') {
       return (
         <CandidateLogin
@@ -338,8 +381,6 @@ export default function App() {
       />
     );
   }
-
-  const currentUserType = user?.userType || user?.role || 'Admin';
 
   // 3. Render Multi-Role Portal Layout
   return (
@@ -398,9 +439,6 @@ export default function App() {
               {activeSection === 'offers' && (
                 <CandidateJobOffersPage user={user} onSectionChange={handleSectionChange} />
               )}
-              {activeSection === 'notifications' && (
-                <CandidateNotificationsPage user={user} onSectionChange={handleSectionChange} />
-              )}
               {activeSection === 'support' && (
                 <CandidateSupportPage user={user} onSectionChange={handleSectionChange} />
               )}
@@ -415,8 +453,9 @@ export default function App() {
                   {(currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && (
                     <PlacementDashboard user={user} onSectionChange={handleSectionChange} />
                   )}
-                  {(currentUserType === 'ME' || currentUserType === 'M&E Team') && <MEDashboard user={user} />}
-                  {currentUserType === 'Admin' && <AdminDashboard onSectionChange={handleSectionChange} user={user} />}
+                  {(currentUserType === 'Admin' || isSuperAdminRole(currentUserType) || (!['Mobilizer', 'Trainer', 'PlacementCoordinator', 'Placement Coordinator'].includes(currentUserType))) && (
+                    <AdminDashboard onSectionChange={handleSectionChange} user={user} />
+                  )}
                 </>
               )}
 
@@ -453,6 +492,10 @@ export default function App() {
             <StakeholderManagement categoryKey="user-management" onSectionChange={handleSectionChange} />
           )}
 
+          {activeSection === 'kyc' && (
+            <StakeholderManagement categoryKey="kyc" onSectionChange={handleSectionChange} />
+          )}
+
           {/* C. Candidate Lifecycle Management Sections */}
           {activeSection === 'candidates' && (
             currentUserType === 'Trainer' ? (
@@ -460,7 +503,14 @@ export default function App() {
             ) : (
               <CandidateManagement
                 mobilizerUser={user}
-                onNavigateToOnboard={() => handleSectionChange('onboard-candidate')}
+                onNavigateToOnboard={() => {
+                  setCandidateToEdit(null);
+                  handleSectionChange('onboard-candidate');
+                }}
+                onEditCandidate={(cand) => {
+                  setCandidateToEdit(cand);
+                  handleSectionChange('onboard-candidate');
+                }}
               />
             )
           )}
@@ -468,8 +518,15 @@ export default function App() {
           {(activeSection === 'onboard-candidate' || activeSection === 'candidate-onboarding') && (
             <CandidateOnboarding
               mobilizerUser={user}
-              onBackToRoster={() => handleSectionChange('candidates')}
-              onCandidateCreated={() => handleSectionChange('candidates')}
+              candidateToEdit={candidateToEdit}
+              onBackToRoster={() => {
+                setCandidateToEdit(null);
+                handleSectionChange('candidates');
+              }}
+              onCandidateCreated={() => {
+                setCandidateToEdit(null);
+                handleSectionChange('candidates');
+              }}
             />
           )}
 
@@ -493,14 +550,8 @@ export default function App() {
             <TrainingModules onSectionChange={handleSectionChange} />
           )}
 
-          {(activeSection === 'training' || activeSection === 'batches' || activeSection === 'training-batches') && (
-            <>
-              {currentUserType === 'Mobilizer' ? (
-                <MobilizerBatchView mobilizerUser={user} />
-              ) : (
-                <BatchManagement user={user} onSectionChange={handleSectionChange} />
-              )}
-            </>
+          {(activeSection === 'training' || activeSection === 'batches' || activeSection === 'training-batches') && currentUserType !== 'Mobilizer' && (
+            <BatchManagement user={user} onSectionChange={handleSectionChange} />
           )}
 
           {(activeSection === 'batch-create' || activeSection === 'create-batch') && (
@@ -522,24 +573,17 @@ export default function App() {
             <TrainingAttendance user={user} onSectionChange={handleSectionChange} />
           )}
 
-          {activeSection === 'assessments' && (
-            <>
-              {currentUserType === 'Mobilizer' ? (
-                <CandidateAssessments
-                  mobilizerUser={user}
-                  onSectionChange={handleSectionChange}
-                />
-              ) : (
-                <TrainingAssessments user={user} onSectionChange={handleSectionChange} />
-              )}
-            </>
-          )}
-
-          {(activeSection === 'deployments' || activeSection === 'placements') && currentUserType === 'Mobilizer' && (
-            <CandidatePlacements
+          {((activeSection === 'assessments-placements') ||
+            (currentUserType === 'Mobilizer' && (activeSection === 'assessments' || activeSection === 'deployments' || activeSection === 'placements'))) && (
+            <AssessmentsAndPlacements
               mobilizerUser={user}
               onSectionChange={handleSectionChange}
+              defaultTab={activeSection === 'deployments' || activeSection === 'placements' ? 'placements' : activeSection === 'assessments' ? 'assessments' : 'combined'}
             />
+          )}
+
+          {activeSection === 'assessments' && currentUserType !== 'Mobilizer' && (
+            <TrainingAssessments user={user} onSectionChange={handleSectionChange} />
           )}
 
           {(activeSection === 'deployments' || activeSection === 'placements') && (currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && (
@@ -549,7 +593,7 @@ export default function App() {
             />
           )}
 
-          {(activeSection === 'targets' || activeSection === 'goals') && (
+          {(activeSection === 'targets' || activeSection === 'goals') && currentUserType !== 'Mobilizer' && (
             <MobilizerTargets
               mobilizerUser={user}
               onSectionChange={handleSectionChange}
@@ -566,14 +610,6 @@ export default function App() {
 
           {activeSection === 'reports' && currentUserType === 'Trainer' && (
             <TrainerReports user={user} onSectionChange={handleSectionChange} />
-          )}
-
-          {activeSection === 'reports' && currentUserType === 'Mobilizer' && (
-            <MobilizerReports user={user} onSectionChange={handleSectionChange} />
-          )}
-
-          {activeSection === 'notifications' && currentUserType === 'Trainer' && (
-            <TrainerNotifications user={user} onSectionChange={handleSectionChange} />
           )}
 
           {activeSection === 'support' && currentUserType === 'Trainer' && (
@@ -610,13 +646,15 @@ export default function App() {
             activeSection !== 'targets' &&
             activeSection !== 'goals' &&
             activeSection !== 'openings' &&
+            activeSection !== 'assessments-placements' &&
             !((activeSection === 'deployments' || activeSection === 'placements') && currentUserType === 'Mobilizer') &&
             activeSection !== 'practical-sessions' &&
             activeSection !== 'feedback' &&
             activeSection !== 'certifications' &&
             !(activeSection === 'reports' && (currentUserType === 'Trainer' || currentUserType === 'Mobilizer')) &&
-            !(activeSection === 'notifications' && currentUserType === 'Trainer') &&
-            !(activeSection === 'support' && currentUserType === 'Trainer') && (
+            activeSection !== 'notifications' &&
+            activeSection !== 'settings' &&
+            !(activeSection === 'support' && (currentUserType === 'Trainer' || currentUserType === 'Mobilizer')) && (
             <GenericAdminSection
               sectionId={activeSection}
               onSectionChange={handleSectionChange}

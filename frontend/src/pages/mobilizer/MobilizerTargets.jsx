@@ -35,11 +35,11 @@ const API_BASE = 'http://localhost:5000/api';
 export default function MobilizerTargets({ mobilizerUser, onSectionChange }) {
   const [targets, setTargets] = useState([]);
   const [stats, setStats] = useState({
-    total_targets: 5,
-    total_intake_target: 45,
-    total_intake_achieved: 38,
-    overall_progress_percentage: 84,
-    accrued_incentive_bonus: 60000,
+    total_targets: 0,
+    total_intake_target: 0,
+    total_intake_achieved: 0,
+    overall_progress_percentage: 0,
+    accrued_incentive_bonus: 0,
     star_performer_status: 'ON_TRACK'
   });
   const [loading, setLoading] = useState(true);
@@ -54,159 +54,6 @@ export default function MobilizerTargets({ mobilizerUser, onSectionChange }) {
   const [adjustmentProposedValue, setAdjustmentProposedValue] = useState('');
   const [adjustmentSuccessToast, setAdjustmentSuccessToast] = useState(false);
 
-  // Fallback initial dataset
-  const fallbackTargets = [
-    {
-      id: 'tgt-mar-2026',
-      period_title: 'March 2026 Monthly Intake Target',
-      period_code: '2026-M03',
-      quarter: 'Q1-2026',
-      mobilizer_id: 'mob-101',
-      mobilizer_name: 'Sunita Verma',
-      territory: 'Bengaluru South & Rural Wards',
-      kpi_type: 'CANDIDATE_ONBOARDING',
-      target_kpi: 'New Candidate Intake & Registration',
-      target_value: 45,
-      achieved_value: 38,
-      unit: 'Candidates',
-      progress_percentage: 84.4,
-      status: 'IN_PROGRESS',
-      deadline: '2026-03-31',
-      days_left: 17,
-      incentive_tier: 'Tier 2 (80%-99%)',
-      estimated_bonus: 19000,
-      breakdown: {
-        nf1_intake: { target: 15, achieved: 14, label: 'NF1 (Job Ready Drivers)' },
-        nf2_intake: { target: 20, achieved: 16, label: 'NF2 (Upskilling EV Riders)' },
-        nf3_intake: { target: 10, achieved: 8, label: 'NF3 (Foundational Training)' }
-      },
-      territory_breakdown: [
-        { area: 'Koramangala & HSR Ward', target: 15, achieved: 14, percent: 93 },
-        { area: 'BTM & Bommanahalli', target: 18, achieved: 15, percent: 83 },
-        { area: 'Electronic City Rural', target: 12, achieved: 9, percent: 75 }
-      ],
-      supervisor_notes: 'Consistent weekly camp drive. On track to reach the 45-candidate stretch target by month end.'
-    },
-    {
-      id: 'tgt-doc-mar-2026',
-      period_title: 'March 2026 KYC Verification Target',
-      period_code: '2026-M03-DOC',
-      quarter: 'Q1-2026',
-      mobilizer_id: 'mob-101',
-      mobilizer_name: 'Sunita Verma',
-      territory: 'Bengaluru South & Rural Wards',
-      kpi_type: 'KYC_DOCUMENTATION',
-      target_kpi: 'Full KYC & Aadhaar / DL Verification',
-      target_value: 40,
-      achieved_value: 35,
-      unit: 'Verified Dossiers',
-      progress_percentage: 87.5,
-      status: 'ON_TRACK',
-      deadline: '2026-03-31',
-      days_left: 17,
-      incentive_tier: 'Tier 2 (80%-99%)',
-      estimated_bonus: 7000,
-      breakdown: {
-        aadhaar_pan: { target: 40, achieved: 37, label: 'Aadhaar / Bank Passbook' },
-        driving_license: { target: 40, achieved: 35, label: 'Learner or Permanent DL' },
-        address_proof: { target: 40, achieved: 38, label: 'Local Residence Proof' }
-      },
-      territory_breakdown: [
-        { area: 'Bengaluru Central Hub', target: 20, achieved: 18, percent: 90 },
-        { area: 'South Peripheral Wards', target: 20, achieved: 17, percent: 85 }
-      ],
-      supervisor_notes: 'Document turnaround time is under 48 hours. Excellent KYC compliance.'
-    },
-    {
-      id: 'tgt-batch-mar-2026',
-      period_title: 'March 2026 Batch Induction Target',
-      period_code: '2026-M03-BAT',
-      quarter: 'Q1-2026',
-      mobilizer_id: 'mob-101',
-      mobilizer_name: 'Sunita Verma',
-      territory: 'Bengaluru South & Rural Wards',
-      kpi_type: 'TRAINING_INDUCTION',
-      target_kpi: 'Candidates Inducted into EV Training',
-      target_value: 30,
-      achieved_value: 28,
-      unit: 'Candidates Inducted',
-      progress_percentage: 93.3,
-      status: 'EXCEEDING',
-      deadline: '2026-03-31',
-      days_left: 17,
-      incentive_tier: 'Tier 3 (90%+ Accelerator)',
-      estimated_bonus: 14000,
-      breakdown: {
-        batch_01: { target: 15, achieved: 15, label: 'Batch BAT-2026-BLR-01' },
-        batch_02: { target: 15, achieved: 13, label: 'Batch BAT-2026-BLR-02' }
-      },
-      territory_breakdown: [
-        { area: 'Koramangala EV Training Academy', target: 30, achieved: 28, percent: 93 }
-      ],
-      supervisor_notes: '93% induction rate achieved with 0 dropout during day 1 induction.'
-    },
-    {
-      id: 'tgt-plc-mar-2026',
-      period_title: 'March 2026 Job Placement Goal',
-      period_code: '2026-M03-PLC',
-      quarter: 'Q1-2026',
-      mobilizer_id: 'mob-101',
-      mobilizer_name: 'Sunita Verma',
-      territory: 'Bengaluru South & Rural Wards',
-      kpi_type: 'PLACEMENT_FACILITATION',
-      target_kpi: 'Commercial Green Fleet Placements',
-      target_value: 22,
-      achieved_value: 20,
-      unit: 'Candidates Placed',
-      progress_percentage: 90.9,
-      status: 'EXCEEDING',
-      deadline: '2026-03-31',
-      days_left: 17,
-      incentive_tier: 'Tier 3 (90%+ Accelerator)',
-      estimated_bonus: 20000,
-      breakdown: {
-        quick_commerce: { target: 12, achieved: 11, label: 'Quick Commerce (Blinkit/BB)' },
-        food_logistics: { target: 6, achieved: 6, label: 'Food Delivery (Zomato Green)' },
-        ride_fleet: { target: 4, achieved: 3, label: 'Clean Urban Ride Fleet (Uber/BluSmart)' }
-      },
-      territory_breakdown: [
-        { area: 'South Hub Cluster', target: 22, achieved: 20, percent: 91 }
-      ],
-      supervisor_notes: 'High placement retention in food & quick commerce logistics.'
-    },
-    {
-      id: 'tgt-feb-2026',
-      period_title: 'February 2026 Monthly Target (Completed)',
-      period_code: '2026-M02',
-      quarter: 'Q1-2026',
-      mobilizer_id: 'mob-101',
-      mobilizer_name: 'Sunita Verma',
-      territory: 'Bengaluru South & Rural Wards',
-      kpi_type: 'CANDIDATE_ONBOARDING',
-      target_kpi: 'New Candidate Intake & Registration',
-      target_value: 40,
-      achieved_value: 42,
-      unit: 'Candidates',
-      progress_percentage: 105.0,
-      status: 'ACHIEVED',
-      deadline: '2026-02-28',
-      days_left: 0,
-      incentive_tier: 'Tier 4 (100%+ Star Performer)',
-      estimated_bonus: 25000,
-      breakdown: {
-        nf1_intake: { target: 12, achieved: 15, label: 'NF1 (Job Ready)' },
-        nf2_intake: { target: 18, achieved: 19, label: 'NF2 (Upskilling)' },
-        nf3_intake: { target: 10, achieved: 8, label: 'NF3 (Foundational)' }
-      },
-      territory_breakdown: [
-        { area: 'Koramangala & HSR Ward', target: 15, achieved: 16, percent: 107 },
-        { area: 'BTM & Bommanahalli', target: 15, achieved: 16, percent: 107 },
-        { area: 'Electronic City Rural', target: 10, achieved: 10, percent: 100 }
-      ],
-      supervisor_notes: '105% target achievement. Received Star Mobilizer award for February 2026.'
-    }
-  ];
-
   const fetchTargets = async () => {
     try {
       setLoading(true);
@@ -219,10 +66,10 @@ export default function MobilizerTargets({ mobilizerUser, onSectionChange }) {
           return;
         }
       }
-      setTargets(fallbackTargets);
+      setTargets([]);
     } catch (err) {
-      console.warn('Using fallback targets data:', err);
-      setTargets(fallbackTargets);
+      console.warn('Error fetching live targets:', err);
+      setTargets([]);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -232,6 +79,7 @@ export default function MobilizerTargets({ mobilizerUser, onSectionChange }) {
   useEffect(() => {
     fetchTargets();
   }, []);
+
 
   const handleRefresh = () => {
     setIsRefreshing(true);

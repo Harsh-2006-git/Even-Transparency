@@ -10,7 +10,6 @@ import {
   UserCog,
   BookOpen, MapPin, FolderSync, HeartHandshake, MessageSquare, Radio,
   ScrollText,
-  Settings,
   Sparkles,
   Search,
   Download,
@@ -23,17 +22,16 @@ const SECTION_CONFIGS = {
     subtitle: 'Track end-to-end candidate lifecycle from mobilization to retention across all 12 stages.',
     icon: Users,
     kpis: [
-      { label: 'Total Candidates', value: '12,548' },
-      { label: 'NF1 Classified', value: '3,842' },
-      { label: 'NF2 Classified', value: '5,778' },
-      { label: 'NF3 Classified', value: '2,928' },
+      { label: 'Total Candidates', value: '3' },
+      { label: 'NF1 Classified', value: '1' },
+      { label: 'NF2 Classified', value: '1' },
+      { label: 'NF3 Classified', value: '1' },
     ],
     columns: ['Candidate Code', 'Name', 'Phone', 'City', 'Current Stage', 'NF Category', 'Readiness Score', 'Risk Level'],
     mockData: [
-      { code: 'ET-2026-001', name: 'Priya Sharma', phone: '+91 98765 11111', city: 'Lucknow', stage: 'REGISTERED', nf: 'NF1', score: '84%', risk: 'Low' },
-      { code: 'ET-2026-002', name: 'Neha Kumari', phone: '+91 98765 22222', city: 'Kanpur', stage: 'IN_TRAINING', nf: 'NF2', score: '92%', risk: 'Low' },
-      { code: 'ET-2026-003', name: 'Sunita Verma', phone: '+91 98765 33333', city: 'Varanasi', stage: 'ASSESSED', nf: 'NF1', score: '88%', risk: 'Normal' },
-      { code: 'ET-2026-004', name: 'Riya Patel', phone: '+91 98765 44444', city: 'Agra', stage: 'IN_TRAINING', nf: 'NF3', score: '71%', risk: 'Medium' },
+      { code: 'ET-2026-001', name: 'Priya Sharma', phone: '+91 98765 11111', city: 'Bengaluru', stage: 'IN_TRAINING', nf: 'NF1', score: '88%', risk: 'Low' },
+      { code: 'ET-2026-002', name: 'Aisha Khan', phone: '+91 98765 22222', city: 'Bengaluru', stage: 'READINESS_ASSESSMENT', nf: 'NF2', score: '74%', risk: 'Low' },
+      { code: 'ET-2026-003', name: 'Kavita Devi', phone: '+91 98765 33333', city: 'Bengaluru', stage: 'MOBILIZED', nf: 'NF3', score: '62%', risk: 'Normal' },
     ]
   },
   trainers: {
@@ -184,7 +182,7 @@ const SECTION_CONFIGS = {
     columns: ['Announcement Title', 'Target Audience', 'Channels', 'Scheduled Date', 'Sent Count', 'Author', 'Status'],
     mockData: [
       { title: 'New 2026 NF Scoring & Readiness Guidelines Live', aud: 'All Mobilizers & Trainers', chan: 'In-App + Email', date: 'Today 08:00', sent: '410 users', author: 'Super Admin', status: 'Active' },
-      { title: 'Scheduled Platform Maintenance on 20 May (02:00 - 04:00 AM)', aud: 'All Platform Users', chan: 'In-App Banner', date: '18 May 2025', sent: '12,548 users', author: 'DevOps Lead', status: 'Scheduled' },
+      { title: 'Scheduled Platform Maintenance on 20 May (02:00 - 04:00 AM)', aud: 'All Platform Users', chan: 'In-App Banner', date: '18 May 2025', sent: 'All Active Users', author: 'DevOps Lead', status: 'Scheduled' },
     ]
   },
   'activity-logs': {
@@ -340,24 +338,6 @@ const SECTION_CONFIGS = {
       { time: '09:45 AM', user: 'admin@eventransparency.org', action: 'CREATE_BATCH', entity: 'Batch: MOB-2026-018', details: 'Initialized training batch with 25 candidate slots', ip: '127.0.0.1' },
       { time: '09:20 AM', user: 'meena.yadav@eventransparency.org', action: 'STAGE_CHANGE', entity: 'Candidate: ET-2026-001', details: 'Stage updated: IN_TRAINING -> READY_FOR_DEPLOYMENT', ip: '10.0.0.12' },
       { time: '08:55 AM', user: 'admin@eventransparency.org', action: 'ONBOARD_EMPLOYER', entity: 'Even Cargo Logistics', details: 'Verified corporate KYC and hiring mandate', ip: '127.0.0.1' },
-    ]
-  },
-  settings: {
-    title: 'Platform Master Configuration',
-    subtitle: 'Configuration for lifecycle stages, NF scoring thresholds, document verification rules, and automated notifications.',
-    icon: Settings,
-    kpis: [
-      { label: 'Lifecycle Stages', value: '7 Active' },
-      { label: 'Document Rules', value: '14 Active' },
-      { label: 'NF Engine Version', value: 'v3.2 Production' },
-      { label: 'API Health', value: '100% Online' },
-    ],
-    columns: ['Category', 'Code', 'Label', 'Description', 'Active Status'],
-    mockData: [
-      { cat: 'LIFECYCLE_STAGE', code: 'STG_REG', label: 'Registered', desc: 'Mobilised candidate registered in platform', status: 'Active' },
-      { cat: 'LIFECYCLE_STAGE', code: 'STG_VER', label: 'Verified', desc: 'Identity and preliminary KYC cleared', status: 'Active' },
-      { cat: 'DOCUMENT_TYPE', code: 'DOC_DL', label: 'Driving Licence', desc: 'Mandatory 2W permanent or learner licence', status: 'Active' },
-      { cat: 'DOCUMENT_TYPE', code: 'DOC_AADHAAR', label: 'Aadhaar Card', desc: 'UIDAI biometric identity document', status: 'Active' },
     ]
   }
 };

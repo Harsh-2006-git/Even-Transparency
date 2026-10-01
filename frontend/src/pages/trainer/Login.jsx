@@ -19,8 +19,8 @@ import RoleLoginNav from '../../components/RoleLoginNav';
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function TrainerLogin({ onLoginSuccess, onGoToLanding, onSwitchRole, onGoToHub }) {
-  const [email, setEmail] = useState('trainer@evenshift.org');
-  const [password, setPassword] = useState('trainer@pass123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -73,25 +73,18 @@ export default function TrainerLogin({ onLoginSuccess, onGoToLanding, onSwitchRo
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Authentication failed. Please check credentials.');
+        throw new Error(data.message || 'No trainer found with this email.');
+      }
+
+      // Dedicated portal check: ensure only Trainer role is admitted
+      const userRole = (data.user?.role || data.user?.userType || '').toLowerCase();
+      if (!userRole.includes('train')) {
+        throw new Error('No trainer found with this email.');
       }
 
       onLoginSuccess(data.user, data.token);
     } catch (err) {
-      console.warn('Network issue, using trainer offline login:', err.message);
-      const fallbackUser = {
-        id: 'usr-tr-001',
-        full_name: 'Rajesh Kumar Verma',
-        first_name: 'Rajesh',
-        last_name: 'Verma',
-        email: email.trim() || 'trainer@evenshift.org',
-        role: 'Master Skill Trainer',
-        userType: 'Trainer',
-        centre: 'Okhla Skill Hub, Delhi',
-        batch: 'Batch #2026-EV-04',
-        status: 'active'
-      };
-      onLoginSuccess(fallbackUser, 'mock_token_trainer');
+      setError(err.message || 'No trainer found with this email.');
     } finally {
       setLoading(false);
     }
@@ -184,15 +177,6 @@ export default function TrainerLogin({ onLoginSuccess, onGoToLanding, onSwitchRo
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Enter instructor credentials to manage batches
               </p>
-            </div>
-
-            {/* Quick Demo Credentials Pill */}
-            <div className="p-2 bg-indigo-50/60 rounded-xl border border-indigo-200/80 text-[11px] space-y-0.5">
-              <div className="flex justify-between items-center text-indigo-800">
-                <span className="font-semibold text-[10.5px] text-indigo-900">Demo Trainer:</span>
-                <span className="text-[9.5px] text-indigo-700 font-bold bg-indigo-100 px-1 py-0.2 rounded">Pre-filled</span>
-              </div>
-              <p className="text-[10.5px] text-slate-700 font-mono">trainer@evenshift.org / trainer@pass123</p>
             </div>
 
             {/* Form */}

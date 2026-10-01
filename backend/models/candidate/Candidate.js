@@ -126,6 +126,10 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     photo_url: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -197,6 +201,86 @@ export default (sequelize, DataTypes) => {
     current_employment_status: {
       type: DataTypes.STRING,
       defaultValue: 'Unemployed',
+    },
+    aadhaar_number: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    family_dependents_count: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    monthly_household_income: {
+      type: DataTypes.DECIMAL(12, 2),
+      defaultValue: 0,
+    },
+    emergency_contact_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    emergency_contact_phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    emergency_contact_relation: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    driving_skill: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    has_scooty_access: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    has_driving_licence: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    has_valid_license: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    license_number: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    driving_experience: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    has_smartphone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    source: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    camp_or_event_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    location_details: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    initial_interest_level: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    referrer_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    referrer_contact: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    counseling_notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
 
     // ─── Lifecycle Stages ──────────────────────────────────────────────────

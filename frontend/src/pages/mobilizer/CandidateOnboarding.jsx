@@ -82,8 +82,8 @@ const INITIAL_FORM_STATE = {
   source: 'COMMUNITY_OUTREACH',
   camp_or_event_name: '',
   location_details: '',
-  organization_id: 'org-1',
-  partner_id: 'prt-1',
+  organization_id: '',
+  partner_id: '',
   initial_interest_level: 'HIGH',
   referrer_name: '',
   referrer_contact: '',
@@ -122,27 +122,151 @@ const SECTIONS = [
   { id: 'sourcing', title: '4. Mobilization & Sourcing', icon: Handshake, desc: 'Outreach campaign & partner records' }
 ];
 
-export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onCandidateCreated }) {
-  const [formData, setFormData] = useState(() => {
+export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, onBackToRoster, onCandidateCreated }) {
+  const isEditing = Boolean(candidateToEdit);
+
+  const buildFormData = (candidate) => {
+    if (!candidate) {
+      return {
+        ...INITIAL_FORM_STATE,
+        city: mobilizerUser?.assigned_city || 'Bengaluru',
+        state: mobilizerUser?.assigned_state || 'Karnataka',
+        partner_id: (mobilizerUser?.partner_id && mobilizerUser.partner_id !== 'prt-1') ? mobilizerUser.partner_id : '',
+        organization_id: (mobilizerUser?.organization_id && mobilizerUser.organization_id !== 'org-1') ? mobilizerUser.organization_id : ''
+      };
+    }
+
+    const nameParts = (candidate.full_name || '').trim().split(' ');
+    const firstName = candidate.first_name || nameParts[0] || '';
+    const lastName = candidate.last_name || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '');
+    const middleName = candidate.middle_name || '';
+
+    // Parse formatted address if address_line_1 isn't stored separately
+    let addr1 = candidate.address_line_1 || '';
+    let addr2 = candidate.address_line_2 || '';
+    if (!addr1 && candidate.address) {
+      const parts = candidate.address.split(',').map(s => s.trim());
+      addr1 = parts[0] || '';
+      addr2 = parts.slice(1).filter(p => !p.toLowerCase().includes('pin:') && p !== candidate.city && p !== candidate.state).join(', ');
+    }
+
+    const mob = candidate.mobilization || {};
+    const rp = candidate.readinessProfile || {};
+
+    // Determine 3 factors from stored data
+    const nfCat = candidate.nf_category || (candidate.nf_classification?.startsWith('NF1') ? 'NF1' : candidate.nf_classification?.startsWith('NF2') ? 'NF2' : 'NF3');
+    let drivingSkill = candidate.driving_skill || (rp.can_ride_two_wheeler ? 'Yes / Verified' : (nfCat === 'NF1' ? 'Yes / Verified' : nfCat === 'NF2' ? 'Basic' : 'No'));
+    let scootyAccess = candidate.has_scooty_access || (nfCat === 'NF1' || nfCat === 'NF2' ? 'Yes' : 'No');
+    let drivingLicence = candidate.has_driving_licence || (rp.has_driving_license ? 'Yes' : (nfCat === 'NF1' ? 'Yes' : 'No'));
+
+    // DOB formatting (YYYY-MM-DD)
+    let dob = candidate.date_of_birth || '';
+    if (dob && dob.includes('T')) dob = dob.split('T')[0];
+
     return {
       ...INITIAL_FORM_STATE,
-      city: mobilizerUser?.assigned_city || 'Bengaluru',
-      state: mobilizerUser?.assigned_state || 'Karnataka',
-      partner_id: mobilizerUser?.partner_id || 'prt-1'
+      ...candidate,
+      first_name: firstName,
+      middle_name: middleName,
+      last_name: lastName,
+      full_name: candidate.full_name || `${firstName} ${lastName}`.trim(),
+      photo_url: candidate.photo_url || '',
+      date_of_birth: dob,
+      age: candidate.age || '',
+      gender: candidate.gender || 'Female',
+      marital_status: candidate.marital_status || 'Single',
+      family_dependents_count: candidate.family_dependents_count != null ? candidate.family_dependents_count : 0,
+      monthly_household_income: candidate.monthly_household_income != null ? candidate.monthly_household_income : '',
+      aadhaar_number: candidate.aadhaar_number || '',
+
+      mobile_number: candidate.mobile_number || candidate.phone_number || '',
+      alternate_mobile: candidate.alternate_mobile || '',
+      email: candidate.email || '',
+      address_line_1: addr1,
+      address_line_2: addr2,
+      address: candidate.address || '',
+      city: candidate.city || mobilizerUser?.assigned_city || 'Bengaluru',
+      state: candidate.state || mobilizerUser?.assigned_state || 'Karnataka',
+      pincode: candidate.pincode || '',
+      emergency_contact_name: candidate.emergency_contact_name || '',
+      emergency_contact_phone: candidate.emergency_contact_phone || '',
+      emergency_contact_relation: candidate.emergency_contact_relation || 'Mother',
+
+      education_level: candidate.education_level || candidate.education_qualification || '10th Pass',
+      employment_status: candidate.employment_status || candidate.current_employment_status || 'Unemployed',
+      current_employment_status: candidate.current_employment_status || candidate.employment_status || 'Unemployed',
+      driving_skill: drivingSkill,
+      has_scooty_access: scootyAccess,
+      has_driving_licence: drivingLicence,
+      has_valid_license: candidate.has_valid_license || (rp.license_number ? `Permanent (${rp.license_number})` : (drivingLicence === 'Yes' ? 'Yes (2W Permanent)' : 'No')),
+      license_number: candidate.license_number || rp.license_number || '',
+      driving_experience: candidate.driving_experience || rp.driving_experience || candidate.prior_driving_experience || 'No Prior Experience',
+      has_smartphone: candidate.has_smartphone || (rp.has_smartphone ? 'Yes (Android 4G/5G)' : 'Yes (Android 4G/5G)'),
+
+      source: candidate.source || mob.source || 'COMMUNITY_OUTREACH',
+      camp_or_event_name: candidate.camp_or_event_name || mob.camp_or_event_name || '',
+      location_details: candidate.location_details || mob.location_details || '',
+      organization_id: candidate.organization_id || '',
+      partner_id: candidate.partner_id || mob.partner_id || '',
+      initial_interest_level: candidate.initial_interest_level || mob.initial_interest_level || 'HIGH',
+      referrer_name: candidate.referrer_name || mob.referrer_name || '',
+      referrer_contact: candidate.referrer_contact || mob.referrer_contact || '',
+      counseling_notes: candidate.counseling_notes || mob.counseling_notes || '',
+
+      current_stage: candidate.current_stage || candidate.stage || 'MOBILIZED',
+      nf_category: nfCat,
+      nf_classification_score: candidate.nf_classification_score || (nfCat === 'NF1' ? 88 : nfCat === 'NF2' ? 72 : 58),
+      recommended_trainings: Array.isArray(candidate.recommended_trainings) && candidate.recommended_trainings.length > 0
+        ? candidate.recommended_trainings
+        : (nfCat === 'NF1' ? ['2W EV Riding & Safety Basics', 'Smartphone & Navigation Apps'] : ['2W EV Riding & Safety Basics', 'Smartphone & Navigation Apps', 'Battery Swapping & Basic Maintenance']),
+      readiness_status: candidate.readiness_status || 'NOT_EVALUATED',
+      readiness_score: candidate.readiness_score != null ? candidate.readiness_score : (nfCat === 'NF1' ? 88 : nfCat === 'NF2' ? 72 : 58),
+      risk_level: candidate.risk_level || 'NORMAL',
+      status: candidate.status || 'active',
+      notes: candidate.notes || '',
+      documents: Array.isArray(candidate.documents) ? candidate.documents : []
     };
-  });
+  };
+
+  const [formData, setFormData] = useState(() => buildFormData(candidateToEdit));
+
+  useEffect(() => {
+    if (!candidateToEdit) {
+      setFormData(buildFormData(null));
+      return;
+    }
+    // Set immediate state from passed candidate
+    setFormData(buildFormData(candidateToEdit));
+
+    // Fetch complete candidate record from backend by ID or code to ensure every single nested field is populated
+    const targetId = candidateToEdit.id || candidateToEdit.candidate_code;
+    if (targetId) {
+      let isMounted = true;
+      fetch(`http://localhost:5000/api/candidates/${targetId}`)
+        .then(res => res.json())
+        .then(resData => {
+          if (isMounted && resData.success && resData.data) {
+            setFormData(buildFormData(resData.data));
+          }
+        })
+        .catch(err => console.warn('Could not fetch complete candidate details:', err));
+
+      return () => { isMounted = false; };
+    }
+  }, [candidateToEdit]);
 
   const [activeSection, setActiveSection] = useState('personal');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [successData, setSuccessData] = useState(null);
   const [candidateCodePreview] = useState(() => {
+    if (candidateToEdit?.candidate_code) return candidateToEdit.candidate_code;
     const year = new Date().getFullYear();
     const rand = Math.floor(1000 + Math.random() * 9000);
     return `ET-${year}-${rand}`;
   });
 
-  // Calculate age automatically from DOB
+  // Calculate age automatically from DOB if changed
   useEffect(() => {
     if (formData.date_of_birth) {
       const birth = new Date(formData.date_of_birth);
@@ -160,6 +284,7 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
 
   // Combine full name
   useEffect(() => {
+    if (!formData.first_name && !formData.last_name) return;
     const full = [formData.first_name, formData.middle_name, formData.last_name]
       .filter(Boolean)
       .join(' ')
@@ -169,6 +294,7 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
 
   // Combine full address
   useEffect(() => {
+    if (!formData.address_line_1 && !formData.city) return;
     const parts = [
       formData.address_line_1,
       formData.address_line_2,
@@ -188,20 +314,30 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
     );
   }, [formData.driving_skill, formData.has_scooty_access, formData.has_driving_licence]);
 
-  // Sync evaluated NF category into form state
+  const userInteractedFactors = React.useRef(false);
+
+  // Sync evaluated NF category into form state only when factors change
   useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      nf_category: evaluatedNF.code,
-      readiness_status: evaluatedNF.readinessStatus,
-      nf_classification_score: evaluatedNF.code === 'NF1' ? 88 : evaluatedNF.code === 'NF2' ? 72 : 58,
-      recommended_trainings: evaluatedNF.recommendedModules
-    }));
+    setFormData(prev => {
+      if (prev.nf_category === evaluatedNF.code) return prev;
+      return {
+        ...prev,
+        nf_category: evaluatedNF.code,
+        readiness_status: evaluatedNF.readinessStatus,
+        nf_classification_score: evaluatedNF.code === 'NF1' ? 88 : evaluatedNF.code === 'NF2' ? 72 : 58,
+        recommended_trainings: (userInteractedFactors.current || !prev.recommended_trainings?.length)
+          ? evaluatedNF.recommendedModules
+          : prev.recommended_trainings
+      };
+    });
   }, [evaluatedNF]);
 
   // Handle Form Change
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (['driving_skill', 'has_scooty_access', 'has_driving_licence'].includes(name)) {
+      userInteractedFactors.current = true;
+    }
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -281,7 +417,7 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
       middle_name: 'Devi',
       last_name: 'Rao',
       full_name: 'Lakshmi Devi Rao',
-      photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+      photo_url: '',
       gender: 'Female',
       date_of_birth: '1998-06-14',
       age: 27,
@@ -311,8 +447,8 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
       source: 'NGO_PARTNER',
       camp_or_event_name: 'Jayanagar Women EV Livelihood Drive',
       location_details: 'Community Center Ward 153',
-      organization_id: 'org-1',
-      partner_id: 'prt-1',
+      organization_id: '',
+      partner_id: '',
       initial_interest_level: 'HIGH',
       referrer_name: 'Meena Tai (SHG Leader)',
       referrer_contact: '+91 98450 11223',
@@ -349,40 +485,51 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
 
     setIsSubmitting(true);
 
+    const isUUID = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    const combinedName = formData.full_name || `${formData.first_name || ''} ${formData.middle_name || ''} ${formData.last_name || ''}`.replace(/\s+/g, ' ').trim();
+
+    const assignedMobId = isUUID(candidateToEdit?.assigned_mobilizer_id)
+      ? candidateToEdit.assigned_mobilizer_id
+      : (isUUID(formData.assigned_mobilizer_id) ? formData.assigned_mobilizer_id : null);
+
     const payload = {
       ...formData,
+      full_name: combinedName,
       candidate_code: candidateCodePreview,
-      mobilizer_id: mobilizerUser?.id || 'usr-mob-001',
-      assigned_mobilizer_id: mobilizerUser?.id || 'usr-mob-001',
-      registered_at: new Date().toISOString()
+      organization_id: isUUID(formData.organization_id) ? formData.organization_id : (isUUID(mobilizerUser?.organization_id) ? mobilizerUser.organization_id : null),
+      partner_id: isUUID(formData.partner_id) ? formData.partner_id : (isUUID(mobilizerUser?.partner_id) ? mobilizerUser.partner_id : null),
+      mobilizer_id: isUUID(formData.mobilizer_id) ? formData.mobilizer_id : (isUUID(mobilizerUser?.id) ? mobilizerUser.id : null),
+      assigned_mobilizer_id: assignedMobId,
+      photo_url: formData.photo_url && String(formData.photo_url).trim() !== '' ? String(formData.photo_url).trim() : null,
+      date_of_birth: formData.date_of_birth || null,
+      registered_at: formData.registered_at || new Date().toISOString()
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/candidates', {
-        method: 'POST',
+      const url = isEditing
+        ? `http://localhost:5000/api/candidates/${candidateToEdit.id}`
+        : 'http://localhost:5000/api/candidates';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       const json = await res.json();
-      const savedCandidate = json.data || payload;
-      localStorage.setItem('even_latest_candidate', JSON.stringify(savedCandidate));
-      if (json.success) {
+      if (res.ok && json.success) {
+        const savedCandidate = json.data || payload;
         setSuccessData(savedCandidate);
         if (onCandidateCreated) {
           onCandidateCreated(savedCandidate);
         }
       } else {
-        throw new Error(json.message || 'Failed to onboard candidate');
+        throw new Error(json.message || (isEditing ? 'Failed to update candidate details' : 'Failed to onboard candidate into database'));
       }
     } catch (err) {
-      console.warn('Backend endpoint error, using client fallback:', err.message);
-      // Fallback for seamless frontend experience
-      localStorage.setItem('even_latest_candidate', JSON.stringify(payload));
-      setSuccessData(payload);
-      if (onCandidateCreated) {
-        onCandidateCreated(payload);
-      }
+      console.error('Candidate onboarding error:', err);
+      setErrorMsg(err.message || 'Failed to save candidate to database. Please verify backend connectivity.');
     } finally {
       setIsSubmitting(false);
     }
@@ -400,15 +547,17 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
           </div>
 
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200 mb-3">
-            <Sparkles className="w-3.5 h-3.5" /> Candidate Successfully Onboarded
+            <Sparkles className="w-3.5 h-3.5" /> {isEditing ? 'Candidate Details Updated' : 'Candidate Successfully Onboarded'}
           </span>
 
           <h2 className="text-3xl font-extrabold text-slate-900 mb-2">
-            Welcome, {successData.full_name || `${successData.first_name} ${successData.last_name}`}!
+            {isEditing ? `Updated: ${successData.full_name || `${successData.first_name} ${successData.last_name}`}` : `Welcome, ${successData.full_name || `${successData.first_name} ${successData.last_name}`}!`}
           </h2>
 
           <p className="text-slate-600 max-w-lg mx-auto mb-6 text-sm sm:text-base">
-            The candidate profile has been registered in the Even Transparency lifecycle portal under candidate code:
+            {isEditing
+              ? 'The candidate record and all lifecycle documents have been updated in the PostgreSQL database:'
+              : 'The candidate profile has been registered in the Even Transparency lifecycle portal under candidate code:'}
           </p>
 
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-w-md mx-auto mb-8 flex items-center justify-between shadow-sm">
@@ -489,17 +638,17 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
               <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                 <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-[#FF408A]" />
-                  Candidate Onboarding Form
+                  {isEditing ? `Edit Candidate: ${formData.full_name || 'Profile'}` : 'Candidate Onboarding Form'}
                 </h1>
                 <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-pink-50 text-[#FF408A] border border-pink-200">
                   {candidateCodePreview}
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Full Roster Intake
+                  {isEditing ? 'Editing Mode' : 'Full Roster Intake'}
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Complete multi-section onboarding record based directly on the Even Transparency Candidate Model.
+                {isEditing ? 'Update and manage full candidate records with database synchronization.' : 'Complete multi-section onboarding record based directly on the Even Transparency Candidate Model.'}
               </p>
             </div>
           </div>
@@ -793,7 +942,6 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
                     name="photo_url"
                     value={formData.photo_url}
                     onChange={handleChange}
-                    placeholder="https://.../photo.jpg"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#FF408A] focus:border-transparent outline-none transition"
                   />
                 </div>
@@ -1348,7 +1496,7 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
                 </div>
                 <div>
                   <div className="text-xs font-bold text-slate-800">
-                    Ready to Onboard Candidate
+                    {isEditing ? 'Ready to Save Changes' : 'Ready to Onboard Candidate'}
                   </div>
                   <div className="text-[11px] text-slate-500">
                     Code: <span className="font-mono font-bold text-slate-700">{candidateCodePreview}</span> • Stage: <span className="font-semibold text-emerald-600">{formData.current_stage}</span>
@@ -1372,12 +1520,12 @@ export default function CandidateOnboarding({ mobilizerUser, onBackToRoster, onC
                   {isSubmitting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Saving Candidate...
+                      {isEditing ? 'Updating Candidate...' : 'Saving Candidate...'}
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      Complete Candidate Onboarding
+                      {isEditing ? 'Save Changes' : 'Complete Candidate Onboarding'}
                     </>
                   )}
                 </button>

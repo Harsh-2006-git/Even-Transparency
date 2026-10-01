@@ -10,6 +10,10 @@ import userRoutes from './routes/userRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import trainingBatchRoutes from './routes/trainingBatchRoutes.js';
 import employerRoutes from './routes/employerRoutes.js';
+import trainerRoutes from './routes/trainerRoutes.js';
+import placementCoordinatorRoutes from './routes/placementCoordinatorRoutes.js';
+import partnerRoutes from './routes/partnerRoutes.js';
+import kycRoutes from './routes/kycRoutes.js';
 
 dotenv.config();
 
@@ -45,6 +49,14 @@ app.use('/api/upload', uploadRoutes);
 // Master Data Helper Routes
 app.get('/api/master/organizations', async (req, res) => {
   try {
+    if (db.Organization) {
+      const dbOrgs = await db.Organization.findAll({
+        attributes: ['id', 'name', 'type', 'city', 'state']
+      });
+      if (dbOrgs && dbOrgs.length > 0) {
+        return res.json({ success: true, data: dbOrgs.map(o => o.toJSON()) });
+      }
+    }
     const orgs = [
       { id: 'org-1', name: 'Even Mobility Foundation', type: 'NGO' },
       { id: 'org-2', name: 'Gujarat Livelihood Mission', type: 'Government' },
@@ -59,6 +71,14 @@ app.get('/api/master/organizations', async (req, res) => {
 
 app.get('/api/master/partners', async (req, res) => {
   try {
+    if (db.Partner) {
+      const dbPartners = await db.Partner.findAll({
+        attributes: ['id', 'name', 'type', 'city', 'state']
+      });
+      if (dbPartners && dbPartners.length > 0) {
+        return res.json({ success: true, data: dbPartners.map(p => p.toJSON()) });
+      }
+    }
     const partners = [
       { id: 'prt-1', name: 'Mahila Vikas Samiti (NGO)', city: 'Bengaluru' },
       { id: 'prt-2', name: 'Delhi Skill Development Society', city: 'Delhi' },
@@ -82,6 +102,18 @@ app.use('/api/training', trainingBatchRoutes);
 
 // Hiring Employer Partners & Job Openings API
 app.use('/api/employers', employerRoutes);
+
+// Training Instructors & Master Trainers API
+app.use('/api/trainers', trainerRoutes);
+
+// Placement Coordinators API
+app.use('/api/placement-coordinators', placementCoordinatorRoutes);
+
+// Field Partners & NGOs API
+app.use('/api/partners', partnerRoutes);
+
+// KYC & Identity Verification API
+app.use('/api/kyc', kycRoutes);
 
 // Start Server & Authenticate DB
 async function startServer() {

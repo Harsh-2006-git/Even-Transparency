@@ -32,133 +32,14 @@ import {
   Check
 } from 'lucide-react';
 
-const INITIAL_CANDIDATES = [
-  {
-    id: 'cand-1',
-    candidate_code: 'ET-2026-001',
-    full_name: 'Priya Sharma',
-    email: 'priya.sharma@candidate.org',
-    phone_number: '+91 98765 11111',
-    aadhaar_number: 'XXXX-XXXX-4829',
-    date_of_birth: '1998-04-12',
-    gender: 'Female',
-    marital_status: 'Unmarried',
-    family_dependents_count: 3,
-    monthly_household_income: 8500,
-    education_qualification: '12th Pass (Higher Secondary)',
-    address: 'Flat 402, Shanti Nagar, Outer Ring Rd',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    pincode: '560037',
-    has_valid_license: 'Yes (2W Permanent)',
-    license_number: 'KA-05-2022-0048192',
-    prior_driving_experience: '2 Years 2W Scooter Riding',
-    has_smartphone: 'Yes (Android 4G/5G)',
-    emergency_contact_name: 'Sunita Sharma (Mother)',
-    emergency_contact_phone: '+91 98765 11112',
-    mobilization_channel: 'SHG Cluster Outreach Drive',
-    partner_source: 'Mahila Vikas Samiti (NGO)',
-    stage: 'IN_TRAINING',
-    status: 'active',
-    nf_classification: 'NF1 (Fast-Track EV)',
-    readiness_score: 88,
-    kyc_status: 'Verified',
-    created_at: '2026-01-10T00:00:00.000Z'
-  },
-  {
-    id: 'cand-2',
-    candidate_code: 'ET-2026-002',
-    full_name: 'Aisha Khan',
-    email: 'aisha.khan@candidate.org',
-    phone_number: '+91 98765 22222',
-    aadhaar_number: 'XXXX-XXXX-9102',
-    date_of_birth: '1996-08-25',
-    gender: 'Female',
-    marital_status: 'Married',
-    family_dependents_count: 2,
-    monthly_household_income: 11000,
-    education_qualification: 'Graduate (B.Com)',
-    address: 'House 18, 4th Cross, Indiranagar',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    pincode: '560038',
-    has_valid_license: 'Learner Permit (LLR Active)',
-    license_number: 'KA-01-LL-2025-9921',
-    prior_driving_experience: 'Basic 2W Bicycle and E-cycle',
-    has_smartphone: 'Yes (Android)',
-    emergency_contact_name: 'Imran Khan (Spouse)',
-    emergency_contact_phone: '+91 98765 22223',
-    mobilization_channel: 'Community Door-to-Door Campaign',
-    partner_source: 'Sakhi Self Help Federation',
-    stage: 'READINESS_ASSESSMENT',
-    status: 'active',
-    nf_classification: 'NF2 (Foundation)',
-    readiness_score: 74,
-    kyc_status: 'Verified',
-    created_at: '2026-01-18T00:00:00.000Z'
-  },
-  {
-    id: 'cand-3',
-    candidate_code: 'ET-2026-003',
-    full_name: 'Kavita Devi',
-    email: 'kavita.devi@candidate.org',
-    phone_number: '+91 98765 33333',
-    aadhaar_number: 'XXXX-XXXX-6612',
-    date_of_birth: '2000-02-14',
-    gender: 'Female',
-    marital_status: 'Unmarried',
-    family_dependents_count: 4,
-    monthly_household_income: 6000,
-    education_qualification: '10th Pass (SSLC)',
-    address: 'Near Govt School, Whitefield Main Road',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    pincode: '560066',
-    has_valid_license: 'No License (Needs Full LLR+DL Training)',
-    license_number: 'Pending',
-    prior_driving_experience: 'Beginner',
-    has_smartphone: 'Yes (Family Shared Android)',
-    emergency_contact_name: 'Ramesh Devi (Father)',
-    emergency_contact_phone: '+91 98765 33334',
-    mobilization_channel: 'Village Anganwadi Outreach Camp',
-    partner_source: 'Mahila Vikas Samiti (NGO)',
-    stage: 'MOBILIZED',
-    status: 'pending_kyc',
-    nf_classification: 'NF3 (Comprehensive)',
-    readiness_score: 62,
-    kyc_status: 'Verified',
-    created_at: '2026-02-02T00:00:00.000Z'
-  }
-];
-
-export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard }) {
-  const [candidates, setCandidates] = useState(INITIAL_CANDIDATES);
+export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard, onEditCandidate }) {
+  const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
   const [kycFilter, setKycFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
-
-  // Fetch from backend API
-  useEffect(() => {
-    fetch('http://localhost:5000/api/candidates')
-      .then(r => r.json())
-      .then(res => {
-        if (res.success && res.data && res.data.length > 0) {
-          const mapped = res.data.map(c => ({
-            ...c,
-            phone_number: c.mobile_number || c.phone_number,
-            education_qualification: c.education_level || c.education_qualification,
-            partner_source: c.source || c.partner_source || 'Even Mobility Direct',
-            nf_classification: c.nf_category ? `${c.nf_category} (${c.nf_category === 'NF1' ? 'Fast-Track EV' : c.nf_category === 'NF2' ? 'Foundation' : 'Comprehensive'})` : (c.nf_classification || 'NF1 (Fast-Track EV)'),
-            stage: c.current_stage || c.stage || 'MOBILIZED',
-            kyc_status: c.kyc_status || (c.documents && c.documents.length > 0 ? 'Verified' : 'Verified'),
-            readiness_score: c.readiness_score || (c.nf_category === 'NF1' ? 88 : c.nf_category === 'NF2' ? 74 : 62)
-          }));
-          setCandidates(mapped);
-        }
-      })
-      .catch(err => console.warn('Candidate API load notice:', err.message));
-  }, []);
 
   // Modals
   const [viewingCandidate, setViewingCandidate] = useState(null);
@@ -166,6 +47,52 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
   const [editingCandidate, setEditingCandidate] = useState(null);
   const [deletingCandidate, setDeletingCandidate] = useState(null);
   const [toast, setToast] = useState(null);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  // Fetch real candidates from backend PostgreSQL database
+  const fetchCandidates = async () => {
+    try {
+      setLoading(true);
+      const r = await fetch('http://localhost:5000/api/candidates');
+      const res = await r.json();
+      if (res.success && Array.isArray(res.data)) {
+        const mapped = res.data.map(c => {
+          let nfLabel = c.nf_category || 'NF1';
+          if (c.nf_category === 'NF1') nfLabel = 'NF1 (Fast-Track EV)';
+          else if (c.nf_category === 'NF2') nfLabel = 'NF2 (Foundation)';
+          else if (c.nf_category === 'NF3') nfLabel = 'NF3 (Comprehensive)';
+          else if (c.nf_classification) nfLabel = c.nf_classification;
+
+          return {
+            ...c,
+            phone_number: c.mobile_number || c.phone_number || '',
+            education_qualification: c.education_level || c.education_qualification || '10th Pass',
+            partner_source: c.source || c.partner_source || 'Even Mobility Direct',
+            nf_classification: nfLabel,
+            stage: c.current_stage || c.stage || 'MOBILIZED',
+            kyc_status: c.kyc_status || (c.documents && c.documents.length > 0 ? 'Verified' : 'Verified'),
+            readiness_score: c.readiness_score != null ? c.readiness_score : (c.nf_category === 'NF1' ? 88 : c.nf_category === 'NF2' ? 74 : 62)
+          };
+        });
+        setCandidates(mapped);
+      } else {
+        setCandidates([]);
+      }
+    } catch (err) {
+      console.warn('Candidate API load notice:', err.message);
+      showToast('Could not load candidates from database.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCandidates();
+  }, []);
 
   // Form State matching Candidate & MobilizationRecord model fields
   const [formData, setFormData] = useState({
@@ -196,11 +123,6 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
     readiness_score: 80,
     status: 'active'
   });
-
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3500);
-  };
 
   const handleOpenForm = (candidate = null) => {
     if (candidate) {
@@ -246,30 +168,117 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
     setIsRegisterModalOpen(true);
   };
 
-  const handleSubmitForm = (e) => {
+  const handleSubmitForm = async (e) => {
     e.preventDefault();
-    if (editingCandidate) {
-      setCandidates(prev => prev.map(c => c.id === editingCandidate.id ? { ...c, ...formData } : c));
-      showToast(`Candidate details for ${formData.full_name} updated successfully!`);
-    } else {
-      const newCand = {
-        ...formData,
-        id: `cand-${Date.now()}`,
-        candidate_code: `ET-2026-00${candidates.length + 1}`,
-        kyc_status: 'Verified',
-        created_at: new Date().toISOString()
-      };
-      setCandidates(prev => [newCand, ...prev]);
-      showToast(`New candidate ${newCand.full_name} registered into mobilization roster!`);
+    setIsSubmitting(true);
+    try {
+      if (editingCandidate) {
+        const payload = {
+          full_name: formData.full_name,
+          email: formData.email,
+          mobile_number: formData.phone_number,
+          aadhaar_number: formData.aadhaar_number,
+          date_of_birth: formData.date_of_birth,
+          gender: formData.gender,
+          marital_status: formData.marital_status,
+          family_dependents_count: Number(formData.family_dependents_count) || 0,
+          monthly_household_income: Number(formData.monthly_household_income) || 0,
+          education_level: formData.education_qualification,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          current_stage: formData.stage,
+          nf_category: formData.nf_classification?.startsWith('NF2') ? 'NF2' : formData.nf_classification?.startsWith('NF3') ? 'NF3' : 'NF1',
+          readiness_score: Number(formData.readiness_score) || 80,
+          has_valid_license: formData.has_valid_license,
+          license_number: formData.license_number,
+          driving_experience: formData.prior_driving_experience,
+          has_smartphone: formData.has_smartphone,
+          emergency_contact_name: formData.emergency_contact_name,
+          emergency_contact_phone: formData.emergency_contact_phone,
+          status: formData.status
+        };
+        const res = await fetch(`http://localhost:5000/api/candidates/${editingCandidate.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Candidate details for ${formData.full_name} updated successfully in database!`);
+          setIsRegisterModalOpen(false);
+          await fetchCandidates();
+        } else {
+          showToast(data.message || 'Failed to update candidate');
+        }
+      } else {
+        const payload = {
+          full_name: formData.full_name,
+          email: formData.email,
+          mobile_number: formData.phone_number,
+          aadhaar_number: formData.aadhaar_number,
+          date_of_birth: formData.date_of_birth,
+          gender: formData.gender,
+          marital_status: formData.marital_status,
+          family_dependents_count: Number(formData.family_dependents_count) || 0,
+          monthly_household_income: Number(formData.monthly_household_income) || 0,
+          education_level: formData.education_qualification,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          current_stage: formData.stage || 'MOBILIZED',
+          nf_category: formData.nf_classification?.startsWith('NF2') ? 'NF2' : formData.nf_classification?.startsWith('NF3') ? 'NF3' : 'NF1',
+          readiness_score: Number(formData.readiness_score) || 80,
+          source: 'COMMUNITY_OUTREACH',
+          has_valid_license: formData.has_valid_license,
+          license_number: formData.license_number,
+          driving_experience: formData.prior_driving_experience,
+          has_smartphone: formData.has_smartphone,
+          emergency_contact_name: formData.emergency_contact_name,
+          emergency_contact_phone: formData.emergency_contact_phone,
+          status: formData.status || 'active'
+        };
+        const res = await fetch('http://localhost:5000/api/candidates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Candidate ${formData.full_name} onboarded into database!`);
+          setIsRegisterModalOpen(false);
+          await fetchCandidates();
+        } else {
+          showToast(data.message || 'Failed to onboard candidate');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('API operation error: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsRegisterModalOpen(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingCandidate) return;
-    setCandidates(prev => prev.filter(c => c.id !== deletingCandidate.id));
-    showToast('Candidate removed from field roster.');
-    setDeletingCandidate(null);
+    try {
+      const res = await fetch(`http://localhost:5000/api/candidates/${deletingCandidate.id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Candidate permanently removed from database.');
+        setDeletingCandidate(null);
+        await fetchCandidates();
+      } else {
+        showToast(data.message || 'Failed to delete candidate.');
+      }
+    } catch (err) {
+      showToast('Error deleting candidate: ' + err.message);
+    }
   };
 
   const handleExportCSV = () => {
@@ -362,6 +371,16 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
         </div>
 
         <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+          <button
+            onClick={fetchCandidates}
+            disabled={loading}
+            className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition shadow-2xs disabled:opacity-50"
+            title="Refresh candidate roster from database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+            <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+
           <button
             onClick={handleExportCSV}
             className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition shadow-2xs"
@@ -546,12 +565,20 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCandidates.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="py-12 text-center text-slate-400">
+                    <RefreshCw className="w-6 h-6 mx-auto mb-2 text-[#FF408A] animate-spin" />
+                    <p className="font-bold text-slate-700 text-xs">Loading candidate roster...</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Fetching live candidate records from database</p>
+                  </td>
+                </tr>
+              ) : filteredCandidates.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="py-12 text-center text-slate-400">
                     <Users className="w-8 h-8 mx-auto mb-1.5 text-slate-300" />
-                    <p className="font-bold text-slate-700 text-xs">No candidate records match filters</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Try clearing the search query or changing stage filters.</p>
+                    <p className="font-bold text-slate-700 text-xs">No candidate records found</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Try clearing your filters or onboard a new candidate.</p>
                   </td>
                 </tr>
               ) : (
@@ -625,12 +652,28 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
 
                       {/* 5. Driving License */}
                       <td className="px-3 py-2.5 text-xs text-slate-700">
-                        <div className="flex items-center gap-1">
-                          <Car className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span className="font-medium text-[11px] truncate max-w-[160px]" title={c.has_valid_license}>
-                            {c.has_valid_license}
-                          </span>
-                        </div>
+                        {(() => {
+                          const licenseText = c.has_valid_license || (c.nf_category === 'NF1' ? 'Yes (2W Permanent)' : c.nf_category === 'NF2' ? 'Learner (LLR)' : 'No License');
+                          const hasLicense = licenseText && !licenseText.toLowerCase().includes('no');
+                          const isLearner = licenseText && licenseText.toLowerCase().includes('learn');
+                          return (
+                            <div className="flex items-center gap-1.5">
+                              <Car className={`w-3.5 h-3.5 shrink-0 ${hasLicense ? (isLearner ? 'text-blue-500' : 'text-emerald-500') : 'text-slate-400'}`} />
+                              <span
+                                className={`font-semibold text-[10.5px] truncate max-w-[160px] px-2 py-0.5 rounded-md ${
+                                  hasLicense
+                                    ? isLearner
+                                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                }`}
+                                title={licenseText}
+                              >
+                                {licenseText}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* 6. KYC Status */}
@@ -656,7 +699,13 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
                             <Eye className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => handleOpenForm(c)}
+                            onClick={() => {
+                              if (onEditCandidate) {
+                                onEditCandidate(c);
+                              } else {
+                                handleOpenForm(c);
+                              }
+                            }}
                             className="cursor-pointer p-1 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition"
                             title="Edit Candidate"
                           >
@@ -791,7 +840,11 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
                 onClick={() => {
                   const c = viewingCandidate;
                   setViewingCandidate(null);
-                  handleOpenForm(c);
+                  if (onEditCandidate) {
+                    onEditCandidate(c);
+                  } else {
+                    handleOpenForm(c);
+                  }
                 }}
                 className="cursor-pointer px-4 py-2 bg-[#FF408A] hover:bg-[#E02670] text-white rounded-xl text-xs font-bold shadow-xs transition"
               >

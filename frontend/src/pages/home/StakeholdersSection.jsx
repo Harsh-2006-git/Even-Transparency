@@ -75,21 +75,6 @@ export default function StakeholdersSection({ onNavigate }) {
       )
     },
     {
-      id: "me",
-      title: "Monitoring & Evaluation Teams",
-      description: "Access organizational dashboards, audit retention metrics (1M, 3M, 6M, 12M), and measure programme impact.",
-      btnText: "M&E Portal",
-      roleRoute: "login/me",
-      color: "#06B6D4",
-      icon: (
-        /* Desktop monitor / Computer display */
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
-          <rect x="2" y="3" width="20" height="14" rx="2" stroke="#FF408A" strokeWidth="1.8" />
-          <path d="M8 21H16M12 17V21" stroke="#FF408A" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      )
-    },
-    {
       id: "candidate",
       title: "Candidates & Trainees",
       description: "Access digital certificates, track lifecycle milestones, view attendance percentages, and receive placement offers.",

@@ -10,7 +10,6 @@ import {
   Users,
   GraduationCap,
   Briefcase,
-  BarChart3,
   UserCheck,
   Sparkles,
   ArrowRight
@@ -119,15 +118,6 @@ export default function HomeHeader({ onNavigate, onOpenDemoModal }) {
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
       border: 'hover:border-emerald-300'
-    },
-    {
-      id: 'me',
-      name: 'M&E Team',
-      sub: 'Retention & Audit Analytics',
-      icon: BarChart3,
-      color: 'text-cyan-600',
-      bg: 'bg-cyan-50',
-      border: 'hover:border-cyan-300'
     },
     {
       id: 'candidate',

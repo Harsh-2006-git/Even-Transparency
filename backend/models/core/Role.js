@@ -18,7 +18,7 @@ export default (sequelize, DataTypes) => {
     role_name: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true, // Super Admin, Organization Admin, Mobilizer, Trainer, Placement Coordinator, M&E Team
+      unique: true, // Super Admin, Organization Admin, Mobilizer, Trainer, Placement Coordinator
     },
     description: {
       type: DataTypes.TEXT,

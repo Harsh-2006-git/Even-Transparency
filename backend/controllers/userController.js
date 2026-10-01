@@ -1,184 +1,109 @@
 import db from '../models/index.js';
+import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { formatDbError, validateContactFields } from '../utils/errorHandler.js';
 
-// In-memory persistent fallback state with diverse user types & pending verification items
-let localUsers = [
-  {
-    id: 'usr-admin-001',
-    first_name: 'Super',
-    last_name: 'Admin',
-    full_name: 'Super Administrator',
-    email: 'admin@evenshift.org',
-    mobile_number: '+91 98000 00001',
-    role: 'Super Admin',
-    userType: 'Admin',
-    status: 'active',
-    verification_status: 'verified',
-    organization_name: 'Even Mobility Foundation',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    created_at: '2025-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'usr-mob-001',
-    first_name: 'Sunita',
-    last_name: 'Verma',
-    full_name: 'Sunita Verma',
-    email: 'sunita.verma@evenshift.org',
-    mobile_number: '+91 98765 43210',
-    role: 'Mobilizer',
-    userType: 'Mobilizer',
-    assigned_city: 'Bengaluru',
-    assigned_state: 'Karnataka',
-    target_candidates_monthly: 45,
-    status: 'active',
-    verification_status: 'verified',
-    organization_name: 'Even Mobility Foundation',
-    partner_name: 'Mahila Vikas Samiti (NGO)',
-    avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    created_at: '2025-06-15T00:00:00.000Z',
-  },
-  {
-    id: 'usr-tr-001',
-    first_name: 'Ramesh',
-    last_name: 'Sen',
-    full_name: 'Ramesh Sen',
-    email: 'ramesh.sen@evenshift.org',
-    mobile_number: '+91 98765 22201',
-    role: 'Trainer',
-    userType: 'Trainer',
-    assigned_city: 'Bengaluru',
-    training_centre_name: 'Bengaluru EV Hub Campus',
-    specialization: '2W EV Riding & Defensive Safety',
-    status: 'active',
-    verification_status: 'verified',
-    organization_name: 'Even Mobility Foundation',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    created_at: '2025-07-01T00:00:00.000Z',
-  },
-  {
-    id: 'usr-pc-001',
-    first_name: 'Kavita',
-    last_name: 'Krishnan',
-    full_name: 'Kavita Krishnan',
-    email: 'kavita.krishnan@evenshift.org',
-    mobile_number: '+91 98765 33301',
-    role: 'Placement Coordinator',
-    userType: 'PlacementCoordinator',
-    assigned_city: 'Bengaluru',
-    target_employers_count: 12,
-    status: 'active',
-    verification_status: 'verified',
-    organization_name: 'Even Mobility Foundation',
-    avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    created_at: '2025-08-10T00:00:00.000Z',
-  },
-  {
-    id: 'usr-me-001',
-    first_name: 'Vikram',
-    last_name: 'Deshmukh',
-    full_name: 'Vikram Deshmukh',
-    email: 'vikram.deshmukh@evenshift.org',
-    mobile_number: '+91 98765 44401',
-    role: 'M&E Team',
-    userType: 'ME',
-    assigned_city: 'Delhi NCR',
-    status: 'active',
-    verification_status: 'verified',
-    organization_name: 'Even Mobility Foundation',
-    avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    created_at: '2025-09-01T00:00:00.000Z',
-  },
-  {
-    id: 'usr-cand-001',
-    first_name: 'Priya',
-    last_name: 'Sharma',
-    full_name: 'Priya Sharma',
-    email: 'priya.sharma@candidate.org',
-    mobile_number: '+91 98765 11111',
-    role: 'Candidate',
-    userType: 'Candidate',
-    candidate_code: 'ET-2026-001',
-    assigned_city: 'Bengaluru',
-    stage: 'IN_TRAINING',
-    nf_category: 'NF1',
-    readiness_score: 84,
-    status: 'active',
-    verification_status: 'verified',
-    organization_name: 'Even Mobility Foundation',
-    avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    created_at: '2026-01-10T00:00:00.000Z',
-  },
-  // Pending Verification Users
-  {
-    id: 'usr-pend-001',
-    first_name: 'Ananya',
-    last_name: 'Roy',
-    full_name: 'Ananya Roy',
-    email: 'ananya.roy@kolkata-shg.org',
-    mobile_number: '+91 98301 23456',
-    role: 'Mobilizer',
-    userType: 'Mobilizer',
-    assigned_city: 'Kolkata',
-    assigned_state: 'West Bengal',
-    target_candidates_monthly: 30,
-    status: 'pending_verification',
-    verification_status: 'pending',
-    organization_name: 'Bengal Women Livelihoods',
-    partner_name: 'Kolkata Mahila Samiti',
-    kyc_document_type: 'Aadhaar + Voter ID',
-    kyc_document_url: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&auto=format&fit=crop&q=80',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ananya',
-    created_at: '2026-08-18T10:30:00.000Z',
-  },
-  {
-    id: 'usr-pend-002',
-    first_name: 'Deepak',
-    last_name: 'Choudhary',
-    full_name: 'Deepak Choudhary',
-    email: 'deepak.choudhary@skills.org',
-    mobile_number: '+91 98290 87654',
-    role: 'Trainer',
-    userType: 'Trainer',
-    assigned_city: 'Jaipur',
-    training_centre_name: 'Rajasthan Skill Development Center',
-    specialization: 'EV Maintenance & Smart App Navigation',
-    status: 'pending_verification',
-    verification_status: 'pending',
-    organization_name: 'Rajasthan Skill Mission',
-    kyc_document_type: 'Trainer Certification + Driving License',
-    kyc_document_url: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&auto=format&fit=crop&q=80',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Deepak',
-    created_at: '2026-08-19T14:20:00.000Z',
-  },
-  {
-    id: 'usr-pend-003',
-    first_name: 'Meena',
-    last_name: 'Kumari',
-    full_name: 'Meena Kumari',
-    email: 'meena.kumari@candidate.org',
-    mobile_number: '+91 98111 22334',
-    role: 'Candidate',
-    userType: 'Candidate',
-    candidate_code: 'ET-2026-005',
-    assigned_city: 'Delhi NCR',
-    stage: 'MOBILIZED',
-    nf_category: 'NF2',
-    readiness_score: 70,
-    status: 'pending_verification',
-    verification_status: 'pending',
-    organization_name: 'Even Mobility Foundation',
-    kyc_document_type: 'Aadhaar Card + 10th Marksheet',
-    kyc_document_url: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&auto=format&fit=crop&q=80',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Meena',
-    created_at: '2026-08-20T09:15:00.000Z',
-  }
-];
-
-// 1. Get All Users with filtering
+// 1. Get All Users with model profiles from PostgreSQL
 export const getAllUsers = async (req, res) => {
   try {
-    const { role, status, search, verification_status } = req.query;
-    let list = [...localUsers];
+    const { role, userType, status, search, verification_status } = req.query;
+
+    const records = await db.User.findAll({
+      include: [
+        {
+          model: db.Organization,
+          as: 'organization',
+          attributes: ['id', 'name', 'organization_name']
+        },
+        {
+          model: db.Partner,
+          as: 'partner',
+          attributes: ['id', 'name']
+        },
+        {
+          model: db.TrainingCenter,
+          as: 'trainingCenter',
+          attributes: ['id', 'name', 'city', 'state']
+        },
+        {
+          model: db.Mobilizer,
+          as: 'mobilizerProfile',
+          required: false
+        },
+        {
+          model: db.Trainer,
+          as: 'trainerProfile',
+          required: false
+        },
+        {
+          model: db.PlacementCoordinator,
+          as: 'placementCoordinatorProfile',
+          required: false
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    let list = records.map(u => {
+      const raw = u.toJSON();
+      const perms = raw.permissions || {};
+      const userRole = raw.role || 'Admin';
+
+      let computedRole = userRole;
+      if (userRole === 'super_admin' || userRole === 'org_admin') computedRole = 'Super Admin';
+      else if (userRole === 'mobilizer' || userRole === 'Mobilizer') computedRole = 'Mobilizer';
+      else if (userRole === 'trainer' || userRole === 'Trainer') computedRole = 'Trainer';
+      else if (userRole === 'placement_coordinator' || userRole === 'Placement Coordinator' || userRole === 'PlacementCoordinator') computedRole = 'Placement Coordinator';
+      else if (userRole === 'candidate' || userRole === 'Candidate') computedRole = 'Candidate';
+
+      const mob = raw.mobilizerProfile || {};
+      const trn = raw.trainerProfile || {};
+      const plc = raw.placementCoordinatorProfile || {};
+
+      return {
+        id: raw.id,
+        first_name: raw.first_name || raw.full_name?.split(' ')[0] || 'User',
+        last_name: raw.last_name || raw.full_name?.split(' ').slice(1).join(' ') || '',
+        full_name: raw.full_name || `${raw.first_name || ''} ${raw.last_name || ''}`.trim() || 'User',
+        email: raw.email,
+        mobile_number: raw.mobile_number || '+91 90000 00000',
+        role: computedRole,
+        userType: computedRole,
+        designation: raw.designation || plc.designation || computedRole,
+        department: raw.department || plc.department || 'Operations',
+        status: raw.status || 'active',
+        verification_status: raw.status === 'active' ? 'verified' : 'pending',
+        
+        // Model Specific Fields
+        // Mobilizer Fields:
+        target_candidates_monthly: mob.target_candidates_monthly || perms.target_candidates_monthly || 30,
+        partner_name: raw.partner?.name || perms.partner_name || 'Mahila Vikas Samiti (NGO)',
+        joining_date: mob.joining_date || perms.joining_date || new Date().toISOString().split('T')[0],
+
+        // Trainer Fields:
+        training_centre_name: raw.trainingCenter?.name || perms.training_centre_name || 'Bengaluru EV Hub Campus',
+        specialization: trn.specialization || perms.specialization || '2W EV Riding & Battery Safety',
+        qualification: trn.qualification || perms.qualification || 'Certified Master EV Assessor',
+        certification: trn.certification || perms.certification || 'NSDC EV Level 3 Certification',
+
+        // Placement Coordinator Fields:
+        assigned_city: mob.assigned_city || plc.assigned_city || raw.trainingCenter?.city || perms.assigned_city || 'Bengaluru',
+        assigned_state: mob.assigned_state || plc.assigned_state || raw.trainingCenter?.state || perms.assigned_state || 'Karnataka',
+
+        // Candidate Specific Fields:
+        current_stage: perms.current_stage || 'MOBILIZED',
+        nf_category: perms.nf_category || 'NF1',
+        age: perms.age || 24,
+        gender: perms.gender || 'Female',
+        education_level: perms.education_level || '12th Pass',
+
+        kyc_document_type: perms.kyc_document_type || 'Aadhaar Card + ID Proof',
+        kyc_document_url: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&auto=format&fit=crop&q=80',
+        avatar_url: raw.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(raw.full_name || raw.email)}`,
+        created_at: raw.created_at,
+        updated_at: raw.updated_at
+      };
+    });
 
     if (search) {
       const q = search.toLowerCase();
@@ -186,12 +111,21 @@ export const getAllUsers = async (req, res) => {
         u.full_name?.toLowerCase().includes(q) ||
         u.email?.toLowerCase().includes(q) ||
         u.mobile_number?.includes(q) ||
-        u.assigned_city?.toLowerCase().includes(q)
+        u.assigned_city?.toLowerCase().includes(q) ||
+        u.specialization?.toLowerCase().includes(q) ||
+        u.partner_name?.toLowerCase().includes(q)
       );
     }
 
-    if (role && role !== 'all') {
-      list = list.filter(u => u.role?.toLowerCase() === role.toLowerCase() || u.userType?.toLowerCase() === role.toLowerCase());
+    const filterRole = role || userType;
+    if (filterRole && filterRole !== 'all') {
+      const rLower = filterRole.toLowerCase();
+      list = list.filter(u =>
+        u.role?.toLowerCase() === rLower ||
+        u.userType?.toLowerCase() === rLower ||
+        (rLower === 'admin' && (u.role === 'Super Admin' || u.role === 'super_admin' || u.role === 'org_admin')) ||
+        (rLower === 'placement coordinator' && u.role === 'Placement Coordinator')
+      );
     }
 
     if (status && status !== 'all') {
@@ -204,21 +138,47 @@ export const getAllUsers = async (req, res) => {
 
     res.json({ success: true, count: list.length, data: list });
   } catch (error) {
+    console.error('Error fetching users:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 2. Get Verification Queue (Pending accounts)
+// 2. Get Verification Queue
 export const getVerificationQueue = async (req, res) => {
   try {
-    const pending = localUsers.filter(u => u.verification_status === 'pending' || u.status === 'pending_verification');
-    res.json({ success: true, count: pending.length, data: pending });
+    const pendingUsers = await db.User.findAll({
+      where: { status: 'inactive' },
+      order: [['created_at', 'DESC']]
+    });
+
+    const mapped = pendingUsers.map(u => {
+      const raw = u.toJSON();
+      const perms = raw.permissions || {};
+      return {
+        id: raw.id,
+        first_name: raw.first_name,
+        last_name: raw.last_name,
+        full_name: raw.full_name,
+        email: raw.email,
+        mobile_number: raw.mobile_number,
+        role: raw.role,
+        userType: raw.role,
+        status: 'pending_verification',
+        verification_status: 'pending',
+        kyc_document_type: perms.kyc_document_type || 'Aadhaar Card + Verification Proof',
+        kyc_document_url: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&auto=format&fit=crop&q=80',
+        created_at: raw.created_at
+      };
+    });
+
+    res.json({ success: true, count: mapped.length, data: mapped });
   } catch (error) {
+    console.error('Error getting verification queue:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 3. Admin Creates a User (with model fields)
+// 3. Admin Creates User in PostgreSQL according to user type model
 export const createUserByAdmin = async (req, res) => {
   try {
     const {
@@ -226,76 +186,175 @@ export const createUserByAdmin = async (req, res) => {
       last_name,
       full_name,
       email,
+      password,
       mobile_number,
-      role,
+      role = 'Mobilizer',
       userType,
+      designation,
+      department,
       assigned_city,
       assigned_state,
-      organization_id,
-      organization_name,
-      partner_id,
+      require_verification = false,
+      kyc_document_type,
+      // Mobilizer fields
       partner_name,
+      target_candidates_monthly,
+      joining_date,
+      // Trainer fields
       training_centre_name,
       specialization,
-      target_candidates_monthly,
-      kyc_document_type,
-      kyc_document_url,
-      candidate_code,
-      stage,
-      nf_category,
-      require_verification = true
+      qualification,
+      certification,
+      // Candidate fields
+      age,
+      gender,
+      education_level,
+      current_stage,
+      nf_category
     } = req.body;
 
-    if (!email || (!first_name && !full_name)) {
-      return res.status(400).json({ success: false, message: 'First name and email are required.' });
+    const validation = validateContactFields({ email, mobile_number, first_name, name: full_name });
+    if (validation) {
+      return res.status(400).json({ success: false, field: validation.field, message: validation.message });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check if user already exists
+    const existing = await db.User.findOne({ where: { email: cleanEmail } });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        field: 'email',
+        message: `The email "${cleanEmail}" is already registered in the system (Role: ${existing.role || 'User'}). Please use a different email address.`
+      });
     }
 
     const computedFullName = full_name || `${first_name || ''} ${last_name || ''}`.trim();
-    const newId = `usr-${Date.now()}`;
+    const effectiveRole = userType || role;
 
-    const newUser = {
-      id: newId,
+    let targetDbRole = 'org_admin';
+    if (effectiveRole === 'Super Admin' || effectiveRole === 'Admin' || effectiveRole === 'super_admin') targetDbRole = 'super_admin';
+    else if (effectiveRole === 'Mobilizer') targetDbRole = 'mobilizer';
+    else if (effectiveRole === 'Trainer') targetDbRole = 'trainer';
+    else if (effectiveRole === 'Placement Coordinator' || effectiveRole === 'PlacementCoordinator') targetDbRole = 'placement_coordinator';
+    else if (effectiveRole === 'Candidate') targetDbRole = 'Candidate';
+
+    const org = await db.Organization.findOne();
+    const rawPassword = password ? password.trim() : 'Password@123';
+    const password_hash = await bcrypt.hash(rawPassword, 10);
+    const userId = uuidv4();
+
+    // 1. Create Base User Record
+    const newUser = await db.User.create({
+      id: userId,
+      employee_id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
       first_name: first_name || computedFullName.split(' ')[0],
       last_name: last_name || computedFullName.split(' ').slice(1).join(' '),
       full_name: computedFullName,
-      email,
+      email: cleanEmail,
       mobile_number: mobile_number || '+91 90000 00000',
-      role: role || userType || 'Mobilizer',
-      userType: userType || role || 'Mobilizer',
-      assigned_city: assigned_city || 'Bengaluru',
-      assigned_state: assigned_state || 'Karnataka',
-      organization_id: organization_id || 'org-1',
-      organization_name: organization_name || 'Even Mobility Foundation',
-      partner_id: partner_id || 'prt-1',
-      partner_name: partner_name || 'Community Outreach Partner',
-      training_centre_name: training_centre_name || '',
-      specialization: specialization || '',
-      target_candidates_monthly: Number(target_candidates_monthly) || 30,
-      candidate_code: candidate_code || `ET-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
-      stage: stage || 'MOBILIZED',
-      nf_category: nf_category || 'NF1',
-      readiness_score: 75,
-      status: require_verification ? 'pending_verification' : 'active',
-      verification_status: require_verification ? 'pending' : 'verified',
-      kyc_document_type: kyc_document_type || 'Aadhaar / KYC ID Card',
-      kyc_document_url: kyc_document_url || 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&auto=format&fit=crop&q=80',
-      avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(computedFullName)}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+      password_hash,
+      role: targetDbRole,
+      designation: designation || effectiveRole,
+      department: department || 'Operations',
+      organization_id: org?.id,
+      status: require_verification ? 'inactive' : 'active',
+      permissions: {
+        kyc_document_type: kyc_document_type || 'Aadhaar Card + ID Proof',
+        kyc_status: require_verification ? 'PENDING_VERIFICATION' : 'VERIFIED',
+        partner_name,
+        target_candidates_monthly: Number(target_candidates_monthly) || 30,
+        joining_date,
+        training_centre_name,
+        specialization,
+        qualification,
+        certification,
+        assigned_city,
+        assigned_state,
+        age: Number(age) || 24,
+        gender: gender || 'Female',
+        education_level: education_level || '12th Pass',
+        current_stage: current_stage || 'MOBILIZED',
+        nf_category: nf_category || 'NF1'
+      }
+    });
 
-    localUsers.unshift(newUser);
+    // 2. Create Model Specific Entry
+    if (effectiveRole === 'Mobilizer' && db.Mobilizer) {
+      try {
+        await db.Mobilizer.create({
+          id: uuidv4(),
+          user_id: userId,
+          organization_id: org?.id,
+          assigned_city: assigned_city || 'Bengaluru',
+          assigned_state: assigned_state || 'Karnataka',
+          joining_date: joining_date ? new Date(joining_date) : new Date(),
+          target_candidates_monthly: Number(target_candidates_monthly) || 30,
+          status: 'active'
+        });
+      } catch (mErr) {
+        console.warn('Mobilizer profile creation notice:', mErr.message);
+      }
+    } else if (effectiveRole === 'Trainer' && db.Trainer) {
+      try {
+        await db.Trainer.create({
+          id: uuidv4(),
+          user_id: userId,
+          organization_id: org?.id,
+          specialization: specialization || '2W EV Riding & Battery Safety',
+          qualification: qualification || 'Master EV Assessor',
+          certification: certification || 'NSDC Level 3 Certified',
+          status: 'active'
+        });
+      } catch (tErr) {
+        console.warn('Trainer profile creation notice:', tErr.message);
+      }
+    } else if ((effectiveRole === 'Placement Coordinator' || effectiveRole === 'PlacementCoordinator') && db.PlacementCoordinator) {
+      try {
+        await db.PlacementCoordinator.create({
+          id: uuidv4(),
+          user_id: userId,
+          organization_id: org?.id,
+          assigned_city: assigned_city || 'Bengaluru',
+          assigned_state: assigned_state || 'Karnataka',
+          status: 'active'
+        });
+      } catch (pErr) {
+        console.warn('PlacementCoordinator profile creation notice:', pErr.message);
+      }
+    } else if (effectiveRole === 'Candidate' && db.Candidate) {
+      try {
+        const currentYear = new Date().getFullYear();
+        const randomCode = `ET-${currentYear}-${Math.floor(1000 + Math.random() * 9000)}`;
+        await db.Candidate.create({
+          id: uuidv4(),
+          candidate_code: randomCode,
+          first_name: first_name || computedFullName.split(' ')[0],
+          last_name: last_name || computedFullName.split(' ').slice(1).join(' '),
+          full_name: computedFullName,
+          email: cleanEmail,
+          mobile_number: mobile_number || '+91 90000 00000',
+          city: assigned_city || 'Bengaluru',
+          state: assigned_state || 'Karnataka',
+          current_stage: current_stage || 'MOBILIZED',
+          nf_category: nf_category || 'NF1',
+          status: 'active'
+        });
+      } catch (cErr) {
+        console.warn('Candidate record creation notice:', cErr.message);
+      }
+    }
 
     res.status(201).json({
       success: true,
-      message: require_verification
-        ? `${newUser.role} created and queued for Admin Verification.`
-        : `${newUser.role} account created and activated immediately.`,
+      message: `${effectiveRole} account for ${newUser.full_name} created successfully in database!`,
       data: newUser
     });
   } catch (error) {
     console.error('Error creating user:', error);
-    res.status(500).json({ success: false, message: error.message });
+    const formatted = formatDbError(error);
+    return res.status(formatted.status).json({ success: false, field: formatted.field, message: formatted.message });
   }
 };
 
@@ -305,27 +364,28 @@ export const verifyUser = async (req, res) => {
     const { id } = req.params;
     const { remarks, verified_by } = req.body;
 
-    const userIndex = localUsers.findIndex(u => u.id === id);
-    if (userIndex === -1) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
+    const user = await db.User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found in database.' });
     }
 
-    localUsers[userIndex] = {
-      ...localUsers[userIndex],
-      status: 'active',
-      verification_status: 'verified',
-      verified_at: new Date().toISOString(),
+    user.status = 'active';
+    user.permissions = {
+      ...(user.permissions || {}),
+      kyc_status: 'VERIFIED',
       verified_by: verified_by || 'Super Administrator',
-      verification_remarks: remarks || 'KYC documents and background details verified by Admin.',
-      updated_at: new Date().toISOString()
+      verified_at: new Date().toISOString(),
+      verification_remarks: remarks || 'KYC documents and credentials verified by Admin.'
     };
+    await user.save();
 
     res.json({
       success: true,
-      message: `User ${localUsers[userIndex].full_name} (${localUsers[userIndex].role}) has been verified and activated!`,
-      data: localUsers[userIndex]
+      message: `User ${user.full_name} verified and activated successfully!`,
+      data: user
     });
   } catch (error) {
+    console.error('Error verifying user:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -334,20 +394,27 @@ export const verifyUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const userIndex = localUsers.findIndex(u => u.id === id);
-    if (userIndex === -1) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
+    const user = await db.User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const updated = {
-      ...localUsers[userIndex],
-      ...req.body,
-      updated_at: new Date().toISOString()
-    };
+    const { first_name, last_name, full_name, email, mobile_number, status, designation, department } = req.body;
 
-    localUsers[userIndex] = updated;
-    res.json({ success: true, message: 'User updated successfully.', data: updated });
+    if (first_name) user.first_name = first_name;
+    if (last_name) user.last_name = last_name;
+    if (full_name) user.full_name = full_name;
+    if (email) user.email = email;
+    if (mobile_number) user.mobile_number = mobile_number;
+    if (status) user.status = status;
+    if (designation) user.designation = designation;
+    if (department) user.department = department;
+
+    await user.save();
+
+    res.json({ success: true, message: 'User updated successfully in database.', data: user });
   } catch (error) {
+    console.error('Error updating user:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -356,14 +423,20 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const userIndex = localUsers.findIndex(u => u.id === id);
-    if (userIndex === -1) {
-      return res.status(404).json({ success: false, message: 'User not found.' });
+    const user = await db.User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const deleted = localUsers.splice(userIndex, 1);
-    res.json({ success: true, message: 'User account removed successfully.', data: deleted[0] });
+    // Delete corresponding model profile if any
+    if (db.Mobilizer) await db.Mobilizer.destroy({ where: { user_id: id } });
+    if (db.Trainer) await db.Trainer.destroy({ where: { user_id: id } });
+    if (db.PlacementCoordinator) await db.PlacementCoordinator.destroy({ where: { user_id: id } });
+
+    await user.destroy();
+    res.json({ success: true, message: 'User account removed from database successfully.' });
   } catch (error) {
+    console.error('Error deleting user:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

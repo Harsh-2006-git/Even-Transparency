@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   UserCheck,
@@ -36,31 +36,79 @@ import {
   Eye,
   X,
   ExternalLink,
-  RefreshCw,
+  RotateCw,
   Zap,
-  Info
+  Info,
+  MessageSquare
 } from 'lucide-react';
+
+const API_BASE = 'http://localhost:5000/api';
 
 export default function AdminDashboard({ onSectionChange, user }) {
   // State variables for interactive controls
   const [timeRange, setTimeRange] = useState('This Month');
-  const [chartMetricFilter, setChartMetricFilter] = useState('All');
   const [searchFilter, setSearchFilter] = useState('');
   const [stageFilter, setStageFilter] = useState('All');
   const [activeModal, setActiveModal] = useState(null); // 'export' | 'addUser' | 'bulkUpload' | 'createBatch' | 'announcement' | 'funnelDetails' | 'geoDetails' | 'viewCandidate' | null
   const [selectedCandidate, setSelectedCandidate] = useState(null);
-  const [activeTab, setActiveTab] = useState('all');
   const [hoveredFunnelStage, setHoveredFunnelStage] = useState(null);
   const [hoveredState, setHoveredState] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 1. Executive KPIs Data
+  // Live Dashboard Data from Database
+  const [dashboardData, setDashboardData] = useState({
+    stats: {
+      total_candidates: 0,
+      active_mobilisers: 0,
+      trainers: 0,
+      employers: 0,
+      placements: 0,
+      active_employed: 0
+    },
+    funnel_stages: [],
+    state_distribution: [],
+    operational_health: [],
+    recent_candidates: [],
+    recent_placements: [],
+    alerts: [],
+    activity_trend: []
+  });
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/users/admin-dashboard-stats`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setDashboardData(json);
+        }
+      }
+    } catch (err) {
+      console.warn('Error fetching admin dashboard statistics:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchDashboardData();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  // 1. Executive KPIs Data from Real Database Metrics
   const executiveKpis = [
     {
       id: 'candidates',
       title: 'TOTAL CANDIDATES',
-      value: '12,548',
-      change: '+11.0%',
-      changeType: 'positive',
+      value: (dashboardData.stats?.total_candidates ?? 0).toLocaleString('en-IN'),
+      change: 'Live Territory Roster',
       icon: Users,
       accentBg: 'bg-[#FFF0F5]',
       accentText: 'text-[#F72570]',
@@ -70,9 +118,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
     {
       id: 'mobilisers',
       title: 'ACTIVE MOBILISERS',
-      value: '286',
-      change: '+6.7%',
-      changeType: 'positive',
+      value: (dashboardData.stats?.active_mobilisers ?? 0).toLocaleString('en-IN'),
+      change: 'Territory Mobilization Team',
       icon: UserCheck,
       accentBg: 'bg-purple-50',
       accentText: 'text-purple-600',
@@ -82,9 +129,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
     {
       id: 'trainers',
       title: 'TRAINERS',
-      value: '124',
-      change: '+6.0%',
-      changeType: 'positive',
+      value: (dashboardData.stats?.trainers ?? 0).toLocaleString('en-IN'),
+      change: 'Certified Instructors',
       icon: GraduationCap,
       accentBg: 'bg-blue-50',
       accentText: 'text-blue-600',
@@ -94,9 +140,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
     {
       id: 'employers',
       title: 'EMPLOYERS',
-      value: '169',
-      change: '+6.9%',
-      changeType: 'positive',
+      value: (dashboardData.stats?.employers ?? 0).toLocaleString('en-IN'),
+      change: 'Fleet Partners',
       icon: Building2,
       accentBg: 'bg-emerald-50',
       accentText: 'text-emerald-600',
@@ -106,372 +151,250 @@ export default function AdminDashboard({ onSectionChange, user }) {
     {
       id: 'placements',
       title: 'PLACEMENTS',
-      value: '3,842',
-      change: '+11.0%',
-      changeType: 'positive',
+      value: (dashboardData.stats?.placements ?? 0).toLocaleString('en-IN'),
+      change: 'Verified Placements',
       icon: Briefcase,
       accentBg: 'bg-amber-50',
       accentText: 'text-amber-600',
       indicatorColor: 'bg-amber-500',
-      onClick: () => onSectionChange('deployments'),
+      onClick: () => onSectionChange('assessments-placements'),
     },
     {
       id: 'employed',
       title: 'ACTIVE EMPLOYED',
-      value: '2,918',
-      change: '+10.3%',
-      changeType: 'positive',
+      value: (dashboardData.stats?.active_employed ?? 0).toLocaleString('en-IN'),
+      change: 'Active On Job',
       icon: ShieldCheck,
       accentBg: 'bg-pink-50',
       accentText: 'text-[#F72570]',
       indicatorColor: 'bg-[#F72570]',
-      onClick: () => onSectionChange('employment-tracking'),
+      onClick: () => onSectionChange('assessments-placements'),
     },
   ];
 
-  // 2. Candidate Lifecycle Funnel Stages
-  const funnelStages = [
-    {
-      stage: 'Registered',
-      count: 12548,
-      formattedCount: '12,548',
-      conversion: '100%',
-      dropOff: '0%',
-      color: '#F72570',
-      width: '100%',
-      badgeBg: 'bg-pink-100 text-pink-800',
-      description: 'Initial intake and basic KYC capture by mobilizers across all hubs',
-    },
-    {
-      stage: 'Assessed',
-      count: 8732,
-      formattedCount: '8,732',
-      conversion: '69.57%',
-      dropOff: '30.43%',
-      color: '#8B5CF6',
-      width: '84%',
-      badgeBg: 'bg-purple-100 text-purple-800',
-      description: 'Digital literacy, readiness evaluation & NF categorization pass',
-    },
-    {
-      stage: 'In Training',
-      count: 5690,
-      formattedCount: '5,690',
-      conversion: '45.30%',
-      dropOff: '34.84%',
-      color: '#F59E0B',
-      width: '68%',
-      badgeBg: 'bg-amber-100 text-amber-800',
-      description: 'Enrolled in 2W EV riding, defensive safety & route navigation',
-    },
-    {
-      stage: 'Ready for Deployment',
-      count: 3842,
-      formattedCount: '3,842',
-      conversion: '30.62%',
-      dropOff: '32.48%',
-      color: '#10B981',
-      width: '52%',
-      badgeBg: 'bg-emerald-100 text-emerald-800',
-      description: 'Passed final certified driving & customer etiquette assessment',
-    },
-    {
-      stage: 'Employed',
-      count: 2918,
-      formattedCount: '2,918',
-      conversion: '23.24%',
-      dropOff: '24.05%',
-      color: '#0284C7',
-      width: '38%',
-      badgeBg: 'bg-blue-100 text-blue-800',
-      description: 'Joined partner fleet with verified contracts & monthly wage audits',
-    },
-  ];
+  // 2. Candidate Lifecycle Funnel Stages from Real Database
+  const funnelStages = dashboardData.funnel_stages && dashboardData.funnel_stages.length > 0
+    ? dashboardData.funnel_stages
+    : [
+      {
+        stage: 'Registered',
+        count: dashboardData.stats?.total_candidates || 0,
+        formattedCount: String(dashboardData.stats?.total_candidates || 0),
+        conversion: '100%',
+        color: '#F72570',
+        description: 'Candidate intake and verified territory roster profiles',
+      },
+      {
+        stage: 'Assessed',
+        count: 0,
+        formattedCount: '0',
+        conversion: '0%',
+        color: '#8B5CF6',
+        description: 'Readiness evaluations and driving assessments completed',
+      },
+      {
+        stage: 'In Training',
+        count: 0,
+        formattedCount: '0',
+        conversion: '0%',
+        color: '#F59E0B',
+        description: 'Enrolled in 2W EV dynamics and battery swapping training',
+      },
+      {
+        stage: 'Ready for Deployment',
+        count: 0,
+        formattedCount: '0',
+        conversion: '0%',
+        color: '#10B981',
+        description: 'Certified drivers qualified for employer placement matching',
+      },
+      {
+        stage: 'Employed',
+        count: 0,
+        formattedCount: '0',
+        conversion: '0%',
+        color: '#0284C7',
+        description: 'Active with partner EV fleets under verified employment contracts',
+      },
+    ];
 
-  // 3. Operational Health Items
-  const operationalHealthItems = [
-    {
-      id: 'doc-verification',
-      title: 'DOCUMENT VERIFICATION',
-      count: '1,245 Pending',
-      description: 'Aadhaar, DL & bank details awaiting verification',
-      icon: FileText,
-      badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
-      iconBg: 'bg-amber-50 text-amber-600',
-      actionLabel: 'Verify',
-      actionSection: 'document-verification',
-    },
-    {
-      id: 'assessments',
-      title: 'ASSESSMENTS',
-      count: '712 Pending',
-      description: 'Readiness & module evaluations to be scored',
-      icon: ShieldCheck,
-      badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
-      iconBg: 'bg-purple-50 text-purple-600',
-      actionLabel: 'Review',
-      actionSection: 'assessments',
-    },
-    {
-      id: 'low-attendance',
-      title: 'LOW ATTENDANCE',
-      count: '385 Candidates',
-      description: 'Candidate attendance below 70% in active batches',
-      icon: AlertTriangle,
-      badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
-      iconBg: 'bg-rose-50 text-rose-600',
-      actionLabel: 'Audit',
-      actionSection: 'attendance',
-    },
-    {
-      id: 'ready-deployment',
-      title: 'READY FOR DEPLOYMENT',
-      count: '1,742 Candidates',
-      description: 'Certified candidates ready for placement matching',
-      icon: Briefcase,
-      badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      iconBg: 'bg-emerald-50 text-emerald-600',
-      actionLabel: 'Deploy',
-      actionSection: 'deployments',
-    },
-    {
-      id: 'expiring-docs',
-      title: 'EXPIRING DOCUMENTS',
-      count: '932 Documents',
-      description: 'Learner licences expiring within next 30 days',
-      icon: Clock,
-      badgeColor: 'bg-pink-100 text-[#F72570] border-pink-200',
-      iconBg: 'bg-[#FFF0F5] text-[#F72570]',
-      actionLabel: 'Notify',
-      actionSection: 'documents',
-    },
-  ];
+  const totalCandidates = dashboardData.stats?.total_candidates || 0;
+  const activeEmployedCount = dashboardData.stats?.active_employed || 0;
+  const overallConversion = totalCandidates > 0
+    ? ((activeEmployedCount / totalCandidates) * 100).toFixed(1) + '%'
+    : '0.0%';
 
-  // 4. Candidate Activity Table Data
-  const recentCandidates = [
-    {
-      id: 'C-001',
-      name: 'Priya Sharma',
-      avatar: 'PS',
-      city: 'Lucknow',
-      state: 'UP',
-      mobiliser: 'Anil Mishra',
-      nfCategory: 'NF 1',
-      nfBadge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      currentStage: 'Registered',
-      stageBadge: 'bg-blue-50 text-blue-700 border-blue-200',
-      lastActivity: '10 min ago',
-      registeredOn: '16 May 2025',
-      status: 'New',
-      statusBadge: 'bg-pink-50 text-[#F72570] border-pink-200',
-    },
-    {
-      id: 'C-002',
-      name: 'Neha Kumari',
-      avatar: 'NK',
-      city: 'Kanpur',
-      state: 'UP',
-      mobiliser: 'Ravi Singh',
-      nfCategory: 'NF 2',
-      nfBadge: 'bg-amber-50 text-amber-700 border-amber-200',
-      currentStage: 'In Training',
-      stageBadge: 'bg-purple-50 text-purple-700 border-purple-200',
-      lastActivity: '25 min ago',
-      registeredOn: '15 May 2025',
-      status: 'In Progress',
-      statusBadge: 'bg-purple-50 text-purple-700 border-purple-200',
-    },
-    {
-      id: 'C-003',
-      name: 'Sunita Verma',
-      avatar: 'SV',
-      city: 'Varanasi',
-      state: 'UP',
-      mobiliser: 'Anil Mishra',
-      nfCategory: 'NF 1',
-      nfBadge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      currentStage: 'Assessed',
-      stageBadge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-      lastActivity: '42 min ago',
-      registeredOn: '14 May 2025',
-      status: 'Active',
-      statusBadge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    },
-    {
-      id: 'C-004',
-      name: 'Riya Patel',
-      avatar: 'RP',
-      city: 'Agra',
-      state: 'UP',
-      mobiliser: 'Meena Yadav',
-      nfCategory: 'NF 3',
-      nfBadge: 'bg-rose-50 text-rose-700 border-rose-200',
-      currentStage: 'In Training',
-      stageBadge: 'bg-purple-50 text-purple-700 border-purple-200',
-      lastActivity: '1 hr ago',
-      registeredOn: '14 May 2025',
-      status: 'In Progress',
-      statusBadge: 'bg-purple-50 text-purple-700 border-purple-200',
-    },
-    {
-      id: 'C-005',
-      name: 'Kavita Yadav',
-      avatar: 'KY',
-      city: 'Meerut',
-      state: 'UP',
-      mobiliser: 'Ravi Singh',
-      nfCategory: 'NF 2',
-      nfBadge: 'bg-amber-50 text-amber-700 border-amber-200',
-      currentStage: 'Registered',
-      stageBadge: 'bg-blue-50 text-blue-700 border-blue-200',
-      lastActivity: '2 hr ago',
-      registeredOn: '13 May 2025',
-      status: 'New',
-      statusBadge: 'bg-pink-50 text-[#F72570] border-pink-200',
-    },
-  ];
+  // 3. Operational Health Items from Real Candidate States
+  const operationalHealthItems = dashboardData.operational_health && dashboardData.operational_health.length > 0
+    ? dashboardData.operational_health.map(item => {
+      let icon = FileText;
+      let badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
+      let iconBg = 'bg-amber-50 text-amber-600';
 
-  // 5. Employer Placement Performance
-  const employerRankings = [
-    {
-      name: 'Even Cargo Logistics',
-      iconColor: 'bg-blue-50 text-blue-600 border-blue-200',
-      openJobs: 12,
-      placedCount: 523,
-      joiningRate: '91%',
-    },
-    {
-      name: 'EV Mobility Solutions',
-      iconColor: 'bg-emerald-50 text-emerald-600 border-emerald-200',
-      openJobs: 8,
-      placedCount: 418,
-      joiningRate: '88%',
-    },
-    {
-      name: 'SpeedX Delivery',
-      iconColor: 'bg-pink-50 text-[#F72570] border-pink-200',
-      openJobs: 15,
-      placedCount: 312,
-      joiningRate: '84%',
-    },
-    {
-      name: 'Urban Fleet Services',
-      iconColor: 'bg-teal-50 text-teal-600 border-teal-200',
-      openJobs: 6,
-      placedCount: 298,
-      joiningRate: '92%',
-    },
-    {
-      name: 'GreenDrive Logistics',
-      iconColor: 'bg-indigo-50 text-indigo-600 border-indigo-200',
-      openJobs: 9,
-      placedCount: 276,
-      joiningRate: '89%',
-    },
-  ];
+      if (item.id === 'assessments') {
+        icon = ShieldCheck;
+        badgeColor = 'bg-purple-100 text-purple-800 border-purple-200';
+        iconBg = 'bg-purple-50 text-purple-600';
+      } else if (item.id === 'ready-deployment') {
+        icon = Briefcase;
+        badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        iconBg = 'bg-emerald-50 text-emerald-600';
+      }
 
-  // 6. Internal Admin Messages
-  const internalMessages = [
-    {
-      id: 1,
-      sender: 'Anil Mishra',
-      role: 'Mobiliser',
-      avatar: 'AM',
-      avatarColor: 'bg-blue-600 text-white',
-      preview: 'Please verify documents for 5 candidates.',
-      time: '10:10 AM',
-      unreadCount: 3,
-    },
-    {
-      id: 2,
-      sender: 'Ravi Singh',
-      role: 'Mobiliser',
-      avatar: 'RS',
-      avatarColor: 'bg-indigo-600 text-white',
-      preview: 'Assessment scheduling issue.',
-      time: '09:45 AM',
-      unreadCount: 2,
-    },
-    {
-      id: 3,
-      sender: 'Meena Yadav',
-      role: 'Mobiliser',
-      avatar: 'MY',
-      avatarColor: 'bg-purple-600 text-white',
-      preview: 'Need access to new training batch.',
-      time: '09:30 AM',
-      unreadCount: 1,
-    },
-    {
-      id: 4,
-      sender: 'Rahul Sharma',
-      role: 'Trainer',
-      avatar: 'RS',
-      avatarColor: 'bg-emerald-600 text-white',
-      preview: 'Training materials updated.',
-      time: '09:00 AM',
-      unreadCount: 0,
-    },
-  ];
+      return {
+        ...item,
+        icon,
+        badgeColor,
+        iconBg
+      };
+    })
+    : [
+      {
+        id: 'doc-verification',
+        title: 'DOCUMENT VERIFICATION',
+        count: '0 Pending',
+        description: 'All candidate documents up to date',
+        icon: FileText,
+        badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
+        iconBg: 'bg-amber-50 text-amber-600',
+        actionLabel: 'Verify',
+        actionSection: 'documents',
+      },
+      {
+        id: 'assessments',
+        title: 'ASSESSMENTS',
+        count: '0 Pending',
+        description: 'Readiness evaluations completed',
+        icon: ShieldCheck,
+        badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
+        iconBg: 'bg-purple-50 text-purple-600',
+        actionLabel: 'Review',
+        actionSection: 'assessments-placements',
+      },
+      {
+        id: 'ready-deployment',
+        title: 'READY FOR DEPLOYMENT',
+        count: '0 Candidates',
+        description: 'No candidates currently waiting for deployment',
+        icon: Briefcase,
+        badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        iconBg: 'bg-emerald-50 text-emerald-600',
+        actionLabel: 'Deploy',
+        actionSection: 'assessments-placements',
+      }
+    ];
 
-  // 7. Alerts & System Health
-  const systemAlerts = [
-    {
-      id: 1,
-      type: 'CRITICAL',
-      title: 'High Drop-off in Training',
-      detail: '23% candidates dropped off in the last 7 days.',
-      icon: AlertCircle,
-      textColor: 'text-rose-600',
-      borderColor: 'border-rose-200',
-      bgHover: 'hover:bg-rose-50/50',
-      iconColor: 'text-rose-500',
-      actionTarget: 'training',
-    },
-    {
-      id: 2,
-      type: 'DOCUMENT ALERT',
-      title: 'Documents Expiring',
-      detail: '58 driving licences expire in next 30 days.',
-      icon: Clock,
-      textColor: 'text-amber-600',
-      borderColor: 'border-amber-200',
-      bgHover: 'hover:bg-amber-50/50',
-      iconColor: 'text-amber-500',
-      actionTarget: 'documents',
-    },
-    {
-      id: 3,
-      type: 'WARNING',
-      title: 'Low Attendance',
-      detail: '142 candidates have attendance < 60%.',
-      icon: AlertTriangle,
-      textColor: 'text-orange-600',
-      borderColor: 'border-orange-200',
-      bgHover: 'hover:bg-orange-50/50',
-      iconColor: 'text-orange-500',
-      actionTarget: 'attendance',
-    },
-    {
-      id: 4,
-      type: 'SYSTEM',
-      title: 'System Update',
-      detail: 'Platform will be updated on 20 May 2025.',
-      icon: CheckCircle2,
-      textColor: 'text-emerald-600',
-      borderColor: 'border-emerald-200',
-      bgHover: 'hover:bg-emerald-50/50',
-      iconColor: 'text-emerald-500',
-      actionTarget: 'settings',
-    },
-  ];
+  // 4. Candidate Activity Table Data (Real Candidates)
+  const recentCandidates = dashboardData.recent_candidates || [];
 
-  // 8. Quick Actions Command Bar
+  // Filter candidates based on search
+  const filteredCandidates = recentCandidates.filter((cand) => {
+    const q = searchFilter.toLowerCase();
+    const matchesSearch =
+      cand.name?.toLowerCase().includes(q) ||
+      cand.candidate_code?.toLowerCase().includes(q) ||
+      cand.city?.toLowerCase().includes(q) ||
+      cand.mobiliser?.toLowerCase().includes(q);
+    const matchesStage = stageFilter === 'All' || cand.currentStage === stageFilter;
+    return matchesSearch && matchesStage;
+  });
+
+  // 5. Employer Placement Performance (Real Placements)
+  const employerRankings = dashboardData.recent_placements || [];
+
+  // 6. Alerts & System Health (Real Alerts)
+  const systemAlerts = (dashboardData.alerts && dashboardData.alerts.length > 0)
+    ? dashboardData.alerts.map(alt => {
+      let icon = CheckCircle2;
+      let textColor = 'text-emerald-600';
+      let borderColor = 'border-emerald-200';
+      let bgHover = 'hover:bg-emerald-50/50';
+      let iconColor = 'text-emerald-500';
+
+      if (alt.type === 'DOCUMENT ALERT') {
+        icon = Clock;
+        textColor = 'text-amber-600';
+        borderColor = 'border-amber-200';
+        bgHover = 'hover:bg-amber-50/50';
+        iconColor = 'text-amber-500';
+      } else if (alt.type === 'EVALUATION ALERT') {
+        icon = AlertCircle;
+        textColor = 'text-purple-600';
+        borderColor = 'border-purple-200';
+        bgHover = 'hover:bg-purple-50/50';
+        iconColor = 'text-purple-500';
+      } else if (alt.type === 'DEPLOYMENT OPPORTUNITY') {
+        icon = Briefcase;
+        textColor = 'text-emerald-600';
+        borderColor = 'border-emerald-200';
+        bgHover = 'hover:bg-emerald-50/50';
+        iconColor = 'text-emerald-500';
+      }
+
+      return {
+        ...alt,
+        icon,
+        textColor,
+        borderColor,
+        bgHover,
+        iconColor
+      };
+    })
+    : [
+      {
+        id: 1,
+        type: 'SYSTEM HEALTH',
+        title: 'Platform Pipeline Operational',
+        detail: 'All candidate records and evaluations are current.',
+        icon: CheckCircle2,
+        textColor: 'text-emerald-600',
+        borderColor: 'border-emerald-200',
+        bgHover: 'hover:bg-emerald-50/50',
+        iconColor: 'text-emerald-500',
+        actionTarget: 'candidates'
+      }
+    ];
+
+  // 7. State Distribution Calculation
+  const stateDistribution = dashboardData.state_distribution || [];
+  const stateColors = ['#F72570', '#8B5CF6', '#06B6D4', '#F59E0B', '#10B981'];
+  const CIRCUMFERENCE = 376.99; // 2 * PI * 60
+
+  // 8. Activity Velocity Trend (Dynamic SVG calculation)
+  const activityTrend = dashboardData.activity_trend && dashboardData.activity_trend.length > 0
+    ? dashboardData.activity_trend
+    : [
+      { month: 'May', registrations: 0, assessments: 0, placements: 0 },
+      { month: 'Jun', registrations: 0, assessments: 0, placements: 0 },
+      { month: 'Jul', registrations: 0, assessments: 0, placements: 0 },
+      { month: 'Aug', registrations: 0, assessments: 0, placements: 0 },
+      { month: 'Sep', registrations: totalCandidates, assessments: totalCandidates, placements: 0 },
+    ];
+
+  const maxTrendVal = Math.max(
+    ...activityTrend.map(t => Math.max(t.registrations || 0, t.assessments || 0, t.placements || 0)),
+    3
+  );
+  const trendCeil = maxTrendVal <= 4 ? 4 : maxTrendVal <= 10 ? 10 : Math.ceil(maxTrendVal / 5) * 5;
+
+  const getCoord = (val, idx, totalPoints) => {
+    const x = totalPoints > 1 ? 35 + (idx * (265 / (totalPoints - 1))) : 160;
+    const y = 98 - ((val / trendCeil) * 80);
+    return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+  };
+
+  const regPoints = activityTrend.map((d, i) => getCoord(d.registrations || 0, i, activityTrend.length));
+  const assPoints = activityTrend.map((d, i) => getCoord(d.assessments || 0, i, activityTrend.length));
+  const plcPoints = activityTrend.map((d, i) => getCoord(d.placements || 0, i, activityTrend.length));
+
+  const makePath = (points) => points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x},${p.y}`).join(' ');
+
+  // 9. Quick Actions Command Bar
   const quickActionsList = [
     {
       id: 'add-user',
       title: 'Add New User',
-      subtitle: 'Create mobiliser, trainer or admin',
+      subtitle: 'Create mobiliser, trainer or coordinator',
       icon: UserPlus,
       color: 'text-[#F72570]',
       bg: 'bg-[#FFF0F5]',
@@ -479,7 +402,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
     },
     {
       id: 'bulk-upload',
-      title: 'Bulk Upload Candidates',
+      title: 'Bulk Candidate Ingestion',
       subtitle: 'Upload multiple candidates',
       icon: FolderSync,
       color: 'text-purple-600',
@@ -493,12 +416,12 @@ export default function AdminDashboard({ onSectionChange, user }) {
       icon: Layers,
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
-      action: () => setActiveModal('createBatch'),
+      action: () => onSectionChange('batch-create'),
     },
     {
       id: 'generate-report',
       title: 'Generate Report',
-      subtitle: 'Download platform reports',
+      subtitle: 'Download platform metrics',
       icon: FileText,
       color: 'text-amber-600',
       bg: 'bg-amber-50',
@@ -507,7 +430,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
     {
       id: 'send-announcement',
       title: 'Send Announcement',
-      subtitle: 'Broadcast message to users',
+      subtitle: 'Broadcast message to teams',
       icon: Radio,
       color: 'text-blue-600',
       bg: 'bg-blue-50',
@@ -524,46 +447,46 @@ export default function AdminDashboard({ onSectionChange, user }) {
     },
   ];
 
-  // Filter candidates based on search and stage tab
-  const filteredCandidates = recentCandidates.filter((cand) => {
-    const matchesSearch =
-      cand.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      cand.city.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      cand.mobiliser.toLowerCase().includes(searchFilter.toLowerCase());
-    const matchesStage = stageFilter === 'All' || cand.currentStage === stageFilter;
-    return matchesSearch && matchesStage;
-  });
+  const currentDateDisplay = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const currentMonthDisplay = new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
 
   return (
     <div className="space-y-6 pb-12 text-slate-800">
-      
+
       {/* ─── 1. TOP COMMAND CENTER HEADER ────────────────────────────────────── */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-kaiseiTokumin tracking-tight">
-              Good morning, Super Admin 👋
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Good morning, {user?.full_name || user?.name || 'Super Admin'} 👋
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live System Active
-            </span>
+
           </div>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Here's an overview of the platform's performance and key insights.
+            Here's an overview of the platform's performance and verified database records.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          {/* Refresh Action */}
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 transition shadow-2xs"
+            title="Refresh database metrics"
+          >
+            <RotateCw className={`w-3.5 h-3.5 text-slate-500 ${isRefreshing ? 'animate-spin text-[#F72570]' : ''}`} />
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+
           {/* Date Range Selector */}
           <div className="relative">
             <button
-              onClick={() => {}}
-              className="cursor-pointer flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 transition shadow-2xs"
+              onClick={() => { }}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 shadow-2xs"
             >
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span>16 May 2025 - 16 May 2025</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              <span>Current Cycle ({currentMonthDisplay})</span>
             </button>
           </div>
 
@@ -586,24 +509,24 @@ export default function AdminDashboard({ onSectionChange, user }) {
             <div
               key={kpi.id}
               onClick={kpi.onClick}
-              className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs hover:border-[#F72570]/40 hover:shadow-xs transition duration-150 cursor-pointer flex flex-col justify-between group"
+              className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs hover:border-[#F72570]/40 hover:shadow-xs transition duration-150 cursor-pointer flex flex-col justify-between group"
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[9.5px] font-bold text-slate-400 tracking-wider uppercase group-hover:text-slate-600 transition-colors truncate pr-1">
                   {kpi.title}
                 </span>
                 <div className={`w-7.5 h-7.5 rounded-lg ${kpi.accentBg} ${kpi.accentText} flex items-center justify-center shrink-0`}>
-                  <Icon className="w-4.5 h-4.5" />
+                  <Icon className="w-4 h-4" />
                 </div>
               </div>
 
-              <div className="flex items-baseline justify-between gap-1.5 flex-wrap mt-1">
-                <span className="text-xl font-black text-slate-900 tracking-tight leading-none">
+              <div className="mt-1">
+                <div className="text-2xl font-black text-slate-900 tracking-tight leading-none">
                   {kpi.value}
-                </span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/70 shrink-0">
-                  ↑ {kpi.change}
-                </span>
+                </div>
+                <div className="text-[10px] font-semibold text-slate-400 mt-1 truncate">
+                  {kpi.change}
+                </div>
               </div>
             </div>
           );
@@ -612,9 +535,9 @@ export default function AdminDashboard({ onSectionChange, user }) {
 
       {/* ─── 3. TOP ANALYTICS ROW: FUNNEL + ACTIVITY TREND + GEO MAP ──────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-        
+
         {/* A. Candidate Lifecycle Funnel (4 Columns) */}
-        <div className="lg:col-span-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white p-4.5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
             <div>
               <h2 className="text-sm font-bold text-slate-900">
@@ -623,7 +546,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
               <p className="text-[11px] text-slate-400">Complete programme conversion stages</p>
             </div>
             <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              23.2% Rate
+              {overallConversion} Employed
             </span>
           </div>
 
@@ -634,11 +557,10 @@ export default function AdminDashboard({ onSectionChange, user }) {
                 key={idx}
                 onMouseEnter={() => setHoveredFunnelStage(stg.stage)}
                 onMouseLeave={() => setHoveredFunnelStage(null)}
-                className={`px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
-                  hoveredFunnelStage === stg.stage
+                className={`px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${hoveredFunnelStage === stg.stage
                     ? 'border-[#F72570] bg-[#FFF0F5]/50 shadow-2xs'
                     : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between text-[11px] mb-1">
                   <div className="flex items-center gap-1.5">
@@ -670,7 +592,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs mt-1">
             <span className="text-slate-500 text-[11px] font-medium">
-              Overall: <span className="font-bold text-emerald-600">23.24%</span>
+              Overall Placed: <span className="font-bold text-emerald-600">{overallConversion}</span>
             </span>
             <button
               onClick={() => setActiveModal('funnelDetails')}
@@ -683,7 +605,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
         </div>
 
         {/* B. Platform Activity Trend (4 Columns) */}
-        <div className="lg:col-span-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white p-4.5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-1.5">
             <div>
               <h2 className="text-sm font-bold text-slate-900">Platform Activity Trend</h2>
@@ -691,7 +613,6 @@ export default function AdminDashboard({ onSectionChange, user }) {
             </div>
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[10.5px] font-semibold">
               <span>{timeRange}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
             </div>
           </div>
 
@@ -711,90 +632,92 @@ export default function AdminDashboard({ onSectionChange, user }) {
             </div>
           </div>
 
-          {/* Compact Vector Multi-line SVG Analytics Chart */}
+          {/* Vector Multi-line SVG Analytics Chart */}
           <div className="relative w-full h-28 my-1 flex items-end">
             <svg className="w-full h-full overflow-visible" viewBox="0 0 320 115">
               {/* Grid Lines */}
-              <line x1="0" y1="15" x2="320" y2="15" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="0" y1="45" x2="320" y2="45" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="0" y1="75" x2="320" y2="75" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="0" y1="100" x2="320" y2="100" stroke="#E2E8F0" strokeWidth="1" />
+              <line x1="25" y1="18" x2="310" y2="18" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1="25" y1="45" x2="310" y2="45" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1="25" y1="72" x2="310" y2="72" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1="25" y1="98" x2="310" y2="98" stroke="#E2E8F0" strokeWidth="1" />
 
               {/* Axis Labels */}
-              <text x="5" y="18" fontSize="8" fill="#94A3B8" fontWeight="600">800</text>
-              <text x="5" y="48" fontSize="8" fill="#94A3B8" fontWeight="600">600</text>
-              <text x="5" y="78" fontSize="8" fill="#94A3B8" fontWeight="600">400</text>
-              <text x="5" y="98" fontSize="8" fill="#94A3B8" fontWeight="600">0</text>
+              <text x="5" y="21" fontSize="8" fill="#94A3B8" fontWeight="600">{trendCeil}</text>
+              <text x="5" y="48" fontSize="8" fill="#94A3B8" fontWeight="600">{Math.round(trendCeil * 0.66)}</text>
+              <text x="5" y="75" fontSize="8" fill="#94A3B8" fontWeight="600">{Math.round(trendCeil * 0.33)}</text>
+              <text x="5" y="101" fontSize="8" fill="#94A3B8" fontWeight="600">0</text>
 
               {/* Line 1: Registrations (Pink/Magenta #F72570) */}
-              <path
-                d="M 40 65 Q 110 52 180 44 T 300 18"
-                fill="none"
-                stroke="#F72570"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-              <circle cx="40" cy="65" r="3" fill="#F72570" stroke="#FFF" strokeWidth="1" />
-              <circle cx="110" cy="52" r="3" fill="#F72570" stroke="#FFF" strokeWidth="1" />
-              <circle cx="180" cy="44" r="3" fill="#F72570" stroke="#FFF" strokeWidth="1" />
-              <circle cx="300" cy="18" r="3.5" fill="#F72570" stroke="#FFF" strokeWidth="1.5" />
+              {regPoints.length > 0 && (
+                <path
+                  d={makePath(regPoints)}
+                  fill="none"
+                  stroke="#F72570"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+              )}
+              {regPoints.map((p, i) => (
+                <circle key={`reg-${i}`} cx={p.x} cy={p.y} r="3" fill="#F72570" stroke="#FFF" strokeWidth="1.5" />
+              ))}
 
               {/* Line 2: Assessments (Purple #8B5CF6) */}
-              <path
-                d="M 40 76 Q 110 72 180 68 T 300 52"
-                fill="none"
-                stroke="#8B5CF6"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-              <circle cx="40" cy="76" r="3" fill="#8B5CF6" stroke="#FFF" strokeWidth="1" />
-              <circle cx="110" cy="72" r="3" fill="#8B5CF6" stroke="#FFF" strokeWidth="1" />
-              <circle cx="180" cy="68" r="3" fill="#8B5CF6" stroke="#FFF" strokeWidth="1" />
-              <circle cx="300" cy="52" r="3.5" fill="#8B5CF6" stroke="#FFF" strokeWidth="1.5" />
+              {assPoints.length > 0 && (
+                <path
+                  d={makePath(assPoints)}
+                  fill="none"
+                  stroke="#8B5CF6"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              )}
+              {assPoints.map((p, i) => (
+                <circle key={`ass-${i}`} cx={p.x} cy={p.y} r="2.5" fill="#8B5CF6" stroke="#FFF" strokeWidth="1" />
+              ))}
 
               {/* Line 3: Placements (Amber #F59E0B) */}
-              <path
-                d="M 40 88 Q 110 83 180 82 T 300 70"
-                fill="none"
-                stroke="#F59E0B"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-              <circle cx="40" cy="88" r="3" fill="#F59E0B" stroke="#FFF" strokeWidth="1" />
-              <circle cx="110" cy="83" r="3" fill="#F59E0B" stroke="#FFF" strokeWidth="1" />
-              <circle cx="180" cy="82" r="3" fill="#F59E0B" stroke="#FFF" strokeWidth="1" />
-              <circle cx="300" cy="70" r="3.5" fill="#F59E0B" stroke="#FFF" strokeWidth="1.5" />
+              {plcPoints.length > 0 && (
+                <path
+                  d={makePath(plcPoints)}
+                  fill="none"
+                  stroke="#F59E0B"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              )}
+              {plcPoints.map((p, i) => (
+                <circle key={`plc-${i}`} cx={p.x} cy={p.y} r="2.5" fill="#F59E0B" stroke="#FFF" strokeWidth="1" />
+              ))}
             </svg>
           </div>
 
-          <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold px-2 mb-1">
-            <span>1 May</span>
-            <span>5 May</span>
-            <span>10 May</span>
-            <span>15 May</span>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold px-4 mb-1">
+            {activityTrend.map((t, idx) => (
+              <span key={idx}>{t.month}</span>
+            ))}
           </div>
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs mt-1">
-            <span className="text-slate-500 text-[11px] font-medium">Updated 10 mins ago</span>
+            <span className="text-slate-500 text-[11px] font-medium">Real platform intake trend</span>
             <button
-              onClick={() => onSectionChange('analytics')}
+              onClick={() => onSectionChange('candidates')}
               className="text-[#F72570] text-[11px] font-bold hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <span>View Report</span>
+              <span>View Roster</span>
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>
 
         {/* C. State-Wise Candidate Distribution Circular Bar Graph (4 Columns) */}
-        <div className="lg:col-span-4 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+        <div className="lg:col-span-4 bg-white p-4.5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-1.5">
             <div>
               <h2 className="text-sm font-bold text-slate-900">State-wise Distribution</h2>
-              <p className="text-[11px] text-slate-400">Candidate concentration by top regions</p>
+              <p className="text-[11px] text-slate-400">Candidate concentration by territory</p>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-[#FFF0F5] text-[#F72570] text-[10px] font-bold">
-              Top 5 States
+              {stateDistribution.length} {stateDistribution.length === 1 ? 'State' : 'States'}
             </span>
           </div>
 
@@ -805,162 +728,68 @@ export default function AdminDashboard({ onSectionChange, user }) {
                 {/* Background base track */}
                 <circle cx="80" cy="80" r="60" stroke="#F1F5F9" strokeWidth="14" fill="none" />
 
-                {/* Segment 1: Uttar Pradesh (22.67%) */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="60"
-                  stroke="#F72570"
-                  strokeWidth="14"
-                  fill="none"
-                  strokeDasharray="85.48 376.99"
-                  strokeDashoffset="0"
-                  className="transition-all duration-300 hover:opacity-90 cursor-pointer"
-                />
+                {/* Dynamic State Segments */}
+                {totalCandidates > 0 && stateDistribution.map((st, i) => {
+                  let priorCount = 0;
+                  for (let j = 0; j < i; j++) priorCount += stateDistribution[j].count;
+                  const dash = (st.count / totalCandidates) * CIRCUMFERENCE;
+                  const offset = -((priorCount / totalCandidates) * CIRCUMFERENCE);
+                  const color = stateColors[i % stateColors.length];
 
-                {/* Segment 2: Maharashtra (15.08%) */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="60"
-                  stroke="#8B5CF6"
-                  strokeWidth="14"
-                  fill="none"
-                  strokeDasharray="56.84 376.99"
-                  strokeDashoffset="-85.48"
-                  className="transition-all duration-300 hover:opacity-90 cursor-pointer"
-                />
-
-                {/* Segment 3: Karnataka (10.01%) */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="60"
-                  stroke="#06B6D4"
-                  strokeWidth="14"
-                  fill="none"
-                  strokeDasharray="37.74 376.99"
-                  strokeDashoffset="-142.32"
-                  className="transition-all duration-300 hover:opacity-90 cursor-pointer"
-                />
-
-                {/* Segment 4: Madhya Pradesh (7.69%) */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="60"
-                  stroke="#F59E0B"
-                  strokeWidth="14"
-                  fill="none"
-                  strokeDasharray="28.99 376.99"
-                  strokeDashoffset="-180.06"
-                  className="transition-all duration-300 hover:opacity-90 cursor-pointer"
-                />
-
-                {/* Segment 5: Rajasthan (6.71%) */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="60"
-                  stroke="#10B981"
-                  strokeWidth="14"
-                  fill="none"
-                  strokeDasharray="25.30 376.99"
-                  strokeDashoffset="-209.05"
-                  className="transition-all duration-300 hover:opacity-90 cursor-pointer"
-                />
-
-                {/* Segment 6: Other States (37.84%) */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="60"
-                  stroke="#E2E8F0"
-                  strokeWidth="14"
-                  fill="none"
-                  strokeDasharray="142.64 376.99"
-                  strokeDashoffset="-234.35"
-                  className="transition-all duration-300 hover:opacity-90 cursor-pointer"
-                />
+                  return (
+                    <circle
+                      key={i}
+                      cx="80"
+                      cy="80"
+                      r="60"
+                      stroke={color}
+                      strokeWidth="14"
+                      fill="none"
+                      strokeDasharray={`${dash} ${CIRCUMFERENCE}`}
+                      strokeDashoffset={offset}
+                      className="transition-all duration-300"
+                    />
+                  );
+                })}
               </svg>
 
               {/* Center Total Counter */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                <span className="text-xs font-black text-slate-900 leading-tight">12.5k</span>
+                <span className="text-sm font-black text-slate-900 leading-tight">{totalCandidates}</span>
                 <span className="text-[8px] font-extrabold text-slate-400 uppercase tracking-wider">TOTAL</span>
               </div>
             </div>
 
-            {/* State Progress Legend & Stats - Compact Rows */}
-            <div className="sm:col-span-7 space-y-1 text-xs">
-              {/* UP */}
-              <div className="flex items-center justify-between py-0.5 border-b border-slate-100">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#F72570]" />
-                  <span className="font-semibold text-slate-800 text-[11px]">Uttar Pradesh</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-[#F72570] text-[11px]">2,845</span>
-                  <span className="text-[9.5px] text-slate-400 font-bold">36.5%</span>
-                </div>
-              </div>
-
-              {/* MH */}
-              <div className="flex items-center justify-between py-0.5 border-b border-slate-100">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]" />
-                  <span className="font-semibold text-slate-800 text-[11px]">Maharashtra</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-slate-800 text-[11px]">1,892</span>
-                  <span className="text-[9.5px] text-slate-400 font-bold">24.2%</span>
-                </div>
-              </div>
-
-              {/* KA */}
-              <div className="flex items-center justify-between py-0.5 border-b border-slate-100">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#06B6D4]" />
-                  <span className="font-semibold text-slate-800 text-[11px]">Karnataka</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-slate-800 text-[11px]">1,256</span>
-                  <span className="text-[9.5px] text-slate-400 font-bold">16.1%</span>
-                </div>
-              </div>
-
-              {/* MP */}
-              <div className="flex items-center justify-between py-0.5 border-b border-slate-100">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
-                  <span className="font-semibold text-slate-800 text-[11px]">Madhya Pradesh</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-slate-800 text-[11px]">965</span>
-                  <span className="text-[9.5px] text-slate-400 font-bold">12.4%</span>
-                </div>
-              </div>
-
-              {/* RJ */}
-              <div className="flex items-center justify-between py-0.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-                  <span className="font-semibold text-slate-800 text-[11px]">Rajasthan</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-slate-800 text-[11px]">842</span>
-                  <span className="text-[9.5px] text-slate-400 font-bold">10.8%</span>
-                </div>
-              </div>
+            {/* State Progress Legend & Stats */}
+            <div className="sm:col-span-7 space-y-1.5 text-xs">
+              {stateDistribution.length === 0 ? (
+                <div className="text-slate-400 text-xs py-2 italic">No regional state data</div>
+              ) : (
+                stateDistribution.map((st, idx) => (
+                  <div key={idx} className="flex items-center justify-between py-0.5 border-b border-slate-100 last:border-b-0">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: stateColors[idx % stateColors.length] }}
+                      />
+                      <span className="font-semibold text-slate-800 text-[11px]">{st.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-extrabold text-slate-900 text-[11px]">{st.count}</span>
+                      <span className="text-[9.5px] text-slate-400 font-bold">({st.percentage})</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs mt-1">
             <span className="text-[10.5px] text-slate-500 font-medium">
-              Top 5: <span className="font-bold text-slate-900">62.2%</span> volume
+              Territory Active: <span className="font-bold text-slate-900">{totalCandidates} candidates</span>
             </span>
             <button
-              onClick={() => onSectionChange('retention')}
+              onClick={() => setActiveModal('geoDetails')}
               className="text-[#F72570] text-[11px] font-bold hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>View All</span>
@@ -971,7 +800,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
 
       </div>
 
-      {/* ─── 4. OPERATIONAL HEALTH SECTION (5 COMPACT MODULES) ───────────────── */}
+      {/* ─── 4. OPERATIONAL HEALTH SECTION ───────────────────────────────────── */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -980,28 +809,28 @@ export default function AdminDashboard({ onSectionChange, user }) {
               Operational Health & Priority Queues
             </h2>
           </div>
-          <span className="text-xs text-slate-400 font-medium">Real-time bottleneck telemetry</span>
+          <span className="text-xs text-slate-400 font-medium">Real-time candidate workflow status</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {operationalHealthItems.map((item) => {
             const Icon = item.icon;
             return (
               <div
                 key={item.id}
-                className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-slate-200 transition duration-150 flex flex-col justify-between shadow-2xs group"
+                className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-white hover:border-slate-200 transition duration-150 flex flex-col justify-between shadow-2xs group"
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     {item.title}
                   </span>
                   <div className={`p-1.5 rounded-lg ${item.iconBg}`}>
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-4 h-4" />
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-base font-extrabold text-slate-900">
+                  <div className="text-lg font-black text-slate-900">
                     {item.count}
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-tight">
@@ -1011,7 +840,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
 
                 <button
                   onClick={() => onSectionChange(item.actionSection)}
-                  className="mt-3 w-full py-1.5 rounded-lg bg-white group-hover:bg-[#FFF0F5] group-hover:text-[#F72570] border border-slate-200 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  className="mt-3.5 w-full py-1.5 rounded-lg bg-white group-hover:bg-[#FFF0F5] group-hover:text-[#F72570] border border-slate-200 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <span>{item.actionLabel}</span>
                   <ChevronRight className="w-3 h-3" />
@@ -1024,7 +853,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
 
       {/* ─── 5. MIDDLE SECTION: CANDIDATE TABLE + PLACEMENT PERFORMANCE ──────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
+
         {/* A. Recent Candidate Activity Table (8 Columns) */}
         <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col justify-between">
           <div>
@@ -1034,7 +863,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                 <h2 className="text-base font-bold text-slate-900">
                   Recent Candidate Activity
                 </h2>
-                <p className="text-xs text-slate-400">Live intake, stage updates & verification log</p>
+                <p className="text-xs text-slate-400">Live intake, stage updates & verification log from database</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -1044,7 +873,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                     type="text"
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
-                    placeholder="Filter candidate or city..."
+                    placeholder="Search candidate or city..."
                     className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 bg-slate-50/60 focus:outline-none focus:border-[#F72570]"
                   />
                 </div>
@@ -1066,78 +895,93 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredCandidates.map((cand) => (
-                    <tr
-                      key={cand.id}
-                      className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
-                      onClick={() => {
-                        setSelectedCandidate(cand);
-                        setActiveModal('viewCandidate');
-                      }}
-                    >
-                      {/* Candidate Avatar & Info */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-[#FFF0F5] border border-[#F72570]/30 text-[#F72570] flex items-center justify-center font-bold text-[10px] shrink-0">
-                            {cand.avatar}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 group-hover:text-[#F72570] transition-colors">
-                              {cand.name}
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-medium">
-                              {cand.city}, {cand.state}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Mobiliser */}
-                      <td className="py-3 px-3 font-semibold text-slate-700">
-                        {cand.mobiliser}
-                      </td>
-
-                      {/* NF Category */}
-                      <td className="py-3 px-3">
-                        <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] border ${cand.nfBadge}`}>
-                          {cand.nfCategory}
-                        </span>
-                      </td>
-
-                      {/* Current Stage */}
-                      <td className="py-3 px-3">
-                        <span className="font-semibold text-slate-800">
-                          {cand.currentStage}
-                        </span>
-                      </td>
-
-                      {/* Registered Date */}
-                      <td className="py-3 px-3 text-slate-500 font-medium">
-                        {cand.registeredOn}
-                      </td>
-
-                      {/* Status Badge */}
-                      <td className="py-3 px-3">
-                        <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${cand.statusBadge}`}>
-                          {cand.status}
-                        </span>
-                      </td>
-
-                      {/* Action Menu */}
-                      <td className="py-3 px-3 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedCandidate(cand);
-                            setActiveModal('viewCandidate');
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
-                        >
-                          <MoreVertical className="w-3.5 h-3.5" />
-                        </button>
+                  {filteredCandidates.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="py-10 text-center text-slate-400">
+                        <Users className="w-7 h-7 mx-auto mb-1 text-slate-300" />
+                        <p className="font-bold text-xs text-slate-600">No candidates match your search</p>
+                        <p className="text-[11px] text-slate-400">Database contains {totalCandidates} registered candidate profiles.</p>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredCandidates.map((cand) => (
+                      <tr
+                        key={cand.id}
+                        className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                        onClick={() => {
+                          setSelectedCandidate(cand);
+                          setActiveModal('viewCandidate');
+                        }}
+                      >
+                        {/* Candidate Avatar & Info */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-[#FFF0F5] border border-[#F72570]/30 text-[#F72570] flex items-center justify-center font-bold text-[10px] shrink-0">
+                              {cand.avatar}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 group-hover:text-[#F72570] transition-colors">
+                                {cand.name}
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-medium">
+                                {cand.candidate_code} • {cand.city}, {cand.state}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Mobiliser */}
+                        <td className="py-3 px-3 font-semibold text-slate-700">
+                          {cand.mobiliser}
+                        </td>
+
+                        {/* NF Category */}
+                        <td className="py-3 px-3">
+                          <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] border ${cand.nfCategory === 'NF1' || cand.nfCategory === 'NF 1'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : cand.nfCategory === 'NF2' || cand.nfCategory === 'NF 2'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-pink-50 text-[#F72570] border-pink-200'
+                            }`}>
+                            {cand.nfCategory}
+                          </span>
+                        </td>
+
+                        {/* Current Stage */}
+                        <td className="py-3 px-3">
+                          <span className="font-semibold text-slate-800">
+                            {cand.currentStage}
+                          </span>
+                        </td>
+
+                        {/* Registered Date */}
+                        <td className="py-3 px-3 text-slate-500 font-medium">
+                          {cand.registeredOn}
+                        </td>
+
+                        {/* Status Badge */}
+                        <td className="py-3 px-3">
+                          <span className="px-2 py-0.5 rounded-full font-bold text-[10px] border bg-emerald-50 text-emerald-700 border-emerald-200 capitalize">
+                            {cand.status}
+                          </span>
+                        </td>
+
+                        {/* Action Menu */}
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCandidate(cand);
+                              setActiveModal('viewCandidate');
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1163,48 +1007,58 @@ export default function AdminDashboard({ onSectionChange, user }) {
                 <h2 className="text-base font-bold text-slate-900">
                   Recent Placements
                 </h2>
-                <p className="text-xs text-slate-400">Employer hiring & joining rates</p>
+                <p className="text-xs text-slate-400">Employer hiring & joining records</p>
               </div>
               <span className="text-xs font-bold text-slate-400 uppercase">Placed</span>
             </div>
 
-            <div className="divide-y divide-slate-100">
-              {employerRankings.map((emp, idx) => (
-                <div
-                  key={idx}
-                  className="p-3.5 px-4 flex items-center justify-between hover:bg-slate-50/70 transition cursor-pointer"
-                  onClick={() => onSectionChange('employers')}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-xl border flex items-center justify-center font-bold text-xs ${emp.iconColor}`}>
-                      <Building2 className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900">
-                        {emp.name}
+            {employerRankings.length === 0 ? (
+              <div className="py-12 px-6 text-center text-slate-400">
+                <Briefcase className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <p className="font-bold text-xs text-slate-700">No candidate placements recorded yet</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Candidate deployments will appear here once candidates complete training and receive verified employer offers.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {employerRankings.map((emp, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 px-4 flex items-center justify-between hover:bg-slate-50/70 transition cursor-pointer"
+                    onClick={() => onSectionChange('employers')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl border flex items-center justify-center font-bold text-xs bg-emerald-50 text-emerald-600 border-emerald-200">
+                        <Building2 className="w-4 h-4" />
                       </div>
-                      <div className="text-[10.5px] text-slate-400 font-medium">
-                        {emp.openJobs} Open Roles • {emp.joiningRate} Joining Rate
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">
+                          {emp.name}
+                        </div>
+                        <div className="text-[10.5px] text-slate-400 font-medium">
+                          {emp.openJobs || 0} Open Roles • {emp.joiningRate || '100%'} Joining Rate
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="text-right">
-                    <span className="text-xs font-extrabold text-slate-900">
-                      {emp.placedCount}
-                    </span>
+                    <div className="text-right">
+                      <span className="text-xs font-extrabold text-slate-900">
+                        {emp.placedCount}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="p-3.5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-center">
             <button
-              onClick={() => onSectionChange('deployments')}
+              onClick={() => onSectionChange('assessments-placements')}
               className="text-xs font-bold text-[#F72570] hover:underline flex items-center gap-1.5 cursor-pointer"
             >
-              <span>View All Placements</span>
+              <span>View All Placements & Pipeline</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -1214,57 +1068,31 @@ export default function AdminDashboard({ onSectionChange, user }) {
 
       {/* ─── 6. BOTTOM ROW: UNREAD MESSAGES + ALERTS & REMINDERS ─────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* A. Unread Internal Messages (6 Columns) */}
+
+        {/* A. Internal Field Messages (6 Columns) */}
         <div className="lg:col-span-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900">Unread Messages</h2>
-                <span className="px-2 py-0.5 rounded-full bg-[#FFF0F5] text-[#F72570] text-[10px] font-bold">
-                  6 new
+                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">
+                  0 pending
                 </span>
               </div>
               <button
                 onClick={() => onSectionChange('messages')}
                 className="text-xs font-bold text-[#F72570] hover:underline cursor-pointer"
               >
-                View All
+                Open Inbox
               </button>
             </div>
 
-            <div className="space-y-3">
-              {internalMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  onClick={() => onSectionChange('messages')}
-                  className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/60 transition cursor-pointer flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full ${msg.avatarColor} flex items-center justify-center font-bold text-[11px] shrink-0`}>
-                      {msg.avatar}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900">{msg.sender}</span>
-                        <span className="text-[10px] font-medium text-slate-400">{msg.role}</span>
-                      </div>
-                      <p className="text-xs text-slate-600 mt-0.5 line-clamp-1">
-                        {msg.preview}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-[10px] text-slate-400 font-medium">{msg.time}</span>
-                    {msg.unreadCount > 0 && (
-                      <span className="h-4 w-4 rounded-full bg-[#F72570] text-white text-[9px] font-black flex items-center justify-center">
-                        {msg.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="py-8 px-4 text-center text-slate-400">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <p className="font-bold text-xs text-slate-700">All field communications are caught up</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                No unread alerts or pending messages from field mobilisers or trainers.
+              </p>
             </div>
           </div>
 
@@ -1274,7 +1102,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
               onClick={() => onSectionChange('messages')}
               className="text-[#F72570] font-bold hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <span>Open Inbox</span>
+              <span>Open Message Center</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -1287,14 +1115,14 @@ export default function AdminDashboard({ onSectionChange, user }) {
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900">Alerts & Reminders</h2>
                 <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-bold">
-                  4 Active
+                  {systemAlerts.length} Active
                 </span>
               </div>
               <button
-                onClick={() => setActiveModal('export')}
+                onClick={() => onSectionChange('candidates')}
                 className="text-xs font-bold text-[#F72570] hover:underline cursor-pointer"
               >
-                Configure
+                Review All
               </button>
             </div>
 
@@ -1304,7 +1132,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                 return (
                   <div
                     key={alt.id}
-                    onClick={() => onSectionChange(alt.actionTarget)}
+                    onClick={() => alt.actionTarget && onSectionChange(alt.actionTarget)}
                     className={`p-3 rounded-xl border ${alt.borderColor} ${alt.bgHover} transition cursor-pointer flex items-center justify-between gap-3`}
                   >
                     <div className="flex items-center gap-3">
@@ -1331,10 +1159,10 @@ export default function AdminDashboard({ onSectionChange, user }) {
           <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-xs">
             <span className="text-slate-500 font-medium">Automatic system threshold monitoring</span>
             <button
-              onClick={() => onSectionChange('audit-logs')}
+              onClick={() => onSectionChange('candidates')}
               className="text-[#F72570] font-bold hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <span>View All Alerts</span>
+              <span>Manage Candidates</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -1381,7 +1209,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
       </div>
 
       {/* ─── 8. INTERACTIVE MODALS ──────────────────────────────────────────── */}
-      
+
       {/* A. Export Report Modal */}
       {activeModal === 'export' && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -1403,8 +1231,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-700">Report Type</label>
               <select className="w-full p-2.5 rounded-xl border border-slate-200 text-xs text-slate-800 bg-slate-50 focus:outline-none focus:border-[#F72570]">
-                <option>Full Programme Executive Summary (PDF)</option>
                 <option>Candidate Master Intake & Status (CSV)</option>
+                <option>Full Programme Executive Summary (PDF)</option>
                 <option>Training Batches & Attendance Logs (XLSX)</option>
                 <option>Employer Placements & Wage Verification (CSV)</option>
               </select>
@@ -1415,7 +1243,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
               </button>
               <button
                 onClick={() => {
-                  alert('Generating executive platform report. Download will begin shortly.');
+                  window.print();
                   setActiveModal(null);
                 }}
                 className="px-4 py-2 rounded-xl bg-[#F72570] hover:bg-[#E02670] text-white text-xs font-bold transition flex items-center gap-1.5"
@@ -1450,7 +1278,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
               </div>
               <div className="space-y-1">
                 <label className="font-bold text-slate-700">Email Address</label>
-                <input type="email" placeholder="user@organization.org" className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-[#F72570]" />
+                <input type="email" placeholder="user@evenshift.org" className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-[#F72570]" />
               </div>
               <div className="space-y-1">
                 <label className="font-bold text-slate-700">Role / Designation</label>
@@ -1458,13 +1286,12 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   <option>Field Mobiliser</option>
                   <option>Trainer / Assessor</option>
                   <option>Placement Coordinator</option>
-                  <option>M&E Impact Lead</option>
                   <option>Administrator</option>
                 </select>
               </div>
               <div className="space-y-1">
                 <label className="font-bold text-slate-700">Assigned Hub / City</label>
-                <input type="text" placeholder="e.g. Lucknow Hub" className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-[#F72570]" />
+                <input type="text" placeholder="e.g. Bengaluru Hub" className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:border-[#F72570]" />
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
@@ -1473,7 +1300,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
               </button>
               <button
                 onClick={() => {
-                  alert('User account created and invitation sent successfully.');
+                  alert('User account creation invitation queued.');
                   setActiveModal(null);
                 }}
                 className="px-4 py-2 rounded-xl bg-[#F72570] hover:bg-[#E02670] text-white text-xs font-bold transition"
@@ -1496,7 +1323,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">{selectedCandidate.name}</h3>
-                  <p className="text-xs text-slate-400">{selectedCandidate.city}, {selectedCandidate.state}</p>
+                  <p className="text-xs text-slate-400">{selectedCandidate.candidate_code} • {selectedCandidate.city}, {selectedCandidate.state}</p>
                 </div>
               </div>
               <button onClick={() => setActiveModal(null)} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
@@ -1505,7 +1332,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
             </div>
             <div className="grid grid-cols-2 gap-2.5 text-xs">
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Mobiliser</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Mobiliser Team</span>
                 <p className="font-bold text-slate-800 mt-0.5">{selectedCandidate.mobiliser}</p>
               </div>
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
@@ -1540,87 +1367,6 @@ export default function AdminDashboard({ onSectionChange, user }) {
         </div>
       )}
 
-      {/* G. Expanded Geographic Details Modal */}
-      {activeModal === 'geoDetails' && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-[#FFF0F5] text-[#F72570]">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">National Programme Reach & State Statistics</h3>
-                  <p className="text-xs text-slate-400">Complete regional candidate breakdown</p>
-                </div>
-              </div>
-              <button onClick={() => setActiveModal(null)} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Total Candidates</span>
-                <p className="font-extrabold text-slate-900 text-sm mt-0.5">12,548</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Active States</span>
-                <p className="font-extrabold text-[#F72570] text-sm mt-0.5">15 States</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Training Centres</span>
-                <p className="font-extrabold text-purple-600 text-sm mt-0.5">36 Centres</p>
-              </div>
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Total Placements</span>
-                <p className="font-extrabold text-emerald-600 text-sm mt-0.5">3,842</p>
-              </div>
-            </div>
-
-            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-              {[
-                { name: 'Uttar Pradesh', count: '2,845', share: '36.5%', centres: 8, placed: 523, color: 'bg-[#F72570]' },
-                { name: 'Maharashtra', count: '1,892', share: '24.2%', centres: 6, placed: 418, color: 'bg-purple-600' },
-                { name: 'Karnataka', count: '1,256', share: '16.1%', centres: 5, placed: 312, color: 'bg-cyan-500' },
-                { name: 'Madhya Pradesh', count: '965', share: '12.4%', centres: 4, placed: 298, color: 'bg-amber-500' },
-                { name: 'Rajasthan', count: '842', share: '10.8%', centres: 3, placed: 276, color: 'bg-emerald-500' },
-                { name: 'Delhi NCR', count: '1,120', share: '14.3%', centres: 4, placed: 340, color: 'bg-indigo-500' },
-                { name: 'Gujarat', count: '780', share: '9.9%', centres: 3, placed: 180, color: 'bg-pink-500' },
-              ].map((st, idx) => (
-                <div key={idx} className="p-2.5 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${st.color}`} />
-                    <span className="font-bold text-slate-800">{st.name}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-slate-500">{st.centres} centres</span>
-                    <span className="text-emerald-600 font-semibold">{st.placed} placed</span>
-                    <span className="font-extrabold text-slate-900">{st.count}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button onClick={() => setActiveModal(null)} className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  setActiveModal(null);
-                  onSectionChange('retention');
-                }}
-                className="px-4 py-2 rounded-xl bg-[#F72570] hover:bg-[#E02670] text-white text-xs font-bold transition flex items-center gap-1.5"
-              >
-                <span>Full State Analytics</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* D. Full Funnel Modal */}
       {activeModal === 'funnelDetails' && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -1645,7 +1391,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   </div>
                   <div className="text-right shrink-0">
                     <span className="font-extrabold text-slate-900 text-sm">{stg.formattedCount}</span>
-                    <p className="text-[10px] text-emerald-600 font-bold">{stg.conversion} pass</p>
+                    <p className="text-[10px] text-emerald-600 font-bold">{stg.conversion}</p>
                   </div>
                 </div>
               ))}
@@ -1738,12 +1484,84 @@ export default function AdminDashboard({ onSectionChange, user }) {
               </button>
               <button
                 onClick={() => {
-                  alert('Bulk file ingested. 450 candidate records processed.');
+                  alert('Bulk file upload feature ready for field data.');
                   setActiveModal(null);
                 }}
                 className="px-4 py-2 rounded-xl bg-[#F72570] text-white text-xs font-bold hover:bg-[#E02670] transition"
               >
                 Upload & Ingest
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* G. Expanded Geographic Details Modal */}
+      {activeModal === 'geoDetails' && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-[#FFF0F5] text-[#F72570]">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Territory Distribution</h3>
+                  <p className="text-xs text-slate-400">Regional candidate breakdown from live database</p>
+                </div>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Total Candidates</span>
+                <p className="font-extrabold text-slate-900 text-sm mt-0.5">{totalCandidates}</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Active Regions</span>
+                <p className="font-extrabold text-[#F72570] text-sm mt-0.5">{stateDistribution.length} {stateDistribution.length === 1 ? 'State' : 'States'}</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Total Placements</span>
+                <p className="font-extrabold text-emerald-600 text-sm mt-0.5">{dashboardData.stats?.placements || 0}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+              {stateDistribution.length === 0 ? (
+                <div className="text-center py-4 text-xs text-slate-400">No states recorded yet</div>
+              ) : (
+                stateDistribution.map((st, idx) => (
+                  <div key={idx} className="p-2.5 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#F72570]" />
+                      <span className="font-bold text-slate-800">{st.name}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-slate-500">{st.percentage}</span>
+                      <span className="font-extrabold text-slate-900">{st.count} candidate{st.count > 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button onClick={() => setActiveModal(null)} className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setActiveModal(null);
+                  onSectionChange('candidates');
+                }}
+                className="px-4 py-2 rounded-xl bg-[#F72570] hover:bg-[#E02670] text-white text-xs font-bold transition flex items-center gap-1.5"
+              >
+                <span>View Candidates</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

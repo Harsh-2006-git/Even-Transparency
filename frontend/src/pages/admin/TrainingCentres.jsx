@@ -12,9 +12,7 @@ import {
   Clock,
   Car,
   RefreshCw,
-  LayoutGrid,
   List,
-  Rows3,
   Filter,
   X,
   ChevronRight,
@@ -92,11 +90,13 @@ const DEFAULT_FALLBACK_CENTRES = [
 export default function TrainingCentres({ onSectionChange }) {
   const [centers, setCenters] = useState(DEFAULT_FALLBACK_CENTRES);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [cityFilter, setCityFilter] = useState('ALL');
-  const [displayLayout, setDisplayLayout] = useState('grid'); // 'grid' | 'table' | 'rows'
   const [selectedCenter, setSelectedCenter] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingCenter, setEditingCenter] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
   const [toast, setToast] = useState(null);
 
   // New center form state
@@ -110,9 +110,9 @@ export default function TrainingCentres({ onSectionChange }) {
     head_phone: '',
     head_email: '',
     capacity: 100,
-    simulators_count: 12,
     has_test_track: true,
-    has_battery_swap: true
+    has_battery_swap: true,
+    has_solar_charging: false
   });
 
   const showToast = (msg, type = 'success') => {
@@ -139,51 +139,117 @@ export default function TrainingCentres({ onSectionChange }) {
     fetchCenters();
   }, []);
 
-  const handleCreateCenter = (e) => {
+  const handleCreateCenter = async (e) => {
     e.preventDefault();
-    const created = {
-      id: `tc-${Date.now()}`,
-      center_code: newCenter.center_code || `TC-${newCenter.city.substring(0, 2).toUpperCase()}-${Math.floor(10 + Math.random() * 90)}`,
-      name: newCenter.name,
-      city: newCenter.city,
-      state: newCenter.state,
-      address: newCenter.address,
-      head_name: newCenter.head_name || 'Center Director',
-      head_phone: newCenter.head_phone,
-      head_email: newCenter.head_email,
-      capacity: parseInt(newCenter.capacity) || 80,
-      active_cohorts_count: 0,
-      simulators_count: parseInt(newCenter.simulators_count) || 10,
-      has_test_track: newCenter.has_test_track,
-      has_battery_swap: newCenter.has_battery_swap,
-      status: 'OPERATIONAL'
-    };
+    try {
+      setSubmitting(true);
+      const res = await fetch(`${API_BASE}/centers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCenter)
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setCenters(prev => [json.data, ...prev.filter(c => c.id !== json.data.id)]);
+        setIsAddModalOpen(false);
+        showToast(`🎉 Campus "${json.data.name}" registered successfully!`);
+        fetchCenters();
+        setNewCenter({
+          center_code: '',
+          name: '',
+          city: 'Bengaluru',
+          state: 'Karnataka',
+          address: '',
+          head_name: '',
+          head_phone: '',
+          head_email: '',
+          capacity: 100,
+          has_test_track: true,
+          has_battery_swap: true,
+          has_solar_charging: false
+        });
+      } else {
+        showToast(json.message || 'Failed to create training center', 'error');
+      }
+    } catch (err) {
+      console.error('Error creating center:', err);
+      showToast('Network error while saving center', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    setCenters(prev => [created, ...prev]);
-    setIsAddModalOpen(false);
-    showToast(`Center ${created.name} registered successfully!`);
-    setNewCenter({
-      center_code: '',
-      name: '',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      address: '',
-      head_name: '',
-      head_phone: '',
-      head_email: '',
-      capacity: 100,
-      simulators_count: 12,
-      has_test_track: true,
-      has_battery_swap: true
+  const handleOpenEditModal = (center, e) => {
+    if (e) e.stopPropagation();
+    setEditingCenter(center);
+    setEditFormData({
+      center_code: center.center_code || '',
+      name: center.name || '',
+      city: center.city || '',
+      state: center.state || 'Karnataka',
+      address: center.address || '',
+      head_name: center.head_name || '',
+      head_phone: center.head_phone || '',
+      head_email: center.head_email || '',
+      capacity: center.capacity || 100,
+      has_test_track: center.has_test_track !== false,
+      has_battery_swap: center.has_battery_swap !== false,
+      has_solar_charging: center.has_solar_charging || false,
+      status: center.status || 'OPERATIONAL'
     });
   };
 
-  const handleDeleteCenter = (centerId, e) => {
+  const handleUpdateCenter = async (e) => {
+    e.preventDefault();
+    if (!editingCenter) return;
+    try {
+      setSubmitting(true);
+      const res = await fetch(`${API_BASE}/centers/${editingCenter.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData)
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        showToast(`🎉 Training Centre "${json.data.name}" updated successfully!`);
+        setCenters(prev => prev.map(c => c.id === editingCenter.id ? json.data : c));
+        if (selectedCenter?.id === editingCenter.id) {
+          setSelectedCenter(json.data);
+        }
+        setEditingCenter(null);
+        fetchCenters();
+      } else {
+        showToast(json.message || 'Failed to update center', 'error');
+      }
+    } catch (err) {
+      console.error('Error updating center:', err);
+      showToast('Network error while updating center', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCenter = async (centerId, e) => {
     if (e) e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this training center campus?')) return;
-    setCenters(prev => prev.filter(c => c.id !== centerId));
-    if (selectedCenter?.id === centerId) setSelectedCenter(null);
-    showToast('Training center removed successfully');
+    if (!window.confirm('Are you sure you want to delete this authorized training center campus?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/centers/${centerId}`, {
+        method: 'DELETE'
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast('Training center removed successfully');
+        setCenters(prev => prev.filter(c => c.id !== centerId));
+        if (selectedCenter?.id === centerId) setSelectedCenter(null);
+        fetchCenters();
+      } else {
+        showToast(json.message || 'Failed to remove center', 'error');
+      }
+    } catch (err) {
+      setCenters(prev => prev.filter(c => c.id !== centerId));
+      if (selectedCenter?.id === centerId) setSelectedCenter(null);
+      showToast('Training center removed');
+    }
   };
 
   const filteredCenters = centers.filter(c => {
@@ -362,43 +428,9 @@ export default function TrainingCentres({ onSectionChange }) {
             </button>
           ))}
         </div>
-
-        {/* View Switcher: Cards vs Table vs Rows */}
-        <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl shrink-0">
-          <button
-            onClick={() => setDisplayLayout('grid')}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              displayLayout === 'grid' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-            }`}
-            title="Card Grid"
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Cards</span>
-          </button>
-          <button
-            onClick={() => setDisplayLayout('table')}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              displayLayout === 'table' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-            }`}
-            title="Table View"
-          >
-            <List className="w-3.5 h-3.5" />
-            <span>Table</span>
-          </button>
-          <button
-            onClick={() => setDisplayLayout('rows')}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              displayLayout === 'rows' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-            }`}
-            title="Row Strips"
-          >
-            <Rows3 className="w-3.5 h-3.5" />
-            <span>Rows</span>
-          </button>
-        </div>
       </div>
 
-      {/* ─── Main Content Display ────────────────────────────────────────────────── */}
+      {/* ─── Main Content Display (Table Format Only) ────────────────────────────── */}
       {loading ? (
         <div className="p-10 text-center text-xs text-slate-500 bg-white rounded-2xl border border-slate-200">
           <div className="inline-block animate-spin w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full mb-2" />
@@ -415,95 +447,9 @@ export default function TrainingCentres({ onSectionChange }) {
             Reset Filters
           </button>
         </div>
-      ) : displayLayout === 'grid' ? (
+      ) : (
         /* ═════════════════════════════════════════════════════════════════════════
-           1. CARDS GRID VIEW (Compact, High-Aesthetic Pure Light Cards)
-           ═════════════════════════════════════════════════════════════════════════ */
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {filteredCenters.map((center) => (
-            <div
-              key={center.id}
-              className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:border-slate-300 hover:shadow-xs transition p-4 sm:p-5 flex flex-col justify-between space-y-3.5 group"
-            >
-              <div className="space-y-3">
-                {/* Header: Code & City Badge */}
-                <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-slate-100 text-slate-800 border border-slate-200">
-                    {center.center_code}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    {center.city}
-                  </span>
-                </div>
-
-                {/* Name & Address */}
-                <div>
-                  <h3
-                    onClick={() => setSelectedCenter(center)}
-                    className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-indigo-600 transition leading-snug cursor-pointer"
-                  >
-                    {center.name}
-                  </h3>
-                  <p className="text-xs text-slate-500 flex items-start gap-1.5 mt-1 line-clamp-2">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span>{center.address}</span>
-                  </p>
-                </div>
-
-                {/* Facility Details Box */}
-                <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-100 text-xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400 font-medium">Facility Head:</span>
-                    <span className="font-bold text-slate-800 truncate max-w-[150px]">{center.head_name || 'Center Director'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400 font-medium">Seat Capacity:</span>
-                    <span className="font-bold text-indigo-600">{center.capacity} Candidates</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400 font-medium">State Jurisdiction:</span>
-                    <span className="font-semibold text-slate-700">{center.state}</span>
-                  </div>
-                </div>
-
-                {/* Feature Chips */}
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Fully Equipped
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-100 flex items-center gap-1">
-                    <Car className="w-3 h-3" /> EV Test Track
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-semibold">
-                    {center.simulators_count || 14} Simulators
-                  </span>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                <button
-                  onClick={() => setSelectedCenter(center)}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition flex items-center gap-1 cursor-pointer border border-indigo-200/60"
-                >
-                  <span>View Details</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  onClick={(e) => handleDeleteCenter(center.id, e)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
-                  title="Remove Center"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : displayLayout === 'table' ? (
-        /* ═════════════════════════════════════════════════════════════════════════
-           2. TABLE VIEW FORMAT
+           CLEAN TABLE VIEW FORMAT
            ═════════════════════════════════════════════════════════════════════════ */
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
@@ -584,6 +530,13 @@ export default function TrainingCentres({ onSectionChange }) {
                           <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                         <button
+                          onClick={(e) => handleOpenEditModal(center, e)}
+                          className="p-1 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                          title="Edit Campus Details"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={(e) => handleDeleteCenter(center.id, e)}
                           className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
                           title="Remove Center"
@@ -597,60 +550,6 @@ export default function TrainingCentres({ onSectionChange }) {
               </tbody>
             </table>
           </div>
-        </div>
-      ) : (
-        /* ═════════════════════════════════════════════════════════════════════════
-           3. ROWS STRIP FORMAT
-           ═════════════════════════════════════════════════════════════════════════ */
-        <div className="space-y-2">
-          {filteredCenters.map((center) => (
-            <div
-              key={center.id}
-              onClick={() => setSelectedCenter(center)}
-              className="p-3.5 sm:p-4 rounded-xl border border-slate-200/90 bg-white shadow-2xs hover:border-slate-300 hover:shadow-xs transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
-            >
-              <div className="flex items-center gap-3 sm:w-1/3 min-w-0">
-                <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-100 text-slate-800 border border-slate-200 shrink-0">
-                  {center.center_code}
-                </span>
-                <div className="min-w-0">
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition truncate">
-                    {center.name}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 truncate">{center.address}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 text-xs text-slate-600 sm:w-1/4">
-                <span className="font-bold text-slate-800 truncate">{center.head_name}</span>
-                <span className="text-slate-400">•</span>
-                <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] border border-emerald-100">
-                  {center.city}
-                </span>
-              </div>
-
-              <div className="text-xs font-bold text-indigo-700 sm:w-1/6">
-                {center.capacity} Seats Capacity
-              </div>
-
-              <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0" onClick={e => e.stopPropagation()}>
-                <button
-                  onClick={() => setSelectedCenter(center)}
-                  className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition flex items-center gap-1 cursor-pointer border border-indigo-200/60"
-                >
-                  <span>Details</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={(e) => handleDeleteCenter(center.id, e)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
-                  title="Remove Center"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
         </div>
       )}
 
@@ -770,14 +669,23 @@ export default function TrainingCentres({ onSectionChange }) {
               </div>
 
               {/* Footer */}
-              <div className="p-4 border-t border-slate-200 bg-slate-50/90 flex items-center justify-between">
-                <button
-                  onClick={(e) => handleDeleteCenter(selectedCenter.id, e)}
-                  className="px-3.5 py-2 rounded-xl text-red-600 hover:bg-red-50 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-red-200"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Remove Centre</span>
-                </button>
+              <div className="p-4 border-t border-slate-200 bg-slate-50/90 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => handleOpenEditModal(selectedCenter, e)}
+                    className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-indigo-200/70"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    <span>Edit Campus</span>
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteCenter(selectedCenter.id, e)}
+                    className="px-3.5 py-2 rounded-xl text-red-600 hover:bg-red-50 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-red-200"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove</span>
+                  </button>
+                </div>
 
                 <button
                   onClick={() => setSelectedCenter(null)}
@@ -895,6 +803,176 @@ export default function TrainingCentres({ onSectionChange }) {
                   className="px-5 py-2 rounded-xl bg-[#F72570] hover:bg-[#de1b60] text-white font-bold cursor-pointer shadow-xs"
                 >
                   Save Campus
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ─── Edit Centre Modal ─────────────────────────────────────────────────── */}
+      {editingCenter && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-slate-100 text-slate-800 border border-slate-200">
+                    {editingCenter.center_code}
+                  </span>
+                  <span className="text-xs font-bold text-indigo-600">Edit Training Campus</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold font-kaiseiTokumin text-slate-900">
+                  {editingCenter.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingCenter(null)}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateCenter} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Center Code</label>
+                  <input
+                    type="text"
+                    value={editFormData.center_code}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, center_code: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono font-bold bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Hub City <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.city}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, city: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Campus Name <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">State Jurisdiction</label>
+                  <input
+                    type="text"
+                    value={editFormData.state}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, state: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Full Physical Address <span className="text-red-500">*</span></label>
+                <textarea
+                  rows={2}
+                  required
+                  value={editFormData.address}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, address: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 resize-none bg-slate-50/50"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Facility Head Name</label>
+                  <input
+                    type="text"
+                    value={editFormData.head_name}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, head_name: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Facility Head Phone</label>
+                  <input
+                    type="text"
+                    value={editFormData.head_phone}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, head_phone: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Total Seat Capacity <span className="text-red-500">*</span></label>
+                  <input
+                    type="number"
+                    required
+                    value={editFormData.capacity}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-center font-bold bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Status</label>
+                  <select
+                    value={editFormData.status || 'OPERATIONAL'}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold bg-slate-50/50"
+                  >
+                    <option value="OPERATIONAL">OPERATIONAL</option>
+                    <option value="UNDER_MAINTENANCE">UNDER MAINTENANCE</option>
+                    <option value="EXPANDING">EXPANDING</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="font-bold text-slate-800 block text-[11px]">Facility Features</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={editFormData.has_test_track}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, has_test_track: e.target.checked }))}
+                      className="rounded text-indigo-600 w-4 h-4"
+                    />
+                    <span>EV Test Track</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={editFormData.has_battery_swap}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, has_battery_swap: e.target.checked }))}
+                      className="rounded text-indigo-600 w-4 h-4"
+                    />
+                    <span>Battery Swap Dock</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingCenter(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  {submitting ? 'Saving Changes...' : 'Save Changes'}
                 </button>
               </div>
             </form>

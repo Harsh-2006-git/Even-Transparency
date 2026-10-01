@@ -19,8 +19,8 @@ import RoleLoginNav from '../../components/RoleLoginNav';
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function PlacementLogin({ onLoginSuccess, onGoToLanding, onSwitchRole, onGoToHub }) {
-  const [email, setEmail] = useState('placement@evenshift.org');
-  const [password, setPassword] = useState('placement@pass123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -73,24 +73,18 @@ export default function PlacementLogin({ onLoginSuccess, onGoToLanding, onSwitch
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Authentication failed. Please check credentials.');
+        throw new Error(data.message || 'No placement coordinator found with this email.');
+      }
+
+      // Dedicated portal check: ensure only Placement Coordinator role is admitted
+      const userRole = (data.user?.role || data.user?.userType || '').toLowerCase();
+      if (!userRole.includes('placement') && !userRole.includes('coord')) {
+        throw new Error('No placement coordinator found with this email.');
       }
 
       onLoginSuccess(data.user, data.token);
     } catch (err) {
-      console.warn('Network issue, using placement offline login:', err.message);
-      const fallbackUser = {
-        id: 'usr-plc-001',
-        full_name: 'Sunita Rao',
-        first_name: 'Sunita',
-        last_name: 'Rao',
-        email: email.trim() || 'placement@evenshift.org',
-        role: 'Placement Coordinator',
-        userType: 'PlacementCoordinator',
-        department: 'Corporate Partnerships & Placements',
-        status: 'active'
-      };
-      onLoginSuccess(fallbackUser, 'mock_token_placement');
+      setError(err.message || 'No placement coordinator found with this email.');
     } finally {
       setLoading(false);
     }
@@ -183,15 +177,6 @@ export default function PlacementLogin({ onLoginSuccess, onGoToLanding, onSwitch
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Enter credentials to access employer pipelines
               </p>
-            </div>
-
-            {/* Quick Demo Credentials Pill */}
-            <div className="p-2 bg-emerald-50/60 rounded-xl border border-emerald-200/80 text-[11px] space-y-0.5">
-              <div className="flex justify-between items-center text-emerald-800">
-                <span className="font-semibold text-[10.5px] text-emerald-900">Demo Placement:</span>
-                <span className="text-[9.5px] text-emerald-700 font-bold bg-emerald-100 px-1 py-0.2 rounded">Pre-filled</span>
-              </div>
-              <p className="text-[10.5px] text-slate-700 font-mono">placement@evenshift.org / placement@pass123</p>
             </div>
 
             {/* Form */}

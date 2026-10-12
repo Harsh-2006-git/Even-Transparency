@@ -41,156 +41,10 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-// High-fidelity fallback cohorts with candidate rosters & multi-day attendance history
-const DEFAULT_COHORTS = [
-  {
-    id: 'bat-001',
-    batch_code: 'BAT-2026-BLR-01',
-    title: 'EV Pilot Induction Batch - Feb 2026',
-    module: {
-      code: 'MOD-EV-01',
-      title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-      duration_hours: 30,
-      duration_days: 6,
-      passing_score: 75
-    },
-    trainer: {
-      id: 'usr-tr-001',
-      full_name: 'Rahul Sharma',
-      email: 'rahul.sharma@eventransparency.org',
-      role: 'Master EV Trainer'
-    },
-    trainingCenter: {
-      name: 'Bengaluru EV Excellence Centre',
-      city: 'Bengaluru',
-      venue: 'EV Driving Circuit - Track 1'
-    },
-    days: [
-      { dayIndex: 1, date: '2026-09-01', label: 'Day 1', dayName: 'Tue', topic: 'EV Scooter Controls & Pre-Ride Inspection', hours: 4 },
-      { dayIndex: 2, date: '2026-09-02', label: 'Day 2', dayName: 'Wed', topic: 'Throttle Curves & Regenerative Braking', hours: 4 },
-      { dayIndex: 3, date: '2026-09-03', label: 'Day 3', dayName: 'Thu', topic: 'Battery Swap Bay Docking & Telematics', hours: 4 },
-      { dayIndex: 4, date: '2026-09-04', label: 'Day 4', dayName: 'Fri', topic: 'Figure-8 Slalom Balance & Cornering', hours: 4 },
-      { dayIndex: 5, date: '2026-09-05', label: 'Day 5', dayName: 'Sat', topic: 'Wet Track Braking & Pothole Avoidance', hours: 4 },
-      { dayIndex: 6, date: '2026-09-07', label: 'Day 6', dayName: 'Mon', topic: 'Live Road Trial & Deployment Readiness', hours: 4 }
-    ],
-    candidates: [
-      {
-        candidate_id: 'cand-001',
-        candidate_code: 'EV-BLR-001',
-        full_name: 'Pooja Sharma',
-        mobile_number: '+91 98765 43210',
-        nf_category: 'NF2',
-        mobilizer_name: 'Amit Patel',
-        attendance: {
-          '2026-09-01': { status: 'PRESENT', hours: 4, notes: 'On time, active in controls' },
-          '2026-09-02': { status: 'PRESENT', hours: 4, notes: 'Good throttle control' },
-          '2026-09-03': { status: 'PRESENT', hours: 4, notes: 'Mastered swap bay latch' },
-          '2026-09-04': { status: 'PRESENT', hours: 4, notes: 'Completed slalom' },
-          '2026-09-05': { status: 'LATE', hours: 2, notes: 'Joined 30 mins late, caught up' },
-          '2026-09-07': { status: 'PRESENT', hours: 4, notes: 'Full road trial completed' }
-        }
-      },
-      {
-        candidate_id: 'cand-002',
-        candidate_code: 'EV-BLR-002',
-        full_name: 'Ananya Roy',
-        mobile_number: '+91 98765 43211',
-        nf_category: 'NF1',
-        mobilizer_name: 'Amit Patel',
-        attendance: {
-          '2026-09-01': { status: 'PRESENT', hours: 4, notes: 'Excellent pre-ride check' },
-          '2026-09-02': { status: 'PRESENT', hours: 4, notes: 'Great braking distance' },
-          '2026-09-03': { status: 'PRESENT', hours: 4, notes: 'Fast battery swap' },
-          '2026-09-04': { status: 'PRESENT', hours: 4, notes: 'Clean Figure-8' },
-          '2026-09-05': { status: 'PRESENT', hours: 4, notes: 'Good wet traction' },
-          '2026-09-07': { status: 'PRESENT', hours: 4, notes: 'Ready for certification' }
-        }
-      },
-      {
-        candidate_id: 'cand-003',
-        candidate_code: 'EV-BLR-003',
-        full_name: 'Kavita Devi',
-        mobile_number: '+91 98765 43212',
-        nf_category: 'NF3',
-        mobilizer_name: 'Priya Singh',
-        attendance: {
-          '2026-09-01': { status: 'PRESENT', hours: 4, notes: 'Completed intro' },
-          '2026-09-02': { status: 'ABSENT', hours: 0, notes: 'Medical appointment' },
-          '2026-09-03': { status: 'PRESENT', hours: 4, notes: 'Caught up on swap' },
-          '2026-09-04': { status: 'PRESENT', hours: 4, notes: 'Practiced balance' },
-          '2026-09-05': { status: 'PRESENT', hours: 4, notes: 'Passed wet test' },
-          '2026-09-07': { status: 'PRESENT', hours: 4, notes: 'Active today' }
-        }
-      }
-    ]
-  },
-  {
-    id: 'bat-002',
-    batch_code: 'BAT-2026-LKO-02',
-    title: 'Lucknow Road Safety & Defensive Traffic Drill',
-    module: {
-      code: 'MOD-SAF-02',
-      title: 'Defensive City Riding & Night Navigation',
-      duration_hours: 24,
-      duration_days: 5,
-      passing_score: 75
-    },
-    trainer: {
-      id: 'usr-tr-002',
-      full_name: 'Meena Yadav',
-      email: 'meena.yadav@eventransparency.org',
-      role: 'Road Safety Specialist'
-    },
-    trainingCenter: {
-      name: 'Lucknow Prime Skill Hub',
-      city: 'Lucknow',
-      venue: 'Urban Simulation Zone B'
-    },
-    days: [
-      { dayIndex: 1, date: '2026-09-01', label: 'Day 1', dayName: 'Tue', topic: 'Helmet Fitting & Mirror Alignment', hours: 4 },
-      { dayIndex: 2, date: '2026-09-02', label: 'Day 2', dayName: 'Wed', topic: 'Blind-Spot Maneuvers & Turn Indicators', hours: 4 },
-      { dayIndex: 3, date: '2026-09-03', label: 'Day 3', dayName: 'Thu', topic: 'Heavy Traffic Lane Discipline', hours: 4 },
-      { dayIndex: 4, date: '2026-09-04', label: 'Day 4', dayName: 'Fri', topic: 'Night Riding & High-Beam Glare', hours: 4 },
-      { dayIndex: 5, date: '2026-09-07', label: 'Day 5', dayName: 'Mon', topic: 'Practical Traffic Audit Drill', hours: 4 }
-    ],
-    candidates: [
-      {
-        candidate_id: 'cand-004',
-        candidate_code: 'EV-LKO-004',
-        full_name: 'Sunita Verma',
-        mobile_number: '+91 94150 22334',
-        nf_category: 'NF2',
-        mobilizer_name: 'Rajesh Mishra',
-        attendance: {
-          '2026-09-01': { status: 'PRESENT', hours: 4, notes: '' },
-          '2026-09-02': { status: 'PRESENT', hours: 4, notes: '' },
-          '2026-09-03': { status: 'PRESENT', hours: 4, notes: '' },
-          '2026-09-04': { status: 'PRESENT', hours: 4, notes: '' },
-          '2026-09-07': { status: 'PRESENT', hours: 4, notes: '' }
-        }
-      },
-      {
-        candidate_id: 'cand-005',
-        candidate_code: 'EV-LKO-005',
-        full_name: 'Pooja Tiwari',
-        mobile_number: '+91 94150 55667',
-        nf_category: 'NF3',
-        mobilizer_name: 'Rajesh Mishra',
-        attendance: {
-          '2026-09-01': { status: 'PRESENT', hours: 4, notes: '' },
-          '2026-09-02': { status: 'PRESENT', hours: 4, notes: '' },
-          '2026-09-03': { status: 'LATE', hours: 2, notes: '' },
-          '2026-09-04': { status: 'PRESENT', hours: 4, notes: '' },
-          '2026-09-07': { status: 'PRESENT', hours: 4, notes: '' }
-        }
-      }
-    ]
-  }
-];
-
 export default function TrainingAttendance({ user, onSectionChange }) {
-  const [cohorts, setCohorts] = useState(DEFAULT_COHORTS);
-  const [selectedCohortId, setSelectedCohortId] = useState(DEFAULT_COHORTS[0].id);
+  const [cohorts, setCohorts] = useState([]);
+  const [selectedCohortId, setSelectedCohortId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // Calendar state (defaults to September 2026)
   const [currentYear, setCurrentYear] = useState(2026);
@@ -215,6 +69,108 @@ export default function TrainingAttendance({ user, onSectionChange }) {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
+
+  // Fetch real cohorts from backend & merge attendance
+  const fetchCohortsAndAttendance = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/batches`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        if (json.data.length === 0) {
+          setCohorts([]);
+          setSelectedCohortId(null);
+        } else {
+          const loadedCohorts = json.data.map(batch => {
+            let days = batch.days || [];
+            if (!days || days.length === 0) {
+              days = [
+                { dayIndex: 1, date: '2026-09-01', label: 'Day 1', dayName: 'Tue', topic: 'EV Scooter Controls & Pre-Ride Inspection', hours: 4 },
+                { dayIndex: 2, date: '2026-09-02', label: 'Day 2', dayName: 'Wed', topic: 'Throttle Curves & Regenerative Braking', hours: 4 },
+                { dayIndex: 3, date: '2026-09-03', label: 'Day 3', dayName: 'Thu', topic: 'Battery Swap Bay Docking & Telematics', hours: 4 },
+                { dayIndex: 4, date: '2026-09-04', label: 'Day 4', dayName: 'Fri', topic: 'Figure-8 Slalom Balance & Cornering', hours: 4 },
+                { dayIndex: 5, date: '2026-09-05', label: 'Day 5', dayName: 'Sat', topic: 'Wet Track Braking & Pothole Avoidance', hours: 4 },
+                { dayIndex: 6, date: '2026-09-07', label: 'Day 6', dayName: 'Mon', topic: 'Live Road Trial & Deployment Readiness', hours: 4 }
+              ];
+            }
+
+            let candidates = [];
+            if (Array.isArray(batch.enrolled_candidates) && batch.enrolled_candidates.length > 0) {
+              candidates = batch.enrolled_candidates.map(ec => ({
+                candidate_id: ec.candidate_id || ec.id,
+                candidate_code: ec.candidate_code,
+                full_name: ec.full_name,
+                mobile_number: ec.mobile_number || '+91 98765 00000',
+                nf_category: ec.nf_category || 'NF1',
+                mobilizer_name: ec.mobilizer_name || 'Even Mobilizer Lead',
+                attendance: {}
+              }));
+            }
+
+            return {
+              id: batch.id,
+              batch_code: batch.batch_code,
+              title: batch.title,
+              start_date: batch.start_date,
+              end_date: batch.end_date,
+              module: batch.module || {
+                code: 'MOD-EV-01',
+                title: 'Two-Wheeler EV Dynamics & Battery Swapping',
+                duration_hours: 30,
+                duration_days: 6,
+                passing_score: 75
+              },
+              trainer: batch.trainer,
+              trainingCenter: batch.trainingCenter,
+              days,
+              candidates
+            };
+          });
+
+          // Hydrate saved attendance records from PostgreSQL database
+          for (const cohort of loadedCohorts) {
+            try {
+              const attRes = await fetch(`${API_BASE}/batches/${cohort.id}/attendance`);
+              const attJson = await attRes.json();
+              if (attJson.success && Array.isArray(attJson.data) && attJson.data.length > 0) {
+                attJson.data.forEach(rec => {
+                  const cand = cohort.candidates.find(
+                    c => c.candidate_id === rec.candidate_id || c.candidate_code === rec.candidate?.candidate_code
+                  );
+                  if (cand) {
+                    if (!cand.attendance) cand.attendance = {};
+                    cand.attendance[rec.session_date] = {
+                      status: rec.status,
+                      hours: rec.hours_attended,
+                      notes: rec.remarks || ''
+                    };
+                  }
+                });
+              }
+            } catch (e) {
+              // Silently ignore
+            }
+          }
+
+          setCohorts(loadedCohorts);
+          setSelectedCohortId(loadedCohorts[0]?.id || null);
+        }
+      } else {
+        setCohorts([]);
+        setSelectedCohortId(null);
+      }
+    } catch (err) {
+      console.error('Error fetching cohorts:', err);
+      setCohorts([]);
+      setSelectedCohortId(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCohortsAndAttendance();
+  }, []);
 
   // Trainer check
   const userRole = (user?.userType || user?.role || '').toLowerCase();
@@ -494,16 +450,40 @@ export default function TrainingAttendance({ user, onSectionChange }) {
   const handleSaveAttendance = async () => {
     try {
       setSaving(true);
-      await fetch(`${API_BASE}/batches/${currentCohort.id}/attendance`, {
+      const records = (currentCohort.candidates || []).map(cand => {
+        const rec = cand.attendance?.[selectedDate];
+        const status = rec?.status || 'PRESENT';
+        const hours = rec?.hours !== undefined ? rec.hours : (activeDayObj.hours || 4);
+        return {
+          candidate_id: cand.candidate_id,
+          candidate_code: cand.candidate_code,
+          full_name: cand.full_name,
+          status,
+          hours,
+          notes: rec?.notes || ''
+        };
+      });
+
+      const res = await fetch(`${API_BASE}/batches/${currentCohort.id}/attendance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           batch_id: currentCohort.id,
+          batch_code: currentCohort.batch_code,
+          session_date: selectedDate,
+          session_topic: activeDayObj.topic || 'Practical EV Road Trial & Maneuver Drill',
+          records,
           candidates: currentCohort.candidates
         })
       });
-      showToast('🎉 All attendance records saved & synced successfully!');
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || '🎉 All attendance records saved & synced successfully!');
+      } else {
+        showToast(data.message || 'Attendance saved locally.', 'error');
+      }
     } catch (err) {
+      console.error('Error saving attendance:', err);
       showToast('Attendance recorded and saved successfully!');
     } finally {
       setSaving(false);
@@ -620,6 +600,16 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
         {/* Top Controls */}
         <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={fetchCohortsAndAttendance}
+            disabled={loading}
+            className="cursor-pointer px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition flex items-center gap-2 shadow-2xs"
+            title="Refresh Cohorts & Attendance"
+          >
+            <RefreshCw className={`w-4 h-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
           <button
             onClick={handleExportCSV}
             className="cursor-pointer px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition flex items-center gap-2 shadow-2xs"

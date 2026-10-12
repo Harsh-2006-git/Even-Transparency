@@ -474,25 +474,52 @@ export default function BatchCreate({ onBack, onBatchCreated }) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {trainers.map((tr) => {
                 const isSelected = formData.trainer_id === tr.id;
+                const isBooked = !!tr.is_booked;
+
                 return (
                   <div
                     key={tr.id}
-                    onClick={() => setFormData(prev => ({ ...prev, trainer_id: tr.id }))}
+                    onClick={() => {
+                      if (isBooked) {
+                        showToast(`Trainer "${tr.full_name}" is already assigned to active batch ${tr.assigned_batch?.batch_code || 'current batch'}. Only after completing the current batch can the next one be aligned.`, 'error');
+                        return;
+                      }
+                      setFormData(prev => ({ ...prev, trainer_id: tr.id }));
+                    }}
                     className={`p-5 rounded-2xl border-2 transition cursor-pointer relative flex flex-col justify-between ${
                       isSelected
                         ? 'border-indigo-600 bg-indigo-50/40 shadow-xs ring-2 ring-indigo-600/20'
+                        : isBooked
+                        ? 'border-amber-200 bg-amber-50/20 hover:border-amber-300'
                         : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
                     }`}
                   >
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-indigo-100 text-indigo-800 font-extrabold text-sm flex items-center justify-center shrink-0">
+                        <div className={`w-11 h-11 rounded-2xl font-extrabold text-sm flex items-center justify-center shrink-0 ${
+                          isBooked ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'
+                        }`}>
                           {tr.full_name?.split(' ').map(n => n[0]).join('') || 'TR'}
                         </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900">{tr.full_name}</h4>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-bold text-slate-900 truncate">{tr.full_name}</h4>
                           <span className="text-[11px] text-slate-500 block">{tr.city}</span>
                         </div>
+                      </div>
+
+                      {/* Trainer Booking Status Tag */}
+                      <div className="pt-1">
+                        {isBooked ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100/80 text-amber-900 text-[10px] font-bold border border-amber-300/60 leading-none">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                            <span>Already assigned: {tr.assigned_batch?.batch_code || 'Active Batch'} (Booked)</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 leading-none">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            <span>Available for next batch</span>
+                          </span>
+                        )}
                       </div>
 
                       <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
@@ -505,7 +532,9 @@ export default function BatchCreate({ onBack, onBatchCreated }) {
                       <div className="flex items-center gap-1 text-amber-600 font-bold">
                         <span>★ {tr.rating || '4.8'}</span>
                       </div>
-                      <span className="text-slate-500 font-medium">{tr.active_batches_count || 1} active batch(es)</span>
+                      <span className={`text-[11px] font-semibold ${isBooked ? 'text-amber-700 font-bold' : 'text-slate-500'}`}>
+                        {isBooked ? 'Already in training batch' : 'Ready to align'}
+                      </span>
                     </div>
 
                     {isSelected && (

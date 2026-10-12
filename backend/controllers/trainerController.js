@@ -28,10 +28,38 @@ export const getTrainers = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
+    // Fetch all active batches to accurately determine trainer booking status
+    const activeBatches = await db.TrainingBatch.findAll({
+      where: {
+        status: {
+          [db.Sequelize.Op.notIn]: ['COMPLETED', 'CANCELLED', 'completed', 'cancelled']
+        }
+      },
+      attributes: ['id', 'batch_code', 'title', 'status', 'start_date', 'end_date', 'primary_trainer_id', 'trainer_id']
+    });
+
     let list = records.map(item => {
       const raw = item.toJSON();
       const u = raw.user || {};
       const tc = raw.trainingCenter || {};
+
+      // Find if this trainer is currently assigned to an active batch
+      const assignedBatchRecord = activeBatches.find(b => 
+        (b.primary_trainer_id && (b.primary_trainer_id === raw.user_id || b.primary_trainer_id === raw.id)) ||
+        (b.trainer_id && (b.trainer_id === raw.id || b.trainer_id === raw.user_id))
+      );
+
+      const isBooked = !!assignedBatchRecord;
+      const assignmentStatus = isBooked ? 'Already in training batch assigned' : 'Available';
+      const assignedBatch = assignedBatchRecord ? {
+        id: assignedBatchRecord.id,
+        batch_code: assignedBatchRecord.batch_code,
+        title: assignedBatchRecord.title,
+        status: assignedBatchRecord.status,
+        start_date: assignedBatchRecord.start_date,
+        end_date: assignedBatchRecord.end_date
+      } : null;
+
       return {
         id: raw.id,
         user_id: raw.user_id,
@@ -49,6 +77,9 @@ export const getTrainers = async (req, res) => {
         assigned_state: tc.state || 'Karnataka',
         organization_name: raw.organization?.name || raw.organization?.organization_name || 'Even Mobility Foundation',
         status: raw.status || u.status || 'active',
+        is_booked: isBooked,
+        assignment_status: assignmentStatus,
+        assigned_batch: assignedBatch,
         avatar_url: u.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.full_name || 'Trainer')}`,
         created_at: raw.created_at,
         updated_at: raw.updated_at
@@ -235,18 +266,132 @@ export const updateTrainer = async (req, res) => {
 export const deleteTrainer = async (req, res) => {
   try {
     const { id } = req.params;
-    const trainer = await db.Trainer.findByPk(id);
+    let trainer = await db.Trainer.findByPk(id);
     if (!trainer) {
-      return res.status(404).json({ success: false, message: 'Trainer not found' });
+      trainer = await db.Trainer.findOne({ where: { user_id: id } });
     }
 
-    const userId = trainer.user_id;
-    await trainer.destroy();
-    if (userId) {
+    const userId = trainer?.user_id || id;
+    const trainerId = trainer?.id || id;
+
+    // 1. Clean up trainer observations referencing this trainer
+    if (db.TrainerObservation) {
+      await db.TrainerObservation.destroy({
+        where: {
+          [db.Sequelize.Op.or]: [
+            { trainer_id: trainerId },
+            ...(userId ? [{ trainer_id: userId }] : [])
+          ]
+        }
+      });
+    }
+
+    // 2. Clean up trainer feedbacks
+    if (db.TrainerFeedback) {
+      await db.TrainerFeedback.destroy({
+        where: {
+          [db.Sequelize.Op.or]: [
+            { trainer_id: trainerId },
+            ...(userId ? [{ trainer_id: userId }] : [])
+          ]
+        }
+      });
+    }
+
+    // 3. Nullify trainer references in assessments
+    if (db.TrainingAssessment) {
+      const assessmentConditions = [
+        { evaluated_by_trainer_id: trainerId },
+        { assessed_by: trainerId }
+      ];
+      if (userId) {
+        assessmentConditions.push({ evaluated_by_trainer_id: userId });
+        assessmentConditions.push({ assessed_by: userId });
+      }
+      await db.TrainingAssessment.update(
+        { evaluated_by_trainer_id: null, assessed_by: null },
+        { where: { [db.Sequelize.Op.or]: assessmentConditions } }
+      );
+    }
+
+    // 4. Nullify trainer assignments in batches
+    if (db.TrainingBatch) {
+      const batchConditions = [
+        { primary_trainer_id: trainerId },
+        { trainer_id: trainerId }
+      ];
+      if (userId) {
+        batchConditions.push({ primary_trainer_id: userId });
+        batchConditions.push({ trainer_id: userId });
+      }
+      await db.TrainingBatch.update(
+        { primary_trainer_id: null, trainer_id: null },
+        { where: { [db.Sequelize.Op.or]: batchConditions } }
+      );
+    }
+
+    // 4.1 Nullify candidate trainer assignments
+    if (db.Candidate) {
+      const candidateConditions = [
+        { trainer_id: trainerId },
+        { assigned_trainer_id: trainerId }
+      ];
+      if (userId) {
+        candidateConditions.push({ trainer_id: userId });
+        candidateConditions.push({ assigned_trainer_id: userId });
+      }
+      await db.Candidate.update(
+        { trainer_id: null, assigned_trainer_id: null },
+        { where: { [db.Sequelize.Op.or]: candidateConditions } }
+      );
+    }
+
+    // 4.2 Nullify training attendances marked_by
+    if (db.TrainingAttendance) {
+      const attendanceConditions = [
+        { marked_by_user_id: trainerId },
+        { marked_by: trainerId }
+      ];
+      if (userId) {
+        attendanceConditions.push({ marked_by_user_id: userId });
+        attendanceConditions.push({ marked_by: userId });
+      }
+      await db.TrainingAttendance.update(
+        { marked_by_user_id: null, marked_by: null },
+        { where: { [db.Sequelize.Op.or]: attendanceConditions } }
+      );
+    }
+
+    // 4.3 Clean user roles
+    if (db.UserRole && userId) {
+      await db.UserRole.destroy({
+        where: { user_id: userId }
+      });
+    }
+
+    // 5. Delete trainer profile
+    if (trainer) {
+      await trainer.destroy();
+    } else if (db.Trainer) {
+      await db.Trainer.destroy({
+        where: {
+          [db.Sequelize.Op.or]: [
+            { id: trainerId },
+            ...(userId ? [{ user_id: userId }] : [])
+          ]
+        }
+      });
+    }
+
+    // 6. Delete user account
+    if (userId && db.User) {
       await db.User.destroy({ where: { id: userId } });
     }
 
-    return res.json({ success: true, message: 'Trainer profile and user account deleted from database' });
+    return res.json({
+      success: true,
+      message: 'Trainer profile and user account deleted successfully from database'
+    });
   } catch (error) {
     console.error('Error deleting trainer:', error);
     return res.status(500).json({ success: false, message: error.message });

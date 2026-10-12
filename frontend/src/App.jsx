@@ -48,12 +48,16 @@ import EmployerManagement from './pages/placement/EmployerManagement';
 import PlacementDeployments from './pages/placement/PlacementDeployments';
 import HomeLanding from './pages/home/HomeLanding';
 import { normalizeRole, isSuperAdminRole } from './utils/roleUtils';
+import AccessDenied from './components/AccessDenied';
+import { checkSectionAuthorization } from './utils/sectionPermissions';
 
 export default function App() {
   // Session State (persisted in localStorage)
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('eventransparency_session');
+      const token = localStorage.getItem('eventransparency_token');
+      if (!token) return null;
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -79,7 +83,8 @@ export default function App() {
     if (hash.startsWith('#login') || hash.startsWith('#/login')) return 'login';
 
     const savedSession = localStorage.getItem('eventransparency_session');
-    if (savedSession) {
+    const token = localStorage.getItem('eventransparency_token');
+    if (savedSession && token) {
       return 'app';
     }
 
@@ -143,20 +148,14 @@ export default function App() {
         setCurrentView('landing');
       } else {
         const session = localStorage.getItem('eventransparency_session');
-        if (session) {
+        const token = localStorage.getItem('eventransparency_token');
+        if (session && token) {
           setCurrentView('app');
-          let section = extractSectionFromHash(hash) || localStorage.getItem('eventransparency_active_section') || 'overview';
-          try {
-            const parsed = JSON.parse(session);
-            if (parsed?.userType === 'Mobilizer' && (section === 'training' || section === 'batches' || section === 'training-batches')) {
-              section = 'candidates';
-              window.location.hash = '#/candidates';
-            }
-          } catch (e) {
-            // ignore
+          const extracted = extractSectionFromHash(hash);
+          if (extracted) {
+            setActiveSection(extracted);
+            localStorage.setItem('eventransparency_active_section', extracted);
           }
-          setActiveSection(section);
-          localStorage.setItem('eventransparency_active_section', section);
         } else if (hash.startsWith('#/')) {
           if (hash.includes('mobilizer')) setActiveLoginRole('mobilizer');
           else if (hash.includes('trainer')) setActiveLoginRole('trainer');
@@ -197,15 +196,6 @@ export default function App() {
         });
     }
   }, []);
-
-  // Prevent mobilizer from accessing training sections
-  useEffect(() => {
-    if (currentUserType === 'Mobilizer' && (activeSection === 'training' || activeSection === 'batches' || activeSection === 'training-batches')) {
-      setActiveSection('candidates');
-      localStorage.setItem('eventransparency_active_section', 'candidates');
-      window.location.hash = '#/candidates';
-    }
-  }, [currentUserType, activeSection]);
 
   // Handle Login Success
   const handleLoginSuccess = (userData, token) => {
@@ -282,20 +272,6 @@ export default function App() {
     } else {
       handleSelectLoginRole(role);
     }
-  };
-
-  // Switch Role View on the fly (for multi-role dashboard testing)
-  const handleSwitchRole = (newRoleType, newRoleLabel) => {
-    const updatedUser = {
-      ...user,
-      userType: newRoleType,
-      role: newRoleLabel,
-      full_name: `${newRoleLabel} User`,
-    };
-    setUser(updatedUser);
-    localStorage.setItem('eventransparency_session', JSON.stringify(updatedUser));
-    setActiveSection('overview');
-    window.location.hash = '#/overview';
   };
 
   // 1. Render Public Landing View
@@ -393,7 +369,6 @@ export default function App() {
         onSectionChange={handleSectionChange}
         activeSection={activeSection}
         onGoToLanding={handleGoToLanding}
-        onSwitchRole={handleSwitchRole}
       />
 
       {/* Body: Sidebar + Main Content */}
@@ -415,38 +390,59 @@ export default function App() {
             desktopCollapsed ? 'md:ml-0' : 'md:ml-0'
           } p-3 sm:p-5 lg:p-6 overflow-x-hidden min-h-[calc(100vh-64px)] bg-[#FDFBFE]`}
         >
-          {/* Candidate Experience: Dedicated Portal with separate pages for each candidate section */}
-          {currentUserType === 'Candidate' ? (
-            <>
-              {(!['profile', 'documents', 'nf-status', 'training', 'my-batch', 'attendance', 'training-progress', 'assessments', 'offers', 'notifications', 'support'].includes(activeSection)) && (
-                <CandidateDashboard user={user} onSectionChange={handleSectionChange} />
-              )}
-              {activeSection === 'profile' && (
-                <CandidateProfilePage user={user} onSectionChange={handleSectionChange} />
-              )}
-              {activeSection === 'documents' && (
-                <CandidateDocumentsPage user={user} onSectionChange={handleSectionChange} />
-              )}
-              {activeSection === 'nf-status' && (
-                <CandidateNFStatusPage user={user} onSectionChange={handleSectionChange} />
-              )}
-              {(activeSection === 'training' || activeSection === 'my-batch' || activeSection === 'attendance' || activeSection === 'training-progress') && (
-                <CandidateTrainingPage user={user} activeSection={activeSection} onSectionChange={handleSectionChange} />
-              )}
-              {activeSection === 'assessments' && (
-                <CandidateAssessmentsPage user={user} onSectionChange={handleSectionChange} />
-              )}
-              {activeSection === 'offers' && (
-                <CandidateJobOffersPage user={user} onSectionChange={handleSectionChange} />
-              )}
-              {activeSection === 'support' && (
-                <CandidateSupportPage user={user} onSectionChange={handleSectionChange} />
-              )}
-            </>
-          ) : (
-            <>
-              {/* A. Role-Specific Dashboards for 'overview' */}
-              {activeSection === 'overview' && (
+          {(() => {
+            const authCheck = checkSectionAuthorization(currentUserType, activeSection);
+            if (!authCheck.authorized) {
+              return (
+                <AccessDenied
+                  user={user}
+                  currentUserType={currentUserType}
+                  requestedSection={activeSection}
+                  allowedRoles={authCheck.allowedRoles}
+                  onGoToDashboard={() => {
+                    const homeSection = currentUserType === 'Candidate' ? 'dashboard' : 'overview';
+                    handleSectionChange(homeSection);
+                  }}
+                  onLogout={handleLogout}
+                />
+              );
+            }
+
+            if (currentUserType === 'Candidate') {
+              return (
+                <>
+                  {(!['profile', 'documents', 'nf-status', 'training', 'my-batch', 'attendance', 'training-progress', 'assessments', 'offers', 'notifications', 'support'].includes(activeSection)) && (
+                    <CandidateDashboard user={user} onSectionChange={handleSectionChange} />
+                  )}
+                  {activeSection === 'profile' && (
+                    <CandidateProfilePage user={user} onSectionChange={handleSectionChange} />
+                  )}
+                  {activeSection === 'documents' && (
+                    <CandidateDocumentsPage user={user} onSectionChange={handleSectionChange} />
+                  )}
+                  {activeSection === 'nf-status' && (
+                    <CandidateNFStatusPage user={user} onSectionChange={handleSectionChange} />
+                  )}
+                  {(activeSection === 'training' || activeSection === 'my-batch' || activeSection === 'attendance' || activeSection === 'training-progress') && (
+                    <CandidateTrainingPage user={user} activeSection={activeSection} onSectionChange={handleSectionChange} />
+                  )}
+                  {activeSection === 'assessments' && (
+                    <CandidateAssessmentsPage user={user} onSectionChange={handleSectionChange} />
+                  )}
+                  {activeSection === 'offers' && (
+                    <CandidateJobOffersPage user={user} onSectionChange={handleSectionChange} />
+                  )}
+                  {activeSection === 'support' && (
+                    <CandidateSupportPage user={user} onSectionChange={handleSectionChange} />
+                  )}
+                </>
+              );
+            }
+
+            return (
+              <>
+                {/* A. Role-Specific Dashboards for 'overview' */}
+                {activeSection === 'overview' && (
                 <>
                   {currentUserType === 'Mobilizer' && <MobilizerDashboard user={user} onSectionChange={handleSectionChange} />}
                   {currentUserType === 'Trainer' && <TrainerDashboard user={user} onSectionChange={handleSectionChange} />}
@@ -661,7 +657,8 @@ export default function App() {
             />
           )}
             </>
-          )}
+          );
+        })()}
         </main>
       </div>
     </div>

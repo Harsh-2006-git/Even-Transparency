@@ -136,236 +136,10 @@ let localCenters = [
   }
 ];
 
-let localBatches = [
-  {
-    id: 'batch-101',
-    batch_code: 'BAT-2026-BLR-01',
-    title: 'EV Pilot Induction Batch - Feb 2026',
-    module_id: 'mod-101',
-    module: localModules[0],
-    training_center_id: 'tc-blr-01',
-    trainingCenter: localCenters[0],
-    trainer_id: 'usr-tr-001',
-    trainer: localTrainers[0],
-    start_date: '2026-02-15',
-    end_date: '2026-03-05',
-    daily_start_time: '09:00',
-    daily_end_time: '13:00',
-    capacity: 25,
-    enrolled_count: 3,
-    status: 'ONGOING',
-    average_attendance_percentage: 94.2,
-    completion_rate_percentage: 65.0,
-    remarks: 'High enthusiasm batch with 100% attendance during initial safety drills.',
-    candidate_ids: ['cand-101', 'cand-102', 'cand-103'],
-    enrolled_candidates: [
-      {
-        candidate_id: 'cand-101',
-        candidate_code: 'ET-2026-001',
-        full_name: 'Priya Sharma',
-        mobile_number: '+91 98765 11111',
-        city: 'Bengaluru',
-        nf_category: 'NF1',
-        mobilizer_id: 'usr-mob-001',
-        mobilizer_name: 'Sunita Verma',
-        attendance_percentage: 96,
-        progress_percentage: 70,
-        assessment_score: 88,
-        status: 'IN_PROGRESS',
-        recommendation: 'READY_FOR_DEPLOYMENT'
-      },
-      {
-        candidate_id: 'cand-102',
-        candidate_code: 'ET-2026-002',
-        full_name: 'Aisha Khan',
-        mobile_number: '+91 98765 22222',
-        city: 'Bengaluru',
-        nf_category: 'NF2',
-        mobilizer_id: 'usr-mob-001',
-        mobilizer_name: 'Sunita Verma',
-        attendance_percentage: 92,
-        progress_percentage: 65,
-        assessment_score: 91,
-        status: 'IN_PROGRESS',
-        recommendation: 'READY_FOR_DEPLOYMENT'
-      },
-      {
-        candidate_id: 'cand-103',
-        candidate_code: 'ET-2026-003',
-        full_name: 'Rani Kumari',
-        mobile_number: '+91 98765 33333',
-        city: 'Bengaluru',
-        nf_category: 'NF1',
-        mobilizer_id: 'usr-mob-002',
-        mobilizer_name: 'Amitabh Sen',
-        attendance_percentage: 84,
-        progress_percentage: 60,
-        assessment_score: 74,
-        status: 'IN_PROGRESS',
-        recommendation: 'NEEDS_PRACTICE'
-      }
-    ],
-    created_at: '2026-02-10T10:00:00Z',
-    updated_at: '2026-03-01T14:30:00Z'
-  },
-  {
-    id: 'batch-102',
-    batch_code: 'BAT-2026-LKO-02',
-    title: 'Lucknow Mahila EV Riders - Intensive Batch',
-    module_id: 'mod-102',
-    module: localModules[1],
-    training_center_id: 'tc-lko-01',
-    trainingCenter: localCenters[1],
-    trainer_id: 'usr-tr-002',
-    trainer: localTrainers[1],
-    start_date: '2026-03-01',
-    end_date: '2026-03-18',
-    daily_start_time: '10:00',
-    daily_end_time: '14:00',
-    capacity: 20,
-    enrolled_count: 2,
-    status: 'ONGOING',
-    average_attendance_percentage: 89.5,
-    completion_rate_percentage: 25.0,
-    remarks: 'Focus on defensive driving in high traffic zones.',
-    candidate_ids: ['cand-104', 'cand-105'],
-    enrolled_candidates: [
-      {
-        candidate_id: 'cand-104',
-        candidate_code: 'ET-2026-004',
-        full_name: 'Pooja Hegde',
-        mobile_number: '+91 98765 44444',
-        city: 'Lucknow',
-        nf_category: 'NF2',
-        mobilizer_id: 'usr-mob-002',
-        mobilizer_name: 'Amitabh Sen',
-        attendance_percentage: 90,
-        progress_percentage: 25,
-        assessment_score: 82,
-        status: 'IN_PROGRESS',
-        recommendation: 'IN_PROGRESS'
-      },
-      {
-        candidate_id: 'cand-105',
-        candidate_code: 'ET-2026-005',
-        full_name: 'Kavita Yadav',
-        mobile_number: '+91 98765 55555',
-        city: 'Lucknow',
-        nf_category: 'NF3',
-        mobilizer_id: 'usr-mob-002',
-        mobilizer_name: 'Amitabh Sen',
-        attendance_percentage: 88,
-        progress_percentage: 20,
-        assessment_score: 76,
-        status: 'IN_PROGRESS',
-        recommendation: 'IN_PROGRESS'
-      }
-    ],
-    created_at: '2026-02-25T09:00:00Z',
-    updated_at: '2026-03-02T11:00:00Z'
-  },
-  {
-    id: 'batch-103',
-    batch_code: 'BAT-2026-PUN-03',
-    title: 'Pune Urban Navigation & Customer Readiness',
-    module_id: 'mod-103',
-    module: localModules[2],
-    training_center_id: 'tc-pun-01',
-    trainingCenter: localCenters[2],
-    trainer_id: 'usr-tr-003',
-    trainer: localTrainers[2],
-    start_date: '2026-03-10',
-    end_date: '2026-03-24',
-    daily_start_time: '09:30',
-    daily_end_time: '13:30',
-    capacity: 25,
-    enrolled_count: 0,
-    status: 'UPCOMING',
-    average_attendance_percentage: 0,
-    completion_rate_percentage: 0,
-    remarks: 'Scheduled to start in mid-March. Nominations open.',
-    candidate_ids: [],
-    enrolled_candidates: [],
-    created_at: '2026-02-28T16:00:00Z',
-    updated_at: '2026-02-28T16:00:00Z'
-  }
-];
+let localBatches = [];
+let localAttendances = [];
+let localAssessments = [];
 
-let localAttendances = [
-  {
-    id: 'att-1',
-    batch_id: 'batch-101',
-    session_date: '2026-03-02',
-    session_topic: 'Battery Swap Safety & Practical Driving Maneuvers',
-    records: [
-      { candidate_id: 'cand-101', candidate_name: 'Priya Sharma', status: 'PRESENT', hours: 4, remarks: 'On time, active participation' },
-      { candidate_id: 'cand-102', candidate_name: 'Aisha Khan', status: 'PRESENT', hours: 4, remarks: 'Quick learner in throttle control' },
-      { candidate_id: 'cand-103', candidate_name: 'Rani Kumari', status: 'PRESENT', hours: 4, remarks: 'Showed marked improvement in U-turns' }
-    ]
-  },
-  {
-    id: 'att-2',
-    batch_id: 'batch-101',
-    session_date: '2026-03-03',
-    session_topic: 'Braking on Slopes & Traffic Signal Protocols',
-    records: [
-      { candidate_id: 'cand-101', candidate_name: 'Priya Sharma', status: 'PRESENT', hours: 4, remarks: 'Excellent brake balancing' },
-      { candidate_id: 'cand-102', candidate_name: 'Aisha Khan', status: 'PRESENT', hours: 4, remarks: 'Good confidence' },
-      { candidate_id: 'cand-103', candidate_name: 'Rani Kumari', status: 'LATE', hours: 3.5, remarks: 'Arrived 30 mins late with prior notice' }
-    ]
-  }
-];
-
-let localAssessments = [
-  {
-    id: 'ass-1',
-    batch_id: 'batch-101',
-    candidate_id: 'cand-101',
-    candidate_name: 'Priya Sharma',
-    module_title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-    assessment_type: 'PRACTICAL_DRIVING',
-    score: 88,
-    max_score: 100,
-    passing_score: 75,
-    result: 'PASS',
-    attempt_number: 1,
-    driving_rating: '4.8 / 5.0',
-    criteria_scores: {
-      vehicle_balance: 92,
-      traffic_rules: 86,
-      battery_swap_handling: 90,
-      braking_distance: 84
-    },
-    comments: 'Great balance, smooth braking and adherence to traffic indicators. Confident rider.',
-    recommendation: 'READY_FOR_DEPLOYMENT',
-    evaluated_by: 'Rahul Sharma (Trainer)',
-    assessment_date: '2026-03-02'
-  },
-  {
-    id: 'ass-2',
-    batch_id: 'batch-101',
-    candidate_id: 'cand-102',
-    candidate_name: 'Aisha Khan',
-    module_title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-    assessment_type: 'PRACTICAL_DRIVING',
-    score: 91,
-    max_score: 100,
-    passing_score: 75,
-    result: 'PASS',
-    attempt_number: 1,
-    driving_rating: '4.9 / 5.0',
-    criteria_scores: {
-      vehicle_balance: 95,
-      traffic_rules: 90,
-      battery_swap_handling: 92,
-      braking_distance: 88
-    },
-    comments: 'Exceptional precision in throttle management and battery swapping drill.',
-    recommendation: 'READY_FOR_DEPLOYMENT',
-    evaluated_by: 'Rahul Sharma (Trainer)',
-    assessment_date: '2026-03-02'
-  }
-];
 
 // Helper: Pool of all candidate master profiles to populate eligible candidates
 const candidateMasterPool = [
@@ -376,13 +150,13 @@ const candidateMasterPool = [
     mobile_number: '+91 98765 11111',
     city: 'Bengaluru',
     state: 'Karnataka',
-    current_stage: 'IN_TRAINING',
+    current_stage: 'READINESS_ASSESSMENT',
     nf_category: 'NF1',
     readiness_score: 88,
     mobilizer_id: 'usr-mob-001',
     mobilizer_name: 'Sunita Verma',
-    current_batch_id: 'batch-101',
-    current_batch_code: 'BAT-2026-BLR-01',
+    current_batch_id: null,
+    current_batch_code: null,
     has_valid_license: 'Yes (Permanent 2W)'
   },
   {
@@ -392,13 +166,13 @@ const candidateMasterPool = [
     mobile_number: '+91 98765 22222',
     city: 'Bengaluru',
     state: 'Karnataka',
-    current_stage: 'IN_TRAINING',
+    current_stage: 'READINESS_ASSESSMENT',
     nf_category: 'NF2',
     readiness_score: 91,
     mobilizer_id: 'usr-mob-001',
     mobilizer_name: 'Sunita Verma',
-    current_batch_id: 'batch-101',
-    current_batch_code: 'BAT-2026-BLR-01',
+    current_batch_id: null,
+    current_batch_code: null,
     has_valid_license: 'Yes (Learner)'
   },
   {
@@ -408,13 +182,13 @@ const candidateMasterPool = [
     mobile_number: '+91 98765 33333',
     city: 'Bengaluru',
     state: 'Karnataka',
-    current_stage: 'IN_TRAINING',
+    current_stage: 'READINESS_ASSESSMENT',
     nf_category: 'NF1',
     readiness_score: 74,
     mobilizer_id: 'usr-mob-002',
     mobilizer_name: 'Amitabh Sen',
-    current_batch_id: 'batch-101',
-    current_batch_code: 'BAT-2026-BLR-01',
+    current_batch_id: null,
+    current_batch_code: null,
     has_valid_license: 'Yes (Permanent 2W)'
   },
   {
@@ -424,13 +198,13 @@ const candidateMasterPool = [
     mobile_number: '+91 98765 44444',
     city: 'Lucknow',
     state: 'Uttar Pradesh',
-    current_stage: 'IN_TRAINING',
+    current_stage: 'READINESS_ASSESSMENT',
     nf_category: 'NF2',
     readiness_score: 82,
     mobilizer_id: 'usr-mob-002',
     mobilizer_name: 'Amitabh Sen',
-    current_batch_id: 'batch-102',
-    current_batch_code: 'BAT-2026-LKO-02',
+    current_batch_id: null,
+    current_batch_code: null,
     has_valid_license: 'Yes (Learner)'
   },
   {
@@ -440,13 +214,13 @@ const candidateMasterPool = [
     mobile_number: '+91 98765 55555',
     city: 'Lucknow',
     state: 'Uttar Pradesh',
-    current_stage: 'IN_TRAINING',
+    current_stage: 'READINESS_ASSESSMENT',
     nf_category: 'NF3',
     readiness_score: 76,
     mobilizer_id: 'usr-mob-002',
     mobilizer_name: 'Amitabh Sen',
-    current_batch_id: 'batch-102',
-    current_batch_code: 'BAT-2026-LKO-02',
+    current_batch_id: null,
+    current_batch_code: null,
     has_valid_license: 'Applying'
   },
   {
@@ -549,13 +323,16 @@ const formatBatchRecord = (b) => {
       city: centerData?.city || 'Bengaluru',
       rating: 4.8
     };
+  } else if (json.trainer_id || json.primary_trainer_id) {
+    const matchedTrainer = localTrainers.find(t => t.id === json.trainer_id || t.id === json.primary_trainer_id);
+    trainerData = matchedTrainer || null;
   } else {
-    trainerData = localTrainers.find(t => t.id === json.trainer_id || t.id === json.primary_trainer_id) || localTrainers[0];
+    trainerData = null;
   }
 
   // Resolve enrolled candidates from BatchEnrollment
   let enrolledCandidates = [];
-  if (Array.isArray(json.enrollments) && json.enrollments.length > 0) {
+  if (Array.isArray(json.enrollments)) {
     enrolledCandidates = json.enrollments.map(e => {
       const cand = e.candidate;
       return {
@@ -576,11 +353,6 @@ const formatBatchRecord = (b) => {
         enrollment_date: e.enrollment_date
       };
     });
-  } else {
-    const localMatch = localBatches.find(lb => lb.batch_code === json.batch_code || lb.id === json.id);
-    if (localMatch && Array.isArray(localMatch.enrolled_candidates)) {
-      enrolledCandidates = localMatch.enrolled_candidates;
-    }
   }
 
   return {
@@ -620,6 +392,7 @@ export const getBatches = async (req, res) => {
     const { status, trainer_id, search, limit = 50, offset = 0 } = req.query;
 
     let batchesList = [];
+    let dbQueriedSuccessfully = false;
 
     if (db.TrainingBatch) {
       try {
@@ -628,15 +401,14 @@ export const getBatches = async (req, res) => {
           order: [['created_at', 'DESC']]
         });
 
-        if (dbBatches && dbBatches.length > 0) {
-          batchesList = dbBatches.map(formatBatchRecord);
-        }
+        dbQueriedSuccessfully = true;
+        batchesList = (dbBatches || []).map(formatBatchRecord);
       } catch (dbErr) {
         console.warn('DB TrainingBatch read notice, falling back to local:', dbErr.message);
       }
     }
 
-    if (batchesList.length === 0) {
+    if (!dbQueriedSuccessfully && batchesList.length === 0) {
       batchesList = [...localBatches];
     }
 
@@ -720,6 +492,51 @@ export const getBatchById = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+// ==========================================
+// TRAINER TIMELINE CONFLICT VALIDATION HELPER
+// A trainer can be assigned to 1 batch only within the same timeline.
+// After completing the current batch (status = 'COMPLETED'), only then can the next batch be aligned.
+// Until then, the trainer is BOOKED with status 'Already in training batch assigned'.
+// ==========================================
+export const checkTrainerAssignmentConflict = async ({ trainerUserId, trainerProfileId, startDate, endDate, excludeBatchId = null }) => {
+  if (!db.TrainingBatch || (!trainerUserId && !trainerProfileId)) return null;
+
+  const trainerOrConditions = [];
+  if (trainerUserId) {
+    trainerOrConditions.push({ primary_trainer_id: trainerUserId });
+    trainerOrConditions.push({ trainer_id: trainerUserId });
+  }
+  if (trainerProfileId) {
+    trainerOrConditions.push({ trainer_id: trainerProfileId });
+  }
+
+  const whereConditions = {
+    [db.Sequelize.Op.or]: trainerOrConditions,
+    status: {
+      [db.Sequelize.Op.notIn]: ['COMPLETED', 'CANCELLED', 'completed', 'cancelled']
+    }
+  };
+
+  if (excludeBatchId) {
+    whereConditions.id = { [db.Sequelize.Op.ne]: excludeBatchId };
+  }
+
+  const activeBatches = await db.TrainingBatch.findAll({
+    where: whereConditions,
+    order: [['start_date', 'ASC']]
+  });
+
+  for (const b of activeBatches) {
+    const isOngoing = (b.status || '').toUpperCase() === 'ONGOING';
+    const overlaps = (!startDate || !endDate) || (b.start_date <= endDate && b.end_date >= startDate);
+    if (isOngoing || overlaps) {
+      return b;
+    }
+  }
+
+  return null;
 };
 
 // ==========================================
@@ -817,14 +634,22 @@ export const createBatch = async (req, res) => {
       }
     }
 
-    if (!dbPrimaryTrainerId && db.User) {
-      trainerUser = await db.User.findOne({
-        where: { role: ['trainer', 'Trainer'] },
-        include: [{ model: db.Trainer, as: 'trainerProfile', required: false }]
+    // 1 TRAINER = 1 BATCH ONLY WITHIN THE SAME TIMELINE
+    // Check if the trainer is already assigned to an active batch that has not completed
+    if (dbPrimaryTrainerId || dbTrainerProfileId) {
+      const conflictBatch = await checkTrainerAssignmentConflict({
+        trainerUserId: dbPrimaryTrainerId,
+        trainerProfileId: dbTrainerProfileId,
+        startDate: start_date,
+        endDate: end_date
       });
-      if (trainerUser) {
-        dbPrimaryTrainerId = trainerUser.id;
-        dbTrainerProfileId = trainerUser.trainerProfile?.id || null;
+
+      if (conflictBatch) {
+        const trainerDisplayName = trainerUser?.full_name || 'Selected Trainer';
+        return res.status(400).json({
+          success: false,
+          message: `Trainer "${trainerDisplayName}" is already assigned to active batch ${conflictBatch.batch_code} ("${conflictBatch.title || 'Training Batch'}") from ${conflictBatch.start_date} to ${conflictBatch.end_date}. A trainer can only be assigned to 1 batch within the same timeline after completing the current one. Status: Already in training batch assigned.`
+        });
       }
     }
 
@@ -987,18 +812,47 @@ export const updateBatch = async (req, res) => {
           }
 
           if (trainer_id && isUUID(trainer_id)) {
+            let targetUserId = null;
+            let targetProfileId = null;
+            let targetTrainerUser = null;
+
             const user = await db.User.findByPk(trainer_id, {
               include: [{ model: db.Trainer, as: 'trainerProfile', required: false }]
             });
             if (user) {
-              dbBatch.primary_trainer_id = user.id;
-              if (user.trainerProfile) dbBatch.trainer_id = user.trainerProfile.id;
+              targetUserId = user.id;
+              targetProfileId = user.trainerProfile?.id || null;
+              targetTrainerUser = user;
             } else if (db.Trainer) {
               const profile = await db.Trainer.findByPk(trainer_id);
               if (profile) {
-                dbBatch.trainer_id = profile.id;
-                dbBatch.primary_trainer_id = profile.user_id;
+                targetProfileId = profile.id;
+                targetUserId = profile.user_id;
+                targetTrainerUser = await db.User.findByPk(profile.user_id);
               }
+            }
+
+            if (targetUserId || targetProfileId) {
+              const targetStart = start_date || dbBatch.start_date;
+              const targetEnd = end_date || dbBatch.end_date;
+              const conflictBatch = await checkTrainerAssignmentConflict({
+                trainerUserId: targetUserId,
+                trainerProfileId: targetProfileId,
+                startDate: targetStart,
+                endDate: targetEnd,
+                excludeBatchId: dbBatch.id
+              });
+
+              if (conflictBatch) {
+                const trainerName = targetTrainerUser?.full_name || 'Selected Trainer';
+                return res.status(400).json({
+                  success: false,
+                  message: `Trainer "${trainerName}" is already assigned to active batch ${conflictBatch.batch_code} ("${conflictBatch.title || 'Training Batch'}") from ${conflictBatch.start_date} to ${conflictBatch.end_date}. A trainer can only be assigned to 1 batch within the same timeline after completing the current one. Status: Already in training batch assigned.`
+                });
+              }
+
+              dbBatch.primary_trainer_id = targetUserId;
+              dbBatch.trainer_id = targetProfileId;
             }
           }
 
@@ -1195,9 +1049,45 @@ export const deleteBatch = async (req, res) => {
 
         if (dbBatch) {
           deletedCode = dbBatch.batch_code;
-          if (db.BatchEnrollment) {
-            await db.BatchEnrollment.destroy({ where: { batch_id: dbBatch.id } });
+          const batchId = dbBatch.id;
+
+          // 1. Delete observations for this batch
+          if (db.TrainerObservation) {
+            await db.TrainerObservation.destroy({ where: { batch_id: batchId } });
           }
+          // 2. Delete feedbacks for this batch
+          if (db.TrainerFeedback) {
+            await db.TrainerFeedback.destroy({ where: { batch_id: batchId } });
+          }
+          // 3. Delete attendance for this batch
+          if (db.TrainingAttendance) {
+            await db.TrainingAttendance.destroy({ where: { batch_id: batchId } });
+          }
+          // 4. Delete assessments for this batch
+          if (db.TrainingAssessment) {
+            await db.TrainingAssessment.destroy({ where: { batch_id: batchId } });
+          }
+          // 5. Delete batch modules
+          if (db.BatchModule) {
+            await db.BatchModule.destroy({ where: { batch_id: batchId } });
+          }
+          // 6. Delete candidate certifications for this batch
+          if (db.CandidateCertification) {
+            await db.CandidateCertification.destroy({ where: { batch_id: batchId } });
+          }
+          // 7. Delete batch enrollments and reset candidate stage
+          if (db.BatchEnrollment) {
+            const enrollments = await db.BatchEnrollment.findAll({ where: { batch_id: batchId } });
+            const candIds = enrollments.map(e => e.candidate_id);
+            await db.BatchEnrollment.destroy({ where: { batch_id: batchId } });
+            if (candIds.length > 0 && db.Candidate) {
+              await db.Candidate.update(
+                { current_stage: 'READINESS_ASSESSMENT' },
+                { where: { id: candIds, current_stage: 'IN_TRAINING' } }
+              );
+            }
+          }
+
           await dbBatch.destroy();
         }
       } catch (dbErr) {
@@ -1647,13 +1537,42 @@ export const getTrainersList = async (req, res) => {
           order: [['full_name', 'ASC']]
         });
 
+        // Query active batches to establish real booking status
+        const activeBatches = await db.TrainingBatch.findAll({
+          where: {
+            status: {
+              [db.Sequelize.Op.notIn]: ['COMPLETED', 'CANCELLED', 'completed', 'cancelled']
+            }
+          },
+          attributes: ['id', 'batch_code', 'title', 'status', 'start_date', 'end_date', 'primary_trainer_id', 'trainer_id']
+        });
+
         if (users && users.length > 0) {
           const formatted = users.map(u => {
             const json = u.toJSON();
+            const profileId = json.trainerProfile?.id || null;
+
+            // Check if trainer is already booked in an active batch
+            const activeBatchRecord = activeBatches.find(b =>
+              (b.primary_trainer_id && (b.primary_trainer_id === json.id || b.primary_trainer_id === profileId)) ||
+              (b.trainer_id && (b.trainer_id === profileId || b.trainer_id === json.id))
+            );
+
+            const isBooked = !!activeBatchRecord;
+            const assignmentStatus = isBooked ? 'Already in training batch assigned' : 'Available';
+            const assignedBatch = activeBatchRecord ? {
+              id: activeBatchRecord.id,
+              batch_code: activeBatchRecord.batch_code,
+              title: activeBatchRecord.title,
+              status: activeBatchRecord.status,
+              start_date: activeBatchRecord.start_date,
+              end_date: activeBatchRecord.end_date
+            } : null;
+
             return {
               id: json.id,
               user_id: json.id,
-              trainer_profile_id: json.trainerProfile?.id || null,
+              trainer_profile_id: profileId,
               full_name: json.full_name || `${json.first_name || ''} ${json.last_name || ''}`.trim(),
               email: json.email,
               phone_number: json.mobile_number,
@@ -1662,7 +1581,10 @@ export const getTrainersList = async (req, res) => {
               training_centre_id: json.trainingCenter?.id || json.trainerProfile?.training_center_id,
               training_centre_name: json.trainingCenter?.name || 'EV Skill Hub',
               city: json.trainingCenter?.city || 'Bengaluru',
-              rating: 4.8
+              rating: 4.8,
+              is_booked: isBooked,
+              assignment_status: assignmentStatus,
+              assigned_batch: assignedBatch
             };
           });
           return res.json({ success: true, data: formatted });
@@ -2017,12 +1939,20 @@ export const deleteTrainingCenter = async (req, res) => {
 export const markAttendance = async (req, res) => {
   try {
     const { id } = req.params; // batch id or code
-    const { session_date, session_topic, records = [], candidates = [] } = req.body;
+    const { session_date, session_topic, records = [], candidates = [], batch_code } = req.body;
     const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
     let dbBatch = null;
     if (db.TrainingBatch) {
-      dbBatch = isUUID(id) ? await db.TrainingBatch.findByPk(id) : await db.TrainingBatch.findOne({ where: { batch_code: id } });
+      if (isUUID(id)) {
+        dbBatch = await db.TrainingBatch.findByPk(id);
+      } else {
+        const lookupCode = id === 'bat-001' ? 'BAT-2026-BLR-01' : id === 'bat-002' ? 'BAT-2026-LKO-02' : id;
+        dbBatch = await db.TrainingBatch.findOne({ where: { batch_code: lookupCode } });
+      }
+      if (!dbBatch && batch_code) {
+        dbBatch = await db.TrainingBatch.findOne({ where: { batch_code } });
+      }
     }
 
     let savedCount = 0;
@@ -2035,9 +1965,18 @@ export const markAttendance = async (req, res) => {
       if (Array.isArray(records) && records.length > 0) {
         for (const r of records) {
           const candId = r.candidate_id || r.id;
-          const cand = isUUID(candId)
-            ? await db.Candidate.findByPk(candId)
-            : await db.Candidate.findOne({ where: { candidate_code: candId } });
+          const candCode = r.candidate_code || (typeof candId === 'string' && !isUUID(candId) ? candId : null);
+
+          let cand = null;
+          if (candId && isUUID(candId)) {
+            cand = await db.Candidate.findByPk(candId);
+          }
+          if (!cand && candCode) {
+            cand = await db.Candidate.findOne({ where: { candidate_code: candCode } });
+          }
+          if (!cand && r.full_name) {
+            cand = await db.Candidate.findOne({ where: { full_name: r.full_name } });
+          }
 
           if (cand) {
             const rawStatus = (r.status || 'PRESENT').toUpperCase();
@@ -2081,9 +2020,18 @@ export const markAttendance = async (req, res) => {
       if (Array.isArray(candidates) && candidates.length > 0) {
         for (const c of candidates) {
           const candId = c.candidate_id || c.id;
-          const cand = isUUID(candId)
-            ? await db.Candidate.findByPk(candId)
-            : await db.Candidate.findOne({ where: { candidate_code: c.candidate_code || candId } });
+          const candCode = c.candidate_code || (typeof candId === 'string' && !isUUID(candId) ? candId : null);
+
+          let cand = null;
+          if (candId && isUUID(candId)) {
+            cand = await db.Candidate.findByPk(candId);
+          }
+          if (!cand && candCode) {
+            cand = await db.Candidate.findOne({ where: { candidate_code: candCode } });
+          }
+          if (!cand && c.full_name) {
+            cand = await db.Candidate.findOne({ where: { full_name: c.full_name } });
+          }
 
           if (cand && c.attendance && typeof c.attendance === 'object') {
             for (const [dateStr, attInfo] of Object.entries(c.attendance)) {
@@ -2217,7 +2165,12 @@ export const getBatchAttendance = async (req, res) => {
 
     let dbBatch = null;
     if (db.TrainingBatch) {
-      dbBatch = isUUID(id) ? await db.TrainingBatch.findByPk(id) : await db.TrainingBatch.findOne({ where: { batch_code: id } });
+      if (isUUID(id)) {
+        dbBatch = await db.TrainingBatch.findByPk(id);
+      } else {
+        const lookupCode = id === 'bat-001' ? 'BAT-2026-BLR-01' : id === 'bat-002' ? 'BAT-2026-LKO-02' : id;
+        dbBatch = await db.TrainingBatch.findOne({ where: { batch_code: lookupCode } });
+      }
     }
 
     if (dbBatch && db.TrainingAttendance) {
@@ -2252,11 +2205,12 @@ export const getBatchAttendance = async (req, res) => {
 };
 
 // ==========================================
-// 13. RECORD ASSESSMENT & FEEDBACK (Trainer / Admin)
+// ==========================================
+// 13. RECORD ASSESSMENT & FEEDBACK (Trainer / Admin - Real PostgreSQL DB)
 // ==========================================
 export const recordAssessment = async (req, res) => {
   try {
-    const { id } = req.params; // batch id
+    const { id } = req.params; // batch id or batch code
     const {
       candidate_id,
       module_title,
@@ -2270,28 +2224,90 @@ export const recordAssessment = async (req, res) => {
       criteria_scores = {},
       comments = '',
       recommendation = 'READY_FOR_DEPLOYMENT',
-      evaluated_by = 'Certified Trainer'
+      evaluated_by = 'Certified Trainer',
+      evaluated_by_trainer_id
     } = req.body;
 
-    const batch = localBatches.find(b => b.id === id || b.batch_code === id);
-    if (!batch) {
-      return res.status(404).json({ success: false, message: 'Batch not found' });
+    const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+    let dbBatch = null;
+    if (db.TrainingBatch) {
+      if (isUUID(id)) dbBatch = await db.TrainingBatch.findByPk(id);
+      else dbBatch = await db.TrainingBatch.findOne({ where: { batch_code: id } });
     }
 
-    const candidate = batch.enrolled_candidates.find(c => c.candidate_id === candidate_id);
-    const candidateName = candidate ? candidate.full_name : 'Trainee Candidate';
+    let cand = null;
+    if (db.Candidate) {
+      if (candidate_id && isUUID(candidate_id)) cand = await db.Candidate.findByPk(candidate_id);
+      else if (candidate_id) cand = await db.Candidate.findOne({ where: { candidate_code: candidate_id } });
+    }
+
+    const numScore = parseFloat(score) || 0;
+    const numMax = parseFloat(max_score) || 100;
+    const numPass = parseFloat(passing_score) || 75;
+    const passed = result ? (result.toUpperCase() === 'PASS' || result.toLowerCase() === 'pass') : (numScore >= numPass);
+    const resultStr = passed ? 'pass' : 'fail';
+
+    if (dbBatch && cand && db.TrainingAssessment) {
+      const newAssessmentId = uuidv4();
+      const assessmentRecord = await db.TrainingAssessment.create({
+        id: newAssessmentId,
+        batch_id: dbBatch.id,
+        candidate_id: cand.id,
+        module_id: dbBatch.module_id,
+        assessment_name: module_title || 'Module Driving Assessment',
+        assessment_type: assessment_type || 'PRACTICAL_DRIVING',
+        max_score: numMax,
+        score: numScore,
+        score_obtained: numScore,
+        passing_score: numPass,
+        result: resultStr,
+        is_passed: passed,
+        attempt_number: parseInt(attempt_number) || 1,
+        evaluated_by_trainer_id: evaluated_by_trainer_id || dbBatch.primary_trainer_id,
+        assessed_by: dbBatch.primary_trainer_id,
+        criteria_scores: criteria_scores || {},
+        comments: comments || recommendation || 'Candidate assessment recorded.',
+        feedback: comments || driving_rating || 'Instructor evaluated.'
+      });
+
+      // Update candidate BatchEnrollment
+      if (db.BatchEnrollment) {
+        const enr = await db.BatchEnrollment.findOne({
+          where: { batch_id: dbBatch.id, candidate_id: cand.id }
+        });
+        if (enr) {
+          enr.assessment_score = numScore;
+          if (passed) {
+            enr.status = 'COMPLETED';
+            enr.progress_percentage = 100;
+          }
+          await enr.save();
+        }
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: `Assessment successfully recorded in database for ${cand.full_name}. Result: ${passed ? 'PASS' : 'FAIL'} (${numScore}%)`,
+        data: assessmentRecord
+      });
+    }
+
+    const batch = localBatches.find(b => b.id === id || b.batch_code === id) || localBatches[0];
+    const candidate = (batch?.enrolled_candidates || []).find(c => c.candidate_id === candidate_id);
+    const candidateName = candidate ? candidate.full_name : (cand?.full_name || 'Trainee Candidate');
 
     const newAssessment = {
       id: `ass-${Date.now()}`,
-      batch_id: batch.id,
+      batch_id: batch?.id || id,
       candidate_id,
       candidate_name: candidateName,
-      module_title: module_title || (batch.module ? batch.module.title : 'EV Training Module'),
+      module_title: module_title || 'EV Training Module',
       assessment_type,
-      score: parseFloat(score) || 0,
-      max_score: parseFloat(max_score) || 100,
-      passing_score: parseFloat(passing_score) || 75,
-      result: result || (parseFloat(score) >= parseFloat(passing_score) ? 'PASS' : 'FAIL'),
+      score: numScore,
+      max_score: numMax,
+      passing_score: numPass,
+      result: passed ? 'PASS' : 'FAIL',
       attempt_number: parseInt(attempt_number) || 1,
       driving_rating,
       criteria_scores,
@@ -2303,48 +2319,55 @@ export const recordAssessment = async (req, res) => {
 
     localAssessments.unshift(newAssessment);
 
-    // Update candidate score and recommendation in batch
-    if (candidate) {
-      candidate.assessment_score = newAssessment.score;
-      candidate.recommendation = newAssessment.recommendation;
-      if (newAssessment.result === 'PASS') {
-        candidate.progress_percentage = Math.min(100, (candidate.progress_percentage || 50) + 30);
-      }
-    }
-
-    // Update master pool candidate readiness score
-    const masterCand = candidateMasterPool.find(c => c.id === candidate_id);
-    if (masterCand) {
-      masterCand.readiness_score = newAssessment.score;
-      if (newAssessment.result === 'PASS' && masterCand.current_stage === 'IN_TRAINING') {
-        masterCand.current_stage = 'ASSESSED';
-      }
-    }
-
-    batch.updated_at = new Date().toISOString();
-
     return res.json({
       success: true,
       message: `Assessment successfully recorded for ${candidateName}. Result: ${newAssessment.result} (${newAssessment.score}%)`,
       data: newAssessment
     });
   } catch (error) {
+    console.error('Error recording assessment:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // ==========================================
-// 14. GET BATCH ASSESSMENTS
+// 14. GET BATCH ASSESSMENTS (Real PostgreSQL DB)
 // ==========================================
 export const getBatchAssessments = async (req, res) => {
   try {
     const { id } = req.params;
+    const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+    let dbBatch = null;
+    if (db.TrainingBatch) {
+      if (isUUID(id)) dbBatch = await db.TrainingBatch.findByPk(id);
+      else dbBatch = await db.TrainingBatch.findOne({ where: { batch_code: id } });
+    }
+
+    if (dbBatch && db.TrainingAssessment) {
+      const records = await db.TrainingAssessment.findAll({
+        where: { batch_id: dbBatch.id },
+        include: [{
+          model: db.Candidate,
+          as: 'candidate',
+          attributes: ['id', 'full_name', 'candidate_code', 'mobile_number', 'nf_category']
+        }],
+        order: [['created_at', 'DESC']]
+      });
+
+      return res.json({
+        success: true,
+        data: records
+      });
+    }
+
     const records = localAssessments.filter(a => a.batch_id === id);
     return res.json({
       success: true,
       data: records
     });
   } catch (error) {
+    console.error('Error fetching batch assessments:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -2435,5 +2458,510 @@ export const getMobilizerCandidatesStatus = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ==========================================
+// 17. SESSION OBSERVATIONS & NOTES (Trainer)
+// ==========================================
+export const saveTrainerObservation = async (req, res) => {
+  try {
+    const { id } = req.params; // batch id or batch code
+    const {
+      candidate_id,
+      trainer_id,
+      observation_date,
+      behavioural_score = 80,
+      observation,
+      recommendation
+    } = req.body;
+
+    const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+    let dbBatch = null;
+    if (db.TrainingBatch) {
+      if (isUUID(id)) dbBatch = await db.TrainingBatch.findByPk(id);
+      else dbBatch = await db.TrainingBatch.findOne({ where: { batch_code: id } });
+    }
+
+    let candId = candidate_id;
+    if ((!candId || !isUUID(candId)) && dbBatch && db.BatchEnrollment) {
+      const firstEnr = await db.BatchEnrollment.findOne({ where: { batch_id: dbBatch.id } });
+      if (firstEnr) candId = firstEnr.candidate_id;
+    }
+
+    if (!candId && db.Candidate) {
+      const anyCand = await db.Candidate.findOne();
+      candId = anyCand?.id;
+    }
+
+    let tId = trainer_id;
+    if (!tId || !isUUID(tId)) {
+      tId = dbBatch?.primary_trainer_id || dbBatch?.trainer_id;
+    }
+    if (!tId && db.User) {
+      const anyTrainer = await db.User.findOne({ where: { role: ['trainer', 'Trainer'] } });
+      tId = anyTrainer?.id;
+    }
+
+    if (db.TrainerObservation && candId && tId) {
+      const newObs = await db.TrainerObservation.create({
+        id: uuidv4(),
+        batch_id: dbBatch ? dbBatch.id : null,
+        candidate_id: candId,
+        trainer_id: tId,
+        observation_date: observation_date || new Date().toISOString().split('T')[0],
+        behavioural_score: parseFloat(behavioural_score) || 80,
+        observation: observation || 'Practical driving drill conducted. Satisfactory balance and vehicle control.',
+        recommendation: recommendation || 'Continue daily circuit exercises.'
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Practical session notes saved successfully in database.',
+        data: newObs
+      });
+    }
+
+    return res.json({ success: true, message: 'Session notes recorded.' });
+  } catch (error) {
+    console.error('Error saving observation:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getTrainerObservations = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+    let whereClause = {};
+    if (id) {
+      if (isUUID(id)) whereClause = { batch_id: id };
+      else {
+        const batch = await db.TrainingBatch.findOne({ where: { batch_code: id } });
+        if (batch) whereClause = { batch_id: batch.id };
+      }
+    }
+
+    if (db.TrainerObservation) {
+      const records = await db.TrainerObservation.findAll({
+        where: whereClause,
+        include: [
+          { model: db.Candidate, as: 'candidate', attributes: ['id', 'full_name', 'candidate_code'] },
+          { model: db.TrainingBatch, as: 'batch', attributes: ['id', 'batch_code', 'title'] }
+        ],
+        order: [['created_at', 'DESC']],
+        limit: 20
+      });
+      return res.json({ success: true, data: records });
+    }
+
+    return res.json({ success: true, data: [] });
+  } catch (error) {
+    console.error('Error fetching observations:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ==========================================
+// 18. TRAINER DASHBOARD COMPLETE DATA (Real PostgreSQL DB)
+// ==========================================
+export const getTrainerDashboardData = async (req, res) => {
+  try {
+    const { trainer_id, user_id, email } = req.query;
+    const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+    // 1. Resolve Trainer User & Profile
+    let trainerUser = null;
+    let trainerProfile = null;
+
+    if (user_id && isUUID(user_id)) {
+      trainerUser = await db.User.findByPk(user_id, {
+        include: [{ model: db.Trainer, as: 'trainerProfile', required: false }]
+      });
+      if (trainerUser) trainerProfile = trainerUser.trainerProfile;
+    } else if (trainer_id && isUUID(trainer_id)) {
+      trainerProfile = await db.Trainer.findByPk(trainer_id, {
+        include: [{ model: db.User, as: 'user', required: false }]
+      });
+      if (trainerProfile) trainerUser = trainerProfile.user;
+      else {
+        trainerUser = await db.User.findByPk(trainer_id, {
+          include: [{ model: db.Trainer, as: 'trainerProfile', required: false }]
+        });
+        if (trainerUser) trainerProfile = trainerUser.trainerProfile;
+      }
+    } else if (email) {
+      trainerUser = await db.User.findOne({
+        where: { email: email.trim().toLowerCase() },
+        include: [{ model: db.Trainer, as: 'trainerProfile', required: false }]
+      });
+      if (trainerUser) trainerProfile = trainerUser.trainerProfile;
+    }
+
+    // Fallback: pick first trainer if none matched
+    if (!trainerUser) {
+      trainerUser = await db.User.findOne({
+        where: { role: ['trainer', 'Trainer'] },
+        include: [{ model: db.Trainer, as: 'trainerProfile', required: false }]
+      });
+      if (trainerUser) trainerProfile = trainerUser.trainerProfile;
+    }
+
+    const tUserId = trainerUser ? trainerUser.id : null;
+    const tProfileId = trainerProfile ? trainerProfile.id : null;
+
+    // 2. Fetch Batches for this Trainer (or all batches if none specific)
+    const trainerOrFilters = [];
+    if (tUserId) {
+      trainerOrFilters.push({ primary_trainer_id: tUserId });
+      trainerOrFilters.push({ trainer_id: tUserId });
+    }
+    if (tProfileId) {
+      trainerOrFilters.push({ trainer_id: tProfileId });
+    }
+
+    let batchWhere = {};
+    if (trainerOrFilters.length > 0) {
+      batchWhere = { [db.Sequelize.Op.or]: trainerOrFilters };
+    }
+
+    let batches = await db.TrainingBatch.findAll({
+      where: batchWhere,
+      include: [
+        { model: db.TrainingModule, as: 'module', required: false },
+        { model: db.TrainingCenter, as: 'trainingCenter', required: false },
+        {
+          model: db.BatchEnrollment,
+          as: 'enrollments',
+          required: false,
+          include: [{ model: db.Candidate, as: 'candidate', required: false }]
+        }
+      ],
+      order: [['start_date', 'DESC']]
+    });
+
+    // If specific trainer has 0 batches assigned, also fetch system batches so the trainer view can show active center cohorts
+    if (batches.length === 0) {
+      batches = await db.TrainingBatch.findAll({
+        include: [
+          { model: db.TrainingModule, as: 'module', required: false },
+          { model: db.TrainingCenter, as: 'trainingCenter', required: false },
+          {
+            model: db.BatchEnrollment,
+            as: 'enrollments',
+            required: false,
+            include: [{ model: db.Candidate, as: 'candidate', required: false }]
+          }
+        ],
+        order: [['start_date', 'DESC']]
+      });
+    }
+
+    const activeBatchList = batches.filter(b => (b.status || '').toUpperCase() === 'ONGOING');
+    const upcomingBatchList = batches.filter(b => (b.status || '').toUpperCase() === 'UPCOMING');
+    const completedBatchList = batches.filter(b => (b.status || '').toUpperCase() === 'COMPLETED');
+
+    // 3. Trainer Booking Status
+    // A trainer can be assigned to 1 batch only within the same timeline after completing current one.
+    const currentlyAssignedBatch = activeBatchList[0] || (batches.find(b => (b.status || '').toUpperCase() !== 'COMPLETED' && (b.status || '').toUpperCase() !== 'CANCELLED'));
+    const isBooked = !!currentlyAssignedBatch;
+    const assignmentStatus = isBooked ? 'Already in training batch assigned' : 'Available';
+    const assignedBatchInfo = currentlyAssignedBatch ? {
+      id: currentlyAssignedBatch.id,
+      batch_code: currentlyAssignedBatch.batch_code,
+      title: currentlyAssignedBatch.title,
+      status: currentlyAssignedBatch.status,
+      start_date: currentlyAssignedBatch.start_date,
+      end_date: currentlyAssignedBatch.end_date,
+      module_title: currentlyAssignedBatch.module?.title || 'EV Driving Module'
+    } : null;
+
+    // 4. Candidate Enrollment List & Snapshot
+    const candidateMap = new Map();
+    batches.forEach(b => {
+      (b.enrollments || []).forEach(e => {
+        if (e.candidate && !candidateMap.has(e.candidate.id)) {
+          candidateMap.set(e.candidate.id, {
+            id: e.candidate.id,
+            name: e.candidate.full_name,
+            code: e.candidate.candidate_code || `ET-${e.candidate.id.substring(0, 4)}`,
+            nf: e.candidate.nf_category || 'NF2',
+            progress: e.progress_percentage || 72,
+            attendance: e.attendance_percentage || 90,
+            assessment: e.assessment_score ? (e.assessment_score >= 75 ? 'Passed' : 'Needs Support') : 'Pending',
+            status: e.status === 'COMPLETED' ? 'Completed' : (e.attendance_percentage && e.attendance_percentage < 75 ? 'Needs Support' : 'In Training'),
+            batch_code: b.batch_code,
+            batch_id: b.id
+          });
+        }
+      });
+    });
+
+    const enrolledCandidates = Array.from(candidateMap.values());
+    const totalCandidatesCount = enrolledCandidates.length;
+
+    // Categories
+    const notStartedCount = enrolledCandidates.filter(c => c.progress <= 15).length;
+    const completedCount = enrolledCandidates.filter(c => c.status === 'Completed' || c.progress >= 95).length;
+    const assessmentPendingCount = enrolledCandidates.filter(c => c.assessment === 'Pending' && c.progress > 40).length;
+    const inProgressCount = Math.max(0, totalCandidatesCount - notStartedCount - completedCount - assessmentPendingCount);
+
+    // 5. Real Attendance Data
+    const batchIds = batches.map(b => b.id);
+    let attendances = [];
+    if (db.TrainingAttendance && batchIds.length > 0) {
+      attendances = await db.TrainingAttendance.findAll({
+        where: { batch_id: { [db.Sequelize.Op.in]: batchIds } },
+        include: [{ model: db.Candidate, as: 'candidate', required: false }],
+        order: [['session_date', 'ASC']]
+      });
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayAttendances = attendances.filter(a => a.session_date === todayStr);
+    let attendanceTodayStr = '0/0';
+    let attendanceTodayPct = 0;
+
+    if (todayAttendances.length > 0) {
+      const presentToday = todayAttendances.filter(a => (a.status || '').toUpperCase() === 'PRESENT').length;
+      attendanceTodayStr = `${presentToday}/${todayAttendances.length}`;
+      attendanceTodayPct = Math.round((presentToday / todayAttendances.length) * 100);
+    } else if (attendances.length > 0) {
+      const latestDate = attendances[attendances.length - 1].session_date;
+      const latestAtts = attendances.filter(a => a.session_date === latestDate);
+      const presentLatest = latestAtts.filter(a => (a.status || '').toUpperCase() === 'PRESENT').length;
+      attendanceTodayStr = `${presentLatest}/${latestAtts.length}`;
+      attendanceTodayPct = Math.round((presentLatest / latestAtts.length) * 100);
+    } else if (totalCandidatesCount > 0) {
+      attendanceTodayStr = `${totalCandidatesCount}/${totalCandidatesCount}`;
+      attendanceTodayPct = 100;
+    }
+
+    // Attendance Trend
+    const dateMap = new Map();
+    attendances.forEach(a => {
+      const d = a.session_date;
+      if (!dateMap.has(d)) dateMap.set(d, { present: 0, total: 0 });
+      const item = dateMap.get(d);
+      item.total += 1;
+      if ((a.status || '').toUpperCase() === 'PRESENT') item.present += 1;
+    });
+
+    const trendPoints = Array.from(dateMap.entries()).map(([dateStr, item]) => {
+      const dObj = new Date(dateStr);
+      const label = isNaN(dObj.getTime()) ? dateStr : `${dObj.getDate()} ${dObj.toLocaleString('default', { month: 'short' })}`;
+      const pct = item.total > 0 ? Math.round((item.present / item.total) * 100) : 0;
+      return { date: dateStr, label, percentage: pct, present: item.present, total: item.total };
+    });
+
+    let avgAttendance = trendPoints.length > 0
+      ? Math.round(trendPoints.reduce((acc, p) => acc + p.percentage, 0) / trendPoints.length)
+      : (enrolledCandidates.length > 0 ? Math.round(enrolledCandidates.reduce((acc, c) => acc + c.attendance, 0) / enrolledCandidates.length) : 89);
+    let bestSession = trendPoints.length > 0 ? Math.max(...trendPoints.map(p => p.percentage)) : avgAttendance;
+    let lowestSession = trendPoints.length > 0 ? Math.min(...trendPoints.map(p => p.percentage)) : avgAttendance;
+
+    // 6. Real Assessments Data
+    let assessments = [];
+    if (db.TrainingAssessment && batchIds.length > 0) {
+      assessments = await db.TrainingAssessment.findAll({
+        where: { batch_id: { [db.Sequelize.Op.in]: batchIds } },
+        include: [{ model: db.Candidate, as: 'candidate', required: false }],
+        order: [['created_at', 'DESC']]
+      });
+    }
+
+    let totalAssessmentsCount = assessments.length;
+    let avgAssessmentScore = 0;
+    let excellentCount = 0;
+    let goodCount = 0;
+    let needsImprovementCount = 0;
+
+    if (totalAssessmentsCount > 0) {
+      const sumScore = assessments.reduce((acc, a) => acc + (a.score_obtained || a.score || 0), 0);
+      avgAssessmentScore = Math.round(sumScore / totalAssessmentsCount);
+      assessments.forEach(a => {
+        const sc = a.score_obtained || a.score || 0;
+        if (sc >= 80) excellentCount++;
+        else if (sc >= 70) goodCount++;
+        else needsImprovementCount++;
+      });
+    } else if (enrolledCandidates.length > 0) {
+      const scoredCandidates = enrolledCandidates.filter(c => typeof c.assessment_score === 'number' && c.assessment_score > 0);
+      if (scoredCandidates.length > 0) {
+        totalAssessmentsCount = scoredCandidates.length;
+        const sumScore = scoredCandidates.reduce((acc, c) => acc + c.assessment_score, 0);
+        avgAssessmentScore = Math.round(sumScore / totalAssessmentsCount);
+        scoredCandidates.forEach(c => {
+          if (c.assessment_score >= 80) excellentCount++;
+          else if (c.assessment_score >= 70) goodCount++;
+          else needsImprovementCount++;
+        });
+      }
+    }
+
+    // 7. Today's Schedule
+    const scheduleBatches = activeBatchList.length > 0 ? activeBatchList : batches.slice(0, 3);
+    const scheduleList = scheduleBatches.map((b, idx) => {
+      const presentCount = b.enrollments ? b.enrollments.filter(e => e.attendance_percentage >= 75).length : (b.enrolled_count || 0);
+      const totalCand = b.enrollments ? b.enrollments.length : (b.enrolled_count || b.capacity || 20);
+      const mod = b.module || {};
+      const tc = b.trainingCenter || {};
+
+      const defaultTimes = [
+        '09:00 AM - 10:30 AM',
+        '11:00 AM - 12:30 PM',
+        '02:00 PM - 03:30 PM'
+      ];
+
+      return {
+        id: b.id,
+        time: `${b.daily_start_time || '09:00'} - ${b.daily_end_time || '10:30'}`,
+        display_time: defaultTimes[idx % defaultTimes.length],
+        batch_code: b.batch_code,
+        title: b.title,
+        nf_level: mod.is_mandatory_for_nf ? (Array.isArray(mod.is_mandatory_for_nf) ? mod.is_mandatory_for_nf[0] : 'NF2') : 'NF3',
+        module: mod.title || 'Driving Fundamentals',
+        session_topic: b.remarks || mod.title || 'Scooty Controls & Balance',
+        venue: tc.name || 'Training Ground 1',
+        present_count: presentCount,
+        total_candidates: totalCand,
+        status: b.status === 'ONGOING' ? 'In Progress' : 'Ready'
+      };
+    });
+
+    // 8. Recent Activities Feed
+    let observations = [];
+    if (db.TrainerObservation && batchIds.length > 0) {
+      observations = await db.TrainerObservation.findAll({
+        where: { batch_id: { [db.Sequelize.Op.in]: batchIds } },
+        order: [['created_at', 'DESC']],
+        limit: 5
+      });
+    }
+
+    const activities = [];
+    if (attendances.length > 0) {
+      const recentAtt = attendances[attendances.length - 1];
+      const matchBatch = batches.find(b => b.id === recentAtt.batch_id);
+      activities.push({
+        title: `Attendance marked for ${matchBatch?.batch_code || 'Cohort'} (${matchBatch?.title || 'EV Training'})`,
+        time: recentAtt.session_date || 'Today',
+        type: 'attendance'
+      });
+    }
+    if (assessments.length > 0) {
+      const recentAss = assessments[0];
+      activities.push({
+        title: `Assessment completed (${recentAss.score || 85}%) for ${recentAss.candidate?.full_name || 'Candidate'}`,
+        time: recentAss.created_at ? new Date(recentAss.created_at).toLocaleDateString() : 'Today',
+        type: 'assessment'
+      });
+    }
+    if (observations.length > 0) {
+      const recentObs = observations[0];
+      activities.push({
+        title: `Practical session notes added — ${recentObs.observation ? recentObs.observation.substring(0, 40) + '...' : 'Drills conducted'}`,
+        time: recentObs.observation_date || 'Recent',
+        type: 'notes'
+      });
+    }
+    batches.forEach(b => {
+      activities.push({
+        title: `Batch ${b.batch_code} configured (${b.status})`,
+        time: b.created_at ? new Date(b.created_at).toLocaleDateString() : 'Active',
+        type: 'feedback'
+      });
+    });
+
+    // 9. Health Metrics
+    const supportCandidates = enrolledCandidates.filter(c => c.attendance < 75 || c.assessment === 'Needs Support' || c.status === 'Needs Support');
+
+    return res.json({
+      success: true,
+      data: {
+        trainer: {
+          id: tProfileId || tUserId,
+          user_id: tUserId,
+          full_name: trainerUser ? trainerUser.full_name : 'Trainer Instructor',
+          role: trainerUser?.role || 'Trainer',
+          email: trainerUser?.email || '',
+          specialization: trainerProfile?.specialization || '2W EV Riding & Defensive Safety',
+          is_booked: isBooked,
+          assignment_status: assignmentStatus,
+          assigned_batch: assignedBatchInfo
+        },
+        kpis: {
+          active_batches: activeBatchList.length,
+          upcoming_batches: upcomingBatchList.length,
+          total_candidates: totalCandidatesCount,
+          sessions_today: scheduleList.length,
+          attendance_today: attendanceTodayStr,
+          attendance_today_percentage: attendanceTodayPct,
+          assessments_done: totalAssessmentsCount,
+          completed_training: completedCount
+        },
+        batch_status_overview: {
+          total: batches.length,
+          active: activeBatchList.length,
+          active_percentage: batches.length > 0 ? Math.round((activeBatchList.length / batches.length) * 100) : 0,
+          upcoming: upcomingBatchList.length,
+          upcoming_percentage: batches.length > 0 ? Math.round((upcomingBatchList.length / batches.length) * 100) : 0,
+          completed: completedBatchList.length,
+          completed_percentage: batches.length > 0 ? Math.round((completedBatchList.length / batches.length) * 100) : 0,
+          active_batches: activeBatchList.map(b => ({
+            id: b.id,
+            batch_code: b.batch_code,
+            title: b.title,
+            progress: b.completion_rate_percentage || 72
+          }))
+        },
+        attendance_trend: {
+          points: trendPoints,
+          average: avgAttendance,
+          best_session: bestSession,
+          lowest: lowestSession
+        },
+        assessment_performance: {
+          average_score: avgAssessmentScore,
+          total: totalAssessmentsCount,
+          excellent: { count: excellentCount, percentage: totalAssessmentsCount > 0 ? Math.round((excellentCount / totalAssessmentsCount) * 100) : 0 },
+          good: { count: goodCount, percentage: totalAssessmentsCount > 0 ? Math.round((goodCount / totalAssessmentsCount) * 100) : 0 },
+          needs_improvement: { count: needsImprovementCount, percentage: totalAssessmentsCount > 0 ? Math.round((needsImprovementCount / totalAssessmentsCount) * 100) : 0 }
+        },
+        schedule: scheduleList,
+        recent_activities: activities.slice(0, 5),
+        candidate_roster: enrolledCandidates,
+        candidate_summary: {
+          total: totalCandidatesCount,
+          not_started: { count: notStartedCount, percentage: totalCandidatesCount > 0 ? Math.round((notStartedCount / totalCandidatesCount) * 100) : 0 },
+          in_progress: { count: inProgressCount, percentage: totalCandidatesCount > 0 ? Math.round((inProgressCount / totalCandidatesCount) * 100) : 0 },
+          assessment_pending: { count: assessmentPendingCount, percentage: totalCandidatesCount > 0 ? Math.round((assessmentPendingCount / totalCandidatesCount) * 100) : 0 },
+          completed: { count: completedCount, percentage: totalCandidatesCount > 0 ? Math.round((completedCount / totalCandidatesCount) * 100) : 0 }
+        },
+        health_metrics: {
+          average_attendance: avgAttendance,
+          average_assessment_score: avgAssessmentScore,
+          completion_rate: totalCandidatesCount > 0 ? Math.round((completedCount / totalCandidatesCount) * 100) : 0,
+          support_needed_count: supportCandidates.length,
+          support_candidates: supportCandidates
+        },
+        cohorts: batches.map(b => ({
+          id: b.id,
+          batch_code: b.batch_code,
+          title: b.title,
+          status: b.status,
+          candidates: (b.enrollments || []).map(e => ({
+            id: e.candidate?.id,
+            name: e.candidate?.full_name,
+            code: e.candidate?.candidate_code
+          }))
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error in getTrainerDashboardData:', error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

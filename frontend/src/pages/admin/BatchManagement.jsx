@@ -44,209 +44,8 @@ import BatchCreate from './BatchCreate';
 
 const API_BASE = 'http://localhost:5000/api/training';
 
-// Fallback cohorts in case backend is offline
-const DEFAULT_FALLBACK_BATCHES = [
-  {
-    id: 'bat-001',
-    batch_code: 'BAT-2026-BLR-01',
-    title: 'EV Pilot Induction Batch - Feb 2026',
-    module_id: 'mod-101',
-    module: {
-      id: 'mod-101',
-      code: 'MOD-EV-01',
-      title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-      category: 'MOBILITY',
-      duration_hours: 30,
-      duration_days: 6,
-      passing_assessment_score: 75,
-      description: 'Master electric two-wheeler riding, regenerative braking, battery health monitoring, and rapid battery swap station operations.'
-    },
-    trainer_id: 'usr-tr-001',
-    trainer: {
-      id: 'usr-tr-001',
-      full_name: 'Rahul Sharma',
-      email: 'rahul.sharma@eventransparency.org',
-      phone_number: '+91 98765 33001',
-      city: 'Bengaluru',
-      specialization: '2W EV Dynamics & Battery Swapping',
-      rating: 4.8
-    },
-    training_center_id: 'tc-blr-01',
-    trainingCenter: {
-      id: 'tc-blr-01',
-      name: 'Bengaluru EV Excellence Centre',
-      city: 'Bengaluru',
-      address: 'Plot 42, Electronic City Phase 1, Bengaluru - 560100',
-      capacity: 50
-    },
-    start_date: '2026-02-15',
-    end_date: '2026-03-05',
-    daily_start_time: '09:00',
-    daily_end_time: '13:00',
-    capacity: 25,
-    enrolled_count: 3,
-    status: 'ONGOING',
-    average_attendance_percentage: 94.2,
-    completion_rate_percentage: 65,
-    remarks: 'Candidate safety gear kits distributed on Day 1. Battery swap practical test scheduled on final week.',
-    enrolled_candidates: [
-      {
-        candidate_id: 'cand-001',
-        candidate_code: 'EV-BLR-001',
-        full_name: 'Priya Sundaram',
-        mobile_number: '+91 98450 11223',
-        nf_category: 'NF1',
-        mobilizer_name: 'Suresh Kumar',
-        attendance_percentage: 96,
-        progress_percentage: 70,
-        assessment_score: 92,
-        recommendation: 'READY_FOR_DEPLOYMENT'
-      },
-      {
-        candidate_id: 'cand-002',
-        candidate_code: 'EV-BLR-002',
-        full_name: 'Ananya Rao',
-        mobile_number: '+91 98450 44556',
-        nf_category: 'NF1',
-        mobilizer_name: 'Suresh Kumar',
-        attendance_percentage: 92,
-        progress_percentage: 65,
-        assessment_score: 88,
-        recommendation: 'READY_FOR_DEPLOYMENT'
-      },
-      {
-        candidate_id: 'cand-003',
-        candidate_code: 'EV-BLR-003',
-        full_name: 'Kavita Hegde',
-        mobile_number: '+91 98450 77889',
-        nf_category: 'NF2',
-        mobilizer_name: 'Deepak V',
-        attendance_percentage: 94,
-        progress_percentage: 60,
-        assessment_score: 84,
-        recommendation: 'IN_TRAINING'
-      }
-    ]
-  },
-  {
-    id: 'bat-002',
-    batch_code: 'BAT-2026-LKO-02',
-    title: 'Lucknow Mahila EV Riders - Intensive Batch',
-    module_id: 'mod-102',
-    module: {
-      id: 'mod-102',
-      code: 'MOD-SAF-02',
-      title: 'Defensive City Riding & Night Navigation',
-      category: 'SAFETY',
-      duration_hours: 20,
-      duration_days: 4,
-      passing_assessment_score: 80,
-      description: 'Hazard perception, heavy urban traffic management, rain & night time riding precautions, and helmet/gear compliance.'
-    },
-    trainer_id: 'usr-tr-002',
-    trainer: {
-      id: 'usr-tr-002',
-      full_name: 'Meena Yadav',
-      email: 'meena.yadav@eventransparency.org',
-      phone_number: '+91 98765 33002',
-      city: 'Lucknow',
-      specialization: 'Defensive Riding & Road Safety',
-      rating: 4.9
-    },
-    training_center_id: 'tc-lko-01',
-    trainingCenter: {
-      id: 'tc-lko-01',
-      name: 'Lucknow Prime Skill Hub',
-      city: 'Lucknow',
-      address: 'Sector 5, Gomti Nagar, Lucknow - 226010',
-      capacity: 40
-    },
-    start_date: '2026-03-01',
-    end_date: '2026-03-18',
-    daily_start_time: '10:00',
-    daily_end_time: '14:00',
-    capacity: 20,
-    enrolled_count: 2,
-    status: 'ONGOING',
-    average_attendance_percentage: 89.5,
-    completion_rate_percentage: 25,
-    remarks: 'Focus on high-density traffic negotiation and GPS app integration for delivery riders.',
-    enrolled_candidates: [
-      {
-        candidate_id: 'cand-004',
-        candidate_code: 'EV-LKO-004',
-        full_name: 'Sunita Verma',
-        mobile_number: '+91 94150 22334',
-        nf_category: 'NF2',
-        mobilizer_name: 'Rajesh Mishra',
-        attendance_percentage: 90,
-        progress_percentage: 30,
-        assessment_score: 80,
-        recommendation: 'IN_TRAINING'
-      },
-      {
-        candidate_id: 'cand-005',
-        candidate_code: 'EV-LKO-005',
-        full_name: 'Pooja Tiwari',
-        mobile_number: '+91 94150 55667',
-        nf_category: 'NF3',
-        mobilizer_name: 'Rajesh Mishra',
-        attendance_percentage: 89,
-        progress_percentage: 20,
-        assessment_score: 76,
-        recommendation: 'IN_TRAINING'
-      }
-    ]
-  },
-  {
-    id: 'bat-003',
-    batch_code: 'BAT-2026-PUN-03',
-    title: 'Pune Urban Navigation & Customer Readiness',
-    module_id: 'mod-103',
-    module: {
-      id: 'mod-103',
-      code: 'MOD-APP-03',
-      title: 'Smartphone GPS Navigation & Delivery Apps',
-      category: 'DIGITAL',
-      duration_hours: 15,
-      duration_days: 3,
-      passing_assessment_score: 70,
-      description: 'Live order acceptance, route optimization, customer location pinpointing, and battery conservation while using navigation.'
-    },
-    trainer_id: 'usr-tr-003',
-    trainer: {
-      id: 'usr-tr-003',
-      full_name: 'Kiran Dave',
-      email: 'kiran.dave@eventransparency.org',
-      phone_number: '+91 98765 33003',
-      city: 'Pune',
-      specialization: 'Digital App Navigation & Delivery Drills',
-      rating: 4.7
-    },
-    training_center_id: 'tc-pun-01',
-    trainingCenter: {
-      id: 'tc-pun-01',
-      name: 'Pune Livelihood Campus',
-      city: 'Pune',
-      address: 'MIDC Bhosari Industrial Area, Pune - 411026',
-      capacity: 35
-    },
-    start_date: '2026-03-10',
-    end_date: '2026-03-24',
-    daily_start_time: '09:30',
-    daily_end_time: '13:30',
-    capacity: 25,
-    enrolled_count: 0,
-    status: 'UPCOMING',
-    average_attendance_percentage: 90.0,
-    completion_rate_percentage: 0,
-    remarks: 'Cohort launching on March 10. Mobilizers currently shortlisting candidate applications.',
-    enrolled_candidates: []
-  }
-];
-
 export default function BatchManagement({ user, onSectionChange }) {
-  const [batches, setBatches] = useState(DEFAULT_FALLBACK_BATCHES);
+  const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -313,11 +112,14 @@ export default function BatchManagement({ user, onSectionChange }) {
       setLoading(true);
       const res = await fetch(`${API_BASE}/batches`);
       const json = await res.json();
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+      if (json.success && Array.isArray(json.data)) {
         setBatches(json.data);
+      } else {
+        setBatches([]);
       }
     } catch (err) {
-      console.warn('Backend unavailable, using active local batches:', err);
+      console.warn('Backend unavailable, setting empty batches:', err);
+      setBatches([]);
     } finally {
       setLoading(false);
     }
@@ -332,9 +134,9 @@ export default function BatchManagement({ user, onSectionChange }) {
         fetch(`${API_BASE}/centers`).then(r => r.json()).catch(() => ({ success: false })),
       ]);
 
-      if (mRes.success && mRes.data?.length > 0) setModules(mRes.data);
-      if (tRes.success && tRes.data?.length > 0) setTrainers(tRes.data);
-      if (cRes.success && cRes.data?.length > 0) setCenters(cRes.data);
+      if (mRes.success && Array.isArray(mRes.data)) setModules(mRes.data);
+      if (tRes.success && Array.isArray(tRes.data)) setTrainers(tRes.data);
+      if (cRes.success && Array.isArray(cRes.data)) setCenters(cRes.data);
     } catch (err) {
       console.warn('Error fetching form dependencies:', err);
     }
@@ -356,25 +158,26 @@ export default function BatchManagement({ user, onSectionChange }) {
       });
       const json = await res.json();
       if (json.success) {
-        showToast('Batch marked as COMPLETED successfully!');
+        showToast('🎉 Batch marked as COMPLETED successfully!');
+        if (json.data) {
+          setBatches(prev => prev.map(b => b.id === batchId ? json.data : b));
+          if (sidebarBatch?.id === batchId) setSidebarBatch(json.data);
+        }
         fetchBatches();
+        fetchFormDependencies();
       } else {
-        setBatches(prev => prev.map(b => b.id === batchId ? { ...b, status: 'COMPLETED', completion_rate_percentage: 100 } : b));
-        showToast('Batch marked as COMPLETED');
+        showToast(json.message || 'Failed to update batch status', 'error');
       }
     } catch (err) {
-      setBatches(prev => prev.map(b => b.id === batchId ? { ...b, status: 'COMPLETED', completion_rate_percentage: 100 } : b));
-      showToast('Batch marked as COMPLETED');
-    }
-    if (sidebarBatch?.id === batchId) {
-      setSidebarBatch(prev => prev ? { ...prev, status: 'COMPLETED', completion_rate_percentage: 100 } : null);
+      console.error('Error marking batch completed:', err);
+      showToast('Error updating batch status', 'error');
     }
   };
 
   // Delete Batch (Admin only)
   const handleDeleteBatch = async (batchId, e) => {
     if (e) e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this training batch cohort?')) return;
+    if (!window.confirm('Are you sure you want to delete this training batch cohort? This will cascade remove related batch enrollments in the database.')) return;
 
     try {
       const res = await fetch(`${API_BASE}/batches/${batchId}`, {
@@ -382,17 +185,18 @@ export default function BatchManagement({ user, onSectionChange }) {
       });
       const json = await res.json();
       if (json.success) {
-        showToast('Batch deleted successfully');
-        fetchBatches();
-      } else {
+        showToast(json.message || 'Batch deleted successfully from database');
         setBatches(prev => prev.filter(b => b.id !== batchId));
-        showToast('Batch deleted successfully');
+        if (sidebarBatch?.id === batchId) setSidebarBatch(null);
+        fetchBatches();
+        fetchFormDependencies();
+      } else {
+        showToast(json.message || 'Failed to delete batch from database', 'error');
       }
     } catch (err) {
-      setBatches(prev => prev.filter(b => b.id !== batchId));
-      showToast('Batch deleted successfully');
+      console.error('Error deleting batch:', err);
+      showToast('Error connecting to server to delete batch', 'error');
     }
-    if (sidebarBatch?.id === batchId) setSidebarBatch(null);
   };
 
   // Open Edit Batch modal
@@ -403,7 +207,7 @@ export default function BatchManagement({ user, onSectionChange }) {
       batch_code: batch.batch_code || '',
       title: batch.title || '',
       module_id: batch.module_id || batch.module?.id || (modules[0]?.id || ''),
-      trainer_id: batch.trainer_id || batch.trainer?.id || (trainers[0]?.id || ''),
+      trainer_id: batch.trainer_id || batch.trainer?.id || batch.trainer?.user_id || '',
       training_center_id: batch.training_center_id || batch.trainingCenter?.id || (centers[0]?.id || ''),
       start_date: batch.start_date ? batch.start_date.split('T')[0] : '',
       end_date: batch.end_date ? batch.end_date.split('T')[0] : '',
@@ -428,13 +232,14 @@ export default function BatchManagement({ user, onSectionChange }) {
       });
       const json = await res.json();
       if (json.success && json.data) {
-        showToast(`🎉 Batch "${json.data.batch_code}" updated successfully!`);
+        showToast(`🎉 Batch "${json.data.batch_code}" updated successfully in database!`);
         setBatches(prev => prev.map(b => b.id === editingBatch.id ? json.data : b));
         if (sidebarBatch?.id === editingBatch.id) {
           setSidebarBatch(json.data);
         }
         setEditingBatch(null);
         fetchBatches();
+        fetchFormDependencies();
       } else {
         showToast(json.message || 'Failed to update batch', 'error');
       }
@@ -535,9 +340,7 @@ export default function BatchManagement({ user, onSectionChange }) {
 
   // Scoped Batches: strictly assigned cohorts if user is Trainer, all cohorts if Admin
   const trainerAssignedBatches = batches.filter(isAssignedToTrainer);
-  const accessibleBatches = isTrainer
-    ? (trainerAssignedBatches.length > 0 ? trainerAssignedBatches : [batches[0]])
-    : batches;
+  const accessibleBatches = isTrainer ? trainerAssignedBatches : batches;
 
   // Computed metrics strictly for accessible batches
   const totalBatches = accessibleBatches.length;
@@ -546,7 +349,7 @@ export default function BatchManagement({ user, onSectionChange }) {
   const completedBatchesCount = accessibleBatches.filter(b => b.status === 'COMPLETED').length;
   
   const totalCandidatesEnrolled = accessibleBatches.reduce((sum, b) => sum + (b.enrolled_count || b.enrolled_candidates?.length || 0), 0);
-  const totalCapacityOverall = accessibleBatches.reduce((sum, b) => sum + (b.capacity || 25), 0);
+  const totalCapacityOverall = accessibleBatches.reduce((sum, b) => sum + (b.capacity || 0), 0);
 
   const avgAttendanceOverall = accessibleBatches.length > 0
     ? (accessibleBatches.reduce((sum, b) => sum + (parseFloat(b.average_attendance_percentage) || 0), 0) / accessibleBatches.length).toFixed(1)
@@ -834,27 +637,47 @@ export default function BatchManagement({ user, onSectionChange }) {
           <p className="font-medium">Loading training cohorts...</p>
         </div>
       ) : filteredBatches.length === 0 ? (
-        <div className="bg-white p-10 rounded-2xl border border-slate-200 text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
-            <Layers className="w-6 h-6" />
+        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-3.5">
+          <div className="w-14 h-14 rounded-2xl bg-[#FFF0F5] border border-[#F72570]/20 flex items-center justify-center mx-auto text-[#F72570] shadow-2xs">
+            <Layers className="w-7 h-7" />
           </div>
-          <h3 className="text-base font-bold text-slate-800">
-            {isTrainer ? 'No assigned batch matches your filter criteria' : 'No training cohorts match your filters'}
-          </h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Try resetting your search query or filter options.
-          </p>
-          <button
-            onClick={() => {
-              setSearchQuery('');
-              setStatusFilter('ALL');
-              setSelectedModuleFilter('ALL');
-              setSelectedCityFilter('ALL');
-            }}
-            className="px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
-          >
-            Clear Filters
-          </button>
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-slate-800 font-kaiseiTokumin">
+              {totalBatches === 0 
+                ? (isTrainer ? 'No Training Batches Assigned' : 'No Training Batches Found')
+                : (isTrainer ? 'No assigned batch matches your filter criteria' : 'No training cohorts match your filters')}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              {totalBatches === 0
+                ? (isTrainer 
+                    ? 'You do not have any active or upcoming cohorts assigned. New cohorts will appear here once allocated.'
+                    : 'All cohorts have been deleted or none have been created yet. Click below to create a new cohort.')
+                : 'Try resetting your search query or filter options to see all batches.'}
+            </p>
+          </div>
+          {totalBatches === 0 && !isTrainer ? (
+            <button
+              onClick={() => setViewMode('create')}
+              className="px-4 py-2.5 rounded-xl bg-[#F72570] hover:bg-[#de1b60] text-white text-xs font-bold transition flex items-center gap-2 mx-auto cursor-pointer shadow-xs shadow-[#F72570]/20"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Training Batch</span>
+            </button>
+          ) : (
+            (searchQuery || statusFilter !== 'ALL' || selectedModuleFilter !== 'ALL' || selectedCityFilter !== 'ALL') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('ALL');
+                  setSelectedModuleFilter('ALL');
+                  setSelectedCityFilter('ALL');
+                }}
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                Clear Filters
+              </button>
+            )
+          )}
         </div>
       ) : (
         /* ═════════════════════════════════════════════════════════════════════════
@@ -1426,9 +1249,28 @@ export default function BatchManagement({ user, onSectionChange }) {
                     onChange={(e) => setEditBatchFormData(prev => ({ ...prev, trainer_id: e.target.value }))}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 font-semibold bg-slate-50/50"
                   >
-                    {trainers.map(t => (
-                      <option key={t.id} value={t.id}>{t.full_name || t.name} ({t.city || 'Hub'})</option>
-                    ))}
+                    <option value="">-- Unassigned (Pending Alignment) --</option>
+                    {trainers.map(t => {
+                      const isAssignedToThisBatch = editingBatch && (
+                        editingBatch.trainer_id === t.id ||
+                        editingBatch.primary_trainer_id === t.id ||
+                        editingBatch.trainer?.id === t.id ||
+                        t.assigned_batch?.id === editingBatch.id ||
+                        t.assigned_batch?.batch_code === editingBatch.batch_code
+                      );
+                      const isBookedElsewhere = t.is_booked && !isAssignedToThisBatch;
+                      return (
+                        <option
+                          key={t.id}
+                          value={t.id}
+                          disabled={isBookedElsewhere}
+                        >
+                          {t.full_name || t.name} ({t.city || 'Hub'})
+                          {isBookedElsewhere ? ` — [Already assigned: ${t.assigned_batch?.batch_code || 'Active'}]` : ''}
+                          {isAssignedToThisBatch ? ' — (Current Cohort)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div>

@@ -74,130 +74,13 @@ const ASSESSMENT_TRACKS = [
   }
 ];
 
-// Fallback cohorts with evaluation records
-const DEFAULT_COHORTS = [
-  {
-    id: 'bat-001',
-    batch_code: 'BAT-2026-BLR-01',
-    title: 'EV Pilot Induction Batch - Feb 2026',
-    module: {
-      code: 'MOD-EV-01',
-      title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-      passing_score: 75
-    },
-    trainer: {
-      id: 'usr-tr-001',
-      full_name: 'Rahul Sharma',
-      email: 'rahul.sharma@eventransparency.org',
-      role: 'Master EV Trainer'
-    },
-    trainingCenter: {
-      name: 'Bengaluru EV Excellence Centre',
-      city: 'Bengaluru'
-    },
-    candidates: [
-      {
-        candidate_id: 'cand-001',
-        candidate_code: 'EV-BLR-001',
-        full_name: 'Pooja Sharma',
-        mobile_number: '+91 98765 43210',
-        nf_category: 'NF2',
-        evaluations: {
-          PRACTICAL_DRIVING: { score: 88, rating: 4.5, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Very confident balance on Figure-8, clean braking control.' },
-          BATTERY_SWAP: { score: 92, rating: 5.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Completed battery swap in 2m 15s. Excellent dock alignment.' },
-          ROAD_SAFETY: { score: 85, rating: 4.5, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Strict adherence to indicator protocols and blind spot safety.' },
-          DIGITAL_APP: { score: 80, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Quick order flow acceptance, good route comprehension.' },
-          FINAL_CERTIFICATION: { score: 86, rating: 4.5, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Passed all criteria. Highly recommended for EV fleet delivery.' }
-        }
-      },
-      {
-        candidate_id: 'cand-002',
-        candidate_code: 'EV-BLR-002',
-        full_name: 'Ananya Roy',
-        mobile_number: '+91 98765 43211',
-        nf_category: 'NF1',
-        evaluations: {
-          PRACTICAL_DRIVING: { score: 94, rating: 5.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Top performer on wet track test. Smooth throttle acceleration.' },
-          BATTERY_SWAP: { score: 90, rating: 4.5, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Accurate thermal check, safe battery dock lock handling.' },
-          ROAD_SAFETY: { score: 92, rating: 5.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Flawless hazard anticipation on heavy traffic simulation.' },
-          DIGITAL_APP: { score: 88, rating: 4.5, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Excellent app usage and battery telematics check.' },
-          FINAL_CERTIFICATION: { score: 91, rating: 5.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Certified Master EV Rider with distinction.' }
-        }
-      },
-      {
-        candidate_id: 'cand-003',
-        candidate_code: 'EV-BLR-003',
-        full_name: 'Kavita Devi',
-        mobile_number: '+91 98765 43212',
-        nf_category: 'NF3',
-        evaluations: {
-          PRACTICAL_DRIVING: { score: 76, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Improved significantly on slalom. Passed all basic balance tests.' },
-          BATTERY_SWAP: { score: 82, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Good latch execution. Time taken: 2m 45s.' },
-          ROAD_SAFETY: { score: 78, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Good mirror check discipline. Needs slight focus on high-beam glare.' },
-          DIGITAL_APP: { score: 74, rating: 3.5, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Completed mock delivery route successfully.' },
-          FINAL_CERTIFICATION: { score: 78, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Certified and ready for induction in day delivery shifts.' }
-        }
-      }
-    ]
-  },
-  {
-    id: 'bat-002',
-    batch_code: 'BAT-2026-LKO-02',
-    title: 'Lucknow Road Safety & Defensive Traffic Drill',
-    module: {
-      code: 'MOD-SAF-02',
-      title: 'Defensive City Riding & Night Navigation',
-      passing_score: 75
-    },
-    trainer: {
-      id: 'usr-tr-002',
-      full_name: 'Meena Yadav',
-      email: 'meena.yadav@eventransparency.org',
-      role: 'Road Safety Specialist'
-    },
-    trainingCenter: {
-      name: 'Lucknow Prime Skill Hub',
-      city: 'Lucknow'
-    },
-    candidates: [
-      {
-        candidate_id: 'cand-004',
-        candidate_code: 'EV-LKO-004',
-        full_name: 'Sunita Verma',
-        mobile_number: '+91 94150 22334',
-        nf_category: 'NF2',
-        evaluations: {
-          PRACTICAL_DRIVING: { score: 80, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Good traffic lane discipline.' },
-          BATTERY_SWAP: { score: 78, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Passed standard swap protocol.' },
-          ROAD_SAFETY: { score: 84, rating: 4.5, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Strong awareness in heavy traffic.' },
-          DIGITAL_APP: { score: 80, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Comfortable with GPS navigation.' },
-          FINAL_CERTIFICATION: { score: 81, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Certified for placement.' }
-        }
-      },
-      {
-        candidate_id: 'cand-005',
-        candidate_code: 'EV-LKO-005',
-        full_name: 'Pooja Tiwari',
-        mobile_number: '+91 94150 55667',
-        nf_category: 'NF3',
-        evaluations: {
-          PRACTICAL_DRIVING: { score: 76, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Steady riding pace, safe lane changes.' },
-          BATTERY_SWAP: { score: 75, rating: 3.5, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Passed basic locking test.' },
-          ROAD_SAFETY: { score: 80, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Good night riding precautions.' },
-          DIGITAL_APP: { score: 78, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Good app usage.' },
-          FINAL_CERTIFICATION: { score: 77, rating: 4.0, recommendation: 'READY_FOR_DEPLOYMENT', feedback: 'Qualified for delivery deployment.' }
-        }
-      }
-    ]
-  }
-];
-
 export default function TrainingAssessments({ user, onSectionChange }) {
-  const [cohorts, setCohorts] = useState(DEFAULT_COHORTS);
-  const [selectedCohortId, setSelectedCohortId] = useState(DEFAULT_COHORTS[0].id);
+  const [cohorts, setCohorts] = useState([]);
+  const [selectedCohortId, setSelectedCohortId] = useState(null);
   const [selectedTrackId, setSelectedTrackId] = useState('PRACTICAL_DRIVING');
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
   // Scorecard modal for individual candidate
@@ -208,6 +91,52 @@ export default function TrainingAssessments({ user, onSectionChange }) {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // Fetch real cohorts & candidates from backend
+  useEffect(() => {
+    const fetchCohortsAndAssessments = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/batches`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const mapped = json.data.map(b => ({
+            id: b.id,
+            batch_code: b.batch_code,
+            title: b.title,
+            module: b.module || {
+              code: 'MOD-EV-01',
+              title: 'Two-Wheeler EV Dynamics & Battery Swapping',
+              passing_score: 75
+            },
+            trainer: b.trainer,
+            trainingCenter: b.trainingCenter,
+            candidates: (b.enrolled_candidates || []).map(ec => ({
+              candidate_id: ec.candidate_id || ec.id,
+              candidate_code: ec.candidate_code,
+              full_name: ec.full_name,
+              mobile_number: ec.mobile_number || '+91 98765 00000',
+              nf_category: ec.nf_category || 'NF1',
+              evaluations: {}
+            }))
+          }));
+          setCohorts(mapped);
+          setSelectedCohortId(mapped[0]?.id || null);
+        } else {
+          setCohorts([]);
+          setSelectedCohortId(null);
+        }
+      } catch (err) {
+        console.warn('Error fetching cohorts for assessment:', err);
+        setCohorts([]);
+        setSelectedCohortId(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCohortsAndAssessments();
+  }, []);
+
   // Trainer check
   const userRole = (user?.userType || user?.role || '').toLowerCase();
   const isTrainer = userRole.includes('trainer') || window.location.hash.includes('trainer');
@@ -215,23 +144,24 @@ export default function TrainingAssessments({ user, onSectionChange }) {
   // Accessible cohorts
   const accessibleCohorts = useMemo(() => {
     if (!isTrainer) return cohorts;
-    const trainerCohorts = cohorts.filter(c => {
+    return cohorts.filter(c => {
       if (user?.id && (c.trainer?.id === user.id || c.trainer_id === user.id)) return true;
       if (user?.email && c.trainer?.email?.toLowerCase() === user.email.toLowerCase()) return true;
       const userName = (user?.full_name || user?.name || '').toLowerCase().trim();
       if (userName && c.trainer?.full_name?.toLowerCase().includes(userName)) return true;
-      return true;
+      return false;
     });
-    return trainerCohorts.length > 0 ? trainerCohorts : [cohorts[0]];
   }, [cohorts, isTrainer, user]);
 
   const currentCohort = useMemo(() => {
-    return accessibleCohorts.find(c => c.id === selectedCohortId) || accessibleCohorts[0];
+    return accessibleCohorts.find(c => c.id === selectedCohortId) || accessibleCohorts[0] || null;
   }, [accessibleCohorts, selectedCohortId]);
 
   useEffect(() => {
     if (accessibleCohorts.length > 0 && !accessibleCohorts.some(c => c.id === selectedCohortId)) {
       setSelectedCohortId(accessibleCohorts[0].id);
+    } else if (accessibleCohorts.length === 0) {
+      setSelectedCohortId(null);
     }
   }, [accessibleCohorts, selectedCohortId]);
 
@@ -429,8 +359,36 @@ export default function TrainingAssessments({ user, onSectionChange }) {
         </div>
       </div>
 
-      {/* ─── 2. Metrics Strip ────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Empty State when no cohorts exist */}
+      {accessibleCohorts.length === 0 ? (
+        <div className="bg-white p-12 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+            <Award className="w-8 h-8 text-indigo-600" />
+          </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-base font-bold text-slate-800 font-kaiseiTokumin">
+              No Training Batches Found
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              {isTrainer
+                ? "You have not been assigned to any active cohorts or all training cohorts have been deleted. When an admin assigns you to a batch with enrolled candidates, they will appear here for skill assessments."
+                : "No training cohorts exist in the database. Create a new training batch in Batch Management and enroll candidates to begin conducting skill evaluations and grading."}
+            </p>
+          </div>
+          {!isTrainer && onSectionChange && (
+            <button
+              onClick={() => onSectionChange('batch_management')}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-sm inline-flex items-center gap-2 cursor-pointer"
+            >
+              <Layers className="w-4 h-4" />
+              <span>Go to Batch Management</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* ─── 2. Metrics Strip ────────────────────────────────────── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Evaluated Candidates</span>
@@ -733,6 +691,8 @@ export default function TrainingAssessments({ user, onSectionChange }) {
           )}
         </div>
       </div>
+      </>
+      )}
 
       {/* ─── MODAL: FULL CANDIDATE SCORECARD DRILL-DOWN ───────────── */}
       {detailedCandidateModal && (

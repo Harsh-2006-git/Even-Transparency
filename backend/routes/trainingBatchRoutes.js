@@ -24,10 +24,16 @@ import {
   recordAssessment,
   getBatchAssessments,
   updateProgress,
-  getMobilizerCandidatesStatus
+  getMobilizerCandidatesStatus,
+  getTrainerDashboardData,
+  saveTrainerObservation,
+  getTrainerObservations
 } from '../controllers/trainingBatchController.js';
 
 const router = express.Router();
+
+// Trainer Dashboard Analytics & Booking Status (Real Database)
+router.get('/trainer-dashboard', getTrainerDashboardData);
 
 // Training Modules CRUD (Real Database)
 router.get('/modules', getTrainingModules);
@@ -64,5 +70,9 @@ router.get('/batches/:id/attendance', getBatchAttendance);
 // Assessments & Feedback
 router.post('/batches/:id/assessments', recordAssessment);
 router.get('/batches/:id/assessments', getBatchAssessments);
+
+// Session Observations & Notes (Real Database)
+router.post('/batches/:id/observations', saveTrainerObservation);
+router.get('/batches/:id/observations', getTrainerObservations);
 
 export default router;

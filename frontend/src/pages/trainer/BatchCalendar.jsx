@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 
 // Comprehensive Master Schedule Dataset
-const MASTER_SESSIONS = [
+const MOCK_OLD_SESSIONS = [
   // --- September 2026 sessions (Current local date context) ---
   {
     id: 'sess-01',
@@ -304,6 +304,8 @@ const MASTER_SESSIONS = [
     ]
   }
 ];
+
+const MASTER_SESSIONS = [];
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [

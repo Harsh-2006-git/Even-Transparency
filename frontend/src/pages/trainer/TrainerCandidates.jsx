@@ -24,84 +24,78 @@ import {
   UserCheck
 } from 'lucide-react';
 
-const CANDIDATE_ROSTER = [
-  {
-    id: 'cand-001',
-    candidate_code: 'EV-BLR-001',
-    full_name: 'Pooja Sharma',
-    mobile_number: '+91 98765 43210',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    nf_category: 'NF2',
-    mobilizer_name: 'Amit Patel',
-    city: 'Bengaluru',
-    training_center: 'Bengaluru EV Excellence Centre',
-    attendance_rate: 94.2,
-    attended_days: '5/6',
-    total_hours: 22,
-    assessment_score: 88,
-    skill_level: 'Advanced Rider',
-    recommendation: 'READY_FOR_DEPLOYMENT',
-    driving_license_status: 'Active (2W Gearless)',
-    emergency_contact: '+91 98765 11223 (Father)',
-    address: 'BTM Layout 2nd Stage, Bengaluru, Karnataka',
-    strengths: ['Figure-8 Balance', 'Battery Swap Speed (2m 15s)', 'Lane Discipline'],
-    areas_of_improvement: ['High-beam glare anticipation']
-  },
-  {
-    id: 'cand-002',
-    candidate_code: 'EV-BLR-002',
-    full_name: 'Ananya Roy',
-    mobile_number: '+91 98765 43211',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    nf_category: 'NF1',
-    mobilizer_name: 'Amit Patel',
-    city: 'Bengaluru',
-    training_center: 'Bengaluru EV Excellence Centre',
-    attendance_rate: 100.0,
-    attended_days: '6/6',
-    total_hours: 24,
-    assessment_score: 94,
-    skill_level: 'Master Pilot',
-    recommendation: 'READY_FOR_DEPLOYMENT',
-    driving_license_status: 'Active (2W Gearless)',
-    emergency_contact: '+91 98765 22334 (Mother)',
-    address: 'Electronic City Phase 1, Bengaluru, Karnataka',
-    strengths: ['Wet Track Braking', 'Smartphone GPS Routing', 'Defensive Riding'],
-    areas_of_improvement: ['Ready for fleet assignment']
-  },
-  {
-    id: 'cand-003',
-    candidate_code: 'EV-BLR-003',
-    full_name: 'Kavita Devi',
-    mobile_number: '+91 98765 43212',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    nf_category: 'NF3',
-    mobilizer_name: 'Priya Singh',
-    city: 'Bengaluru',
-    training_center: 'Bengaluru EV Excellence Centre',
-    attendance_rate: 83.3,
-    attended_days: '5/6',
-    total_hours: 20,
-    assessment_score: 78,
-    skill_level: 'Competent Rider',
-    recommendation: 'READY_FOR_DEPLOYMENT',
-    driving_license_status: 'Active (Learner License)',
-    emergency_contact: '+91 98765 33445 (Spouse)',
-    address: 'Koramangala 4th Block, Bengaluru, Karnataka',
-    strengths: ['Steady riding posture', 'Battery swap safety lock'],
-    areas_of_improvement: ['Confidence in dense peak-hour traffic']
-  }
-];
+const API_BASE = 'http://localhost:5000/api/training';
 
 export default function TrainerCandidates({ user, onSectionChange }) {
-  const [candidates, setCandidates] = useState(CANDIDATE_ROSTER);
+  const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [selectedCandidate, setSelectedCandidate] = useState(null);
+
+  // Fetch real batches and enrolled candidates
+  React.useEffect(() => {
+    const fetchAssignedCandidates = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/batches`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const userRole = (user?.userType || user?.role || '').toLowerCase();
+          const isTrainer = userRole.includes('trainer') || window.location.hash.includes('trainer');
+
+          const userBatches = isTrainer
+            ? json.data.filter(b => {
+                if (user?.id && (b.trainer?.id === user.id || b.trainer_id === user.id)) return true;
+                if (user?.email && b.trainer?.email?.toLowerCase() === user.email.toLowerCase()) return true;
+                const userName = (user?.full_name || user?.name || '').toLowerCase().trim();
+                if (userName && b.trainer?.full_name?.toLowerCase().includes(userName)) return true;
+                return false;
+              })
+            : json.data;
+
+          const roster = [];
+          userBatches.forEach(batch => {
+            (batch.enrolled_candidates || []).forEach(cand => {
+              roster.push({
+                id: cand.candidate_id || cand.id,
+                candidate_code: cand.candidate_code || 'N/A',
+                full_name: cand.full_name,
+                mobile_number: cand.mobile_number || '+91 98765 00000',
+                batch_code: batch.batch_code,
+                batch_title: batch.title,
+                nf_category: cand.nf_category || 'NF1',
+                mobilizer_name: cand.mobilizer_name || 'Assigned Mobilizer',
+                city: batch.trainingCenter?.city || 'Bengaluru',
+                training_center: batch.trainingCenter?.name || 'EV Excellence Centre',
+                attendance_rate: cand.attendance_percentage ?? cand.attendance ?? 0,
+                attended_days: cand.attended_days || (cand.attendance_percentage ? `${Math.round(cand.attendance_percentage / 20)}/5` : '0/0'),
+                total_hours: cand.total_hours || (cand.progress_percentage ? Math.round(cand.progress_percentage * 0.3) : 0),
+                assessment_score: cand.assessment_score || 0,
+                skill_level: cand.assessment_score >= 80 ? 'Distinction' : (cand.assessment_score >= 60 ? 'Competent Rider' : 'In Training'),
+                recommendation: cand.assessment_score >= 75 ? 'READY_FOR_DEPLOYMENT' : 'TRAINING_IN_PROGRESS',
+                driving_license_status: 'Active (2W Gearless)',
+                emergency_contact: cand.mobile_number || '+91 98765 00000',
+                address: cand.address || 'Candidate Address',
+                strengths: ['Figure-8 Balance', 'Battery Swap Safety'],
+                areas_of_improvement: ['Road traffic practice']
+              });
+            });
+          });
+          setCandidates(roster);
+        } else {
+          setCandidates([]);
+        }
+      } catch (err) {
+        console.warn('Error fetching candidates for trainer:', err);
+        setCandidates([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAssignedCandidates();
+  }, [user]);
 
   const filteredCandidates = useMemo(() => {
     return candidates.filter(cand => {
@@ -258,14 +252,34 @@ export default function TrainerCandidates({ user, onSectionChange }) {
         </div>
       </div>
 
-      {/* ─── Candidates List ─────────────────────────────────────── */}
-      <div className="space-y-3">
-        {filteredCandidates.map((cand) => (
-          <div
-            key={cand.id}
-            onClick={() => setSelectedCandidate(cand)}
-            className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:border-indigo-300 transition cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between gap-4 group"
-          >
+      {/* ─── Candidates List / Empty State ───────────────────────── */}
+      {candidates.length === 0 ? (
+        <div className="bg-white p-12 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+            <Users className="w-8 h-8 text-indigo-600" />
+          </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-base font-bold text-slate-800 font-kaiseiTokumin">
+              No Enrolled Candidates Found
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              There are currently no candidates enrolled in your assigned training cohorts. Once batches are created and candidates are enrolled, they will appear here.
+            </p>
+          </div>
+        </div>
+      ) : filteredCandidates.length === 0 ? (
+        <div className="bg-white p-12 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-2">
+          <p className="text-sm font-bold text-slate-700">No candidates match your search</p>
+          <p className="text-xs text-slate-400">Try adjusting your filters or search keywords.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredCandidates.map((cand) => (
+            <div
+              key={cand.id}
+              onClick={() => setSelectedCandidate(cand)}
+              className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:border-indigo-300 transition cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between gap-4 group"
+            >
             {/* Candidate Identity */}
             <div className="space-y-1 lg:w-1/3 min-w-0">
               <div className="flex items-center gap-2">
@@ -325,7 +339,8 @@ export default function TrainerCandidates({ user, onSectionChange }) {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* ─── CANDIDATE PROFILE SLIDE-OVER DRAWER ─────────────────── */}
       {selectedCandidate && (

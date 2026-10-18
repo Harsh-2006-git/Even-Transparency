@@ -41,17 +41,78 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+// Helper: Generate assigned cohort training days from batch schedule
+const generateCohortDays = (batch) => {
+  if (Array.isArray(batch.days) && batch.days.length > 0) {
+    return batch.days;
+  }
+
+  const startDateStr = batch.start_date || '2026-10-17';
+  const endDateStr = batch.end_date || '2026-10-22';
+
+  const start = new Date(startDateStr + 'T00:00:00');
+  const end = new Date(endDateStr + 'T00:00:00');
+
+  // Daily hours calculation from daily_start_time & daily_end_time
+  let hours = 4;
+  if (batch.daily_start_time && batch.daily_end_time) {
+    const [sh, sm] = batch.daily_start_time.split(':').map(Number);
+    const [eh, em] = batch.daily_end_time.split(':').map(Number);
+    const diff = (eh + (em || 0) / 60) - (sh + (sm || 0) / 60);
+    if (diff > 0) hours = Math.round(diff);
+  }
+
+  const defaultTopics = [
+    'EV Scooter Controls & Pre-Ride Inspection',
+    'Throttle Curves & Regenerative Braking',
+    'Battery Swap Bay Docking & Telematics',
+    'Figure-8 Slalom Balance & Cornering',
+    'Wet Track Braking & Pothole Avoidance',
+    'Live Road Trial & Deployment Readiness',
+    'Defensive Traffic & Night Drills',
+    'Digital App Navigation & Delivery Handshake',
+    'Emergency Protocols & Rapid Battery Swap',
+    'Final Graduation Practical Road Certification'
+  ];
+
+  const days = [];
+  let curr = new Date(start);
+  let dayIndex = 1;
+
+  while (curr <= end) {
+    const y = curr.getFullYear();
+    const m = String(curr.getMonth() + 1).padStart(2, '0');
+    const d = String(curr.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+    const dayName = curr.toLocaleDateString('en-US', { weekday: 'short' });
+
+    days.push({
+      dayIndex,
+      date: dateStr,
+      label: `Day ${dayIndex}`,
+      dayName,
+      topic: defaultTopics[(dayIndex - 1) % defaultTopics.length],
+      hours
+    });
+
+    curr.setDate(curr.getDate() + 1);
+    dayIndex++;
+  }
+
+  return days;
+};
+
 export default function TrainingAttendance({ user, onSectionChange }) {
   const [cohorts, setCohorts] = useState([]);
   const [selectedCohortId, setSelectedCohortId] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Calendar state (defaults to September 2026)
+  // Calendar state (defaults to October 2026)
   const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(8); // 8 = September
-  const [selectedDate, setSelectedDate] = useState('2026-09-07');
+  const [currentMonth, setCurrentMonth] = useState(9); // 9 = October (0-indexed)
+  const [selectedDate, setSelectedDate] = useState('2026-10-17');
 
-  // View Layout tab: 'split-calendar' (Calendar + Candidate Roll Call) | 'matrix' (Spreadsheet Matrix)
+  // View Layout tab: 'split-calendar' (Assigned Sessions + Candidate Roll Call) | 'matrix' (Spreadsheet Matrix)
   const [viewLayout, setViewLayout] = useState('split-calendar');
 
   // Search filter
@@ -61,7 +122,7 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
   // Add Day modal
   const [isAddDayModalOpen, setIsAddDayModalOpen] = useState(false);
-  const [newDayDate, setNewDayDate] = useState('2026-09-08');
+  const [newDayDate, setNewDayDate] = useState('2026-10-23');
   const [newDayTopic, setNewDayTopic] = useState('EV Road Trial & Live Deployment Readiness');
   const [newDayHours, setNewDayHours] = useState(4);
 
@@ -82,17 +143,7 @@ export default function TrainingAttendance({ user, onSectionChange }) {
           setSelectedCohortId(null);
         } else {
           const loadedCohorts = json.data.map(batch => {
-            let days = batch.days || [];
-            if (!days || days.length === 0) {
-              days = [
-                { dayIndex: 1, date: '2026-09-01', label: 'Day 1', dayName: 'Tue', topic: 'EV Scooter Controls & Pre-Ride Inspection', hours: 4 },
-                { dayIndex: 2, date: '2026-09-02', label: 'Day 2', dayName: 'Wed', topic: 'Throttle Curves & Regenerative Braking', hours: 4 },
-                { dayIndex: 3, date: '2026-09-03', label: 'Day 3', dayName: 'Thu', topic: 'Battery Swap Bay Docking & Telematics', hours: 4 },
-                { dayIndex: 4, date: '2026-09-04', label: 'Day 4', dayName: 'Fri', topic: 'Figure-8 Slalom Balance & Cornering', hours: 4 },
-                { dayIndex: 5, date: '2026-09-05', label: 'Day 5', dayName: 'Sat', topic: 'Wet Track Braking & Pothole Avoidance', hours: 4 },
-                { dayIndex: 6, date: '2026-09-07', label: 'Day 6', dayName: 'Mon', topic: 'Live Road Trial & Deployment Readiness', hours: 4 }
-              ];
-            }
+            const days = generateCohortDays(batch);
 
             let candidates = [];
             if (Array.isArray(batch.enrolled_candidates) && batch.enrolled_candidates.length > 0) {
@@ -113,6 +164,8 @@ export default function TrainingAttendance({ user, onSectionChange }) {
               title: batch.title,
               start_date: batch.start_date,
               end_date: batch.end_date,
+              daily_start_time: batch.daily_start_time,
+              daily_end_time: batch.daily_end_time,
               module: batch.module || {
                 code: 'MOD-EV-01',
                 title: 'Two-Wheeler EV Dynamics & Battery Swapping',
@@ -153,7 +206,19 @@ export default function TrainingAttendance({ user, onSectionChange }) {
           }
 
           setCohorts(loadedCohorts);
-          setSelectedCohortId(loadedCohorts[0]?.id || null);
+          if (loadedCohorts.length > 0) {
+            const first = loadedCohorts[0];
+            setSelectedCohortId(first.id);
+            if (first.days && first.days.length > 0) {
+              const firstDay = first.days[0].date;
+              setSelectedDate(firstDay);
+              const [y, m] = firstDay.split('-').map(Number);
+              if (y && m) {
+                setCurrentYear(y);
+                setCurrentMonth(m - 1);
+              }
+            }
+          }
         }
       } else {
         setCohorts([]);
@@ -178,37 +243,62 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
   // Accessible cohorts
   const accessibleCohorts = useMemo(() => {
+    if (!cohorts || cohorts.length === 0) return [];
     if (!isTrainer) return cohorts;
     const trainerCohorts = cohorts.filter(c => {
+      if (!c) return false;
       if (user?.id && (c.trainer?.id === user.id || c.trainer_id === user.id)) return true;
       if (user?.email && c.trainer?.email?.toLowerCase() === user.email.toLowerCase()) return true;
       const userName = (user?.full_name || user?.name || '').toLowerCase().trim();
       if (userName && c.trainer?.full_name?.toLowerCase().includes(userName)) return true;
       return true;
     });
-    return trainerCohorts.length > 0 ? trainerCohorts : [cohorts[0]];
+    return trainerCohorts.length > 0 ? trainerCohorts : (cohorts[0] ? [cohorts[0]] : []);
   }, [cohorts, isTrainer, user]);
 
   const currentCohort = useMemo(() => {
-    return accessibleCohorts.find(c => c.id === selectedCohortId) || accessibleCohorts[0];
+    if (!accessibleCohorts || accessibleCohorts.length === 0) return null;
+    return accessibleCohorts.find(c => c && c.id === selectedCohortId) || accessibleCohorts[0] || null;
   }, [accessibleCohorts, selectedCohortId]);
 
   useEffect(() => {
-    if (accessibleCohorts.length > 0 && !accessibleCohorts.some(c => c.id === selectedCohortId)) {
-      setSelectedCohortId(accessibleCohorts[0].id);
+    if (accessibleCohorts.length > 0 && (!selectedCohortId || !accessibleCohorts.some(c => c && c.id === selectedCohortId))) {
+      setSelectedCohortId(accessibleCohorts[0]?.id || null);
     }
   }, [accessibleCohorts, selectedCohortId]);
+
+  // Ensure selectedDate defaults to an allotted cohort date
+  useEffect(() => {
+    if (currentCohort?.days && currentCohort.days.length > 0) {
+      const isDateValid = currentCohort.days.some(d => d.date === selectedDate);
+      if (!isDateValid) {
+        const firstAllottedDate = currentCohort.days[0].date;
+        setSelectedDate(firstAllottedDate);
+        const [y, m] = firstAllottedDate.split('-').map(Number);
+        if (y && m) {
+          setCurrentYear(y);
+          setCurrentMonth(m - 1);
+        }
+      }
+    }
+  }, [currentCohort]);
+
+  // Is the currently selected date an allotted training day for this batch?
+  const isAllottedDate = useMemo(() => {
+    return (currentCohort?.days || []).some(d => d.date === selectedDate);
+  }, [currentCohort, selectedDate]);
 
   // Active training day details for selected date
   const activeDayObj = useMemo(() => {
     const existing = (currentCohort?.days || []).find(d => d.date === selectedDate);
-    if (existing) return existing;
+    if (existing) return { ...existing, isAllotted: true };
     return {
       date: selectedDate,
-      label: `Session on ${selectedDate}`,
+      label: 'Unassigned Date',
       dayName: new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }),
-      topic: 'Practical Training & Workshop',
-      hours: 4
+      topic: 'No training session scheduled for this batch on this date',
+      hours: 0,
+      isAllotted: false
     };
   }, [currentCohort, selectedDate]);
 
@@ -352,7 +442,9 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
   // Metrics for selected day
   const selectedDayMetrics = useMemo(() => {
-    if (!currentCohort || candidateStats.length === 0) return { present: 0, late: 0, absent: 0, excused: 0, unrecorded: 0, rate: 0 };
+    if (!currentCohort || candidateStats.length === 0 || !isAllottedDate) {
+      return { present: 0, late: 0, absent: 0, excused: 0, unrecorded: 0, rate: 0 };
+    }
     let present = 0;
     let late = 0;
     let absent = 0;
@@ -371,7 +463,7 @@ export default function TrainingAttendance({ user, onSectionChange }) {
     const total = candidateStats.length;
     const rate = total > 0 ? Math.round(((present + late * 0.5) / total) * 100) : 0;
     return { present, late, absent, excused, unrecorded, rate };
-  }, [currentCohort, selectedDate, candidateStats]);
+  }, [currentCohort, selectedDate, candidateStats, isAllottedDate]);
 
   // Overall cohort metrics
   const overallCohortMetrics = useMemo(() => {
@@ -389,6 +481,11 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
   // Set individual candidate status for selected date
   const handleSetCandidateStatus = (candidateId, status) => {
+    if (!isAllottedDate) {
+      showToast('⚠️ Attendance can only be marked on assigned batch dates.', 'error');
+      return;
+    }
+
     setCohorts(prevCohorts => {
       return prevCohorts.map(cohort => {
         if (cohort.id !== currentCohort.id) return cohort;
@@ -420,6 +517,11 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
   // Bulk mark all candidates for selected date
   const handleBulkMarkSelectedDay = (status) => {
+    if (!isAllottedDate) {
+      showToast('⚠️ Attendance can only be marked on assigned batch dates.', 'error');
+      return;
+    }
+
     setCohorts(prevCohorts => {
       return prevCohorts.map(cohort => {
         if (cohort.id !== currentCohort.id) return cohort;
@@ -448,6 +550,11 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
   // Save changes
   const handleSaveAttendance = async () => {
+    if (!isAllottedDate) {
+      showToast('⚠️ Cannot save: Attendance can only be recorded on assigned batch dates.', 'error');
+      return;
+    }
+
     try {
       setSaving(true);
       const records = (currentCohort.candidates || []).map(cand => {
@@ -621,8 +728,13 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
           <button
             onClick={handleSaveAttendance}
-            disabled={saving}
-            className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#F72570] hover:bg-[#de1b60] text-white text-xs font-bold shadow-sm shadow-[#F72570]/20 transition flex items-center gap-2 disabled:opacity-50"
+            disabled={saving || !isAllottedDate}
+            className={`cursor-pointer px-4 py-2.5 rounded-xl text-white text-xs font-bold transition flex items-center gap-2 ${
+              !isAllottedDate
+                ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                : 'bg-[#F72570] hover:bg-[#de1b60] shadow-sm shadow-[#F72570]/20'
+            }`}
+            title={!isAllottedDate ? 'Attendance can only be saved on allotted cohort dates' : 'Save Attendance to Database'}
           >
             {saving ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -651,34 +763,46 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
         <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Present ({activeDayObj.label || selectedDate})</span>
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+              {isAllottedDate ? `Present (${activeDayObj.label || selectedDate})` : 'Present (Unassigned Date)'}
+            </span>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-2xl font-black text-emerald-700 font-kaiseiTokumin">
-                {selectedDayMetrics.present}
+              <span className={`text-2xl font-black font-kaiseiTokumin ${isAllottedDate ? 'text-emerald-700' : 'text-slate-400'}`}>
+                {isAllottedDate ? selectedDayMetrics.present : '—'}
               </span>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">
-                {selectedDayMetrics.rate}% Logged
+              <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                isAllottedDate ? 'text-emerald-700 bg-emerald-50' : 'text-slate-500 bg-slate-100'
+              }`}>
+                {isAllottedDate ? `${selectedDayMetrics.rate}% Logged` : 'Not Scheduled'}
               </span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            isAllottedDate ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
+          }`}>
             <CheckCircle2 className="w-4 h-4" />
           </div>
         </div>
 
         <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Absent / Leave Today</span>
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">
+              {isAllottedDate ? 'Absent / Leave Today' : 'Status on Selected Date'}
+            </span>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-2xl font-black text-rose-600 font-kaiseiTokumin">
-                {selectedDayMetrics.absent + selectedDayMetrics.excused}
+              <span className={`text-2xl font-black font-kaiseiTokumin ${isAllottedDate ? 'text-rose-600' : 'text-slate-400'}`}>
+                {isAllottedDate ? (selectedDayMetrics.absent + selectedDayMetrics.excused) : '—'}
               </span>
-              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded">
-                {selectedDayMetrics.late} Late
+              <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                isAllottedDate ? 'text-amber-700 bg-amber-50' : 'text-slate-500 bg-slate-100'
+              }`}>
+                {isAllottedDate ? `${selectedDayMetrics.late} Late` : 'No Class'}
               </span>
             </div>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            isAllottedDate ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-400'
+          }`}>
             <XCircle className="w-4 h-4" />
           </div>
         </div>
@@ -748,144 +872,142 @@ export default function TrainingAttendance({ user, onSectionChange }) {
       {viewLayout === 'split-calendar' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
           {/* ═════════════════════════════════════════════════════════════
-             LEFT: FULL INTERACTIVE MONTH CALENDAR
+             LEFT: ASSIGNED COHORT TRAINING SESSIONS ONLY
              ═════════════════════════════════════════════════════════════ */}
           <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 flex flex-col space-y-3">
-            {/* Calendar Header with Navigation */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center bg-slate-100/90 p-1 rounded-xl">
-                  <button
-                    onClick={handlePrevMonth}
-                    className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200/80 text-slate-700 flex items-center justify-center transition cursor-pointer shadow-2xs"
-                    title="Previous Month"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <div className="px-2.5 text-xs font-black text-slate-900 min-w-[110px] text-center font-kaiseiTokumin">
-                    {MONTH_NAMES[currentMonth]} {currentYear}
-                  </div>
-                  <button
-                    onClick={handleNextMonth}
-                    className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200/80 text-slate-700 flex items-center justify-center transition cursor-pointer shadow-2xs"
-                    title="Next Month"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+            {/* Cohort Schedule Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <CalendarDays className="w-4 h-4 text-indigo-600" />
+                  <h3 className="text-sm font-bold text-slate-900 font-kaiseiTokumin">
+                    Assigned Cohort Schedule
+                  </h3>
                 </div>
-
-                <button
-                  onClick={() => {
-                    setCurrentYear(2026);
-                    setCurrentMonth(8);
-                    setSelectedDate('2026-09-07');
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-[11px] font-bold text-slate-700 transition cursor-pointer"
-                >
-                  Today
-                </button>
+                <p className="text-[11px] text-slate-500">
+                  {currentCohort?.days?.length || 0} Allotted Sessions • {currentCohort?.batch_code}
+                </p>
               </div>
 
               <button
                 onClick={() => setIsAddDayModalOpen(true)}
-                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
-                title="Add a custom training day"
+                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100/80 px-2.5 py-1.5 rounded-xl border border-indigo-200/60 flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                title="Add a custom training session"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Day</span>
+                <span>Add Session</span>
               </button>
             </div>
 
-            {/* Days of Week Header */}
-            <div className="grid grid-cols-7 text-center text-[10px] font-black uppercase text-slate-400 py-1 border-b border-slate-100">
-              {DAYS_OF_WEEK.map((d, i) => (
-                <div key={d} className={i === 0 || i === 6 ? 'text-slate-300' : ''}>
-                  {d}
-                </div>
-              ))}
-            </div>
+            {/* List of ONLY Assigned Cohort Dates */}
+            <div className="space-y-2 max-h-[620px] overflow-y-auto pr-1">
+              {(currentCohort?.days || []).map((day) => {
+                const isSelected = day.date === selectedDate;
 
-            {/* Month Calendar Day Grid Matrix */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((day, idx) => {
-                const isSelected = day.dateStr === selectedDate;
-                const isCohortDay = !!day.cohortDay;
+                // Calculate attendance summary for this assigned day
+                let presentCount = 0;
+                let lateCount = 0;
+                let absentCount = 0;
+                let totalCands = currentCohort?.candidates?.length || 0;
+                let isMarked = false;
+
+                currentCohort?.candidates?.forEach(c => {
+                  const st = c.attendance?.[day.date]?.status;
+                  if (st) isMarked = true;
+                  if (st === 'PRESENT') presentCount++;
+                  else if (st === 'LATE') lateCount++;
+                  else if (st === 'ABSENT' || st === 'EXCUSED') absentCount++;
+                });
+
+                const isFullPresent = isMarked && totalCands > 0 && presentCount === totalCands;
+
+                const dayDateObj = new Date(day.date + 'T00:00:00');
+                const formattedDateStr = dayDateObj.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                });
 
                 return (
                   <button
-                    key={idx}
+                    key={day.date}
                     type="button"
-                    onClick={() => {
-                      if (day.isCurrentMonth) {
-                        setSelectedDate(day.dateStr);
-                      }
-                    }}
-                    className={`min-h-[58px] p-1.5 rounded-xl flex flex-col justify-between items-center transition cursor-pointer text-center relative ${
-                      !day.isCurrentMonth
-                        ? 'bg-slate-50/40 text-slate-300 pointer-events-none'
-                        : isSelected
-                        ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-500/40 font-bold'
-                        : isCohortDay
-                        ? 'bg-indigo-50/70 hover:bg-indigo-100/80 text-slate-800 border border-indigo-200/80'
-                        : 'bg-white hover:bg-slate-100/80 text-slate-700 border border-slate-100'
+                    onClick={() => setSelectedDate(day.date)}
+                    className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex flex-col space-y-2 group ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-500/30'
+                        : 'bg-slate-50/70 hover:bg-indigo-50/40 text-slate-800 border-slate-200/80 hover:border-indigo-200'
                     }`}
                   >
-                    {/* Day Number */}
+                    {/* Top Row: Day Pill, Date & Status */}
                     <div className="flex items-center justify-between w-full">
-                      <span className={`text-xs font-black inline-flex items-center justify-center w-5 h-5 rounded-full ${
-                        day.isToday && !isSelected
-                          ? 'bg-[#F72570] text-white text-[10px]'
-                          : isSelected
-                          ? 'text-white'
-                          : 'text-slate-800'
-                      }`}>
-                        {day.dayNumber}
-                      </span>
-
-                      {/* Indicator Dot */}
-                      {isCohortDay && (
-                        <span className={`w-2 h-2 rounded-full ${
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[11px] font-black font-mono px-2 py-0.5 rounded-md ${
                           isSelected
-                            ? 'bg-white'
-                            : day.isFullPresent
-                            ? 'bg-emerald-500'
-                            : day.presentCount > 0
-                            ? 'bg-amber-500'
-                            : 'bg-indigo-400'
-                        }`} />
-                      )}
+                            ? 'bg-white/20 text-white border border-white/20'
+                            : 'bg-indigo-100 text-indigo-700 border border-indigo-200/70'
+                        }`}>
+                          {day.label}
+                        </span>
+
+                        <span className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                          {formattedDateStr}
+                        </span>
+                      </div>
+
+                      {/* Attendance Status Badge */}
+                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                        isSelected
+                          ? isFullPresent
+                            ? 'bg-emerald-500 text-white'
+                            : isMarked
+                            ? 'bg-amber-400 text-slate-900'
+                            : 'bg-white/20 text-white'
+                          : isFullPresent
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : isMarked
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {isFullPresent ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>{presentCount}/{totalCands} Present</span>
+                          </>
+                        ) : isMarked ? (
+                          <>
+                            <Clock className="w-3 h-3" />
+                            <span>{presentCount} Present</span>
+                          </>
+                        ) : (
+                          <span>Unrecorded</span>
+                        )}
+                      </span>
                     </div>
 
-                    {/* Badge / Label for Cohort Days */}
-                    {isCohortDay ? (
-                      <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md truncate max-w-[48px] block ${
-                        isSelected
-                          ? 'bg-white/20 text-white'
-                          : 'bg-indigo-100 text-indigo-700'
-                      }`}>
-                        {day.cohortDay.label}
+                    {/* Topic & Hours */}
+                    <div className="flex items-center justify-between text-xs">
+                      <p className={`line-clamp-1 font-medium ${isSelected ? 'text-indigo-100' : 'text-slate-600'}`}>
+                        {day.topic}
+                      </p>
+                      <span className={`text-[10px] shrink-0 font-bold ml-2 ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
+                        {day.hours || 4}h
                       </span>
-                    ) : (
-                      <span className="h-3" />
-                    )}
+                    </div>
                   </button>
                 );
               })}
             </div>
 
-            {/* Calendar Legend */}
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>Marked & Present</span>
+            {/* Schedule Footnote */}
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                <span>Strict Cohort Scope (Assigned Dates Only)</span>
               </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>Partial / Late</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-indigo-400" />
-                <span>Scheduled</span>
+              <span className="font-bold text-slate-700">
+                {currentCohort?.days?.length || 0} Sessions Allotted
               </span>
             </div>
           </div>
@@ -894,14 +1016,16 @@ export default function TrainingAttendance({ user, onSectionChange }) {
              RIGHT: CANDIDATE LIST & ATTENDANCE MARKING FOR SELECTED DATE
              ═════════════════════════════════════════════════════════════ */}
           <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
-            {/* Selected Date Header Banner */}
-            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-md bg-[#FFF0F5] text-[#F72570] text-xs font-mono font-black border border-[#F72570]/20">
-                    {activeDayObj.label || 'Session'}
-                  </span>
-                  <span className="text-xs font-bold text-indigo-900">
+            {/* When selected date is NOT allotted to the batch */}
+            {!isAllottedDate ? (
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3">
+                <div className="flex items-center gap-2.5 text-amber-900 font-bold text-sm">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                  <span>Date Not Allotted for This Batch — Attendance Disabled</span>
+                </div>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  No training session is scheduled for <strong>{currentCohort?.batch_code}</strong> on{' '}
+                  <span className="font-semibold underline">
                     {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
                       weekday: 'long',
                       month: 'short',
@@ -909,31 +1033,70 @@ export default function TrainingAttendance({ user, onSectionChange }) {
                       year: 'numeric'
                     })}
                   </span>
+                  . Attendance can only be recorded on assigned cohort training dates.
+                </p>
+                <div className="pt-2 border-t border-amber-200/60">
+                  <span className="text-[11px] font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                    Select an assigned batch date to mark attendance:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(currentCohort?.days || []).map((d) => (
+                      <button
+                        key={d.date}
+                        type="button"
+                        onClick={() => setSelectedDate(d.date)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200 shadow-2xs transition cursor-pointer flex items-center gap-1"
+                      >
+                        <CalendarIcon className="w-3 h-3" />
+                        <span>{d.label}</span>
+                        <span className="text-[10px] opacity-75">({d.date.slice(5)})</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  {activeDayObj.topic}
-                </h3>
               </div>
+            ) : (
+              /* Selected Date Header Banner for Allotted Date */
+              <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-md bg-[#FFF0F5] text-[#F72570] text-xs font-mono font-black border border-[#F72570]/20">
+                      {activeDayObj.label || 'Session'}
+                    </span>
+                    <span className="text-xs font-bold text-indigo-900">
+                      {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {activeDayObj.topic}
+                  </h3>
+                </div>
 
-              {/* One-Click Bulk Actions */}
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => handleBulkMarkSelectedDay('PRESENT')}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Mark All Present</span>
-                </button>
+                {/* One-Click Bulk Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleBulkMarkSelectedDay('PRESENT')}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Mark All Present</span>
+                  </button>
 
-                <button
-                  onClick={() => handleBulkMarkSelectedDay('ABSENT')}
-                  className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>All Absent</span>
-                </button>
+                  <button
+                    onClick={() => handleBulkMarkSelectedDay('ABSENT')}
+                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>All Absent</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Candidate Search Box */}
             <div className="relative">
@@ -961,7 +1124,11 @@ export default function TrainingAttendance({ user, onSectionChange }) {
                   return (
                     <div
                       key={cand.candidate_id}
-                      className="p-3.5 rounded-xl border border-slate-200/90 bg-white shadow-2xs hover:border-indigo-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className={`p-3.5 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        !isAllottedDate
+                          ? 'border-slate-200/60 bg-slate-50/50 opacity-75'
+                          : 'border-slate-200/90 bg-white shadow-2xs hover:border-indigo-300'
+                      }`}
                     >
                       {/* Candidate Details */}
                       <div className="space-y-0.5 sm:w-2/5 min-w-0">
@@ -989,10 +1156,14 @@ export default function TrainingAttendance({ user, onSectionChange }) {
                         {/* PRESENT */}
                         <button
                           onClick={() => handleSetCandidateStatus(cand.candidate_id, 'PRESENT')}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center cursor-pointer ${
-                            currentStatus === 'PRESENT'
-                              ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500/40'
-                              : 'bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200'
+                          disabled={!isAllottedDate}
+                          title={!isAllottedDate ? 'Attendance disabled on unallotted dates' : 'Mark Present'}
+                          className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center ${
+                            !isAllottedDate
+                              ? 'bg-slate-100 text-slate-400 border border-slate-200/60 cursor-not-allowed opacity-50'
+                              : currentStatus === 'PRESENT'
+                              ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500/40 cursor-pointer'
+                              : 'bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 cursor-pointer'
                           }`}
                         >
                           <Check className="w-3.5 h-3.5 mb-0.5" />
@@ -1002,10 +1173,14 @@ export default function TrainingAttendance({ user, onSectionChange }) {
                         {/* LATE */}
                         <button
                           onClick={() => handleSetCandidateStatus(cand.candidate_id, 'LATE')}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center cursor-pointer ${
-                            currentStatus === 'LATE'
-                              ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-500/40'
-                              : 'bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-700 border border-slate-200'
+                          disabled={!isAllottedDate}
+                          title={!isAllottedDate ? 'Attendance disabled on unallotted dates' : 'Mark Late'}
+                          className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center ${
+                            !isAllottedDate
+                              ? 'bg-slate-100 text-slate-400 border border-slate-200/60 cursor-not-allowed opacity-50'
+                              : currentStatus === 'LATE'
+                              ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-500/40 cursor-pointer'
+                              : 'bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-amber-700 border border-slate-200 cursor-pointer'
                           }`}
                         >
                           <Clock className="w-3.5 h-3.5 mb-0.5" />
@@ -1015,10 +1190,14 @@ export default function TrainingAttendance({ user, onSectionChange }) {
                         {/* ABSENT */}
                         <button
                           onClick={() => handleSetCandidateStatus(cand.candidate_id, 'ABSENT')}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center cursor-pointer ${
-                            currentStatus === 'ABSENT'
-                              ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-500/40'
-                              : 'bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200'
+                          disabled={!isAllottedDate}
+                          title={!isAllottedDate ? 'Attendance disabled on unallotted dates' : 'Mark Absent'}
+                          className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center ${
+                            !isAllottedDate
+                              ? 'bg-slate-100 text-slate-400 border border-slate-200/60 cursor-not-allowed opacity-50'
+                              : currentStatus === 'ABSENT'
+                              ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-500/40 cursor-pointer'
+                              : 'bg-slate-50 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 cursor-pointer'
                           }`}
                         >
                           <X className="w-3.5 h-3.5 mb-0.5" />
@@ -1028,10 +1207,14 @@ export default function TrainingAttendance({ user, onSectionChange }) {
                         {/* EXCUSED / LEAVE */}
                         <button
                           onClick={() => handleSetCandidateStatus(cand.candidate_id, 'EXCUSED')}
-                          className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center cursor-pointer ${
-                            currentStatus === 'EXCUSED'
-                              ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-500/40'
-                              : 'bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200'
+                          disabled={!isAllottedDate}
+                          title={!isAllottedDate ? 'Attendance disabled on unallotted dates' : 'Mark Leave'}
+                          className={`py-2 px-1 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center ${
+                            !isAllottedDate
+                              ? 'bg-slate-100 text-slate-400 border border-slate-200/60 cursor-not-allowed opacity-50'
+                              : currentStatus === 'EXCUSED'
+                              ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-500/40 cursor-pointer'
+                              : 'bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 cursor-pointer'
                           }`}
                         >
                           <AlertCircle className="w-3.5 h-3.5 mb-0.5" />

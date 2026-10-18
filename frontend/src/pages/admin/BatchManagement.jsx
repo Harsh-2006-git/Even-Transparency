@@ -223,6 +223,22 @@ export default function BatchManagement({ user, onSectionChange }) {
   const handleSaveEditBatch = async (e) => {
     e.preventDefault();
     if (!editingBatch) return;
+
+    if (editBatchFormData.trainer_id) {
+      const selectedTr = trainers.find(t => t.id === editBatchFormData.trainer_id);
+      const isAssignedToThisBatch = editingBatch && (
+        editingBatch.trainer_id === selectedTr?.id ||
+        editingBatch.primary_trainer_id === selectedTr?.id ||
+        editingBatch.trainer?.id === selectedTr?.id ||
+        selectedTr?.assigned_batch?.id === editingBatch.id ||
+        selectedTr?.assigned_batch?.batch_code === editingBatch.batch_code
+      );
+      if (selectedTr?.is_booked && !isAssignedToThisBatch) {
+        showToast(`Cannot assign: Trainer "${selectedTr.full_name}" is already assigned to active batch ${selectedTr.assigned_batch?.batch_code || 'current cohort'}. 1 trainer can only be assigned to 1 batch at a time.`, 'error');
+        return;
+      }
+    }
+
     try {
       setIsSubmittingEdit(true);
       const res = await fetch(`${API_BASE}/batches/${editingBatch.id}`, {
@@ -1272,6 +1288,25 @@ export default function BatchManagement({ user, onSectionChange }) {
                       );
                     })}
                   </select>
+                  {(() => {
+                    const selectedTr = trainers.find(t => t.id === editBatchFormData.trainer_id);
+                    const isAssignedToThisBatch = editingBatch && (
+                      editingBatch.trainer_id === selectedTr?.id ||
+                      editingBatch.primary_trainer_id === selectedTr?.id ||
+                      editingBatch.trainer?.id === selectedTr?.id ||
+                      selectedTr?.assigned_batch?.id === editingBatch.id ||
+                      selectedTr?.assigned_batch?.batch_code === editingBatch.batch_code
+                    );
+                    if (selectedTr?.is_booked && !isAssignedToThisBatch) {
+                      return (
+                        <div className="mt-1.5 p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-semibold flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>Trainer "{selectedTr.full_name}" is currently assigned to active batch {selectedTr.assigned_batch?.batch_code || 'Cohort'}. 1 trainer can only be assigned to 1 batch at a time.</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Training Campus Hub</label>

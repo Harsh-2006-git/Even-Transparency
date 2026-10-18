@@ -8,19 +8,67 @@ export const getEmployers = async (req, res) => {
     const { search, category, city, status } = req.query;
 
     const records = await db.Employer.findAll({
+      include: [
+        { model: db.JobOpportunity, as: 'jobOpportunities', required: false }
+      ],
       order: [['created_at', 'DESC']]
     });
 
     let list = records.map(e => {
       const raw = e.toJSON();
       const displayName = raw.employer_name || raw.company_name || 'Employer';
+      const companyCode = raw.company_code || `EMP-${displayName.substring(0, 3).toUpperCase()}-${raw.id.substring(0, 2).toUpperCase()}`;
+
+      // Map real JobOpportunities from PostgreSQL
+      const dbJobs = Array.isArray(raw.jobOpportunities) && raw.jobOpportunities.length > 0
+        ? raw.jobOpportunities.map((j, jIdx) => {
+            const maxSal = Number(j.salary_max || j.max_salary_monthly || 21500);
+            const minSal = Number(j.salary_min || j.min_salary_monthly || 16000);
+            return {
+              id: j.id,
+              job_title: j.title || j.role_name || 'EV Delivery Pilot',
+              role_code: `${companyCode.replace('EMP-', '')}-R${jIdx + 1}`,
+              vacancies: Number(j.openings || j.open_positions || 10),
+              placed_count: Number(j.filled_positions || 0),
+              monthly_gross_salary: maxSal,
+              base_pay: minSal,
+              performance_bonus: Math.max(0, maxSal - minSal),
+              shift_timings: j.shift_type ? `${j.shift_type} Shift` : 'Day Shift (08:00 AM - 04:30 PM)',
+              work_type: j.employment_type || 'Full-Time',
+              delivery_radius_km: 5.0,
+              required_qualification: j.minimum_education || '10th Standard Pass, Valid 2W License',
+              preferred_nf_tier: Array.isArray(j.required_nf_levels) ? j.required_nf_levels.join(' / ') : 'NF1 / NF2',
+              perks: ['Accidental Insurance ₹5 Lakhs', 'Unlimited Battery Swaps', 'Safety Gear Kit'],
+              status: j.status || 'OPEN'
+            };
+          })
+        : [
+            {
+              id: `role-${raw.id}-01`,
+              job_title: 'EV Last-Mile Delivery Pilot',
+              role_code: `${companyCode.replace('EMP-', '')}-R1`,
+              vacancies: 20,
+              placed_count: Number(raw.total_placed_candidates) || 0,
+              monthly_gross_salary: 21500,
+              base_pay: 16000,
+              performance_bonus: 5500,
+              shift_timings: '08:00 AM - 04:30 PM (Day Shift)',
+              work_type: 'Full-Time',
+              delivery_radius_km: 5.0,
+              required_qualification: '10th Standard Pass, Valid 2W License',
+              preferred_nf_tier: 'NF1 / NF2',
+              perks: ['Accidental Insurance ₹5 Lakhs', 'Battery Swap Access', 'Safety Gear Kit'],
+              status: 'OPEN'
+            }
+          ];
+
       return {
         id: raw.id,
         employer_name: displayName,
         company_name: raw.company_name || displayName,
         full_name: displayName,
-        company_code: raw.company_code || `EMP-${raw.id.substring(0, 4).toUpperCase()}`,
-        employee_id: raw.company_code || `EMP-${raw.id.substring(0, 4).toUpperCase()}`,
+        company_code: companyCode,
+        employee_id: companyCode,
         industry: raw.industry || raw.industry_type || 'Hyperlocal Food Logistics',
         industry_type: raw.industry_type || raw.industry || 'QUICK_COMMERCE',
         category: raw.industry_type || 'QUICK_COMMERCE',
@@ -28,7 +76,7 @@ export const getEmployers = async (req, res) => {
         logo_url: raw.logo_url || 'https://images.unsplash.com/photo-1526367790999-0150786686a2?w=120&auto=format&fit=crop&q=80',
         primary_city: raw.city || 'Bengaluru',
         assigned_city: raw.city || 'Bengaluru',
-        operating_cities: Array.isArray(raw.operating_cities) ? raw.operating_cities : [raw.city || 'Bengaluru'],
+        operating_cities: Array.isArray(raw.operating_cities) && raw.operating_cities.length > 0 ? raw.operating_cities : [raw.city || 'Bengaluru'],
         mou_signed: true,
         mou_date: raw.created_at ? new Date(raw.created_at).toISOString().split('T')[0] : '2025-08-10',
         status: raw.status || 'active',
@@ -42,25 +90,11 @@ export const getEmployers = async (req, res) => {
         address: raw.address || 'Plot 18, 80ft Rd, Koramangala 4th Block, Bengaluru',
         website: raw.website || 'https://evenmobility.org',
         total_placed_candidates: Number(raw.total_placed_candidates) || 0,
-        active_roles: [
-          {
-            id: `role-${raw.id}-01`,
-            job_title: 'EV Last-Mile Delivery Pilot',
-            role_code: `${raw.id.substring(0, 4).toUpperCase()}-R1`,
-            vacancies: 25,
-            placed_count: Number(raw.total_placed_candidates) || 0,
-            monthly_gross_salary: 21500,
-            base_pay: 16000,
-            performance_bonus: 5500,
-            shift_timings: '08:00 AM - 04:30 PM (Day Shift)',
-            work_type: 'Full-Time',
-            delivery_radius_km: 5.5,
-            required_qualification: '10th Standard Pass, Valid 2W License',
-            preferred_nf_tier: 'NF1 / NF2',
-            perks: ['Accidental Insurance ₹5 Lakhs', 'Battery Swap Access', 'Safety Gear Kit'],
-            status: 'OPEN'
-          }
+        allocated_ev_model: raw.industry_type === 'COMMERCIAL_EV' ? 'Hero Electric Nyx Heavy Cargo' : 'Ather 450X Commercial Spec',
+        hubs: [
+          { name: `${raw.city || 'Bengaluru'} Central EV Hub`, address: raw.address || 'Central Commercial Hub', capacity: 50, charging_points: 20 }
         ],
+        active_roles: dbJobs,
         created_at: raw.created_at,
         updated_at: raw.updated_at
       };
@@ -264,20 +298,64 @@ export const deleteEmployer = async (req, res) => {
   }
 };
 
-// 5. POST /api/employers/:id/roles - Add a new Job Role / Opening
+// 5. POST /api/employers/:id/roles - Add a new Job Role / Opening in PostgreSQL
 export const addJobRoleToEmployer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { job_title, vacancies = 10, monthly_gross_salary = 20000 } = req.body;
+    const {
+      job_title,
+      role_title,
+      vacancies = 10,
+      monthly_gross_salary = 20000,
+      base_pay,
+      shift_timings,
+      work_type = 'Full-Time',
+      required_qualification,
+      preferred_nf_tier = 'NF1 / NF2',
+      perks = []
+    } = req.body;
 
     const employer = await db.Employer.findByPk(id);
     if (!employer) {
       return res.status(404).json({ success: false, message: 'Employer not found' });
     }
 
+    const title = job_title || role_title || 'EV Delivery Pilot';
+    const grossSalary = Number(monthly_gross_salary) || 20000;
+    const base = Number(base_pay) || Math.round(grossSalary * 0.75);
+
+    let createdJob = null;
+    if (db.JobOpportunity) {
+      createdJob = await db.JobOpportunity.create({
+        id: uuidv4(),
+        employer_id: employer.id,
+        title,
+        role_name: title,
+        role_category: 'Delivery Associate',
+        description: `${title} at ${employer.employer_name || employer.company_name}`,
+        employment_type: work_type === 'Part-Time' ? 'PART_TIME' : 'FULL_TIME',
+        minimum_education: required_qualification || '10th Standard Pass, Valid 2W License',
+        salary_min: base,
+        salary_max: grossSalary,
+        min_salary_monthly: base,
+        max_salary_monthly: grossSalary,
+        city: employer.city || 'Bengaluru',
+        work_location: `${employer.city || 'Bengaluru'} EV Hub`,
+        openings: Number(vacancies),
+        open_positions: Number(vacancies),
+        filled_positions: 0,
+        shift_type: shift_timings && shift_timings.toLowerCase().includes('night') ? 'NIGHT' : 'DAY',
+        required_nf_levels: preferred_nf_tier ? preferred_nf_tier.split('/').map(t => t.trim()) : ['NF1', 'NF2'],
+        requires_vehicle: false,
+        requires_license: true,
+        status: 'OPEN'
+      });
+    }
+
     return res.status(201).json({
       success: true,
-      message: `Job role '${job_title}' with ${vacancies} vacancies created for ${employer.employer_name}`
+      message: `Job role '${title}' with ${vacancies} vacancies created for ${employer.employer_name || employer.company_name}`,
+      data: createdJob
     });
   } catch (error) {
     console.error('Error adding job role:', error);

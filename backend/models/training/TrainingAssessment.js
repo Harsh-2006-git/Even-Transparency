@@ -45,6 +45,10 @@ export default (sequelize, DataTypes) => {
     assessment_type: {
       type: DataTypes.ENUM(
         'PRACTICAL_DRIVING',
+        'BATTERY_SWAP',
+        'ROAD_SAFETY',
+        'DIGITAL_APP',
+        'FINAL_CERTIFICATION',
         'THEORY',
         'DIGITAL_LITERACY',
         'SAFETY_DRILL',

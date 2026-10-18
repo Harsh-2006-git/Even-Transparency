@@ -34,7 +34,8 @@ import {
   HelpCircle,
   Bell,
   Lock,
-  Unlock
+  Unlock,
+  Eye
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000/api/training';
@@ -46,6 +47,7 @@ export default function TrainerDashboard({ user, onSectionChange }) {
 
   // Active Session & Action Modals
   const [activeSessionModal, setActiveSessionModal] = useState(null);
+  const [selectedScheduleSession, setSelectedScheduleSession] = useState(null);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [isAssessmentModalOpen, setIsAssessmentModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
@@ -184,9 +186,9 @@ export default function TrainerDashboard({ user, onSectionChange }) {
   // Attendance Trend
   const attendanceTrend = dashboardData?.attendance_trend || {
     points: [],
-    average: 89,
-    best_session: 95,
-    lowest: 78
+    average: 0,
+    best_session: 0,
+    lowest: 0
   };
 
   // Assessment Performance
@@ -210,9 +212,9 @@ export default function TrainerDashboard({ user, onSectionChange }) {
   };
   const recentActivities = dashboardData?.recent_activities || [];
   const healthMetrics = dashboardData?.health_metrics || {
-    average_attendance: 89,
-    average_assessment_score: 80,
-    completion_rate: 90,
+    average_attendance: 0,
+    average_assessment_score: 0,
+    completion_rate: 0,
     support_needed_count: 0,
     support_candidates: []
   };
@@ -440,68 +442,6 @@ export default function TrainerDashboard({ user, onSectionChange }) {
         </div>
       </div>
 
-      {/* ─── MANDATORY TRAINER BOOKING & ASSIGNMENT STATUS BANNER ─────────────── */}
-      {/* 1 trainer can be assigned to 1 batch only within the same timeline. After completing current one only next can be aligned */}
-      {trainerProfile.is_booked ? (
-        <div className="bg-gradient-to-r from-amber-500/10 via-pink-500/10 to-indigo-500/10 border border-amber-300/80 rounded-3xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-              <Lock className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-black text-amber-900 uppercase tracking-wider">
-                  Trainer Assignment Status:
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
-                  Already in training batch assigned (Booked)
-                </span>
-              </div>
-              <p className="text-xs text-slate-700 mt-1 font-medium">
-                Currently locked to cohort <strong className="text-slate-900 font-bold">{trainerProfile.assigned_batch?.batch_code || 'Active Batch'}</strong> ({trainerProfile.assigned_batch?.title || 'EV Training Cohort'}) from <span className="font-semibold text-slate-900">{trainerProfile.assigned_batch?.start_date}</span> to <span className="font-semibold text-slate-900">{trainerProfile.assigned_batch?.end_date}</span>. 
-                <span className="text-amber-800 font-semibold block sm:inline sm:ml-1">
-                  1 trainer is assigned to 1 batch only within the same timeline. Next batch can be aligned only after completing this batch.
-                </span>
-              </p>
-            </div>
-          </div>
-          <div className="shrink-0 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 text-xs font-bold shadow-2xs">
-              <Clock className="w-3.5 h-3.5 text-amber-600" />
-              <span>Current Batch: {trainerProfile.assigned_batch?.batch_code || 'Assigned'}</span>
-            </span>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-emerald-50/80 border border-emerald-300 rounded-3xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-              <Unlock className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-emerald-900 uppercase tracking-wider">
-                  Trainer Assignment Status:
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  Available for Assignment
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 mt-0.5">
-                No active overlapping batches. Ready to be aligned to the next training batch after completing previous commitments.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => onSectionChange && onSectionChange('batch-create')}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-2xs cursor-pointer inline-flex items-center gap-1.5"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Align to New Batch</span>
-          </button>
-        </div>
-      )}
-
       {/* ─── SECTION 1: Trainer Summary (6 Compact KPI Cards - Real PostgreSQL Data) ─ */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
         {/* Card 1: Active Batches */}
@@ -703,15 +643,21 @@ export default function TrainerDashboard({ user, onSectionChange }) {
             <div className="flex items-center gap-4">
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">Average</span>
-                <span className="font-extrabold text-emerald-600">{attendanceTrend.average}%</span>
+                <span className="font-extrabold text-emerald-600">
+                  {attendanceTrend.points?.length > 0 ? `${attendanceTrend.average}%` : '0%'}
+                </span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">Best Session</span>
-                <span className="font-extrabold text-[#F72570]">{attendanceTrend.best_session}%</span>
+                <span className="font-extrabold text-[#F72570]">
+                  {attendanceTrend.points?.length > 0 ? `${attendanceTrend.best_session}%` : '0%'}
+                </span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">Lowest</span>
-                <span className="font-extrabold text-amber-600">{attendanceTrend.lowest}%</span>
+                <span className="font-extrabold text-amber-600">
+                  {attendanceTrend.points?.length > 0 ? `${attendanceTrend.lowest}%` : '0%'}
+                </span>
               </div>
             </div>
 
@@ -808,138 +754,252 @@ export default function TrainerDashboard({ user, onSectionChange }) {
         </div>
       </div>
 
-      {/* ─── SECTION 4: Today's Schedule & Recent Activities ────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* Left: Today's Training Schedule (8 Cols - Real Database Batches) */}
-        <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col justify-between">
-          <div>
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#FFF0F5] text-[#F72570] flex items-center justify-center font-bold">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm sm:text-base font-bold text-slate-900 font-kaiseiTokumin">
-                  Today's Schedule
-                </h3>
+      {/* ─── SECTION 4: Today's Schedule (Full Width Desktop Screen) ──────── */}
+      <div className="w-full bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col justify-between">
+        <div>
+          <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-white via-white to-slate-50/50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#FFF0F5] text-[#F72570] flex items-center justify-center font-bold shadow-2xs border border-[#F72570]/20">
+                <Calendar className="w-5 h-5" />
               </div>
-              <span className="text-xs font-semibold text-slate-500">
-                {scheduleList.length} Sessions Scheduled
-              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 font-kaiseiTokumin">
+                    Today's Schedule
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/20">
+                    {scheduleList.length} Sessions Scheduled
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Real-time certified EV practical training drills & track sessions scheduled for today
+                </p>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/80 border-b border-slate-200/70 text-slate-400 uppercase font-bold text-[10px]">
-                  <tr>
-                    <th className="px-5 py-3">Time</th>
-                    <th className="px-4 py-3">Batch / Module</th>
-                    <th className="px-4 py-3">Session Topic</th>
-                    <th className="px-4 py-3">Venue</th>
-                    <th className="px-3 py-3">Candidates</th>
-                    <th className="px-5 py-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {scheduleList.length > 0 ? (
-                    scheduleList.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                        <td className="px-5 py-4 font-semibold text-slate-700 whitespace-nowrap">
-                          {item.display_time || item.time}
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                            <span>{item.batch_code}</span>
-                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/20">
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-slate-400 font-semibold hidden md:inline-flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/70">
+                <Sparkles className="w-3.5 h-3.5 text-[#F72570]" />
+                <span>Click any row for complete cohort syllabus & candidate roster</span>
+              </span>
+              <button
+                onClick={() => onSectionChange && onSectionChange('batch-calendar')}
+                className="text-xs font-bold text-[#F72570] hover:text-[#de1b60] flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FFF0F5] border border-[#F72570]/20 hover:bg-[#FFE5EE] transition cursor-pointer shrink-0"
+              >
+                <span>View Full Calendar</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* ── Desktop View: Non-scrolling Table with Compact Multi-row Cells ── */}
+          <div className="hidden md:block w-full overflow-hidden">
+            <table className="w-full table-fixed text-left text-xs">
+              <thead className="bg-slate-50/90 border-b border-slate-200/70 text-slate-400 uppercase font-bold text-[10px]">
+                <tr>
+                  <th className="w-[16%] px-3.5 py-3 tracking-wider">Time Slot</th>
+                  <th className="w-[24%] px-3.5 py-3 tracking-wider">Cohort & Module</th>
+                  <th className="w-[20%] px-3.5 py-3 tracking-wider">Session Topic</th>
+                  <th className="w-[18%] px-3.5 py-3 tracking-wider">Venue Facility</th>
+                  <th className="w-[10%] px-2.5 py-3 tracking-wider text-center">Trainees</th>
+                  <th className="w-[12%] px-3.5 py-3 tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {scheduleList.length > 0 ? (
+                  scheduleList.map((item) => (
+                    <tr
+                      key={item.id}
+                      onClick={() => setSelectedScheduleSession(item)}
+                      className="hover:bg-[#FFF5F8]/40 transition group cursor-pointer"
+                    >
+                      {/* 1. Time Slot (Compact Multi-row) */}
+                      <td className="px-3.5 py-2.5">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 font-black text-slate-900 text-xs truncate">
+                            <Clock className="w-3.5 h-3.5 text-[#F72570] shrink-0" />
+                            <span className="truncate">{item.display_time || item.time}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-semibold block truncate mt-0.5">
+                            Daily Session Slot
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 2. Cohort & Module (Compact Multi-row) */}
+                      <td className="px-3.5 py-2.5">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="font-mono font-bold text-slate-900 text-xs bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 shrink-0">
+                              {item.batch_code}
+                            </span>
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/20 shrink-0">
                               {item.nf_level}
                             </span>
                           </div>
-                          <div className="text-[11px] text-slate-400 truncate max-w-xs">{item.module}</div>
-                        </td>
-                        <td className="px-4 py-4 font-medium text-slate-700">
-                          {item.session_topic}
-                        </td>
-                        <td className="px-4 py-4 text-slate-600 whitespace-nowrap">
-                          {item.venue}
-                        </td>
-                        <td className="px-3 py-4 font-bold text-slate-800">
-                          {item.present_count} / {item.total_candidates}
-                        </td>
-                        <td className="px-5 py-4 text-right whitespace-nowrap">
+                          <div className="text-[11px] text-slate-500 font-medium truncate mt-0.5" title={item.module}>
+                            {item.module}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* 3. Session Topic (Compact Multi-row) */}
+                      <td className="px-3.5 py-2.5">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs truncate" title={item.session_topic}>
+                            <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+                            <span className="truncate">{item.session_topic}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                            Practical EV Drills
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 4. Venue Facility (Compact Multi-row) */}
+                      <td className="px-3.5 py-2.5">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1 text-slate-700 font-semibold text-xs truncate" title={item.venue}>
+                            <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span className="truncate">{item.venue}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                            {item.venue_city || 'Campus Track Facility'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 5. Trainees (Compact Multi-row) */}
+                      <td className="px-2.5 py-2.5 text-center">
+                        <div className="flex flex-col items-center">
+                          <span className="px-2 py-0.5 rounded-lg bg-slate-100 font-black text-slate-800 text-xs border border-slate-200/60 inline-flex items-center gap-1">
+                            <Users className="w-3 h-3 text-indigo-600" />
+                            <span>{item.present_count} / {item.total_candidates}</span>
+                          </span>
+                          <span className="text-[9px] font-bold text-emerald-600 mt-0.5 block">
+                            {item.total_candidates > 0 ? `${Math.round((item.present_count / item.total_candidates) * 100)}% Present` : 'Enrolled'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 6. Actions (Compact) */}
+                      <td className="px-3.5 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => handleStartSession(item)}
-                            className="px-3.5 py-1.5 rounded-xl bg-[#F72570] hover:bg-[#de1b60] text-white text-xs font-bold transition shadow-xs cursor-pointer inline-flex items-center gap-1"
+                            type="button"
+                            onClick={() => setSelectedScheduleSession(item)}
+                            className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-100 text-slate-700 text-[11px] font-bold transition shadow-2xs cursor-pointer inline-flex items-center gap-1"
+                            title="Open Sidebar Details"
                           >
-                            <Play className="w-3 h-3 fill-current" />
-                            <span>Start Session</span>
+                            <Eye className="w-3 h-3 text-slate-500" />
+                            <span>Details</span>
                           </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
-                        No training sessions scheduled for today. All batches completed or upcoming.
+
+                          <button
+                            type="button"
+                            onClick={() => handleStartSession(item)}
+                            className="px-3 py-1.5 rounded-lg bg-[#F72570] hover:bg-[#de1b60] text-white text-[11px] font-bold transition shadow-xs cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <Play className="w-2.5 h-2.5 fill-current" />
+                            <span>Start</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
+                      No training sessions scheduled for today. All batches completed or upcoming.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
 
-          <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end">
-            <button
-              onClick={() => onSectionChange && onSectionChange('batch-calendar')}
-              className="text-xs font-bold text-[#F72570] hover:text-[#de1b60] flex items-center gap-1 cursor-pointer"
-            >
-              <span>View Full Calendar</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+          {/* ── Mobile View: Responsive Clean Cards ── */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {scheduleList.length > 0 ? (
+              scheduleList.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedScheduleSession(item)}
+                  className="p-4 hover:bg-slate-50/60 transition cursor-pointer space-y-3"
+                >
+                  {/* Top Bar: Time Slot & Batch Code */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 font-black text-slate-900 text-xs">
+                      <Clock className="w-3.5 h-3.5 text-[#F72570]" />
+                      <span>{item.display_time || item.time}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-bold text-slate-900 text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {item.batch_code}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/20">
+                        {item.nf_level}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Middle: Topic & Module & Venue */}
+                  <div className="space-y-1">
+                    <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+                      <span className="truncate">{item.session_topic}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">{item.module}</div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-600 pt-1">
+                      <span className="flex items-center gap-1 truncate max-w-[65%]">
+                        <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                        <span className="truncate">{item.venue}</span>
+                      </span>
+                      <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md text-[10px]">
+                        {item.present_count} / {item.total_candidates} Trainees
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mobile Actions */}
+                  <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScheduleSession(item)}
+                      className="flex-1 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Details</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStartSession(item)}
+                      className="flex-1 py-2 rounded-xl bg-[#F72570] hover:bg-[#de1b60] text-white text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      <span>Start Session</span>
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-6 text-center text-slate-400 text-xs">
+                No training sessions scheduled for today.
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right: Recent Activities Feed (4 Cols) */}
-        <div className="lg:col-span-4 bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-4">
-          <div>
-            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 font-kaiseiTokumin flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-[#F72570]" />
-                <span>Recent Activities</span>
-              </h3>
-            </div>
-
-            <div className="space-y-3.5 pt-3">
-              {recentActivities.length > 0 ? (
-                recentActivities.map((act, idx) => {
-                  const Icon = act.type === 'attendance' ? CheckSquare : act.type === 'assessment' ? Award : act.type === 'notes' ? FileText : GraduationCap;
-                  return (
-                    <div key={idx} className="flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-full bg-[#FFF0F5] text-[#F72570] flex items-center justify-center shrink-0 mt-0.5 border border-[#F72570]/20">
-                        <Icon className="w-3.5 h-3.5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-slate-800 leading-snug">
-                          {act.title}
-                        </p>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">
-                          {act.time}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-xs text-slate-400 py-4 text-center">Activities will log here automatically.</p>
-              )}
-            </div>
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 px-6">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-medium text-[11px]">Click any session row or 'Details' button to preview curriculum drills and full trainee roster</span>
           </div>
-
           <button
-            onClick={() => onSectionChange && onSectionChange('feedback')}
-            className="text-xs font-bold text-[#F72570] hover:text-[#de1b60] flex items-center justify-center gap-1 pt-2 border-t border-slate-100 cursor-pointer"
+            onClick={() => onSectionChange && onSectionChange('batch-calendar')}
+            className="text-xs font-bold text-[#F72570] hover:text-[#de1b60] flex items-center gap-1 cursor-pointer"
           >
-            <span>View All Activities</span>
+            <span>Full Calendar</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -1069,61 +1129,104 @@ export default function TrainerDashboard({ user, onSectionChange }) {
           </div>
         </div>
 
-        {/* Right: Quick Actions Panel (4 Cols) */}
-        <div className="lg:col-span-4 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-4">
-          <div className="border-b border-slate-100 pb-3">
-            <h3 className="text-sm font-bold text-slate-900 font-kaiseiTokumin">
-              Quick Actions
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">Frequently used instructor tools</p>
+        {/* Right: Quick Actions & Recent Activities (4 Cols) */}
+        <div className="lg:col-span-4 space-y-5 flex flex-col justify-between">
+          {/* Quick Actions Panel */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 font-kaiseiTokumin">
+                Quick Actions
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">Frequently used instructor tools</p>
+            </div>
+
+            {/* 4 Action Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setIsAttendanceModalOpen(true)}
+                className="p-3.5 rounded-2xl bg-[#FFF5F8] hover:bg-[#FFEBF2] border border-[#F72570]/20 text-slate-800 text-left transition flex flex-col justify-between space-y-2 group cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-xl bg-white text-[#F72570] flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
+                  <CheckSquare className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold text-slate-900">Mark Attendance</span>
+              </button>
+
+              <button
+                onClick={() => setIsAssessmentModalOpen(true)}
+                className="p-3.5 rounded-2xl bg-[#FFF5F8] hover:bg-[#FFEBF2] border border-[#F72570]/20 text-slate-800 text-left transition flex flex-col justify-between space-y-2 group cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-xl bg-white text-[#F72570] flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
+                  <Award className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold text-slate-900">Create Assessment</span>
+              </button>
+
+              <button
+                onClick={() => setIsNotesModalOpen(true)}
+                className="p-3.5 rounded-2xl bg-[#FFF5F8] hover:bg-[#FFEBF2] border border-[#F72570]/20 text-slate-800 text-left transition flex flex-col justify-between space-y-2 group cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-xl bg-white text-[#F72570] flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold text-slate-900">Add Session Notes</span>
+              </button>
+
+              <button
+                onClick={() => onSectionChange && onSectionChange('reports')}
+                className="p-3.5 rounded-2xl bg-[#FFF5F8] hover:bg-[#FFEBF2] border border-[#F72570]/20 text-slate-800 text-left transition flex flex-col justify-between space-y-2 group cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-xl bg-white text-[#F72570] flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold text-slate-900">View Reports</span>
+              </button>
+            </div>
           </div>
 
-          {/* 4 Action Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setIsAttendanceModalOpen(true)}
-              className="p-4 rounded-2xl bg-[#FFF5F8] hover:bg-[#FFEBF2] border border-[#F72570]/20 text-slate-800 text-left transition flex flex-col justify-between space-y-2 group cursor-pointer"
-            >
-              <div className="w-8 h-8 rounded-xl bg-white text-[#F72570] flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
-                <CheckSquare className="w-4 h-4" />
+          {/* Recent Activities Panel */}
+          <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs space-y-3.5 flex flex-col justify-between flex-1">
+            <div>
+              <div className="border-b border-slate-100 pb-2.5 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 font-kaiseiTokumin flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-[#F72570]" />
+                  <span>Recent Activities</span>
+                </h3>
               </div>
-              <span className="text-xs font-bold text-slate-900">Mark Attendance</span>
-            </button>
+
+              <div className="space-y-3 pt-2.5">
+                {recentActivities.length > 0 ? (
+                  recentActivities.slice(0, 3).map((act, idx) => {
+                    const Icon = act.type === 'attendance' ? CheckSquare : act.type === 'assessment' ? Award : act.type === 'notes' ? FileText : GraduationCap;
+                    return (
+                      <div key={idx} className="flex items-start gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-[#FFF0F5] text-[#F72570] flex items-center justify-center shrink-0 mt-0.5 border border-[#F72570]/20">
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-800 leading-snug">
+                            {act.title}
+                          </p>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                            {act.time}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-xs text-slate-400 py-3 text-center">Activities will log here automatically.</p>
+                )}
+              </div>
+            </div>
 
             <button
-              onClick={() => setIsAssessmentModalOpen(true)}
-              className="p-4 rounded-2xl bg-[#FFF5F8] hover:bg-[#FFEBF2] border border-[#F72570]/20 text-slate-800 text-left transition flex flex-col justify-between space-y-2 group cursor-pointer"
+              onClick={() => onSectionChange && onSectionChange('feedback')}
+              className="text-xs font-bold text-[#F72570] hover:text-[#de1b60] flex items-center justify-center gap-1 pt-2 border-t border-slate-100 cursor-pointer"
             >
-              <div className="w-8 h-8 rounded-xl bg-white text-[#F72570] flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
-                <Award className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold text-slate-900">Create Assessment</span>
+              <span>View All Activities</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
-
-            <button
-              onClick={() => setIsNotesModalOpen(true)}
-              className="p-4 rounded-2xl bg-[#FFF5F8] hover:bg-[#FFEBF2] border border-[#F72570]/20 text-slate-800 text-left transition flex flex-col justify-between space-y-2 group cursor-pointer"
-            >
-              <div className="w-8 h-8 rounded-xl bg-white text-[#F72570] flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
-                <FileText className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold text-slate-900">Add Session Notes</span>
-            </button>
-
-            <button
-              onClick={() => onSectionChange && onSectionChange('reports')}
-              className="p-4 rounded-2xl bg-[#FFF5F8] hover:bg-[#FFEBF2] border border-[#F72570]/20 text-slate-800 text-left transition flex flex-col justify-between space-y-2 group cursor-pointer"
-            >
-              <div className="w-8 h-8 rounded-xl bg-white text-[#F72570] flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold text-slate-900">View Reports</span>
-            </button>
-          </div>
-
-          <div className="p-3 bg-slate-50 rounded-2xl text-[11px] text-slate-500 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#F72570] shrink-0" />
-            <span>Next milestone review scheduled for active batches on Friday.</span>
           </div>
         </div>
       </div>
@@ -1162,6 +1265,245 @@ export default function TrainerDashboard({ user, onSectionChange }) {
           </div>
         </div>
       </div>
+
+      {/* ─── SIDEBAR OPENING DRAWER: Detailed Scheduled Session Overview ── */}
+      {selectedScheduleSession && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop overlay */}
+          <div
+            onClick={() => setSelectedScheduleSession(null)}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+          />
+
+          {/* Slide-over panel from right */}
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-8">
+            <div className="w-screen max-w-full sm:max-w-xl md:max-w-2xl bg-white shadow-2xl border-l border-slate-200 flex flex-col h-full animate-in slide-in-from-right duration-300">
+              
+              {/* Drawer Top Header */}
+              <div className="p-6 border-b border-slate-100 flex items-start justify-between bg-gradient-to-r from-white via-slate-50/50 to-pink-50/20">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono font-bold text-xs bg-[#FFF0F5] text-[#F72570] px-2.5 py-0.5 rounded-lg border border-[#F72570]/20">
+                      {selectedScheduleSession.batch_code}
+                    </span>
+                    <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-indigo-100">
+                      {selectedScheduleSession.nf_level}
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                      {selectedScheduleSession.status || 'Active Cohort'}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 font-kaiseiTokumin">
+                    {selectedScheduleSession.title || 'Training Cohort Session'}
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <span className="flex items-center gap-1 font-semibold text-slate-700">
+                      <Clock className="w-3.5 h-3.5 text-[#F72570]" />
+                      {selectedScheduleSession.display_time || selectedScheduleSession.time}
+                    </span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 truncate max-w-xs text-slate-600">
+                      <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      {selectedScheduleSession.venue}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedScheduleSession(null)}
+                  className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer shrink-0 ml-3"
+                  title="Close Sidebar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Drawer Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
+                
+                {/* 3 Metric Tiles */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Enrolled Trainees</span>
+                    <div className="text-base font-black text-slate-900">
+                      {selectedScheduleSession.present_count} / {selectedScheduleSession.total_candidates}
+                    </div>
+                    <span className="text-[10px] text-emerald-600 font-semibold">100% Verified</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#FFF0F5]/70 border border-[#F72570]/20 text-center space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-[#F72570] block">Scheduled Slot</span>
+                    <div className="text-xs font-black text-slate-900 truncate">
+                      {selectedScheduleSession.display_time || selectedScheduleSession.time}
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">Daily Practical Drill</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-center space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-indigo-600 block">Passing Benchmark</span>
+                    <div className="text-base font-black text-indigo-700">
+                      {selectedScheduleSession.passing_score || 75}%
+                    </div>
+                    <span className="text-[10px] text-indigo-600 font-medium">Certification Level</span>
+                  </div>
+                </div>
+
+                {/* Card: Curriculum Module & Lesson Plan */}
+                <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-[#F72570]" />
+                      <span>Curriculum Module</span>
+                    </h4>
+                    <span className="text-[10px] font-extrabold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100">
+                      {selectedScheduleSession.module_category || 'MOBILITY'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="text-sm font-bold text-slate-900">
+                      {selectedScheduleSession.module}
+                    </div>
+                    <p className="text-slate-600 leading-relaxed text-[11px]">
+                      {selectedScheduleSession.module_description}
+                    </p>
+                  </div>
+
+                  {/* Specific Practical Drill Box */}
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Today's Practical Drill Focus
+                    </span>
+                    <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-[#F72570] shrink-0" />
+                      <span>{selectedScheduleSession.session_topic}</span>
+                    </div>
+                  </div>
+
+                  {/* Core Checkpoints */}
+                  <div className="pt-2 border-t border-slate-100 space-y-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Core Practical Checkpoints
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                      {(selectedScheduleSession.curriculum_topics || []).map((topic, i) => (
+                        <div key={i} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50/80 text-slate-700 border border-slate-100 font-medium">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span className="truncate">{topic}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card: Venue & Campus Facility Details */}
+                <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-emerald-600" />
+                    <span>Campus Venue & Facilities</span>
+                  </h4>
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
+                    <div className="font-bold text-slate-900 text-xs">{selectedScheduleSession.venue}</div>
+                    <div className="text-[11px] text-slate-500">
+                      {selectedScheduleSession.venue_address || selectedScheduleSession.venue_city || 'Dedicated EV Practical Testing Ground & Battery Docking Station'}
+                    </div>
+                    <div className="pt-1.5 flex items-center gap-2 text-[10px] font-semibold text-slate-600 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200">Rapid Battery Swap Bay</span>
+                      <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200">Slalom Figure-8 Track</span>
+                      <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200">Wet Braking Zone</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card: Trainee Roster */}
+                <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-indigo-600" />
+                      <span>Assigned Trainees ({selectedScheduleSession.total_candidates})</span>
+                    </h4>
+                    <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      Verified Batch Roster
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {(selectedScheduleSession.candidates && selectedScheduleSession.candidates.length > 0) ? (
+                      selectedScheduleSession.candidates.map((cand, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/70 border border-slate-100 transition">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-800 font-extrabold text-xs flex items-center justify-center shrink-0">
+                              {cand.name ? cand.name.substring(0, 2).toUpperCase() : 'TR'}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 leading-tight">{cand.name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono">{cand.code}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/20">
+                              {cand.nf_category || 'NF1'}
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                              {cand.attendance || 100}% Att.
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-4 text-center text-slate-400 text-xs">
+                        All candidate registrations are synchronized directly from cohort enrollments.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Drawer Sticky Action Footer */}
+              <div className="p-4 border-t border-slate-200 bg-slate-50/90 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedScheduleSession(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition cursor-pointer"
+                >
+                  Close
+                </button>
+                
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const bId = selectedScheduleSession.id;
+                      setSelectedScheduleSession(null);
+                      setAttendanceForm(prev => ({ ...prev, batch_id: bId }));
+                      setIsAttendanceModalOpen(true);
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-[#F72570]/30 text-[#F72570] hover:bg-[#FFF0F5] text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    <span>Mark Attendance</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sess = selectedScheduleSession;
+                      setSelectedScheduleSession(null);
+                      handleStartSession(sess);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-[#F72570] hover:bg-[#de1b60] text-white text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Start Live Session</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── Start Session Live Modal ───────────────────────────────────────── */}
       {activeSessionModal && (

@@ -89,11 +89,12 @@ export default function BatchCreate({ onBack, onBatchCreated }) {
 
         const defaultCity = centData[0]?.city?.substring(0, 3)?.toUpperCase() || 'DEL';
         const randomBatchNum = Math.floor(10 + Math.random() * 90);
+        const firstAvailableTrainer = trainData.find(t => !t.is_booked);
 
         setFormData(prev => ({
           ...prev,
           module_id: modData[0]?.id || '',
-          trainer_id: trainData[0]?.id || '',
+          trainer_id: firstAvailableTrainer ? firstAvailableTrainer.id : '',
           training_center_id: centData[0]?.id || '',
           batch_code: `BAT-2026-${defaultCity}-${randomBatchNum}`,
           title: modData[0] ? `${modData[0].title} - Cohort ${randomBatchNum}` : ''
@@ -181,6 +182,11 @@ export default function BatchCreate({ onBack, onBatchCreated }) {
       }
       if (!formData.trainer_id) {
         showToast('Please select an Assigned Trainer', 'error');
+        return false;
+      }
+      const chosenTr = trainers.find(t => t.id === formData.trainer_id);
+      if (chosenTr?.is_booked) {
+        showToast(`Cannot assign: Trainer "${chosenTr.full_name}" is already assigned to active batch ${chosenTr.assigned_batch?.batch_code || 'ongoing cohort'}. A trainer can only be assigned to 1 batch at a time within overlapping timelines.`, 'error');
         return false;
       }
     }
@@ -468,6 +474,13 @@ export default function BatchCreate({ onBack, onBatchCreated }) {
               </div>
               <span className="text-xs font-bold text-slate-400">
                 {trainers.length} Trainers Available
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/90 text-xs text-amber-900 flex items-start sm:items-center gap-2.5 font-medium shadow-2xs">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+              <span>
+                <strong>Admin Assignment Rule:</strong> 1 trainer can only be assigned to 1 batch within overlapping timelines. Trainers already assigned to an ongoing cohort are locked and cannot be assigned to another batch until their previous batch is completed.
               </span>
             </div>
 

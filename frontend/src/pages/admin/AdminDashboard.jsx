@@ -47,6 +47,9 @@ const API_BASE = 'http://localhost:5000/api';
 export default function AdminDashboard({ onSectionChange, user }) {
   // State variables for interactive controls
   const [timeRange, setTimeRange] = useState('This Month');
+  const [trendMetricMode, setTrendMetricMode] = useState('monthly'); // 'monthly' | 'cumulative'
+  const [hoveredTrendIdx, setHoveredTrendIdx] = useState(null);
+  const [visibleSeries, setVisibleSeries] = useState({ registrations: true, assessments: true, placements: true });
   const [searchFilter, setSearchFilter] = useState('');
   const [stageFilter, setStageFilter] = useState('All');
   const [activeModal, setActiveModal] = useState(null); // 'export' | 'addUser' | 'bulkUpload' | 'createBatch' | 'announcement' | 'funnelDetails' | 'geoDetails' | 'viewCandidate' | null
@@ -94,6 +97,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
 
   useEffect(() => {
     fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleRefresh = async () => {
@@ -185,14 +190,6 @@ export default function AdminDashboard({ onSectionChange, user }) {
         description: 'Candidate intake and verified territory roster profiles',
       },
       {
-        stage: 'Assessed',
-        count: 0,
-        formattedCount: '0',
-        conversion: '0%',
-        color: '#8B5CF6',
-        description: 'Readiness evaluations and driving assessments completed',
-      },
-      {
         stage: 'In Training',
         count: 0,
         formattedCount: '0',
@@ -201,12 +198,20 @@ export default function AdminDashboard({ onSectionChange, user }) {
         description: 'Enrolled in 2W EV dynamics and battery swapping training',
       },
       {
+        stage: 'Assessed',
+        count: 0,
+        formattedCount: '0',
+        conversion: '0%',
+        color: '#8B5CF6',
+        description: 'Completed batch practical driving and theory final assessment',
+      },
+      {
         stage: 'Ready for Deployment',
         count: 0,
         formattedCount: '0',
         conversion: '0%',
         color: '#10B981',
-        description: 'Certified drivers qualified for employer placement matching',
+        description: 'Completed batch with passing marks (certified for employer placement)',
       },
       {
         stage: 'Employed',
@@ -360,34 +365,55 @@ export default function AdminDashboard({ onSectionChange, user }) {
   const stateColors = ['#F72570', '#8B5CF6', '#06B6D4', '#F59E0B', '#10B981'];
   const CIRCUMFERENCE = 376.99; // 2 * PI * 60
 
-  // 8. Activity Velocity Trend (Dynamic SVG calculation)
+  // 8. Activity Velocity Trend (Dynamic SVG calculation with integer tick scaling)
   const activityTrend = dashboardData.activity_trend && dashboardData.activity_trend.length > 0
     ? dashboardData.activity_trend
     : [
-      { month: 'May', registrations: 0, assessments: 0, placements: 0 },
-      { month: 'Jun', registrations: 0, assessments: 0, placements: 0 },
-      { month: 'Jul', registrations: 0, assessments: 0, placements: 0 },
-      { month: 'Aug', registrations: 0, assessments: 0, placements: 0 },
-      { month: 'Sep', registrations: totalCandidates, assessments: totalCandidates, placements: 0 },
+      { month: 'Jun', registrations: 0, assessments: 0, placements: 0, cumulative_registrations: 0, cumulative_assessments: 0, cumulative_placements: 0 },
+      { month: 'Jul', registrations: 0, assessments: 0, placements: 0, cumulative_registrations: 0, cumulative_assessments: 0, cumulative_placements: 0 },
+      { month: 'Aug', registrations: 0, assessments: 0, placements: 0, cumulative_registrations: 0, cumulative_assessments: 0, cumulative_placements: 0 },
+      { month: 'Sep', registrations: 2, assessments: 0, placements: 0, cumulative_registrations: 2, cumulative_assessments: 0, cumulative_placements: 0 },
+      { month: 'Oct', registrations: 2, assessments: 0, placements: 0, cumulative_registrations: 4, cumulative_assessments: 0, cumulative_placements: 0 },
     ];
 
-  const maxTrendVal = Math.max(
-    ...activityTrend.map(t => Math.max(t.registrations || 0, t.assessments || 0, t.placements || 0)),
-    3
-  );
-  const trendCeil = maxTrendVal <= 4 ? 4 : maxTrendVal <= 10 ? 10 : Math.ceil(maxTrendVal / 5) * 5;
+  const getTrendVal = (d, key) => {
+    if (trendMetricMode === 'cumulative') {
+      return d[`cumulative_${key}`] !== undefined ? d[`cumulative_${key}`] : (d[key] || 0);
+    }
+    return d[key] || 0;
+  };
+
+  const allTrendVals = activityTrend.flatMap(t => [
+    visibleSeries.registrations ? getTrendVal(t, 'registrations') : 0,
+    visibleSeries.assessments ? getTrendVal(t, 'assessments') : 0,
+    visibleSeries.placements ? getTrendVal(t, 'placements') : 0,
+  ]);
+  const rawMaxVal = Math.max(...allTrendVals, 0);
+  const trendCeil = Math.max(4, Math.ceil(rawMaxVal / 4) * 4);
+
+  // Clean equidistant Y-axis ticks: [trendCeil, 3/4, 2/4, 1/4, 0]
+  // When trendCeil = 4, this yields exactly [4, 3, 2, 1, 0]
+  const yTicks = [
+    { y: 18, val: trendCeil },
+    { y: 38, val: Math.round(trendCeil * 0.75) },
+    { y: 58, val: Math.round(trendCeil * 0.50) },
+    { y: 78, val: Math.round(trendCeil * 0.25) },
+    { y: 98, val: 0 },
+  ];
 
   const getCoord = (val, idx, totalPoints) => {
     const x = totalPoints > 1 ? 35 + (idx * (265 / (totalPoints - 1))) : 160;
-    const y = 98 - ((val / trendCeil) * 80);
+    const clampedVal = Math.max(0, Math.min(trendCeil, val));
+    const y = 98 - ((clampedVal / trendCeil) * 80);
     return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
   };
 
-  const regPoints = activityTrend.map((d, i) => getCoord(d.registrations || 0, i, activityTrend.length));
-  const assPoints = activityTrend.map((d, i) => getCoord(d.assessments || 0, i, activityTrend.length));
-  const plcPoints = activityTrend.map((d, i) => getCoord(d.placements || 0, i, activityTrend.length));
+  const regPoints = activityTrend.map((d, i) => getCoord(getTrendVal(d, 'registrations'), i, activityTrend.length));
+  const assPoints = activityTrend.map((d, i) => getCoord(getTrendVal(d, 'assessments'), i, activityTrend.length));
+  const plcPoints = activityTrend.map((d, i) => getCoord(getTrendVal(d, 'placements'), i, activityTrend.length));
 
   const makePath = (points) => points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x},${p.y}`).join(' ');
+  const makeAreaPath = (points) => `${makePath(points)} L ${points[points.length - 1].x},98 L ${points[0].x},98 Z`;
 
   // 9. Quick Actions Command Bar
   const quickActionsList = [
@@ -611,94 +637,323 @@ export default function AdminDashboard({ onSectionChange, user }) {
               <h2 className="text-sm font-bold text-slate-900">Platform Activity Trend</h2>
               <p className="text-[11px] text-slate-400">Monthly cross-channel operational velocity</p>
             </div>
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[10.5px] font-semibold">
-              <span>{timeRange}</span>
+            {/* Metric Mode Selector Toggle */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200/60 text-[10px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setTrendMetricMode('monthly')}
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  trendMetricMode === 'monthly'
+                    ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="View monthly intake velocity"
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrendMetricMode('cumulative')}
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  trendMetricMode === 'cumulative'
+                    ? 'bg-white text-[#F72570] shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="View cumulative platform growth"
+              >
+                Cumulative
+              </button>
             </div>
           </div>
 
-          {/* Chart Series Legend - Compact */}
-          <div className="flex flex-wrap items-center gap-2.5 text-[10px] font-semibold text-slate-600 my-1">
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#F72570]" />
-              <span>Registrations</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-purple-600" />
-              <span>Assessments</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              <span>Placements</span>
+          {/* Chart Series Legend with Clickable Filters */}
+          <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] font-semibold text-slate-600 my-1">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setVisibleSeries(prev => ({ ...prev, registrations: !prev.registrations }))}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md transition-all cursor-pointer border ${
+                  visibleSeries.registrations
+                    ? 'bg-pink-50 text-[#F72570] border-pink-200'
+                    : 'bg-slate-50 text-slate-400 border-slate-200 opacity-60 line-through'
+                }`}
+                title="Toggle Registrations"
+              >
+                <span className="w-2 h-2 rounded-full bg-[#F72570]" />
+                <span>Registrations</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibleSeries(prev => ({ ...prev, assessments: !prev.assessments }))}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md transition-all cursor-pointer border ${
+                  visibleSeries.assessments
+                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                    : 'bg-slate-50 text-slate-400 border-slate-200 opacity-60 line-through'
+                }`}
+                title="Toggle Assessments"
+              >
+                <span className="w-2 h-2 rounded-full bg-purple-600" />
+                <span>Assessments</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibleSeries(prev => ({ ...prev, placements: !prev.placements }))}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md transition-all cursor-pointer border ${
+                  visibleSeries.placements
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-slate-50 text-slate-400 border-slate-200 opacity-60 line-through'
+                }`}
+                title="Toggle Placements"
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>Placements</span>
+              </button>
             </div>
           </div>
 
           {/* Vector Multi-line SVG Analytics Chart */}
-          <div className="relative w-full h-28 my-1 flex items-end">
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 320 115">
-              {/* Grid Lines */}
-              <line x1="25" y1="18" x2="310" y2="18" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="25" y1="45" x2="310" y2="45" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="25" y1="72" x2="310" y2="72" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <line x1="25" y1="98" x2="310" y2="98" stroke="#E2E8F0" strokeWidth="1" />
+          <div
+            className="relative w-full h-32 my-1 flex items-end"
+            onMouseLeave={() => setHoveredTrendIdx(null)}
+          >
+            {/* Floating Tooltip Card */}
+            {hoveredTrendIdx !== null && activityTrend[hoveredTrendIdx] && (
+              <div
+                className="absolute z-20 pointer-events-none bg-slate-900/95 text-white text-[10px] px-2.5 py-1.5 rounded-xl shadow-xl backdrop-blur-sm border border-slate-700 transition-all duration-150"
+                style={{
+                  left: `${((regPoints[hoveredTrendIdx]?.x || 160) / 320) * 100}%`,
+                  transform: hoveredTrendIdx === 0
+                    ? 'translate(4px, -100%)'
+                    : hoveredTrendIdx === activityTrend.length - 1
+                      ? 'translate(-96%, -100%)'
+                      : 'translate(-50%, -100%)',
+                  top: '12px'
+                }}
+              >
+                <div className="font-bold text-slate-200 border-b border-slate-700/60 pb-1 mb-1 flex items-center justify-between gap-3">
+                  <span>{activityTrend[hoveredTrendIdx].label || activityTrend[hoveredTrendIdx].month}</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">
+                    {trendMetricMode === 'monthly' ? 'Monthly' : 'Total'}
+                  </span>
+                </div>
+                <div className="space-y-0.5 font-medium">
+                  {visibleSeries.registrations && (
+                    <div className="flex items-center justify-between gap-3 text-pink-300">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#F72570]" />
+                        Registrations:
+                      </span>
+                      <span className="font-bold text-white">{getTrendVal(activityTrend[hoveredTrendIdx], 'registrations')}</span>
+                    </div>
+                  )}
+                  {visibleSeries.assessments && (
+                    <div className="flex items-center justify-between gap-3 text-purple-300">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                        Assessments:
+                      </span>
+                      <span className="font-bold text-white">{getTrendVal(activityTrend[hoveredTrendIdx], 'assessments')}</span>
+                    </div>
+                  )}
+                  {visibleSeries.placements && (
+                    <div className="flex items-center justify-between gap-3 text-amber-300">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        Placements:
+                      </span>
+                      <span className="font-bold text-white">{getTrendVal(activityTrend[hoveredTrendIdx], 'placements')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-              {/* Axis Labels */}
-              <text x="5" y="21" fontSize="8" fill="#94A3B8" fontWeight="600">{trendCeil}</text>
-              <text x="5" y="48" fontSize="8" fill="#94A3B8" fontWeight="600">{Math.round(trendCeil * 0.66)}</text>
-              <text x="5" y="75" fontSize="8" fill="#94A3B8" fontWeight="600">{Math.round(trendCeil * 0.33)}</text>
-              <text x="5" y="101" fontSize="8" fill="#94A3B8" fontWeight="600">0</text>
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 320 115">
+              <defs>
+                <linearGradient id="regGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#F72570" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#F72570" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="assGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="plcGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {/* Equidistant Grid Lines */}
+              {yTicks.map((tick, i) => (
+                <g key={`grid-${i}`}>
+                  <line
+                    x1="25"
+                    y1={tick.y}
+                    x2="310"
+                    y2={tick.y}
+                    stroke={tick.val === 0 ? "#E2E8F0" : "#F1F5F9"}
+                    strokeWidth="1"
+                    strokeDasharray={tick.val === 0 ? "" : "3 3"}
+                  />
+                  {/* Clean Integer Axis Label */}
+                  <text
+                    x="8"
+                    y={tick.y + 3}
+                    fontSize="8"
+                    fill="#94A3B8"
+                    fontWeight="600"
+                    textAnchor="start"
+                  >
+                    {tick.val}
+                  </text>
+                </g>
+              ))}
+
+              {/* Hover vertical guide line */}
+              {hoveredTrendIdx !== null && regPoints[hoveredTrendIdx] && (
+                <line
+                  x1={regPoints[hoveredTrendIdx].x}
+                  y1="14"
+                  x2={regPoints[hoveredTrendIdx].x}
+                  y2="98"
+                  stroke="#CBD5E1"
+                  strokeWidth="1.5"
+                  strokeDasharray="3 3"
+                />
+              )}
+
+              {/* Area Fills */}
+              {visibleSeries.registrations && regPoints.length > 0 && (
+                <path d={makeAreaPath(regPoints)} fill="url(#regGradient)" />
+              )}
+              {visibleSeries.assessments && assPoints.length > 0 && (
+                <path d={makeAreaPath(assPoints)} fill="url(#assGradient)" />
+              )}
+              {visibleSeries.placements && plcPoints.length > 0 && (
+                <path d={makeAreaPath(plcPoints)} fill="url(#plcGradient)" />
+              )}
 
               {/* Line 1: Registrations (Pink/Magenta #F72570) */}
-              {regPoints.length > 0 && (
+              {visibleSeries.registrations && regPoints.length > 0 && (
                 <path
                   d={makePath(regPoints)}
                   fill="none"
                   stroke="#F72570"
-                  strokeWidth="2.5"
+                  strokeWidth="2.8"
                   strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               )}
-              {regPoints.map((p, i) => (
-                <circle key={`reg-${i}`} cx={p.x} cy={p.y} r="3" fill="#F72570" stroke="#FFF" strokeWidth="1.5" />
-              ))}
 
               {/* Line 2: Assessments (Purple #8B5CF6) */}
-              {assPoints.length > 0 && (
+              {visibleSeries.assessments && assPoints.length > 0 && (
                 <path
                   d={makePath(assPoints)}
                   fill="none"
                   stroke="#8B5CF6"
-                  strokeWidth="2"
+                  strokeWidth="2.2"
                   strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               )}
-              {assPoints.map((p, i) => (
-                <circle key={`ass-${i}`} cx={p.x} cy={p.y} r="2.5" fill="#8B5CF6" stroke="#FFF" strokeWidth="1" />
-              ))}
 
               {/* Line 3: Placements (Amber #F59E0B) */}
-              {plcPoints.length > 0 && (
+              {visibleSeries.placements && plcPoints.length > 0 && (
                 <path
                   d={makePath(plcPoints)}
                   fill="none"
                   stroke="#F59E0B"
                   strokeWidth="2"
                   strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               )}
-              {plcPoints.map((p, i) => (
-                <circle key={`plc-${i}`} cx={p.x} cy={p.y} r="2.5" fill="#F59E0B" stroke="#FFF" strokeWidth="1" />
-              ))}
+
+              {/* Data Point Circles with Concentric Radii so overlapping points remain distinct */}
+              {activityTrend.map((d, i) => {
+                const rp = regPoints[i];
+                const ap = assPoints[i];
+                const pp = plcPoints[i];
+                const isHovered = hoveredTrendIdx === i;
+
+                return (
+                  <g key={`pts-${i}`}>
+                    {/* Pink: Outer ring / circle */}
+                    {visibleSeries.registrations && rp && (
+                      <circle
+                        cx={rp.x}
+                        cy={rp.y}
+                        r={isHovered ? 5.5 : 4.2}
+                        fill="#F72570"
+                        stroke="#FFF"
+                        strokeWidth={isHovered ? 2 : 1.5}
+                        className="transition-all duration-150"
+                      />
+                    )}
+
+                    {/* Purple: Middle ring / circle */}
+                    {visibleSeries.assessments && ap && (
+                      <circle
+                        cx={ap.x}
+                        cy={ap.y}
+                        r={isHovered ? 4 : 2.8}
+                        fill="#8B5CF6"
+                        stroke="#FFF"
+                        strokeWidth="1.2"
+                        className="transition-all duration-150"
+                      />
+                    )}
+
+                    {/* Amber: Inner core dot */}
+                    {visibleSeries.placements && pp && (
+                      <circle
+                        cx={pp.x}
+                        cy={pp.y}
+                        r={isHovered ? 2.5 : 1.6}
+                        fill="#F59E0B"
+                        stroke="#FFF"
+                        strokeWidth="0.8"
+                        className="transition-all duration-150"
+                      />
+                    )}
+
+                    {/* Invisible hover hotspot column for frictionless mouse interaction */}
+                    <rect
+                      x={rp ? rp.x - 25 : 0}
+                      y="10"
+                      width="50"
+                      height="95"
+                      fill="transparent"
+                      className="cursor-pointer"
+                      onMouseEnter={() => setHoveredTrendIdx(i)}
+                      onMouseLeave={() => setHoveredTrendIdx(null)}
+                    />
+                  </g>
+                );
+              })}
             </svg>
           </div>
 
           <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold px-4 mb-1">
             {activityTrend.map((t, idx) => (
-              <span key={idx}>{t.month}</span>
+              <span
+                key={idx}
+                className={`transition-colors cursor-pointer ${
+                  hoveredTrendIdx === idx ? 'text-[#F72570] font-bold' : 'text-slate-400'
+                }`}
+                onMouseEnter={() => setHoveredTrendIdx(idx)}
+                onMouseLeave={() => setHoveredTrendIdx(null)}
+              >
+                {t.month}
+              </span>
             ))}
           </div>
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs mt-1">
-            <span className="text-slate-500 text-[11px] font-medium">Real platform intake trend</span>
+            <span className="text-slate-500 text-[11px] font-medium">
+              {trendMetricMode === 'monthly' ? 'Monthly Intake Velocity' : 'Cumulative Platform Growth'}
+            </span>
             <button
               onClick={() => onSectionChange('candidates')}
               className="text-[#F72570] text-[11px] font-bold hover:underline flex items-center gap-1 cursor-pointer"

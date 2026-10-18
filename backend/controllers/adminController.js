@@ -51,6 +51,22 @@ export const getAdminDashboardStats = async (req, res) => {
       } catch (e) {}
     }
 
+    let assessments = [];
+    if (db.TrainingAssessment) {
+      try {
+        assessments = await db.TrainingAssessment.findAll({
+          order: [['created_at', 'DESC']]
+        });
+      } catch (e) {}
+    }
+
+    let enrollments = [];
+    if (db.BatchEnrollment) {
+      try {
+        enrollments = await db.BatchEnrollment.findAll();
+      } catch (e) {}
+    }
+
     // If counts are 0, check User model for roles
     if (mobilizersCount === 0 && db.User) {
       try {
@@ -69,34 +85,69 @@ export const getAdminDashboardStats = async (req, res) => {
       ['ACTIVE_EMPLOYED', 'EMPLOYED', 'DEPLOYED'].includes((d.deployment_status || '').toUpperCase())
     ).length;
 
+    // Helper: Map candidate ID to batch assessment & enrollment results
+    const candHasBatchAssessment = (candId) => {
+      const hasAssessment = assessments.some(a => a.candidate_id === candId);
+      const hasEnrollmentEval = enrollments.some(e => 
+        e.candidate_id === candId && (
+          (e.assessment_score !== null && e.assessment_score > 0) ||
+          e.is_passed === true ||
+          ['COMPLETED', 'CERTIFIED', 'FAILED'].includes((e.status || '').toUpperCase())
+        )
+      );
+      return hasAssessment || hasEnrollmentEval;
+    };
+
+    const candPassedBatch = (candId) => {
+      const passedInAssessment = assessments.some(a => 
+        a.candidate_id === candId && (
+          a.is_passed === true ||
+          (a.result || '').toLowerCase() === 'pass' ||
+          (a.score !== null && a.score >= (a.passing_score || 70))
+        )
+      );
+      const passedInEnrollment = enrollments.some(e => 
+        e.candidate_id === candId && (
+          e.is_passed === true ||
+          (e.assessment_score !== null && e.assessment_score >= 70)
+        ) && ['COMPLETED', 'CERTIFIED', 'completed', 'certified'].includes(e.status)
+      );
+      return passedInAssessment || passedInEnrollment;
+    };
+
     // 3. Candidate Lifecycle Funnel (from actual database candidate stages)
+    // Note: Initial mobilisation screening/score is NOT counted as batch assessment.
+    // Batch assessment is the final training scoring, and passing marks are required for deployment readiness.
     let registeredCount = totalCandidates;
-    let assessedCount = 0;
     let inTrainingCount = 0;
+    let assessedCount = 0;
     let readyForDeploymentCount = 0;
     let employedCount = activeEmployed;
 
     candidates.forEach(c => {
       const stage = (c.current_stage || '').toUpperCase();
-      const score = c.readiness_score;
-      const status = c.readiness_status;
+      const candId = c.id;
 
-      // Assessed
-      if ((score && score > 0) || (status && status !== 'NOT_EVALUATED') || ['ASSESSED', 'IN_TRAINING', 'DEPLOYMENT_READY', 'DEPLOYED'].includes(stage)) {
-        assessedCount++;
-      }
-
-      // In Training
-      if (['IN_TRAINING', 'TRAINING', 'TRAINING_RECOMMENDED', 'DEPLOYMENT_READY', 'DEPLOYED'].includes(stage)) {
+      // In Training (enrolled in batch or stage indicates in training / beyond)
+      const hasEnrollment = enrollments.some(e => e.candidate_id === candId);
+      const isPostTraining = ['DEPLOYMENT_READY', 'DEPLOYED', 'EMPLOYED', 'ACTIVE_EMPLOYED'].includes(stage);
+      if (['IN_TRAINING', 'TRAINING', 'TRAINING_RECOMMENDED'].includes(stage) || hasEnrollment || isPostTraining) {
         inTrainingCount++;
       }
 
-      // Ready for Deployment
-      if (status === 'DEPLOYMENT_READY' || (score && score >= 80) || ['DEPLOYMENT_READY', 'DEPLOYED'].includes(stage)) {
+      // Batch Assessed (only final batch training evaluation, NOT mobilization intake screening)
+      const hasBatchAss = candHasBatchAssessment(candId);
+      if (hasBatchAss || ['BATCH_ASSESSED', 'DEPLOYED'].includes(stage)) {
+        assessedCount++;
+      }
+
+      // Ready for Deployment (must have successfully completed batch and achieved passing marks)
+      const passedBatch = candPassedBatch(candId);
+      if (passedBatch || ['DEPLOYED', 'EMPLOYED', 'ACTIVE_EMPLOYED'].includes(stage)) {
         readyForDeploymentCount++;
       }
 
-      // Employed
+      // Employed (placed under active partner contract)
       if (['DEPLOYED', 'EMPLOYED', 'ACTIVE_EMPLOYED'].includes(stage)) {
         employedCount++;
       }
@@ -115,37 +166,37 @@ export const getAdminDashboardStats = async (req, res) => {
         description: 'Candidate intake and verified territory roster profiles',
       },
       {
-        stage: 'Assessed',
-        count: assessedCount,
-        formattedCount: assessedCount.toLocaleString('en-IN'),
-        conversion: registeredCount > 0 ? `${Math.round((assessedCount / registeredCount) * 100)}%` : '0%',
-        dropOff: registeredCount > 0 ? `${Math.max(0, 100 - Math.round((assessedCount / registeredCount) * 100))}%` : '0%',
-        color: '#8B5CF6',
-        width: registeredCount > 0 ? `${Math.max(20, Math.round((assessedCount / registeredCount) * 100))}%` : '20%',
-        badgeBg: 'bg-purple-100 text-purple-800',
-        description: 'Readiness evaluations and driving assessments completed',
-      },
-      {
         stage: 'In Training',
         count: inTrainingCount,
         formattedCount: inTrainingCount.toLocaleString('en-IN'),
         conversion: registeredCount > 0 ? `${Math.round((inTrainingCount / registeredCount) * 100)}%` : '0%',
-        dropOff: assessedCount > 0 ? `${Math.max(0, 100 - Math.round((inTrainingCount / assessedCount) * 100))}%` : '0%',
+        dropOff: registeredCount > 0 ? `${Math.max(0, 100 - Math.round((inTrainingCount / registeredCount) * 100))}%` : '0%',
         color: '#F59E0B',
         width: registeredCount > 0 ? `${Math.max(20, Math.round((inTrainingCount / registeredCount) * 100))}%` : '20%',
         badgeBg: 'bg-amber-100 text-amber-800',
-        description: 'Enrolled in 2W EV dynamics and battery swapping training',
+        description: 'Enrolled in 2W EV dynamics and battery swapping training batch',
+      },
+      {
+        stage: 'Assessed',
+        count: assessedCount,
+        formattedCount: assessedCount.toLocaleString('en-IN'),
+        conversion: registeredCount > 0 ? `${Math.round((assessedCount / registeredCount) * 100)}%` : '0%',
+        dropOff: inTrainingCount > 0 ? `${Math.max(0, 100 - Math.round((assessedCount / inTrainingCount) * 100))}%` : '0%',
+        color: '#8B5CF6',
+        width: registeredCount > 0 ? `${Math.max(20, Math.round((assessedCount / registeredCount) * 100))}%` : '20%',
+        badgeBg: 'bg-purple-100 text-purple-800',
+        description: 'Completed batch practical driving and theory final assessment',
       },
       {
         stage: 'Ready for Deployment',
         count: readyForDeploymentCount,
         formattedCount: readyForDeploymentCount.toLocaleString('en-IN'),
         conversion: registeredCount > 0 ? `${Math.round((readyForDeploymentCount / registeredCount) * 100)}%` : '0%',
-        dropOff: inTrainingCount > 0 ? `${Math.max(0, 100 - Math.round((readyForDeploymentCount / inTrainingCount) * 100))}%` : '0%',
+        dropOff: assessedCount > 0 ? `${Math.max(0, 100 - Math.round((readyForDeploymentCount / assessedCount) * 100))}%` : '0%',
         color: '#10B981',
         width: registeredCount > 0 ? `${Math.max(20, Math.round((readyForDeploymentCount / registeredCount) * 100))}%` : '20%',
         badgeBg: 'bg-emerald-100 text-emerald-800',
-        description: 'Certified drivers qualified for employer placement matching',
+        description: 'Completed batch with passing marks (certified for employer placement)',
       },
       {
         stage: 'Employed',
@@ -175,8 +226,10 @@ export const getAdminDashboardStats = async (req, res) => {
 
     // 5. Operational Health Items (from actual candidate records)
     const pendingDocsCount = candidates.filter(c => !c.documents || c.documents.length === 0 || c.documents.some(d => d.verification_status === 'pending' || d.verification_status === 'PENDING')).length;
-    const pendingAssessmentsCount = candidates.filter(c => !c.readiness_score || c.readiness_score === 0 || c.readiness_status === 'NOT_EVALUATED').length;
-    const readyDeploymentCount = candidates.filter(c => (c.readiness_status === 'DEPLOYMENT_READY' || (c.readiness_score && c.readiness_score >= 80)) && c.current_stage !== 'DEPLOYED').length;
+    // Candidates currently in training who are awaiting final batch assessment:
+    const inTrainingCandidates = candidates.filter(c => ['IN_TRAINING', 'TRAINING'].includes(c.current_stage) || enrollments.some(e => e.candidate_id === c.id));
+    const pendingAssessmentsCount = inTrainingCandidates.filter(c => !candHasBatchAssessment(c.id)).length;
+    const readyDeploymentCount = readyForDeploymentCount;
 
     const operationalHealth = [
       {
@@ -190,10 +243,10 @@ export const getAdminDashboardStats = async (req, res) => {
       },
       {
         id: 'assessments',
-        title: 'ASSESSMENTS',
+        title: 'BATCH ASSESSMENTS',
         count: `${pendingAssessmentsCount} Pending`,
         rawCount: pendingAssessmentsCount,
-        description: pendingAssessmentsCount > 0 ? 'Intake evaluations to be scored' : 'All candidate assessments completed',
+        description: pendingAssessmentsCount > 0 ? 'Enrolled trainees pending final batch assessment' : 'All enrolled trainees evaluated',
         actionLabel: 'Review',
         actionSection: 'assessments-placements',
       },
@@ -202,7 +255,7 @@ export const getAdminDashboardStats = async (req, res) => {
         title: 'READY FOR DEPLOYMENT',
         count: `${readyDeploymentCount} Candidates`,
         rawCount: readyDeploymentCount,
-        description: readyDeploymentCount > 0 ? 'Certified candidates ready for fleet matching' : 'No candidates awaiting deployment',
+        description: readyDeploymentCount > 0 ? 'Batch graduates with passing marks ready for fleet matching' : 'No candidates awaiting deployment',
         actionLabel: 'Deploy',
         actionSection: 'assessments-placements',
       }
@@ -281,7 +334,7 @@ export const getAdminDashboardStats = async (req, res) => {
       });
     }
 
-    // 9. Monthly activity velocity trend from candidate registration dates
+    // 9. Monthly activity velocity trend from real timestamps
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -291,18 +344,84 @@ export const getAdminDashboardStats = async (req, res) => {
       const d = new Date(currentYear, currentMonth - i, 1);
       const m = d.getMonth();
       const y = d.getFullYear();
+      const monthStart = new Date(y, m, 1, 0, 0, 0, 0);
       const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999);
-      const count = candidates.filter(c => {
-        const cd = new Date(c.created_at || c.createdAt || c.registered_at || Date.now());
-        return cd <= monthEnd;
+
+      // Actual new registrations in this specific month
+      const regInMonth = candidates.filter(c => {
+        const cd = new Date(c.registered_at || c.createdAt || c.created_at);
+        return !isNaN(cd.getTime()) && cd >= monthStart && cd <= monthEnd;
       }).length;
+
+      // Cumulative registrations up to this month
+      const regCumulative = candidates.filter(c => {
+        const cd = new Date(c.registered_at || c.createdAt || c.created_at);
+        return !isNaN(cd.getTime()) && cd <= monthEnd;
+      }).length;
+
+      // Assessments in this month
+      let assInMonth = 0;
+      let assCumulative = 0;
+      if (assessments && assessments.length > 0) {
+        assInMonth = assessments.filter(a => {
+          const ad = new Date(a.assessment_date || a.createdAt || a.created_at);
+          return !isNaN(ad.getTime()) && ad >= monthStart && ad <= monthEnd;
+        }).length;
+        assCumulative = new Set(
+          assessments
+            .filter(a => {
+              const ad = new Date(a.assessment_date || a.createdAt || a.created_at);
+              return !isNaN(ad.getTime()) && ad <= monthEnd;
+            })
+            .map(a => a.candidate_id)
+        ).size;
+      } else if (enrollments && enrollments.length > 0) {
+        assInMonth = enrollments.filter(e => {
+          const ed = new Date(e.completed_at || e.updatedAt || e.updated_at);
+          return !isNaN(ed.getTime()) && ed >= monthStart && ed <= monthEnd && (
+            e.is_passed === true || (e.assessment_score !== null && e.assessment_score > 0)
+          );
+        }).length;
+        assCumulative = new Set(
+          enrollments
+            .filter(e => {
+              const ed = new Date(e.completed_at || e.updatedAt || e.updated_at);
+              return !isNaN(ed.getTime()) && ed <= monthEnd && (
+                e.is_passed === true || (e.assessment_score !== null && e.assessment_score > 0)
+              );
+            })
+            .map(e => e.candidate_id)
+        ).size;
+      }
+
+      // Placements in this month
+      let plcInMonth = 0;
+      let plcCumulative = 0;
+      if (deployments && deployments.length > 0) {
+        plcInMonth = deployments.filter(dep => {
+          const dd = new Date(dep.joining_date || dep.offer_date || dep.createdAt || dep.created_at);
+          return !isNaN(dd.getTime()) && dd >= monthStart && dd <= monthEnd;
+        }).length;
+        plcCumulative = new Set(
+          deployments
+            .filter(dep => {
+              const dd = new Date(dep.joining_date || dep.offer_date || dep.createdAt || dep.created_at);
+              return !isNaN(dd.getTime()) && dd <= monthEnd;
+            })
+            .map(d => d.candidate_id)
+        ).size;
+      }
 
       activityTrend.push({
         month: monthNames[m],
         year: y,
-        registrations: count,
-        assessments: Math.min(count, assessedCount),
-        placements: Math.min(count, totalDeployments)
+        label: `${monthNames[m]} ${y}`,
+        registrations: regInMonth,
+        assessments: assInMonth,
+        placements: plcInMonth,
+        cumulative_registrations: regCumulative,
+        cumulative_assessments: assCumulative,
+        cumulative_placements: plcCumulative
       });
     }
 

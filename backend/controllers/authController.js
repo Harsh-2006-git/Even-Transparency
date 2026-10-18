@@ -13,6 +13,8 @@ const normalizeRoleKey = (roleStr) => {
   if (clean.includes('train')) return 'trainer';
   if (clean.includes('placement') || clean.includes('coord')) return 'placement_coordinator';
   if (clean.includes('cand')) return 'candidate';
+  if (clean.includes('employ')) return 'employer';
+  if (clean.includes('partner')) return 'partner';
   return clean;
 };
 
@@ -28,6 +30,10 @@ const getRoleNotFoundMessage = (roleKey) => {
       return 'No placement coordinator found with this email.';
     case 'candidate':
       return 'No candidate found with this identifier.';
+    case 'employer':
+      return 'No employer user account found with this email.';
+    case 'partner':
+      return 'No partner account found with this email.';
     default:
       return 'User does not exist in database or invalid credentials.';
   }

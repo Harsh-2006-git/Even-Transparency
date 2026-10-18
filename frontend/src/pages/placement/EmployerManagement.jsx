@@ -347,8 +347,9 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
       const res = await fetch(`${API_BASE}/employers`);
       if (res.ok) {
         const data = await res.json();
-        if (data.employers && data.employers.length > 0) {
-          setEmployers(data.employers);
+        const list = data.data || data.employers || [];
+        if (list && list.length > 0) {
+          setEmployers(list);
         } else {
           setEmployers(fallbackEmployers);
         }
@@ -382,71 +383,50 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
       const codePrefix = (newEmployerName.trim() ? newEmployerName.substring(0, 3) : 'EMP').toUpperCase();
 
       const newLocalEmployer = {
-        id: `emp-${Date.now()}`,
         employer_name: newEmployerName,
+        company_name: newEmployerName,
         brand_name: newBrandName || newEmployerName,
         cin_gstin: newCinGstin,
         company_code: `EMP-${codePrefix}-${Math.floor(10 + Math.random() * 90)}`,
         industry: newIndustry,
+        industry_type: newCategory,
         category: newCategory,
         is_green_employer: true,
         logo_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=120&auto=format&fit=crop&q=80',
         primary_city: newPrimaryCity,
+        city: newPrimaryCity,
         operating_cities: [newPrimaryCity],
+        address: newRegisteredAddress,
         registered_address: newRegisteredAddress,
         mou_signed: newMouSigned,
-        mou_date: new Date().toISOString().split('T')[0],
-        status: 'ACTIVE',
+        status: 'active',
         contact_person: newContactPerson,
         contact_designation: newContactDesignation,
         contact_email: newContactEmail,
         contact_phone: newContactPhone,
-        hubs: [
-          {
-            name: newHubName || `${newPrimaryCity} Main Central Hub`,
-            address: newHubAddress || `Sector 4, Central Commercial Area, ${newPrimaryCity}`,
-            capacity: parseInt(newHubCapacity) || 50,
-            charging_points: parseInt(newHubChargingPoints) || 20
-          }
-        ],
-        vehicle_policy: newVehiclePolicy,
-        allocated_ev_model: newVehicleModel,
-        active_roles: [
-          {
-            id: `role-${Date.now()}`,
-            job_title: newInitialRole,
-            role_code: `${codePrefix}-01`,
-            vacancies: parseInt(newInitialVacancies) || 10,
-            placed_count: 0,
-            monthly_gross_salary: grossSalary,
-            base_pay: basePay,
-            performance_bonus: bonusPay,
-            shift_timings: newInitialShift,
-            work_type: 'Full-Time',
-            delivery_radius_km: 5.0,
-            required_qualification: newInitialQualification,
-            preferred_nf_tier: newInitialTier,
-            perks: newInitialPerks,
-            status: 'OPEN'
-          }
-        ],
-        total_placed_candidates: 0,
-        created_at: new Date().toISOString()
+        initial_role_title: newInitialRole,
+        initial_vacancies: parseInt(newInitialVacancies) || 10,
+        initial_salary: grossSalary
       };
 
       try {
-        await fetch(`${API_BASE}/employers`, {
+        const postRes = await fetch(`${API_BASE}/employers`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newLocalEmployer)
         });
+        if (postRes.ok) {
+          await fetchEmployers();
+        } else {
+          setEmployers(prev => [newLocalEmployer, ...prev]);
+        }
       } catch (apiErr) {
         console.warn('API backend error, updating local state:', apiErr);
+        setEmployers(prev => [newLocalEmployer, ...prev]);
       }
 
-      setEmployers([newLocalEmployer, ...employers]);
       setShowAddEmployerModal(false);
-      setToastMessage(`Employer partner "${newEmployerName}" successfully onboarded with ${newInitialVacancies} live openings!`);
+      setToastMessage(`Employer partner "${newEmployerName}" successfully onboarded to database!`);
       setTimeout(() => setToastMessage(''), 4000);
       
       // Reset form
@@ -466,62 +446,61 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
       const employerId = targetEmployerId || (employers[0] ? employers[0].id : 'emp-01');
       const grossSalary = parseInt(newRoleSalary) || 21000;
       const basePay = Math.round(grossSalary * 0.75);
-      const bonusPay = grossSalary - basePay;
       const targetEmp = employers.find(e => e.id === employerId);
-      const codePrefix = targetEmp ? targetEmp.company_code.replace('EMP-', '') : 'ROL';
+      const codePrefix = targetEmp ? (targetEmp.company_code || 'ROL').replace('EMP-', '') : 'ROL';
 
       const newRoleObj = {
-        id: `role-${Date.now()}`,
         job_title: newRoleTitle,
+        role_title: newRoleTitle,
         role_code: `${codePrefix}-${Math.floor(100 + Math.random() * 900)}`,
         vacancies: parseInt(newRoleVacancies) || 10,
-        placed_count: 0,
         monthly_gross_salary: grossSalary,
         base_pay: basePay,
-        performance_bonus: bonusPay,
-        payout_cycle: newRolePayoutCycle,
         shift_timings: newRoleShift,
-        working_days: newRoleWorkingDays,
         work_type: newRoleWorkType,
-        delivery_radius_km: parseFloat(newRoleDeliveryRadius) || 4.5,
-        hub_location: newRoleHub,
         required_qualification: `${newRoleEduLevel}, ${newRoleDLReq}. ${newRoleQualification}`,
         preferred_nf_tier: newRolePreferredTier,
-        perks: newRolePerks,
-        status: 'OPEN'
+        perks: newRolePerks
       };
 
       try {
-        await fetch(`${API_BASE}/employers/${employerId}/roles`, {
+        const postRes = await fetch(`${API_BASE}/employers/${employerId}/roles`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newRoleObj)
         });
+        if (postRes.ok) {
+          await fetchEmployers();
+        } else {
+          setEmployers(prev =>
+            prev.map(emp => {
+              if (emp.id === employerId) {
+                return {
+                  ...emp,
+                  active_roles: [newRoleObj, ...(emp.active_roles || [])]
+                };
+              }
+              return emp;
+            })
+          );
+        }
       } catch (apiErr) {
         console.warn('API backend error, updating local state:', apiErr);
-      }
-
-      setEmployers(prev =>
-        prev.map(emp => {
-          if (emp.id === employerId) {
-            return {
-              ...emp,
-              active_roles: [newRoleObj, ...(emp.active_roles || [])]
-            };
-          }
-          return emp;
-        })
-      );
-
-      if (selectedEmployer && selectedEmployer.id === employerId) {
-        setSelectedEmployer(prev => ({
-          ...prev,
-          active_roles: [newRoleObj, ...(prev.active_roles || [])]
-        }));
+        setEmployers(prev =>
+          prev.map(emp => {
+            if (emp.id === employerId) {
+              return {
+                ...emp,
+                active_roles: [newRoleObj, ...(emp.active_roles || [])]
+              };
+            }
+            return emp;
+          })
+        );
       }
 
       setShowAddRoleModal(false);
-      setToastMessage(`Job opening "${newRoleTitle}" with ${newRoleVacancies} vacancies posted successfully!`);
+      setToastMessage(`Job opening "${newRoleTitle}" with ${newRoleVacancies} vacancies posted to database!`);
       setTimeout(() => setToastMessage(''), 4000);
       setNewRoleTitle('');
     } catch (err) {
@@ -564,31 +543,32 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
   };
 
   return (
-    <div className="space-y-6 pb-20 font-sans max-w-[1600px] mx-auto text-slate-800">
+    <div className="space-y-4 pb-12 font-sans max-w-7xl mx-auto text-slate-800">
       
-      {/* ─── Header & Action Toolbar (100% White Light Theme) ──────────────── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-        <div className="space-y-1.5 relative z-10 flex-1 min-w-0">
+      {/* ─── Header & Action Toolbar (Compact White Theme) ──────────────── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="space-y-1.5 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3 py-1 rounded-full text-[11px] font-bold tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5 shadow-2xs">
-              <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-              PLACEMENT & EMPLOYER HUB
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-2xs">
+              <Building2 className="w-3 h-3 text-emerald-600" />
+              <span>PLACEMENT & EMPLOYER HUB</span>
             </span>
             <span className="text-slate-400 text-xs font-medium">• Commercial EV Fleet Hiring Partnerships</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold font-kaiseiTokumin tracking-tight text-slate-900 leading-tight">
             Hiring Employers & Job Opportunities
           </h1>
-          <p className="text-slate-500 text-xs sm:text-sm max-w-2xl leading-relaxed">
+          <p className="text-slate-500 text-xs max-w-2xl leading-normal">
             Register corporate EV fleet partners, configure verified pilot designations, guarantee wage structures, and allocate hyper-local delivery charging hubs.
           </p>
         </div>
 
-        {/* Action Buttons - Fixed in a single unified row */}
-        <div className="flex items-center gap-2.5 relative z-10 shrink-0 flex-nowrap overflow-x-auto pb-1 lg:pb-0">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 relative z-10 shrink-0 flex-wrap">
           <button
             onClick={handleRefresh}
-            className="px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition flex items-center gap-2 whitespace-nowrap shrink-0 shadow-2xs"
+            disabled={isRefreshing}
+            className="cursor-pointer px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 whitespace-nowrap shadow-2xs"
             title="Refresh Employers"
           >
             <RotateCw className={`w-3.5 h-3.5 text-emerald-600 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -600,7 +580,7 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
               if (employers.length > 0) setTargetEmployerId(employers[0].id);
               setShowAddRoleModal(true);
             }}
-            className="px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition flex items-center gap-2 whitespace-nowrap shrink-0 shadow-2xs"
+            className="cursor-pointer px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 whitespace-nowrap shadow-2xs"
           >
             <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
             <span>Post New Job Role</span>
@@ -608,9 +588,9 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
 
           <button
             onClick={() => setShowAddEmployerModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-sm shadow-emerald-600/20 transition flex items-center gap-2 whitespace-nowrap shrink-0"
+            className="cursor-pointer px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-xs transition flex items-center gap-1.5 whitespace-nowrap"
           >
-            <PlusCircle className="w-4 h-4" />
+            <PlusCircle className="w-3.5 h-3.5" />
             <span>Add New Employer Partner</span>
           </button>
         </div>
@@ -618,134 +598,134 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
 
       {/* Success Notification Toast */}
       {toastMessage && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-sm flex items-center justify-between text-xs font-bold animate-fadeIn">
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-2xs flex items-center justify-between text-xs font-bold animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{toastMessage}</span>
           </div>
-          <button onClick={() => setToastMessage('')} className="text-emerald-700 hover:text-emerald-900 p-1">
-            <X className="w-4 h-4" />
+          <button onClick={() => setToastMessage('')} className="text-emerald-700 hover:text-emerald-900 p-0.5 cursor-pointer">
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* ─── 1. KPI Metric Summary Cards (Clean Elevated White) ────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+      {/* ─── 1. KPI Metric Summary Cards (Compact White) ────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         
         {/* Total Employers */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-emerald-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EMPLOYER PARTNERS</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
-              <Building2 className="w-4 h-4" />
+            <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
+              <Building2 className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-900">{employers.length} Active</div>
-            <div className="text-[11px] font-semibold text-emerald-600 mt-0.5">100% Green Fleets (MOU Signed)</div>
+            <div className="text-xl font-black text-slate-900 font-kaiseiTokumin">{employers.length} Active</div>
+            <div className="text-[10px] font-medium text-emerald-600 mt-0.5">100% Green Fleets (MOU Signed)</div>
           </div>
         </div>
 
         {/* Live Job Openings */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-indigo-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-indigo-300 transition">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">LIVE VACANCIES</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center">
-              <Briefcase className="w-4 h-4" />
+            <div className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center">
+              <Briefcase className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-indigo-900">
+            <div className="text-xl font-black text-indigo-900 font-kaiseiTokumin">
               {totalLiveVacancies} Openings
             </div>
-            <div className="text-[11px] font-semibold text-indigo-600 mt-0.5">Across {allJobRoles.length} Job Roles</div>
+            <div className="text-[10px] font-medium text-indigo-600 mt-0.5">Across {allJobRoles.length} Job Roles</div>
           </div>
         </div>
 
         {/* Average Guaranteed Wage */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-teal-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-teal-300 transition">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">AVG MONTHLY SALARY</span>
-            <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
+            <div className="w-6 h-6 rounded-md bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center">
+              <DollarSign className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-teal-700">₹21,100 / mo</div>
-            <div className="text-[11px] font-semibold text-teal-600 mt-0.5">Base + EV Performance Incentives</div>
+            <div className="text-xl font-black text-teal-700 font-kaiseiTokumin">₹21,100 / mo</div>
+            <div className="text-[10px] font-medium text-teal-600 mt-0.5">Base + Performance Incentives</div>
           </div>
         </div>
 
         {/* Total Placed Pilots */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-purple-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-purple-300 transition">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">CANDIDATES PLACED</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center">
-              <Users className="w-4 h-4" />
+            <div className="w-6 h-6 rounded-md bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center">
+              <Users className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-purple-700">
+            <div className="text-xl font-black text-purple-700 font-kaiseiTokumin">
               {totalPlacedCount} Placed
             </div>
-            <div className="text-[11px] font-semibold text-purple-600 mt-0.5">Active in Commercial Delivery</div>
+            <div className="text-[10px] font-medium text-purple-600 mt-0.5">Active in Commercial Delivery</div>
           </div>
         </div>
 
         {/* EV Vehicle Asset Policy */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-blue-300 transition">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EV VEHICLE SUPPORT</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
-              <Car className="w-4 h-4" />
+            <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
+              <Car className="w-3.5 h-3.5" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black text-blue-900">100% EV</div>
-            <div className="text-[11px] font-semibold text-blue-600 mt-0.5">Employer Provided (Zero Petrol Cost)</div>
+            <div className="text-xl font-black text-blue-900 font-kaiseiTokumin">100% EV</div>
+            <div className="text-[10px] font-medium text-blue-600 mt-0.5">Employer Provided (Zero Petrol Cost)</div>
           </div>
         </div>
 
       </div>
 
-      {/* ─── 2. Main Navigation Tabs ───────────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+      {/* ─── 2. Main Navigation Tabs (Compact Segmented Strip) ─────────────── */}
+      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200/70">
         <button
           onClick={() => setActiveTab('employers')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
             activeTab === 'employers'
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Building2 className="w-3.5 h-3.5 text-emerald-600" />
           <span>Hiring Employer Partners</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+          <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
             {filteredEmployers.length}
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab('roles')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
             activeTab === 'roles'
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+          <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
           <span>All Live Job Openings Directory</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-slate-100 text-slate-700">
+          <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
             {allJobRoles.length}
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab('hubs')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
             activeTab === 'hubs'
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <MapPin className="w-3.5 h-3.5 text-emerald-600" />
@@ -753,27 +733,27 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
         </button>
       </div>
 
-      {/* ─── 3. TAB 1: Employer Partners Table (Row Format) ─────────────────── */}
+      {/* ─── 3. TAB 1: Employer Partners Table ──────────────────────────────── */}
       {activeTab === 'employers' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           
           {/* Filters Bar */}
-          <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
             
             {/* Search Input */}
             <div className="relative flex-1 min-w-[260px]">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search employer name, code, industry, job roles..."
-                className="w-full pl-9.5 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
+                className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-slate-50/70 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500 transition"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -785,7 +765,7 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
               <select
                 value={selectedCategory}
                 onChange={e => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="px-2.5 py-1.5 rounded-lg bg-slate-50/70 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="ALL">All Categories</option>
                 <option value="QUICK_COMMERCE">Quick Commerce / Food</option>
@@ -796,7 +776,7 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
               <select
                 value={selectedCity}
                 onChange={e => setSelectedCity(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="px-2.5 py-1.5 rounded-lg bg-slate-50/70 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="ALL">All Cities</option>
                 <option value="Bengaluru">Bengaluru</option>
@@ -812,9 +792,9 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
                     setSelectedCategory('ALL');
                     setSelectedCity('ALL');
                   }}
-                  className="px-3 py-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition flex items-center gap-1.5"
+                  className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3 h-3" />
                   <span>Reset</span>
                 </button>
               )}
@@ -822,32 +802,32 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
 
           </div>
 
-          {/* Structured Row / Tabular Display - Concise & Clean */}
+          {/* Structured Table Display */}
           {filteredEmployers.length === 0 ? (
-            <div className="bg-white rounded-3xl p-14 text-center border border-slate-200 space-y-3 shadow-xs">
-              <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
-                <Search className="w-6 h-6" />
+            <div className="bg-white rounded-xl p-10 text-center border border-slate-200 space-y-2 shadow-2xs">
+              <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mx-auto text-slate-400">
+                <Search className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-800">No Employer Partners Found</h3>
+              <h3 className="text-sm font-bold text-slate-800">No Employer Partners Found</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 No employer partners matched the selected filters. Click "Add New Employer Partner" to onboard one.
               </p>
             </div>
           ) : (
-            <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-xs">
+            <div className="bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-2xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase text-[11px] tracking-wider">
-                      <th className="py-4.5 px-6">EMPLOYER PARTNER</th>
-                      <th className="py-4.5 px-6">CITY / HUB</th>
-                      <th className="py-4.5 px-6">OPEN VACANCIES</th>
-                      <th className="py-4.5 px-6">GUARANTEED WAGE</th>
-                      <th className="py-4.5 px-6">STATUS</th>
-                      <th className="py-4.5 px-6 text-right">ACTION</th>
+                    <tr className="bg-slate-50/90 border-b border-slate-200/80 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                      <th className="py-2.5 px-4">EMPLOYER PARTNER</th>
+                      <th className="py-2.5 px-4">CITY / HUB</th>
+                      <th className="py-2.5 px-4">OPEN VACANCIES</th>
+                      <th className="py-2.5 px-4">GUARANTEED WAGE</th>
+                      <th className="py-2.5 px-4">STATUS</th>
+                      <th className="py-2.5 px-4 text-right">ACTION</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100/90">
+                  <tbody className="divide-y divide-slate-100">
                     {filteredEmployers.map(item => {
                       const totalOpen = (item.active_roles || []).reduce((sum, r) => sum + (r.vacancies - r.placed_count), 0);
                       const salaries = (item.active_roles || []).map(r => r.monthly_gross_salary);
@@ -858,15 +838,15 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
                         <tr
                           key={item.id}
                           onClick={() => setSelectedEmployer(item)}
-                          className={`hover:bg-slate-50/70 transition-colors cursor-pointer group ${
+                          className={`hover:bg-slate-50/80 transition-colors cursor-pointer group ${
                             selectedEmployer?.id === item.id ? 'bg-emerald-50/40' : ''
                           }`}
                         >
                           
-                          {/* 1. Employer Name with Clean Fallback Avatar */}
-                          <td className="py-4.5 px-6 align-middle">
-                            <div className="flex items-center gap-3.5">
-                              <div className="w-10 h-10 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-2xs shrink-0 flex items-center justify-center font-black text-slate-700 text-xs">
+                          {/* 1. Employer Name with Clean Avatar */}
+                          <td className="py-3 px-4 align-middle">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
                                 {item.logo_url ? (
                                   <img
                                     src={item.logo_url}
@@ -881,15 +861,15 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
                                 )}
                               </div>
                               <div className="min-w-0">
-                                <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition flex items-center gap-2 text-sm whitespace-nowrap">
+                                <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition flex items-center gap-1.5 text-xs whitespace-nowrap">
                                   <span>{item.employer_name}</span>
                                   {item.mou_signed && (
-                                    <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                                    <span className="px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                                       MOU Signed
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                                <div className="text-[10px] font-mono text-slate-400">
                                   {item.company_code}
                                 </div>
                               </div>
@@ -897,48 +877,48 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
                           </td>
 
                           {/* 2. City / Location */}
-                          <td className="py-4.5 px-6 align-middle">
-                            <div className="text-xs font-semibold text-slate-800 flex items-center gap-1.5 whitespace-nowrap">
-                              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <td className="py-3 px-4 align-middle">
+                            <div className="text-xs font-semibold text-slate-700 flex items-center gap-1 whitespace-nowrap">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                               <span>{item.primary_city}</span>
                             </div>
                           </td>
 
                           {/* 3. Open Vacancies */}
-                          <td className="py-4.5 px-6 align-middle">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100/80 font-bold text-xs whitespace-nowrap">
+                          <td className="py-3 px-4 align-middle">
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 text-[11px] font-bold whitespace-nowrap">
                               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
                               <span>{totalOpen} Openings</span>
                             </div>
                           </td>
 
                           {/* 4. Guaranteed Wage */}
-                          <td className="py-4.5 px-6 align-middle">
-                            <div className="font-extrabold text-slate-900 text-xs whitespace-nowrap">
+                          <td className="py-3 px-4 align-middle">
+                            <div className="font-bold text-slate-900 text-xs whitespace-nowrap">
                               {minSalary === maxSalary
                                 ? `₹${minSalary.toLocaleString('en-IN')}`
                                 : `₹${minSalary.toLocaleString('en-IN')} - ₹${maxSalary.toLocaleString('en-IN')}`}
-                              <span className="text-[11px] font-normal text-slate-400 ml-1">/mo</span>
+                              <span className="text-[10px] font-normal text-slate-400 ml-1">/mo</span>
                             </div>
                           </td>
 
                           {/* 5. Status */}
-                          <td className="py-4.5 px-6 align-middle">
-                            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                          <td className="py-3 px-4 align-middle">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                               ACTIVE PARTNER
                             </span>
                           </td>
 
                           {/* 6. Action Button */}
-                          <td className="py-4.5 px-6 text-right align-middle" onClick={e => e.stopPropagation()}>
+                          <td className="py-3 px-4 text-right align-middle" onClick={e => e.stopPropagation()}>
                             <button
                               onClick={() => setSelectedEmployer(item)}
-                              className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200 text-slate-700 font-bold text-xs transition-all inline-flex items-center gap-1.5 shadow-2xs group-hover:bg-white whitespace-nowrap"
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200 text-slate-700 font-bold text-xs transition-all inline-flex items-center gap-1 shadow-2xs group-hover:bg-white whitespace-nowrap cursor-pointer"
                             >
-                              <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                              <Eye className="w-3 h-3 text-emerald-600" />
                               <span>View Details</span>
-                              <ChevronRight className="w-3 h-3 text-slate-400 group-hover:text-emerald-700 group-hover:translate-x-0.5 transition-transform" />
+                              <ChevronRight className="w-3 h-3 text-slate-400 group-hover:text-emerald-700 transition-transform" />
                             </button>
                           </td>
 
@@ -956,13 +936,13 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
 
       {/* ─── 4. TAB 2: All Live Job Openings Directory ──────────────────────── */}
       {activeTab === 'roles' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {allJobRoles.map((role, idx) => (
-              <div key={idx} className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-4 hover:border-indigo-300 hover:shadow-md transition">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs overflow-hidden shrink-0">
+              <div key={idx} className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs space-y-3 hover:border-indigo-300 transition">
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-slate-900 text-white font-bold text-xs flex items-center justify-center overflow-hidden shrink-0">
                       {role.employer_logo ? (
                         <img src={role.employer_logo} alt="" className="w-full h-full object-cover" onError={e => e.target.style.display = 'none'} />
                       ) : (
@@ -971,35 +951,35 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
                     </div>
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{role.employer_name}</span>
-                      <h3 className="font-extrabold text-slate-900 text-sm">{role.job_title}</h3>
+                      <h3 className="font-bold text-slate-900 text-xs sm:text-sm">{role.job_title}</h3>
                     </div>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10.5px] font-extrabold shrink-0">
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] font-bold shrink-0">
                     {role.vacancies - role.placed_count} Openings
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Gross Monthly Wage:</span>
-                    <strong className="text-emerald-700 font-black text-sm">₹{role.monthly_gross_salary.toLocaleString('en-IN')} / mo</strong>
+                    <span className="text-slate-500 text-[11px]">Gross Monthly Wage:</span>
+                    <strong className="text-emerald-700 font-bold text-xs">₹{role.monthly_gross_salary.toLocaleString('en-IN')} / mo</strong>
                   </div>
-                  <div className="flex justify-between text-[11px]">
+                  <div className="flex justify-between text-[10px]">
                     <span className="text-slate-500">Base Pay:</span>
                     <span className="font-bold text-slate-700">₹{role.base_pay.toLocaleString('en-IN')} + Incentives</span>
                   </div>
-                  <div className="flex justify-between text-[11px]">
+                  <div className="flex justify-between text-[10px]">
                     <span className="text-slate-500">Shift Schedule:</span>
                     <span className="font-semibold text-slate-800">{role.shift_timings?.split('(')[0]}</span>
                   </div>
-                  <div className="flex justify-between text-[11px]">
+                  <div className="flex justify-between text-[10px]">
                     <span className="text-slate-500">Assigned EV Fleet:</span>
                     <span className="font-semibold text-emerald-700 truncate max-w-[150px]">{role.vehicle_model?.split('(')[0]}</span>
                   </div>
                 </div>
 
-                <div className="pt-1 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">
+                <div className="pt-0.5 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-500">
                     Tier: <strong className="text-slate-800 font-bold">{role.preferred_nf_tier}</strong>
                   </span>
                   <button
@@ -1007,10 +987,10 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
                       const parentEmp = employers.find(e => e.employer_name === role.employer_name);
                       if (parentEmp) setSelectedEmployer(parentEmp);
                     }}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 font-bold text-xs transition flex items-center gap-1.5"
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
                   >
                     <span>View Role Dossier</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
               </div>
@@ -1021,30 +1001,30 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
 
       {/* ─── 5. TAB 3: Operating Hubs & Charging Infrastructure ─────────────── */}
       {activeTab === 'hubs' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {employers.flatMap(e => (e.hubs || []).map((hub, hIdx) => (
-              <div key={`${e.id}-${hIdx}`} className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-3 hover:border-emerald-300 hover:shadow-md transition">
+              <div key={`${e.id}-${hIdx}`} className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs space-y-2 hover:border-emerald-300 transition">
                 <div className="flex justify-between items-start gap-2">
                   <div>
-                    <span className="text-[10px] font-bold text-emerald-700 uppercase bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    <span className="text-[10px] font-bold text-emerald-700 uppercase bg-emerald-50 px-1.5 py-0.2 rounded-md border border-emerald-200">
                       {e.employer_name}
                     </span>
-                    <h3 className="font-extrabold text-slate-900 text-sm mt-1.5">{hub.name}</h3>
+                    <h3 className="font-bold text-slate-900 text-xs sm:text-sm mt-1">{hub.name}</h3>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-[10.5px] font-bold shrink-0">
+                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold shrink-0">
                     {hub.capacity} Fleet Capacity
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-500 leading-relaxed">{hub.address}</p>
+                <p className="text-[11px] text-slate-500 leading-normal">{hub.address}</p>
 
-                <div className="pt-2.5 border-t border-slate-100 flex justify-between items-center text-xs font-semibold">
-                  <span className="text-slate-500 flex items-center gap-1.5">
-                    <BatteryCharging className="w-4 h-4 text-emerald-600" />
+                <div className="pt-1.5 border-t border-slate-100 flex justify-between items-center text-xs font-semibold">
+                  <span className="text-slate-500 flex items-center gap-1 text-[11px]">
+                    <BatteryCharging className="w-3.5 h-3.5 text-emerald-600" />
                     Fast Charging Docks:
                   </span>
-                  <strong className="text-emerald-700 font-bold">{hub.charging_points} Docks Active</strong>
+                  <strong className="text-emerald-700 font-bold text-xs">{hub.charging_points} Docks Active</strong>
                 </div>
               </div>
             )))}
@@ -1066,9 +1046,9 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
             <div className="w-screen max-w-xl bg-white shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-slideLeft">
               
               {/* Sidebar Header */}
-              <div className="p-6 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between">
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-14 h-14 rounded-2xl bg-white border-2 border-slate-200 shadow-sm flex items-center justify-center font-black text-slate-800 text-lg overflow-hidden shrink-0">
+              <div className="p-4 sm:p-5 bg-white border-b border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white shadow-2xs flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
                     {selectedEmployer.logo_url ? (
                       <img src={selectedEmployer.logo_url} alt="" className="w-full h-full object-cover" onError={e => e.target.style.display = 'none'} />
                     ) : (
@@ -1077,15 +1057,15 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-lg font-black text-slate-900 truncate">{selectedEmployer.employer_name}</h2>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                      <h2 className="text-base font-bold font-kaiseiTokumin text-slate-900 truncate">{selectedEmployer.employer_name}</h2>
+                      <span className="px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         Active MOU
                       </span>
                     </div>
-                    <p className="text-slate-500 text-xs mt-0.5 font-mono">
+                    <p className="text-slate-500 text-[11px] font-mono">
                       {selectedEmployer.company_code} • {selectedEmployer.industry}
                     </p>
-                    <p className="text-slate-400 text-[11px] mt-0.5 flex items-center gap-1">
+                    <p className="text-slate-400 text-[10px] flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
                       <span>{selectedEmployer.primary_city} (Headquarters & Central Hub)</span>
                     </p>
@@ -1094,7 +1074,7 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
 
                 <button
                   onClick={() => setSelectedEmployer(null)}
-                  className="p-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 transition shadow-2xs shrink-0"
+                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer shrink-0"
                   title="Close Sidebar"
                 >
                   <X className="w-4 h-4" />
@@ -1102,25 +1082,25 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
               </div>
 
               {/* Sidebar Content Scrollable Area */}
-              <div className="p-6 overflow-y-auto space-y-5 text-xs text-slate-800 flex-1">
+              <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs text-slate-800 flex-1">
                 
                 {/* 0. Quick Stats Header Strip */}
-                <div className="grid grid-cols-3 gap-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-                  <div className="p-2 bg-white rounded-xl border border-slate-100 shadow-2xs">
+                <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                  <div className="p-2 bg-white rounded-lg border border-slate-100 shadow-2xs">
                     <span className="text-[10px] font-bold text-slate-400 uppercase block">OPENINGS</span>
-                    <strong className="text-sm font-black text-indigo-700">
+                    <strong className="text-xs font-black text-indigo-700 font-kaiseiTokumin">
                       {(selectedEmployer.active_roles || []).reduce((sum, r) => sum + (r.vacancies - r.placed_count), 0)} Live
                     </strong>
                   </div>
-                  <div className="p-2 bg-white rounded-xl border border-slate-100 shadow-2xs">
+                  <div className="p-2 bg-white rounded-lg border border-slate-100 shadow-2xs">
                     <span className="text-[10px] font-bold text-slate-400 uppercase block">PLACED</span>
-                    <strong className="text-sm font-black text-purple-700">
+                    <strong className="text-xs font-black text-purple-700 font-kaiseiTokumin">
                       {selectedEmployer.total_placed_candidates || 0} Pilots
                     </strong>
                   </div>
-                  <div className="p-2 bg-white rounded-xl border border-slate-100 shadow-2xs">
+                  <div className="p-2 bg-white rounded-lg border border-slate-100 shadow-2xs">
                     <span className="text-[10px] font-bold text-slate-400 uppercase block">EV FLEET</span>
-                    <strong className="text-sm font-black text-emerald-700">100% EV</strong>
+                    <strong className="text-xs font-black text-emerald-700 font-kaiseiTokumin">100% EV</strong>
                   </div>
                 </div>
 

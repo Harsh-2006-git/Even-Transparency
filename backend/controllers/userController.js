@@ -235,10 +235,12 @@ export const createUserByAdmin = async (req, res) => {
 
     let targetDbRole = 'org_admin';
     if (effectiveRole === 'Super Admin' || effectiveRole === 'Admin' || effectiveRole === 'super_admin') targetDbRole = 'super_admin';
-    else if (effectiveRole === 'Mobilizer') targetDbRole = 'mobilizer';
-    else if (effectiveRole === 'Trainer') targetDbRole = 'trainer';
-    else if (effectiveRole === 'Placement Coordinator' || effectiveRole === 'PlacementCoordinator') targetDbRole = 'placement_coordinator';
-    else if (effectiveRole === 'Candidate') targetDbRole = 'Candidate';
+    else if (effectiveRole === 'Mobilizer' || effectiveRole === 'mobilizer') targetDbRole = 'mobilizer';
+    else if (effectiveRole === 'Trainer' || effectiveRole === 'trainer') targetDbRole = 'trainer';
+    else if (effectiveRole === 'Placement Coordinator' || effectiveRole === 'PlacementCoordinator' || effectiveRole === 'placement_coordinator') targetDbRole = 'placement_coordinator';
+    else if (effectiveRole === 'Candidate' || effectiveRole === 'candidate') targetDbRole = 'candidate';
+    else if (effectiveRole === 'Employer' || effectiveRole === 'employer') targetDbRole = 'employer';
+    else if (effectiveRole === 'Partner' || effectiveRole === 'partner') targetDbRole = 'partner';
 
     const org = await db.Organization.findOne();
     const rawPassword = password ? password.trim() : 'Password@123';
@@ -399,7 +401,7 @@ export const updateUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const { first_name, last_name, full_name, email, mobile_number, status, designation, department } = req.body;
+    const { first_name, last_name, full_name, email, mobile_number, status, designation, department, password, new_password } = req.body;
 
     if (first_name) user.first_name = first_name;
     if (last_name) user.last_name = last_name;
@@ -410,11 +412,142 @@ export const updateUser = async (req, res) => {
     if (designation) user.designation = designation;
     if (department) user.department = department;
 
+    const pwdToUpdate = password || new_password;
+    if (pwdToUpdate && String(pwdToUpdate).trim().length >= 6) {
+      const salt = await bcrypt.genSalt(10);
+      user.password_hash = await bcrypt.hash(String(pwdToUpdate).trim(), salt);
+    }
+
     await user.save();
 
     res.json({ success: true, message: 'User updated successfully in database.', data: user });
   } catch (error) {
     console.error('Error updating user:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 5b. Admin Change/Add User Password
+export const changeUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password, new_password, email } = req.body;
+    const targetPassword = password || new_password;
+
+    if (!targetPassword || String(targetPassword).trim().length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long.'
+      });
+    }
+
+    let user = await db.User.findByPk(id);
+    let matchedEmployer = null;
+    let matchedPartner = null;
+
+    if (!user && db.Trainer) {
+      const trn = await db.Trainer.findByPk(id);
+      if (trn?.user_id) user = await db.User.findByPk(trn.user_id);
+      if (!user && trn?.email) user = await db.User.findOne({ where: { email: String(trn.email).toLowerCase().trim() } });
+    }
+    if (!user && db.Mobilizer) {
+      const mob = await db.Mobilizer.findByPk(id);
+      if (mob?.user_id) user = await db.User.findByPk(mob.user_id);
+      if (!user && mob?.email) user = await db.User.findOne({ where: { email: String(mob.email).toLowerCase().trim() } });
+    }
+    if (!user && db.PlacementCoordinator) {
+      const plc = await db.PlacementCoordinator.findByPk(id);
+      if (plc?.user_id) user = await db.User.findByPk(plc.user_id);
+      if (!user && plc?.email) user = await db.User.findOne({ where: { email: String(plc.email).toLowerCase().trim() } });
+    }
+    if (!user && db.Employer) {
+      matchedEmployer = await db.Employer.findByPk(id);
+      if (matchedEmployer?.user_id) user = await db.User.findByPk(matchedEmployer.user_id);
+      if (!user && (matchedEmployer?.contact_email || matchedEmployer?.email)) {
+        user = await db.User.findOne({ where: { email: String(matchedEmployer.contact_email || matchedEmployer.email).toLowerCase().trim() } });
+      }
+    }
+    if (!user && db.Partner) {
+      matchedPartner = await db.Partner.findByPk(id);
+      if (matchedPartner?.contact_email || matchedPartner?.email) {
+        user = await db.User.findOne({ where: { email: String(matchedPartner.contact_email || matchedPartner.email).toLowerCase().trim() } });
+      }
+    }
+    if (!user && db.Candidate) {
+      const cand = await db.Candidate.findByPk(id);
+      if (cand?.user_id) user = await db.User.findByPk(cand.user_id);
+      if (!user && cand?.email) user = await db.User.findOne({ where: { email: String(cand.email).toLowerCase().trim() } });
+    }
+    const incomingEmail = email || req.body.email;
+    if (!user && incomingEmail) {
+      const lookupEmail = String(incomingEmail).toLowerCase().trim();
+      user = await db.User.findOne({ where: { email: lookupEmail } });
+    }
+
+    // Auto-provision portal login if the user row does not exist yet (e.g. for employers, partners, candidates)
+    if (!user && incomingEmail) {
+      const targetEmail = String(incomingEmail).toLowerCase().trim();
+      const name = req.body.full_name || req.body.name || req.body.employer_name || targetEmail.split('@')[0];
+      const rawRole = req.body.role || req.body.userType || 'staff';
+      const rLower = String(rawRole).toLowerCase();
+      let targetRole = 'staff';
+      if (rLower.includes('admin')) targetRole = 'org_admin';
+      else if (rLower.includes('mobiliz') || rLower.includes('mobilis')) targetRole = 'mobilizer';
+      else if (rLower.includes('train')) targetRole = 'trainer';
+      else if (rLower.includes('placement') || rLower.includes('coord')) targetRole = 'placement_coordinator';
+      else if (rLower.includes('employ')) targetRole = 'employer';
+      else if (rLower.includes('partner')) targetRole = 'partner';
+      else if (rLower.includes('cand')) targetRole = 'candidate';
+
+      const salt = await bcrypt.genSalt(10);
+      const password_hash = await bcrypt.hash(String(targetPassword).trim(), salt);
+      user = await db.User.create({
+        id: uuidv4(),
+        employee_id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
+        first_name: name.split(' ')[0],
+        last_name: name.split(' ').slice(1).join(' ') || '',
+        full_name: name,
+        email: targetEmail,
+        password_hash,
+        role: targetRole,
+        status: 'active'
+      });
+
+      if (matchedEmployer && !matchedEmployer.user_id) {
+        try {
+          await matchedEmployer.update({ user_id: user.id });
+        } catch (e) {
+          // ignore if user_id column doesn't exist on Employer
+        }
+      }
+
+      return res.json({
+        success: true,
+        message: `Account created & password set for ${user.full_name} (${user.email})!`,
+        data: { id: user.id, full_name: user.full_name, email: user.email, role: user.role }
+      });
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found in database.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password_hash = await bcrypt.hash(String(targetPassword).trim(), salt);
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: `Password for ${user.full_name} (${user.email}) updated successfully!`,
+      data: {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Error updating password:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

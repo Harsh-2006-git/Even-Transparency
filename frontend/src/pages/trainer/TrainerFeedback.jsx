@@ -18,64 +18,65 @@ import {
   Phone
 } from 'lucide-react';
 
-const INITIAL_FEEDBACK = [
-  {
-    id: 'fb-001',
-    candidate_id: 'cand-001',
-    candidate_code: 'EV-BLR-001',
-    candidate_name: 'Pooja Sharma',
-    trainer_name: 'Rahul Sharma',
-    date: '2026-09-07',
-    category: 'SKILL_PROGRESS', // SKILL_PROGRESS | BEHAVIOUR | INCIDENT | MOBILIZER_NOTE
-    title: 'Rapid Battery Swap Mastery & Confidence',
-    notes: 'Pooja has mastered the battery swap docking latch in under 2m 15s. Her vehicle pre-ride check is thorough. Highly motivated and ready for placement trial.',
-    severity: 'POSITIVE',
-    mobilizer: 'Amit Patel',
-    shared_with_mobilizer: true
-  },
-  {
-    id: 'fb-002',
-    candidate_id: 'cand-003',
-    candidate_code: 'EV-BLR-003',
-    candidate_name: 'Kavita Devi',
-    trainer_name: 'Rahul Sharma',
-    date: '2026-09-05',
-    category: 'MOBILIZER_NOTE',
-    title: 'Attendance Catch-up Support Request',
-    notes: 'Kavita missed Day 2 session due to medical leave. She attended a 1-hour special morning catch-up session and completed all slalom drills successfully.',
-    severity: 'INFO',
-    mobilizer: 'Priya Singh',
-    shared_with_mobilizer: true
-  },
-  {
-    id: 'fb-003',
-    candidate_id: 'cand-002',
-    candidate_code: 'EV-BLR-002',
-    candidate_name: 'Ananya Roy',
-    trainer_name: 'Rahul Sharma',
-    date: '2026-09-04',
-    category: 'SKILL_PROGRESS',
-    title: 'Exceptional Wet Track Braking Control',
-    notes: 'Demonstrated 70/30 progressive braking on wet painted track without wheel lock. Outstanding safety attitude.',
-    severity: 'POSITIVE',
-    mobilizer: 'Amit Patel',
-    shared_with_mobilizer: false
-  }
-];
+const API_BASE = 'http://localhost:5000/api/training';
 
 export default function TrainerFeedback({ user, onSectionChange }) {
-  const [feedbackList, setFeedbackList] = useState(INITIAL_FEEDBACK);
+  const [feedbackList, setFeedbackList] = useState([]);
+  const [candidatesList, setCandidatesList] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
   // New Note Form state
-  const [newCandidate, setNewCandidate] = useState('Pooja Sharma (EV-BLR-001)');
+  const [newCandidate, setNewCandidate] = useState('');
   const [newCategory, setNewCategory] = useState('SKILL_PROGRESS');
   const [newTitle, setNewTitle] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [newSeverity, setNewSeverity] = useState('POSITIVE');
+
+  React.useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/batches`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const userRole = (user?.userType || user?.role || '').toLowerCase();
+          const isTrainer = userRole.includes('trainer') || window.location.hash.includes('trainer');
+
+          const userBatches = isTrainer
+            ? json.data.filter(b => {
+                if (user?.id && (b.trainer?.id === user.id || b.trainer_id === user.id)) return true;
+                if (user?.email && b.trainer?.email?.toLowerCase() === user.email.toLowerCase()) return true;
+                const userName = (user?.full_name || user?.name || '').toLowerCase().trim();
+                if (userName && b.trainer?.full_name?.toLowerCase().includes(userName)) return true;
+                return false;
+              })
+            : json.data;
+
+          const cands = [];
+          userBatches.forEach(batch => {
+            (batch.enrolled_candidates || []).forEach(cand => {
+              cands.push({
+                id: cand.candidate_id || cand.id,
+                label: `${cand.full_name} (${cand.candidate_code || 'N/A'})`,
+                name: cand.full_name,
+                code: cand.candidate_code,
+                mobilizer: cand.mobilizer_name || 'Assigned Mobilizer'
+              });
+            });
+          });
+          setCandidatesList(cands);
+          if (cands.length > 0) setNewCandidate(cands[0].label);
+        } else {
+          setCandidatesList([]);
+        }
+      } catch (err) {
+        setCandidatesList([]);
+      }
+    };
+    fetchCandidates();
+  }, [user]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -186,51 +187,72 @@ export default function TrainerFeedback({ user, onSectionChange }) {
         </div>
       </div>
 
-      {/* ─── Feedback Notes List ─────────────────────────────────── */}
-      <div className="space-y-3">
-        {filteredList.map((item) => (
-          <div
-            key={item.id}
-            className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:border-slate-300 transition space-y-3"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                  {item.candidate_code}
-                </span>
-                <span className="font-bold text-slate-900 text-sm">{item.candidate_name}</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  item.category === 'SKILL_PROGRESS' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                  item.category === 'MOBILIZER_NOTE' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
-                  'bg-rose-50 text-rose-700 border border-rose-200'
-                }`}>
-                  {item.category.replace('_', ' ')}
-                </span>
-              </div>
-
-              <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5" />
-                <span>{item.date}</span>
-                <span>•</span>
-                <span>Trainer: {item.trainer_name}</span>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 space-y-1.5">
-              <h4 className="text-xs font-bold text-slate-900">{item.title}</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">{item.notes}</p>
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>Coordinated with Mobilizer: <strong className="text-slate-800">{item.mobilizer}</strong></span>
-              </span>
-              <span className="text-[11px] text-emerald-600 font-bold">Synced with Candidate Profile</span>
-            </div>
+      {/* ─── Feedback Notes List / Empty State ────────────────────── */}
+      {feedbackList.length === 0 ? (
+        <div className="bg-white p-12 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+            <MessageSquare className="w-8 h-8 text-indigo-600" />
           </div>
-        ))}
-      </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-base font-bold text-slate-800 font-kaiseiTokumin">
+              No Feedback Notes Logged
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Log observation notes, attendance catch-up requests, or behavioral milestones for candidates in your cohorts.
+            </p>
+          </div>
+        </div>
+      ) : filteredList.length === 0 ? (
+        <div className="bg-white p-12 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-2">
+          <p className="text-sm font-bold text-slate-700">No matching notes</p>
+          <p className="text-xs text-slate-400">No observation notes match your search criteria.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredList.map((item) => (
+            <div
+              key={item.id}
+              className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs hover:border-slate-300 transition space-y-3"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    {item.candidate_code}
+                  </span>
+                  <span className="font-bold text-slate-900 text-sm">{item.candidate_name}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    item.category === 'SKILL_PROGRESS' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                    item.category === 'MOBILIZER_NOTE' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                    'bg-rose-50 text-rose-700 border border-rose-200'
+                  }`}>
+                    {item.category.replace('_', ' ')}
+                  </span>
+                </div>
+
+                <div className="text-[11px] text-slate-400 flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{item.date}</span>
+                  <span>•</span>
+                  <span>Trainer: {item.trainer_name}</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 space-y-1.5">
+                <h4 className="text-xs font-bold text-slate-900">{item.title}</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">{item.notes}</p>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Coordinated with Mobilizer: <strong className="text-slate-800">{item.mobilizer}</strong></span>
+                </span>
+                <span className="text-[11px] text-emerald-600 font-bold">Synced with Candidate Profile</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ─── MODAL: NEW OBSERVATION NOTE ─────────────────────────── */}
       {isNewModalOpen && (
@@ -257,9 +279,13 @@ export default function TrainerFeedback({ user, onSectionChange }) {
                   onChange={(e) => setNewCandidate(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
-                  <option value="Pooja Sharma (EV-BLR-001)">Pooja Sharma (EV-BLR-001)</option>
-                  <option value="Ananya Roy (EV-BLR-002)">Ananya Roy (EV-BLR-002)</option>
-                  <option value="Kavita Devi (EV-BLR-003)">Kavita Devi (EV-BLR-003)</option>
+                  {candidatesList.length === 0 ? (
+                    <option value="">No candidates available in batch</option>
+                  ) : (
+                    candidatesList.map(c => (
+                      <option key={c.id} value={c.label}>{c.label}</option>
+                    ))
+                  )}
                 </select>
               </div>
 

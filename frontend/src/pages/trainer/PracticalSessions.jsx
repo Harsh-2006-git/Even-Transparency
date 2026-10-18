@@ -75,18 +75,57 @@ const PRACTICAL_DRILLS = [
   }
 ];
 
-const COHORT_CANDIDATES = [
-  { id: 'cand-001', code: 'EV-BLR-001', name: 'Pooja Sharma', status: 'READY', score: 90, remarks: 'Excellent Figure-8 posture' },
-  { id: 'cand-002', code: 'EV-BLR-002', name: 'Ananya Roy', status: 'READY', score: 95, remarks: 'Very smooth wet track braking' },
-  { id: 'cand-003', code: 'EV-BLR-003', name: 'Kavita Devi', status: 'READY', score: 80, remarks: 'Completed swap in 2m 40s' }
-];
+const API_BASE = 'http://localhost:5000/api/training';
 
 export default function PracticalSessions({ user, onSectionChange }) {
   const [selectedDrill, setSelectedDrill] = useState(PRACTICAL_DRILLS[0]);
-  const [candidates, setCandidates] = useState(COHORT_CANDIDATES);
+  const [candidates, setCandidates] = useState([]);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/batches`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const userRole = (user?.userType || user?.role || '').toLowerCase();
+          const isTrainer = userRole.includes('trainer') || window.location.hash.includes('trainer');
+
+          const userBatches = isTrainer
+            ? json.data.filter(b => {
+                if (user?.id && (b.trainer?.id === user.id || b.trainer_id === user.id)) return true;
+                if (user?.email && b.trainer?.email?.toLowerCase() === user.email.toLowerCase()) return true;
+                const userName = (user?.full_name || user?.name || '').toLowerCase().trim();
+                if (userName && b.trainer?.full_name?.toLowerCase().includes(userName)) return true;
+                return false;
+              })
+            : json.data;
+
+          const cands = [];
+          userBatches.forEach(batch => {
+            (batch.enrolled_candidates || []).forEach(cand => {
+              cands.push({
+                id: cand.candidate_id || cand.id,
+                code: cand.candidate_code || 'N/A',
+                name: cand.full_name || 'Candidate',
+                status: 'READY',
+                score: cand.assessment_score || 0,
+                remarks: 'Enrolled in practical track'
+              });
+            });
+          });
+          setCandidates(cands);
+        } else {
+          setCandidates([]);
+        }
+      } catch (err) {
+        setCandidates([]);
+      }
+    };
+    fetchCandidates();
+  }, [user]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -275,49 +314,55 @@ export default function PracticalSessions({ user, onSectionChange }) {
               </h3>
             </div>
             <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-              3 Candidates on Track
+              {candidates.length} {candidates.length === 1 ? 'Candidate' : 'Candidates'} on Track
             </span>
           </div>
 
           <div className="space-y-3">
-            {candidates.map((cand) => (
-              <div
-                key={cand.id}
-                className="p-3.5 rounded-xl border border-slate-200/90 bg-white shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-              >
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
-                      {cand.code}
-                    </span>
-                    <span className="font-bold text-slate-900 text-xs sm:text-sm">{cand.name}</span>
-                  </div>
-                  <div className="text-[11px] text-slate-500">{cand.remarks}</div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100">
-                    <button
-                      onClick={() => handleMarkCandidate(cand.id, 'PASS', 90)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                        cand.status === 'PASS' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-emerald-700'
-                      }`}
-                    >
-                      Passed ({cand.score}%)
-                    </button>
-
-                    <button
-                      onClick={() => handleMarkCandidate(cand.id, 'NEEDS_PRACTICE', 65)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                        cand.status === 'NEEDS_PRACTICE' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 hover:text-amber-700'
-                      }`}
-                    >
-                      Needs Practice
-                    </button>
-                  </div>
-                </div>
+            {candidates.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                No candidates enrolled in this practical session track.
               </div>
-            ))}
+            ) : (
+              candidates.map((cand) => (
+                <div
+                  key={cand.id}
+                  className="p-3.5 rounded-xl border border-slate-200/90 bg-white shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                        {cand.code}
+                      </span>
+                      <span className="font-bold text-slate-900 text-xs sm:text-sm">{cand.name}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">{cand.remarks}</div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                      <button
+                        onClick={() => handleMarkCandidate(cand.id, 'PASS', 90)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          cand.status === 'PASS' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-emerald-700'
+                        }`}
+                      >
+                        Passed ({cand.score}%)
+                      </button>
+
+                      <button
+                        onClick={() => handleMarkCandidate(cand.id, 'NEEDS_PRACTICE', 65)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          cand.status === 'NEEDS_PRACTICE' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 hover:text-amber-700'
+                        }`}
+                      >
+                        Needs Practice
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

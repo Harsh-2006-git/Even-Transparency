@@ -110,14 +110,30 @@ export default function TrainingAssessments({ user, onSectionChange }) {
             },
             trainer: b.trainer,
             trainingCenter: b.trainingCenter,
-            candidates: (b.enrolled_candidates || []).map(ec => ({
-              candidate_id: ec.candidate_id || ec.id,
-              candidate_code: ec.candidate_code,
-              full_name: ec.full_name,
-              mobile_number: ec.mobile_number || '+91 98765 00000',
-              nf_category: ec.nf_category || 'NF1',
-              evaluations: {}
-            }))
+            candidates: (b.enrolled_candidates || []).map(ec => {
+              const initScore = ec.assessment_score || 85;
+              const initRec = ec.recommendation || (initScore >= 75 ? 'READY_FOR_DEPLOYMENT' : 'REQUIRES_RETEST');
+              const initRating = initScore >= 85 ? 5 : initScore >= 75 ? 4 : 3;
+              const initialEvals = {};
+              ASSESSMENT_TRACKS.forEach(track => {
+                initialEvals[track.id] = {
+                  score: initScore,
+                  rating: initRating,
+                  recommendation: initRec,
+                  feedback: 'Demonstrates good foundational skills and vehicle control.'
+                };
+              });
+
+              return {
+                candidate_id: ec.candidate_id || ec.id,
+                candidate_code: ec.candidate_code,
+                full_name: ec.full_name,
+                mobile_number: ec.mobile_number || '+91 98765 00000',
+                nf_category: ec.nf_category || 'NF1',
+                assessment_score: initScore,
+                evaluations: initialEvals
+              };
+            })
           }));
           setCohorts(mapped);
           setSelectedCohortId(mapped[0]?.id || null);
@@ -164,6 +180,47 @@ export default function TrainingAssessments({ user, onSectionChange }) {
       setSelectedCohortId(null);
     }
   }, [accessibleCohorts, selectedCohortId]);
+
+  // Load real saved evaluations from database whenever selected cohort changes
+  useEffect(() => {
+    if (!selectedCohortId) return;
+    const fetchExistingAssessments = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/batches/${selectedCohortId}/assessments`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setCohorts(prevCohorts => {
+            return prevCohorts.map(cohort => {
+              if (cohort.id !== selectedCohortId) return cohort;
+              const updatedCandidates = cohort.candidates.map(cand => {
+                const candAssessments = json.data.filter(a => a.candidate_id === cand.candidate_id);
+                if (candAssessments.length === 0) return cand;
+
+                const newEvals = { ...(cand.evaluations || {}) };
+                candAssessments.forEach(ass => {
+                  const trackKey = ass.assessment_type || 'PRACTICAL_DRIVING';
+                  const sc = ass.score != null ? ass.score : (ass.score_obtained != null ? ass.score_obtained : 80);
+                  newEvals[trackKey] = {
+                    score: sc,
+                    rating: sc >= 85 ? 5 : sc >= 75 ? 4 : 3,
+                    recommendation: ass.comments?.includes('RETEST') || ass.is_passed === false
+                      ? 'REQUIRES_RETEST'
+                      : 'READY_FOR_DEPLOYMENT',
+                    feedback: ass.feedback || ass.comments || 'Demonstrates good vehicle control and foundational skills.'
+                  };
+                });
+                return { ...cand, evaluations: newEvals };
+              });
+              return { ...cohort, candidates: updatedCandidates };
+            });
+          });
+        }
+      } catch (err) {
+        console.warn('Notice loading saved assessments for batch:', err);
+      }
+    };
+    fetchExistingAssessments();
+  }, [selectedCohortId]);
 
   const activeTrack = useMemo(() => {
     return ASSESSMENT_TRACKS.find(t => t.id === selectedTrackId) || ASSESSMENT_TRACKS[0];
@@ -258,20 +315,36 @@ export default function TrainingAssessments({ user, onSectionChange }) {
 
   // Save assessments
   const handleSaveAssessments = async () => {
+    if (!currentCohort) return;
     try {
       setSaving(true);
-      await fetch(`${API_BASE}/batches/${currentCohort.id}/assessments`, {
+      const res = await fetch(`${API_BASE}/batches/${currentCohort.id}/assessments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           batch_id: currentCohort.id,
           assessment_type: selectedTrackId,
-          evaluations: currentCohort.candidates
+          passing_score: activeTrack.passScore,
+          evaluations: currentCohort.candidates.map(c => {
+            const ev = c.evaluations?.[selectedTrackId] || {};
+            return {
+              candidate_id: c.candidate_id,
+              score: ev.score !== undefined ? ev.score : 80,
+              rating: ev.rating || 4,
+              recommendation: ev.recommendation || 'READY_FOR_DEPLOYMENT',
+              feedback: ev.feedback || 'Demonstrates good foundational skills and vehicle control.',
+              evaluations: c.evaluations
+            };
+          })
         })
       });
-      showToast('🎉 Assessment scores & recommendations saved successfully!');
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to save evaluations');
+      }
+      showToast(`🎉 Evaluations successfully saved for ${data.count || currentCohort.candidates.length} candidates in database!`);
     } catch (err) {
-      showToast('Assessments recorded and saved successfully!');
+      showToast(err.message || 'Error saving evaluations. Please retry.', 'error');
     } finally {
       setSaving(false);
     }

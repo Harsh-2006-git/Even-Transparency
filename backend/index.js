@@ -14,6 +14,7 @@ import trainerRoutes from './routes/trainerRoutes.js';
 import placementCoordinatorRoutes from './routes/placementCoordinatorRoutes.js';
 import partnerRoutes from './routes/partnerRoutes.js';
 import kycRoutes from './routes/kycRoutes.js';
+import deploymentRoutes from './routes/deploymentRoutes.js';
 
 dotenv.config();
 
@@ -114,6 +115,9 @@ app.use('/api/partners', partnerRoutes);
 
 // KYC & Identity Verification API
 app.use('/api/kyc', kycRoutes);
+
+// Candidate Placements & Corporate Deployments API
+app.use('/api/deployments', deploymentRoutes);
 
 // Start Server & Authenticate DB
 async function startServer() {

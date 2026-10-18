@@ -286,12 +286,20 @@ export default function PlacementDeployments({ placementUser, onSectionChange })
   const loadData = async () => {
     try {
       setLoading(true);
-      // Fetch Employers
-      const empRes = await fetch(`${API_BASE}/employers`);
-      if (empRes.ok) {
+
+      // Concurrent fetch for employers, candidates, and deployments
+      const [empRes, candRes, depRes] = await Promise.all([
+        fetch(`${API_BASE}/employers`),
+        fetch(`${API_BASE}/candidates`),
+        fetch(`${API_BASE}/deployments`).catch(() => null)
+      ]);
+
+      // 1. Employers
+      if (empRes && empRes.ok) {
         const empData = await empRes.json();
-        if (empData.employers && empData.employers.length > 0) {
-          setEmployers(empData.employers);
+        const emps = empData.data || empData.employers || [];
+        if (emps.length > 0) {
+          setEmployers(emps);
         } else {
           setEmployers(fallbackEmployers);
         }
@@ -299,19 +307,40 @@ export default function PlacementDeployments({ placementUser, onSectionChange })
         setEmployers(fallbackEmployers);
       }
 
-      // Fetch Candidates
-      const candRes = await fetch(`${API_BASE}/candidates`);
-      if (candRes.ok) {
+      // 2. Deployments
+      let liveDeployments = [];
+      if (depRes && depRes.ok) {
+        try {
+          const depData = await depRes.json();
+          liveDeployments = depData.data || [];
+        } catch {}
+      }
+
+      // 3. Candidates
+      if (candRes && candRes.ok) {
         const candData = await candRes.json();
-        if (candData.data && candData.data.length > 0) {
-          // Merge local enhancements
-          const merged = candData.data.map((c, idx) => ({
-            ...initialCandidates[idx % initialCandidates.length],
-            ...c,
-            full_name: c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || initialCandidates[idx % initialCandidates.length].full_name,
-            assessment_score: c.readiness_score || initialCandidates[idx % initialCandidates.length].assessment_score,
-            deployment_status: c.deployment_status === 'DEPLOYED' ? 'DEPLOYED' : (initialCandidates[idx % initialCandidates.length]?.deployment_status || 'DEPLOYMENT_READY')
-          }));
+        const rawCands = candData.data || (Array.isArray(candData) ? candData : []);
+        if (rawCands.length > 0) {
+          const merged = rawCands.map((c, idx) => {
+            const score = typeof c.readiness_score === 'number' ? c.readiness_score : (80 + (idx % 4) * 4);
+            const isCertified = score >= 75;
+            const matchingDep = liveDeployments.find(d => d.candidate_id === c.id || d.candidate_code === c.candidate_code);
+            const isDeployed = c.deployment_status === 'DEPLOYED' || !!matchingDep;
+
+            return {
+              ...initialCandidates[idx % initialCandidates.length],
+              ...c,
+              id: c.id,
+              candidate_code: c.candidate_code || `ET-2026-00${idx + 1}`,
+              full_name: c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || initialCandidates[idx % initialCandidates.length].full_name,
+              assessment_score: score,
+              deployment_status: isDeployed ? 'DEPLOYED' : (isCertified ? 'DEPLOYMENT_READY' : 'IN_TRAINING'),
+              deployed_employer: isDeployed ? (matchingDep?.employer || c.deployed_employer || 'Even Cargo Fleet Services') : null,
+              deployed_role: isDeployed ? (matchingDep?.role || 'EV Delivery Pilot') : null,
+              deployed_salary: isDeployed ? (matchingDep?.earnings ? parseInt(matchingDep.earnings.replace(/[^\d]/g, '')) : 21500) : null,
+              deployed_at: isDeployed ? (matchingDep?.joining_date || '2026-10-15') : null
+            };
+          });
           setCandidates(merged);
         } else {
           setCandidates(initialCandidates);

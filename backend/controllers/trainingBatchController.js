@@ -2228,7 +2228,7 @@ export const recordAssessment = async (req, res) => {
       evaluated_by_trainer_id
     } = req.body;
 
-    const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    const isUUID = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
     let dbBatch = null;
     if (db.TrainingBatch) {
@@ -2236,6 +2236,100 @@ export const recordAssessment = async (req, res) => {
       else dbBatch = await db.TrainingBatch.findOne({ where: { batch_code: id } });
     }
 
+    // 1. Bulk Evaluations Array Support (Trainer Evaluation Hub "Save Evaluations")
+    if (req.body.evaluations && Array.isArray(req.body.evaluations) && dbBatch) {
+      const savedRecords = [];
+      const trackType = req.body.assessment_type || assessment_type || 'PRACTICAL_DRIVING';
+      const numPass = parseFloat(req.body.passing_score || passing_score) || 75;
+
+      for (const item of req.body.evaluations) {
+        const cId = item.candidate_id || item.id;
+        if (!cId) continue;
+
+        let candidate = null;
+        if (isUUID(cId)) candidate = await db.Candidate.findByPk(cId);
+        else candidate = await db.Candidate.findOne({ where: { candidate_code: cId } });
+        if (!candidate) continue;
+
+        const evalObj = item.evaluations?.[trackType] || item.evalData || item;
+        const cScore = parseFloat(evalObj.score !== undefined ? evalObj.score : (item.score || 80));
+        const cFeedback = evalObj.feedback || evalObj.comments || item.comments || 'Demonstrates good vehicle control and foundational skills.';
+        const cRec = evalObj.recommendation || item.recommendation || (cScore >= numPass ? 'READY_FOR_DEPLOYMENT' : 'REQUIRES_RETEST');
+        const isPass = cScore >= numPass;
+
+        if (db.TrainingAssessment) {
+          let existingAss = await db.TrainingAssessment.findOne({
+            where: { batch_id: dbBatch.id, candidate_id: candidate.id, assessment_type: trackType }
+          });
+
+          if (existingAss) {
+            await existingAss.update({
+              score: cScore,
+              score_obtained: cScore,
+              is_passed: isPass,
+              result: isPass ? 'pass' : 'fail',
+              feedback: cFeedback,
+              comments: cRec,
+              assessment_date: new Date().toISOString().split('T')[0]
+            });
+            savedRecords.push(existingAss);
+          } else {
+            const newAss = await db.TrainingAssessment.create({
+              id: uuidv4(),
+              batch_id: dbBatch.id,
+              candidate_id: candidate.id,
+              module_id: dbBatch.module_id,
+              assessment_name: trackType.replace(/_/g, ' '),
+              assessment_type: trackType,
+              max_score: 100,
+              score: cScore,
+              score_obtained: cScore,
+              passing_score: numPass,
+              result: isPass ? 'pass' : 'fail',
+              is_passed: isPass,
+              attempt_number: 1,
+              assessment_date: new Date().toISOString().split('T')[0],
+              assessed_by: dbBatch.primary_trainer_id,
+              evaluated_by_trainer_id: dbBatch.primary_trainer_id,
+              feedback: cFeedback,
+              comments: cRec
+            });
+            savedRecords.push(newAss);
+          }
+        }
+
+        // Update BatchEnrollment
+        if (db.BatchEnrollment) {
+          const enr = await db.BatchEnrollment.findOne({
+            where: { batch_id: dbBatch.id, candidate_id: candidate.id }
+          });
+          if (enr) {
+            await enr.update({
+              assessment_score: cScore,
+              overall_score: cScore,
+              is_passed: isPass,
+              progress_percentage: isPass ? 100 : Math.max(enr.progress_percentage || 0, 80),
+              status: isPass ? 'COMPLETED' : 'IN_PROGRESS'
+            });
+          }
+        }
+
+        // Update Candidate readiness
+        await candidate.update({
+          readiness_score: cScore,
+          readiness_status: isPass ? 'DEPLOYMENT_READY' : candidate.readiness_status
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Successfully saved ${savedRecords.length} candidate evaluations in PostgreSQL database!`,
+        count: savedRecords.length,
+        data: savedRecords
+      });
+    }
+
+    // 2. Single Candidate Assessment Record
     let cand = null;
     if (db.Candidate) {
       if (candidate_id && isUUID(candidate_id)) cand = await db.Candidate.findByPk(candidate_id);
@@ -2249,27 +2343,44 @@ export const recordAssessment = async (req, res) => {
     const resultStr = passed ? 'pass' : 'fail';
 
     if (dbBatch && cand && db.TrainingAssessment) {
-      const newAssessmentId = uuidv4();
-      const assessmentRecord = await db.TrainingAssessment.create({
-        id: newAssessmentId,
-        batch_id: dbBatch.id,
-        candidate_id: cand.id,
-        module_id: dbBatch.module_id,
-        assessment_name: module_title || 'Module Driving Assessment',
-        assessment_type: assessment_type || 'PRACTICAL_DRIVING',
-        max_score: numMax,
-        score: numScore,
-        score_obtained: numScore,
-        passing_score: numPass,
-        result: resultStr,
-        is_passed: passed,
-        attempt_number: parseInt(attempt_number) || 1,
-        evaluated_by_trainer_id: evaluated_by_trainer_id || dbBatch.primary_trainer_id,
-        assessed_by: dbBatch.primary_trainer_id,
-        criteria_scores: criteria_scores || {},
-        comments: comments || recommendation || 'Candidate assessment recorded.',
-        feedback: comments || driving_rating || 'Instructor evaluated.'
+      let assessmentRecord = await db.TrainingAssessment.findOne({
+        where: { batch_id: dbBatch.id, candidate_id: cand.id, assessment_type: assessment_type || 'PRACTICAL_DRIVING' }
       });
+
+      if (assessmentRecord) {
+        await assessmentRecord.update({
+          score: numScore,
+          score_obtained: numScore,
+          passing_score: numPass,
+          result: resultStr,
+          is_passed: passed,
+          assessment_date: new Date().toISOString().split('T')[0],
+          feedback: comments || driving_rating || 'Instructor evaluated.',
+          comments: comments || recommendation || 'Candidate assessment recorded.'
+        });
+      } else {
+        assessmentRecord = await db.TrainingAssessment.create({
+          id: uuidv4(),
+          batch_id: dbBatch.id,
+          candidate_id: cand.id,
+          module_id: dbBatch.module_id,
+          assessment_name: module_title || 'Module Driving Assessment',
+          assessment_type: assessment_type || 'PRACTICAL_DRIVING',
+          max_score: numMax,
+          score: numScore,
+          score_obtained: numScore,
+          passing_score: numPass,
+          result: resultStr,
+          is_passed: passed,
+          attempt_number: parseInt(attempt_number) || 1,
+          evaluated_by_trainer_id: evaluated_by_trainer_id || dbBatch.primary_trainer_id,
+          assessed_by: dbBatch.primary_trainer_id,
+          criteria_scores: criteria_scores || {},
+          comments: comments || recommendation || 'Candidate assessment recorded.',
+          feedback: comments || driving_rating || 'Instructor evaluated.',
+          assessment_date: new Date().toISOString().split('T')[0]
+        });
+      }
 
       // Update candidate BatchEnrollment
       if (db.BatchEnrollment) {
@@ -2278,6 +2389,8 @@ export const recordAssessment = async (req, res) => {
         });
         if (enr) {
           enr.assessment_score = numScore;
+          enr.overall_score = numScore;
+          enr.is_passed = passed;
           if (passed) {
             enr.status = 'COMPLETED';
             enr.progress_percentage = 100;
@@ -2285,6 +2398,11 @@ export const recordAssessment = async (req, res) => {
           await enr.save();
         }
       }
+
+      await cand.update({
+        readiness_score: numScore,
+        readiness_status: passed ? 'DEPLOYMENT_READY' : cand.readiness_status
+      });
 
       return res.status(201).json({
         success: true,
@@ -2688,8 +2806,8 @@ export const getTrainerDashboardData = async (req, res) => {
             name: e.candidate.full_name,
             code: e.candidate.candidate_code || `ET-${e.candidate.id.substring(0, 4)}`,
             nf: e.candidate.nf_category || 'NF2',
-            progress: e.progress_percentage || 72,
-            attendance: e.attendance_percentage || 90,
+            progress: e.progress_percentage || 0,
+            attendance: e.attendance_percentage || 0,
             assessment: e.assessment_score ? (e.assessment_score >= 75 ? 'Passed' : 'Needs Support') : 'Pending',
             status: e.status === 'COMPLETED' ? 'Completed' : (e.attendance_percentage && e.attendance_percentage < 75 ? 'Needs Support' : 'In Training'),
             batch_code: b.batch_code,
@@ -2734,9 +2852,9 @@ export const getTrainerDashboardData = async (req, res) => {
       const presentLatest = latestAtts.filter(a => (a.status || '').toUpperCase() === 'PRESENT').length;
       attendanceTodayStr = `${presentLatest}/${latestAtts.length}`;
       attendanceTodayPct = Math.round((presentLatest / latestAtts.length) * 100);
-    } else if (totalCandidatesCount > 0) {
-      attendanceTodayStr = `${totalCandidatesCount}/${totalCandidatesCount}`;
-      attendanceTodayPct = 100;
+    } else {
+      attendanceTodayStr = '0/0';
+      attendanceTodayPct = 0;
     }
 
     // Attendance Trend
@@ -2758,9 +2876,11 @@ export const getTrainerDashboardData = async (req, res) => {
 
     let avgAttendance = trendPoints.length > 0
       ? Math.round(trendPoints.reduce((acc, p) => acc + p.percentage, 0) / trendPoints.length)
-      : (enrolledCandidates.length > 0 ? Math.round(enrolledCandidates.reduce((acc, c) => acc + c.attendance, 0) / enrolledCandidates.length) : 89);
-    let bestSession = trendPoints.length > 0 ? Math.max(...trendPoints.map(p => p.percentage)) : avgAttendance;
-    let lowestSession = trendPoints.length > 0 ? Math.min(...trendPoints.map(p => p.percentage)) : avgAttendance;
+      : (attendances.length > 0
+          ? Math.round((attendances.filter(a => (a.status || '').toUpperCase() === 'PRESENT').length / attendances.length) * 100)
+          : 0);
+    let bestSession = trendPoints.length > 0 ? Math.max(...trendPoints.map(p => p.percentage)) : 0;
+    let lowestSession = trendPoints.length > 0 ? Math.min(...trendPoints.map(p => p.percentage)) : 0;
 
     // 6. Real Assessments Data
     let assessments = [];
@@ -2815,6 +2935,12 @@ export const getTrainerDashboardData = async (req, res) => {
         '02:00 PM - 03:30 PM'
       ];
 
+      const topic = b.remarks && b.remarks.trim().length > 0
+        ? b.remarks
+        : (Array.isArray(mod.curriculum_topics) && mod.curriculum_topics.length > 0
+            ? mod.curriculum_topics[0]
+            : 'EV Riding Dynamics & Safety Checks');
+
       return {
         id: b.id,
         time: `${b.daily_start_time || '09:00'} - ${b.daily_end_time || '10:30'}`,
@@ -2823,8 +2949,30 @@ export const getTrainerDashboardData = async (req, res) => {
         title: b.title,
         nf_level: mod.is_mandatory_for_nf ? (Array.isArray(mod.is_mandatory_for_nf) ? mod.is_mandatory_for_nf[0] : 'NF2') : 'NF3',
         module: mod.title || 'Driving Fundamentals',
-        session_topic: b.remarks || mod.title || 'Scooty Controls & Balance',
-        venue: tc.name || 'Training Ground 1',
+        module_id: mod.id,
+        module_description: mod.description || 'Comprehensive certified two-wheeler EV practical and theoretical instruction.',
+        module_category: mod.category || 'MOBILITY',
+        duration_hours: mod.duration_hours || 30,
+        passing_score: mod.passing_assessment_score || 75,
+        curriculum_topics: Array.isArray(mod.curriculum_topics) ? mod.curriculum_topics : ['EV Controls & Balance', 'Regenerative Braking', 'Battery Swap Operations', 'Defensive Urban Riding'],
+        session_topic: topic,
+        venue: tc.name || 'Training Center 1',
+        venue_city: tc.city || '',
+        venue_address: tc.address || '',
+        capacity: b.capacity || totalCand,
+        start_date: b.start_date,
+        end_date: b.end_date,
+        daily_start_time: b.daily_start_time || '09:00',
+        daily_end_time: b.daily_end_time || '10:30',
+        candidates: (b.enrollments || []).map(e => ({
+          id: e.candidate?.id,
+          name: e.candidate?.full_name || 'Candidate',
+          code: e.candidate?.candidate_code || `ET-${(e.candidate?.id || '').substring(0, 4)}`,
+          nf_category: e.candidate?.nf_category || 'NF1',
+          progress: e.progress_percentage || 0,
+          attendance: e.attendance_percentage || 0,
+          status: e.status || 'IN_PROGRESS'
+        })),
         present_count: presentCount,
         total_candidates: totalCand,
         status: b.status === 'ONGOING' ? 'In Progress' : 'Ready'
@@ -2854,7 +3002,7 @@ export const getTrainerDashboardData = async (req, res) => {
     if (assessments.length > 0) {
       const recentAss = assessments[0];
       activities.push({
-        title: `Assessment completed (${recentAss.score || 85}%) for ${recentAss.candidate?.full_name || 'Candidate'}`,
+        title: `Assessment completed (${recentAss.score_obtained ?? recentAss.score ?? 0}%) for ${recentAss.candidate?.full_name || 'Candidate'}`,
         time: recentAss.created_at ? new Date(recentAss.created_at).toLocaleDateString() : 'Today',
         type: 'assessment'
       });
@@ -2914,7 +3062,7 @@ export const getTrainerDashboardData = async (req, res) => {
             id: b.id,
             batch_code: b.batch_code,
             title: b.title,
-            progress: b.completion_rate_percentage || 72
+            progress: b.completion_rate_percentage || 0
           }))
         },
         attendance_trend: {

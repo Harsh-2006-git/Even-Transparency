@@ -485,7 +485,7 @@ export default function App() {
           )}
 
           {activeSection === 'user-management' && (
-            <StakeholderManagement categoryKey="user-management" onSectionChange={handleSectionChange} />
+            <UserManagement onSectionChange={handleSectionChange} />
           )}
 
           {activeSection === 'kyc' && (
@@ -582,7 +582,7 @@ export default function App() {
             <TrainingAssessments user={user} onSectionChange={handleSectionChange} />
           )}
 
-          {(activeSection === 'deployments' || activeSection === 'placements') && (currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && (
+          {(activeSection === 'deployments' || activeSection === 'placements' || activeSection === 'offers') && (currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && (
             <PlacementDeployments
               placementUser={user}
               onSectionChange={handleSectionChange}
@@ -643,7 +643,9 @@ export default function App() {
             activeSection !== 'goals' &&
             activeSection !== 'openings' &&
             activeSection !== 'assessments-placements' &&
-            !((activeSection === 'deployments' || activeSection === 'placements') && currentUserType === 'Mobilizer') &&
+            activeSection !== 'deployments' &&
+            activeSection !== 'placements' &&
+            activeSection !== 'offers' &&
             activeSection !== 'practical-sessions' &&
             activeSection !== 'feedback' &&
             activeSection !== 'certifications' &&

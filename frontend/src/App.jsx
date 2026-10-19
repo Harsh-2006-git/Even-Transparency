@@ -44,6 +44,8 @@ import TrainerFeedback from './pages/trainer/TrainerFeedback';
 import TrainerReports from './pages/trainer/TrainerReports';
 import TrainerSupport from './pages/trainer/TrainerSupport';
 import AssessmentsAndPlacements from './pages/mobilizer/AssessmentsAndPlacements';
+import MobilizerTargets from './pages/mobilizer/MobilizerTargets';
+import MobilizerReports from './pages/mobilizer/MobilizerReports';
 import EmployerManagement from './pages/placement/EmployerManagement';
 import PlacementDeployments from './pages/placement/PlacementDeployments';
 import HomeLanding from './pages/home/HomeLanding';
@@ -589,7 +591,7 @@ export default function App() {
             />
           )}
 
-          {(activeSection === 'targets' || activeSection === 'goals') && currentUserType !== 'Mobilizer' && (
+          {(activeSection === 'targets' || activeSection === 'goals') && (
             <MobilizerTargets
               mobilizerUser={user}
               onSectionChange={handleSectionChange}
@@ -606,6 +608,10 @@ export default function App() {
 
           {activeSection === 'reports' && currentUserType === 'Trainer' && (
             <TrainerReports user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {activeSection === 'reports' && (currentUserType === 'Mobilizer' || currentUserType === 'Admin') && (
+            <MobilizerReports mobilizerUser={user} onSectionChange={handleSectionChange} />
           )}
 
           {activeSection === 'support' && currentUserType === 'Trainer' && (

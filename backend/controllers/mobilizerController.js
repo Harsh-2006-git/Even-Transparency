@@ -589,8 +589,12 @@ export const getMobilizerStats = async (req, res) => {
         const nf3 = candidates.filter(c => c.nf_category === 'NF3').length;
 
         const readyForTraining = candidates.filter(c => 
-          c.current_stage === 'IN_TRAINING' || 
-          c.readiness_status === 'DEPLOYMENT_READY'
+          c.current_stage !== 'DEPLOYED' && (
+            c.current_stage === 'IN_TRAINING' || 
+            c.current_stage === 'TRAINING_RECOMMENDED' ||
+            c.readiness_status === 'DEPLOYMENT_READY' ||
+            (c.readiness_score && c.readiness_score >= 70)
+          )
         ).length;
 
         const deployedCandidates = candidates.filter(c => 
@@ -598,7 +602,8 @@ export const getMobilizerStats = async (req, res) => {
         ).length;
 
         const kycVerified = candidates.filter(c => 
-          (c.documents && c.documents.length > 0) || c.status === 'active'
+          c.kyc_status === 'VERIFIED' || 
+          (c.documents && c.documents.length > 0)
         ).length;
 
         const stageBreakdown = {
@@ -854,6 +859,7 @@ export const getMobilizerCandidateAssessments = async (req, res) => {
               mobile_number: c.mobile_number,
               city: c.city || 'Bengaluru',
               nf_category: c.nf_category || 'UNCLASSIFIED',
+              stage: c.current_stage || 'MOBILIZED',
               mobilizer_id: c.mobilizer_id || null,
               mobilizer_name: 'Mobilization Field Team',
               batch_title: (c.recommended_trainings && c.recommended_trainings[0]) || (c.current_stage || 'MOBILIZED').replace(/_/g, ' '),
@@ -991,7 +997,7 @@ export const getMobilizerCandidatePlacements = async (req, res) => {
             {
               model: db.Employer,
               as: 'employer',
-              attributes: ['id', 'company_name', 'trade_name', 'logo_url', 'industry_type']
+              attributes: ['id', 'company_name', 'employer_name', 'logo_url', 'industry_type']
             }
           ],
           order: [['created_at', 'DESC']]
@@ -1013,7 +1019,7 @@ export const getMobilizerCandidatePlacements = async (req, res) => {
               state: cand.state || 'Karnataka',
               nf_category: cand.nf_category || 'NF1',
               employer_id: raw.employer_id,
-              employer_name: emp.trade_name || emp.company_name || 'Employer',
+              employer_name: emp.employer_name || emp.company_name || 'Employer',
               employer_logo: emp.logo_url,
               industry: emp.industry_type || 'EV Fleet Logistics',
               job_role: raw.job_role_title || 'EV Pilot Driver',
@@ -1126,13 +1132,13 @@ export const getMobilizerTargets = async (req, res) => {
 
     const totalCount = candidates.length;
     const kycCount = candidates.filter(c => 
-      (c.documents && c.documents.length > 0) || c.kyc_status === 'VERIFIED' || c.has_driving_licence === 'Yes' || c.status === 'active'
+      (c.documents && c.documents.length > 0) || c.kyc_status === 'VERIFIED'
     ).length;
     const inTrainingCount = candidates.filter(c => 
-      c.current_stage === 'IN_TRAINING' || c.stage === 'IN_TRAINING' || (c.readiness_score && c.readiness_score >= 70)
+      c.current_stage !== 'DEPLOYED' && (c.current_stage === 'IN_TRAINING' || c.stage === 'IN_TRAINING' || (c.readiness_score && c.readiness_score >= 70))
     ).length;
     const placedCount = candidates.filter(c => 
-      c.current_stage === 'DEPLOYED' || c.current_stage === 'PLACED' || c.current_stage === 'MOBILIZED'
+      c.current_stage === 'DEPLOYED' || c.current_stage === 'PLACED' || c.current_stage === 'ACTIVE_EMPLOYED'
     ).length;
 
     const nf1Count = candidates.filter(c => c.nf_category === 'NF1').length;
@@ -1326,13 +1332,13 @@ export const getMobilizerReports = async (req, res) => {
 
     const totalMobilized = candidates.length;
     const verifiedKycCount = candidates.filter(c => 
-      (c.documents && c.documents.length > 0) || c.kyc_status === 'VERIFIED' || c.has_driving_licence === 'Yes' || c.status === 'active'
+      (c.documents && c.documents.length > 0) || c.kyc_status === 'VERIFIED'
     ).length;
     const inTrainingCount = candidates.filter(c => 
-      c.current_stage === 'IN_TRAINING' || c.stage === 'IN_TRAINING' || (c.readiness_score && c.readiness_score >= 70)
+      c.current_stage !== 'DEPLOYED' && (c.current_stage === 'IN_TRAINING' || c.stage === 'IN_TRAINING' || (c.readiness_score && c.readiness_score >= 70))
     ).length;
     const placedCount = candidates.filter(c => 
-      c.current_stage === 'DEPLOYED' || c.current_stage === 'PLACED' || c.current_stage === 'MOBILIZED'
+      c.current_stage === 'DEPLOYED' || c.current_stage === 'PLACED' || c.current_stage === 'ACTIVE_EMPLOYED'
     ).length;
 
     const nf1Count = candidates.filter(c => c.nf_category === 'NF1').length;

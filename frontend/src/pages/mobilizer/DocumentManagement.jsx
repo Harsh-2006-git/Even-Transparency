@@ -168,10 +168,11 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
           document_type: docType,
           file_name: file.name,
           file_url: finalFileUrl,
+          document_url: finalFileUrl,
           file_type: isImage ? 'image' : isPdf ? 'pdf' : 'other',
           uploaded_at: new Date().toISOString(),
           file_size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-          verification_status: 'APPROVED'
+          verification_status: 'VERIFIED'
         };
 
         const currentDocs = selectedCandidate.documents || [];
@@ -195,16 +196,28 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
         );
 
         try {
-          await fetch(`http://localhost:5000/api/candidates/${selectedCandidate.id}`, {
+          const updateRes = await fetch(`http://localhost:5000/api/candidates/${selectedCandidate.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ documents: updatedDocs })
           });
+          const updateJson = await updateRes.json();
+          if (updateJson.success && updateJson.data) {
+            const freshDocs = updateJson.data.documents || updatedDocs;
+            const freshCandidate = {
+              ...selectedCandidate,
+              documents: freshDocs
+            };
+            setSelectedCandidate(freshCandidate);
+            setCandidates(prev =>
+              prev.map(c => (c.id === selectedCandidate.id ? freshCandidate : c))
+            );
+          }
         } catch (saveErr) {
-          // Saved in local state
+          console.warn('Document candidate update notice:', saveErr.message);
         }
 
-        showToast(`✅ ${docType} saved!`);
+        showToast(`✅ ${docType} uploaded & verified!`);
         setShowUploadModal(false);
         setModalFile(null);
         setModalPreviewUrl(null);
@@ -628,8 +641,8 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
                     <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
                       {isUploaded ? (
                         <>
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                            APPROVED
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {uploadedDoc?.verification_status === 'REJECTED' ? 'REJECTED' : 'VERIFIED'}
                           </span>
 
                           <button

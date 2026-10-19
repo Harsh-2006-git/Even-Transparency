@@ -122,6 +122,7 @@ export default function Sidebar({
           { id: 'onboard-candidate', label: 'Add Candidate', icon: UserPlus, badge: 'New' },
           { id: 'documents', label: 'Candidate Documents', icon: ScrollText },
           { id: 'assessments-placements', label: 'Assessments & Placements', icon: Award },
+          s
         ];
       case 'Trainer':
         return [

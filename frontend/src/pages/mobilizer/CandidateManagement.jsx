@@ -84,8 +84,8 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
             partner_source: c.source || c.partner_source || 'Even Mobility Direct',
             nf_classification: nfLabel,
             stage: c.current_stage || c.stage || 'MOBILIZED',
-            kyc_status: c.kyc_status || (c.documents && c.documents.length > 0 ? 'Verified' : 'Verified'),
-            readiness_score: c.readiness_score != null ? c.readiness_score : (c.nf_category === 'NF1' ? 88 : c.nf_category === 'NF2' ? 74 : 62)
+            kyc_status: c.kyc_status || (c.documents && c.documents.length > 0 ? 'Verified' : 'Pending Verification'),
+            readiness_score: c.readiness_score != null ? c.readiness_score : 0
           };
         });
         setCandidates(mapped);

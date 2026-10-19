@@ -74,6 +74,7 @@ export const getCandidates = async (req, res) => {
               json.has_valid_license = 'No License';
             }
           }
+          json.kyc_status = (json.documents && json.documents.length > 0 && json.documents.some(d => d.verification_status === 'VERIFIED')) ? 'Verified' : 'Pending Verification';
           return json;
         });
         if (search) {
@@ -767,6 +768,35 @@ export const updateCandidate = async (req, res) => {
             }
           }
 
+          // Synchronize CandidateDocument records
+          if (db.CandidateDocument && Array.isArray(payload.documents)) {
+            try {
+              await db.CandidateDocument.destroy({ where: { candidate_id: targetId } });
+              for (const doc of payload.documents) {
+                let vStatus = String(doc.verification_status || 'VERIFIED').toUpperCase();
+                if (vStatus === 'APPROVED' || vStatus === 'VERIFIED') vStatus = 'VERIFIED';
+                else if (vStatus === 'REJECTED') vStatus = 'REJECTED';
+                else if (vStatus === 'EXPIRED') vStatus = 'EXPIRED';
+                else vStatus = 'PENDING';
+
+                await db.CandidateDocument.create({
+                  id: uuidv4(),
+                  candidate_id: targetId,
+                  document_type: doc.document_type || doc.type || 'Identity Proof',
+                  document_number: doc.document_number || doc.doc_number || null,
+                  file_url: doc.file_url || doc.url || doc.document_url || null,
+                  document_url: doc.file_url || doc.url || doc.document_url || null,
+                  file_name: doc.file_name || doc.name || 'document',
+                  verification_status: vStatus,
+                  uploaded_at: doc.uploaded_at || new Date()
+                });
+              }
+
+            } catch (docErr) {
+              console.warn('CandidateDocument sync notice:', docErr.message);
+            }
+          }
+
           const updated = await db.Candidate.findByPk(targetId, {
             include: [
               { model: db.CandidateDocument, as: 'documents', required: false },
@@ -796,6 +826,7 @@ export const updateCandidate = async (req, res) => {
               updatedJson.driving_skill = rp.can_ride_two_wheeler ? 'Yes / Verified' : 'No';
             }
           }
+          updatedJson.kyc_status = (updatedJson.documents && updatedJson.documents.length > 0 && updatedJson.documents.some(d => d.verification_status === 'VERIFIED')) ? 'Verified' : 'Pending Verification';
 
           return res.json({
             success: true,

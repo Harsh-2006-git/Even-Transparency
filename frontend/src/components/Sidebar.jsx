@@ -135,7 +135,7 @@ export default function Sidebar({
           { id: 'practical-sessions', label: 'Practical Sessions', icon: Radio },
           { id: 'feedback', label: 'Feedback & Notes', icon: FileText },
           { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
-          { id: 'support', label: 'Support & Help', icon: HelpCircle },
+
         ];
       case 'PlacementCoordinator':
       case 'Placement Coordinator':

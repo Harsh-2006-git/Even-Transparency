@@ -25,13 +25,9 @@ import {
   Check,
   Clock,
   ArrowRight,
-  FileSpreadsheet,
-  Send,
-  Building,
-  ExternalLink,
-  ChevronDown,
   BatteryCharging,
-  TrendingUp
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000/api';
@@ -43,8 +39,36 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedCity, setSelectedCity] = useState('ALL');
-  const [selectedEmployer, setSelectedEmployer] = useState(null);
   const [activeTab, setActiveTab] = useState(initialTab); // 'employers' | 'roles' | 'hubs'
+
+  // Selected for Sidebar Drawer Details
+  const [selectedEmployerForDrawer, setSelectedEmployerForDrawer] = useState(null);
+  const [selectedRoleForDrawer, setSelectedRoleForDrawer] = useState(null);
+
+  // Modals state
+  const [showAddEmployerModal, setShowAddEmployerModal] = useState(false);
+  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  // Add Employer Form State
+  const [newEmployerName, setNewEmployerName] = useState('');
+  const [newIndustry, setNewIndustry] = useState('Quick Commerce EV Logistics');
+  const [newCategory, setNewCategory] = useState('QUICK_COMMERCE');
+  const [newPrimaryCity, setNewPrimaryCity] = useState('Bengaluru');
+  const [newAddress, setNewAddress] = useState('Sector 4, Outer Ring Rd, Bengaluru');
+  const [newContactPerson, setNewContactPerson] = useState('');
+  const [newContactDesignation, setNewContactDesignation] = useState('HR Talent Acquisition Lead');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+
+  // Add Role Form State
+  const [targetEmployerId, setTargetEmployerId] = useState('');
+  const [newRoleTitle, setNewRoleTitle] = useState('');
+  const [newRoleVacancies, setNewRoleVacancies] = useState('15');
+  const [newRoleSalary, setNewRoleSalary] = useState('21500');
+  const [newRoleShift, setNewRoleShift] = useState('DAY');
+  const [newRoleTier, setNewRoleTier] = useState('NF1 / NF2');
 
   useEffect(() => {
     if (initialTab) {
@@ -52,313 +76,19 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
     }
   }, [initialTab]);
 
-  // Modals state
-  const [showAddEmployerModal, setShowAddEmployerModal] = useState(false);
-  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
-  const [selectedEmployerForRole, setSelectedEmployerForRole] = useState('');
-
-  const ALL_PERKS_OPTIONS = [
-    'Accidental Insurance ₹5 Lakhs',
-    '100% Employer Provided EV',
-    'Unlimited Free Battery Swaps',
-    'Safety Gear & Helmet Kit',
-    'Rain Gear & Waterproof Bag',
-    'Weekly Direct Bank Payout Cycle',
-    'Subsidized Canteen Meals',
-    'Mobile Data Allowance ₹500/mo',
-    'Quarterly Retention Bonus ₹5,000'
-  ];
-
-  // Add Employer Form State
-  const [newEmployerName, setNewEmployerName] = useState('');
-  const [newBrandName, setNewBrandName] = useState('');
-  const [newCinGstin, setNewCinGstin] = useState('U74999KA2022PTC128491 / 29AABCE1284P1Z4');
-  const [newIndustry, setNewIndustry] = useState('Quick Commerce EV Logistics');
-  const [newCategory, setNewCategory] = useState('QUICK_COMMERCE');
-  const [newPrimaryCity, setNewPrimaryCity] = useState('Bengaluru');
-  const [newRegisteredAddress, setNewRegisteredAddress] = useState('Sector 4, Main Commercial Boulevard, Koramangala, Bengaluru, Karnataka 560034');
-  const [newMouSigned, setNewMouSigned] = useState(true);
-  
-  // Hub Details for New Employer
-  const [newHubName, setNewHubName] = useState('Central Dark Store & Charging Hub');
-  const [newHubAddress, setNewHubAddress] = useState('Plot 24, Outer Ring Rd, Koramangala, Bengaluru');
-  const [newHubCapacity, setNewHubCapacity] = useState('50');
-  const [newHubChargingPoints, setNewHubChargingPoints] = useState('20');
-  
-  // EV Vehicle & Policy
-  const [newVehicleModel, setNewVehicleModel] = useState('Ather 450X Commercial Spec');
-  const [newVehiclePolicy, setNewVehiclePolicy] = useState('100% Employer Provided EV with Zero Fuel & Swap Cost');
-
-  // Contact Person Details
-  const [newContactPerson, setNewContactPerson] = useState('');
-  const [newContactDesignation, setNewContactDesignation] = useState('Regional Talent Acquisition & Operations Lead');
-  const [newContactEmail, setNewContactEmail] = useState('');
-  const [newContactPhone, setNewContactPhone] = useState('');
-
-  // Initial Role for New Employer
-  const [newInitialRole, setNewInitialRole] = useState('EV Delivery Pilot');
-  const [newInitialVacancies, setNewInitialVacancies] = useState('25');
-  const [newInitialSalary, setNewInitialSalary] = useState('21500');
-  const [newInitialShift, setNewInitialShift] = useState('08:00 AM - 04:30 PM (Day Shift)');
-  const [newInitialTier, setNewInitialTier] = useState('NF1 / NF2');
-  const [newInitialQualification, setNewInitialQualification] = useState('10th Standard Pass, Basic Android Smartphone literacy, Learner or Permanent DL');
-  const [newInitialPerks, setNewInitialPerks] = useState([
-    'Accidental Insurance ₹5 Lakhs',
-    '100% Employer Provided EV',
-    'Unlimited Free Battery Swaps',
-    'Weekly Direct Bank Payout Cycle'
-  ]);
-
-  // Add Role Form State
-  const [targetEmployerId, setTargetEmployerId] = useState('');
-  const [newRoleTitle, setNewRoleTitle] = useState('');
-  const [newRoleVacancies, setNewRoleVacancies] = useState('15');
-  const [newRoleSalary, setNewRoleSalary] = useState('21000');
-  const [newRoleShift, setNewRoleShift] = useState('08:00 AM - 04:30 PM (Day Shift)');
-  const [newRoleWorkType, setNewRoleWorkType] = useState('Full-Time');
-  const [newRoleDeliveryRadius, setNewRoleDeliveryRadius] = useState('4.5');
-  const [newRoleHub, setNewRoleHub] = useState('Indiranagar 100ft Hub');
-  const [newRoleEduLevel, setNewRoleEduLevel] = useState('10th Standard Pass');
-  const [newRoleDLReq, setNewRoleDLReq] = useState('Learner or Permanent 2W DL');
-  const [newRolePreferredTier, setNewRolePreferredTier] = useState('NF1 / NF2');
-  const [newRolePayoutCycle, setNewRolePayoutCycle] = useState('Weekly Direct Bank Transfer');
-  const [newRoleWorkingDays, setNewRoleWorkingDays] = useState('6 Days / Week (1 Rostered Off)');
-  const [newRoleQualification, setNewRoleQualification] = useState('10th Standard Pass, Basic Android Smartphone usage, Learner or Permanent DL');
-  const [newRolePerks, setNewRolePerks] = useState([
-    'Accidental Insurance ₹5 Lakhs',
-    '100% Employer Provided EV',
-    'Unlimited Free Battery Swaps',
-    'Safety Gear & Helmet Kit'
-  ]);
-
-  const toggleInitialPerk = (perk) => {
-    if (newInitialPerks.includes(perk)) {
-      setNewInitialPerks(newInitialPerks.filter(p => p !== perk));
-    } else {
-      setNewInitialPerks([...newInitialPerks, perk]);
-    }
-  };
-
-  const toggleRolePerk = (perk) => {
-    if (newRolePerks.includes(perk)) {
-      setNewRolePerks(newRolePerks.filter(p => p !== perk));
-    } else {
-      setNewRolePerks([...newRolePerks, perk]);
-    }
-  };
-
-  const [toastMessage, setToastMessage] = useState('');
-
-  // Fallback initial dataset
-  const fallbackEmployers = [
-    {
-      id: 'emp-01',
-      employer_name: 'Zomato Green Fleet',
-      company_code: 'EMP-ZOM-01',
-      industry: 'Hyperlocal Food Logistics',
-      category: 'QUICK_COMMERCE',
-      is_green_employer: true,
-      logo_url: 'https://images.unsplash.com/photo-1526367790999-0150786686a2?w=120&auto=format&fit=crop&q=80',
-      primary_city: 'Bengaluru',
-      operating_cities: ['Bengaluru', 'Delhi NCR', 'Hyderabad', 'Mumbai'],
-      mou_signed: true,
-      status: 'ACTIVE',
-      contact_person: 'Ananya Deshmukh',
-      contact_designation: 'Head of Green Fleet Operations',
-      contact_email: 'ananya.deshmukh@zomato-green.com',
-      contact_phone: '+91 98765 44001',
-      hubs: [
-        { name: 'Koramangala 4th Block Hub', address: 'Plot 18, 80ft Rd, Koramangala 4th Block, Bengaluru', capacity: 60, charging_points: 24 },
-        { name: 'Indiranagar 100ft Hub', address: '142, 100 Feet Rd, HAL 2nd Stage, Indiranagar, Bengaluru', capacity: 45, charging_points: 18 }
-      ],
-      vehicle_policy: 'EMPLOYER_PROVIDED_EV',
-      allocated_ev_model: 'Ather 450X Commercial Spec',
-      active_roles: [
-        {
-          id: 'role-zom-01',
-          job_title: 'EV Last-Mile Delivery Pilot',
-          role_code: 'ZOM-PILOT-01',
-          vacancies: 35,
-          placed_count: 20,
-          monthly_gross_salary: 21500,
-          base_pay: 16000,
-          performance_bonus: 5500,
-          shift_timings: '08:00 AM - 04:30 PM (Day Shift)',
-          work_type: 'Full-Time',
-          delivery_radius_km: 5.5,
-          required_qualification: '10th Standard Pass, Basic Android Smartphone usage, Learner or Permanent DL',
-          preferred_nf_tier: 'NF1 / NF2',
-          perks: ['Accidental Insurance ₹5 Lakhs', 'Unlimited Battery Swaps', 'Safety Gear Kit', 'Weekly Payout Cycle'],
-          status: 'OPEN'
-        },
-        {
-          id: 'role-zom-02',
-          job_title: 'Senior Hub EV Fleet Captain',
-          role_code: 'ZOM-CAPT-02',
-          vacancies: 10,
-          placed_count: 6,
-          monthly_gross_salary: 24500,
-          base_pay: 18500,
-          performance_bonus: 6000,
-          shift_timings: '12:00 PM - 08:30 PM (Evening Peak)',
-          work_type: 'Full-Time',
-          delivery_radius_km: 7.0,
-          required_qualification: 'Permanent 2W Driving License, Minimum 6 months riding experience',
-          preferred_nf_tier: 'NF1',
-          perks: ['Quarterly Retention Bonus ₹6,000', 'Hub Leadership Track', 'Medical OPD Allowance'],
-          status: 'OPEN'
-        }
-      ],
-      total_placed_candidates: 26
-    },
-    {
-      id: 'emp-02',
-      employer_name: 'BigBasket Electric (BB Now)',
-      company_code: 'EMP-BB-02',
-      industry: 'Quick Commerce EV Grocery Logistics',
-      category: 'QUICK_COMMERCE',
-      is_green_employer: true,
-      logo_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=120&auto=format&fit=crop&q=80',
-      primary_city: 'Bengaluru',
-      operating_cities: ['Bengaluru', 'Chennai', 'Pune'],
-      mou_signed: true,
-      status: 'ACTIVE',
-      contact_person: 'Vikram Sethi',
-      contact_designation: 'Talent Acquisition & Diversity Lead',
-      contact_email: 'vikram.sethi@bigbasket.com',
-      contact_phone: '+91 98765 44002',
-      hubs: [
-        { name: 'BTM 2nd Stage Dark Store', address: '12, 16th Main, BTM 2nd Stage, Bengaluru', capacity: 50, charging_points: 20 },
-        { name: 'Whitefield EPIP Hub', address: 'Plot 4, EPIP Zone, Whitefield, Bengaluru', capacity: 40, charging_points: 15 }
-      ],
-      vehicle_policy: 'EMPLOYER_PROVIDED_EV',
-      allocated_ev_model: 'Hero Electric Nyx Heavy Cargo',
-      active_roles: [
-        {
-          id: 'role-bb-01',
-          job_title: 'Express Dark Store EV Pilot',
-          role_code: 'BB-DARK-01',
-          vacancies: 40,
-          placed_count: 28,
-          monthly_gross_salary: 19800,
-          base_pay: 15000,
-          performance_bonus: 4800,
-          shift_timings: '07:00 AM - 03:30 PM (Morning Express)',
-          work_type: 'Full-Time',
-          delivery_radius_km: 3.5,
-          required_qualification: '8th Standard Pass, Basic reading skills, Learner DL accepted',
-          preferred_nf_tier: 'NF1 / NF2 / NF3',
-          perks: ['Subsidized Canteen Meals', 'Zero Security Deposit', 'Festival Bonus', 'Grocery Discount Pass'],
-          status: 'OPEN'
-        }
-      ],
-      total_placed_candidates: 28
-    },
-    {
-      id: 'emp-03',
-      employer_name: 'Blinkit Smart Logistics',
-      company_code: 'EMP-BLK-03',
-      industry: 'Instant Delivery & Supply Logistics',
-      category: 'INSTANT_DELIVERY',
-      is_green_employer: true,
-      logo_url: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=120&auto=format&fit=crop&q=80',
-      primary_city: 'Bengaluru',
-      operating_cities: ['Bengaluru', 'Delhi NCR', 'Kolkata'],
-      mou_signed: true,
-      status: 'ACTIVE',
-      contact_person: 'Sneha Roy',
-      contact_designation: 'Operations Regional Manager',
-      contact_email: 'sneha.roy@blinkit.com',
-      contact_phone: '+91 98765 44003',
-      hubs: [
-        { name: 'HSR Layout Sector 1 Hub', address: '27th Main Rd, Sector 1, HSR Layout, Bengaluru', capacity: 35, charging_points: 12 }
-      ],
-      vehicle_policy: 'EMPLOYER_PROVIDED_EV',
-      allocated_ev_model: 'TVS iQube Commercial Cargo',
-      active_roles: [
-        {
-          id: 'role-blk-01',
-          job_title: 'Hub Dispatch & Delivery Associate',
-          role_code: 'BLK-DISP-01',
-          vacancies: 25,
-          placed_count: 15,
-          monthly_gross_salary: 18500,
-          base_pay: 14500,
-          performance_bonus: 4000,
-          shift_timings: '09:00 AM - 05:30 PM (Regular Day)',
-          work_type: 'Full-Time',
-          delivery_radius_km: 3.0,
-          required_qualification: '10th Standard Pass, Smartphone Literacy',
-          preferred_nf_tier: 'NF2 / NF3',
-          perks: ['Health Insurance Coverage', 'Free Uniform & Rain Kit', 'On-time Direct Bank Credit'],
-          status: 'OPEN'
-        }
-      ],
-      total_placed_candidates: 15
-    },
-    {
-      id: 'emp-04',
-      employer_name: 'Uber Green Mobility',
-      company_code: 'EMP-UBR-04',
-      industry: 'Clean Urban Ride Hailing',
-      category: 'RIDE_HAILING',
-      is_green_employer: true,
-      logo_url: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=120&auto=format&fit=crop&q=80',
-      primary_city: 'Bengaluru',
-      operating_cities: ['Bengaluru', 'Delhi', 'Mumbai'],
-      mou_signed: true,
-      status: 'ACTIVE',
-      contact_person: 'Rohan Deshmukh',
-      contact_designation: 'EV Fleet Partnership Director',
-      contact_email: 'rohan.d@uber-green.org',
-      contact_phone: '+91 98765 44004',
-      hubs: [
-        { name: 'KIAL Clean Airport Hub', address: 'Terminal 1 Dedicated EV Bay, Kempegowda Intl Airport, Bengaluru', capacity: 50, charging_points: 30 }
-      ],
-      vehicle_policy: 'EMPLOYER_PROVIDED_EV',
-      allocated_ev_model: 'BluSmart / Tata Tigor EV',
-      active_roles: [
-        {
-          id: 'role-ubr-01',
-          job_title: 'Women EV Ride Fleet Captain',
-          role_code: 'UBR-CAPT-01',
-          vacancies: 20,
-          placed_count: 10,
-          monthly_gross_salary: 24000,
-          base_pay: 19000,
-          performance_bonus: 5000,
-          shift_timings: 'Flexible (Airport Corridor)',
-          work_type: 'Full-Time',
-          delivery_radius_km: 15.0,
-          required_qualification: 'Permanent 4W/LMV Commercial License, 1 year driving experience',
-          preferred_nf_tier: 'NF1',
-          perks: ['Safe Commute Escort', 'Health Shield Insurance', 'Weekly Incentive Bonus'],
-          status: 'OPEN'
-        }
-      ],
-      total_placed_candidates: 10
-    }
-  ];
-
-  // Fetch from backend API
+  // Fetch real employers from PostgreSQL API
   const fetchEmployers = async () => {
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE}/employers`);
-      if (res.ok) {
-        const data = await res.json();
-        const list = data.data || data.employers || [];
-        if (list && list.length > 0) {
-          setEmployers(list);
-        } else {
-          setEmployers(fallbackEmployers);
-        }
-      } else {
-        setEmployers(fallbackEmployers);
+      if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setEmployers(json.data);
       }
     } catch (err) {
-      console.warn('Backend API offline, using fallback employers:', err);
-      setEmployers(fallbackEmployers);
+      console.error('Failed to fetch employers from API:', err);
+      setToastMessage({ type: 'error', text: 'Failed to connect to employer database API.' });
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -374,205 +104,165 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
     fetchEmployers();
   };
 
-  const handleCreateEmployerSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const grossSalary = parseInt(newInitialSalary) || 21500;
-      const basePay = Math.round(grossSalary * 0.75);
-      const bonusPay = grossSalary - basePay;
-      const codePrefix = (newEmployerName.trim() ? newEmployerName.substring(0, 3) : 'EMP').toUpperCase();
-
-      const newLocalEmployer = {
-        employer_name: newEmployerName,
-        company_name: newEmployerName,
-        brand_name: newBrandName || newEmployerName,
-        cin_gstin: newCinGstin,
-        company_code: `EMP-${codePrefix}-${Math.floor(10 + Math.random() * 90)}`,
-        industry: newIndustry,
-        industry_type: newCategory,
-        category: newCategory,
-        is_green_employer: true,
-        logo_url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=120&auto=format&fit=crop&q=80',
-        primary_city: newPrimaryCity,
-        city: newPrimaryCity,
-        operating_cities: [newPrimaryCity],
-        address: newRegisteredAddress,
-        registered_address: newRegisteredAddress,
-        mou_signed: newMouSigned,
-        status: 'active',
-        contact_person: newContactPerson,
-        contact_designation: newContactDesignation,
-        contact_email: newContactEmail,
-        contact_phone: newContactPhone,
-        initial_role_title: newInitialRole,
-        initial_vacancies: parseInt(newInitialVacancies) || 10,
-        initial_salary: grossSalary
-      };
-
-      try {
-        const postRes = await fetch(`${API_BASE}/employers`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newLocalEmployer)
-        });
-        if (postRes.ok) {
-          await fetchEmployers();
-        } else {
-          setEmployers(prev => [newLocalEmployer, ...prev]);
-        }
-      } catch (apiErr) {
-        console.warn('API backend error, updating local state:', apiErr);
-        setEmployers(prev => [newLocalEmployer, ...prev]);
-      }
-
-      setShowAddEmployerModal(false);
-      setToastMessage(`Employer partner "${newEmployerName}" successfully onboarded to database!`);
-      setTimeout(() => setToastMessage(''), 4000);
-      
-      // Reset form
-      setNewEmployerName('');
-      setNewBrandName('');
-      setNewContactPerson('');
-      setNewContactEmail('');
-      setNewContactPhone('');
-    } catch (err) {
-      console.error('Error creating employer:', err);
-    }
+  const getCompanyInitials = (name) => {
+    if (!name) return 'EP';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
   };
 
-  const handleAddJobRoleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const employerId = targetEmployerId || (employers[0] ? employers[0].id : 'emp-01');
-      const grossSalary = parseInt(newRoleSalary) || 21000;
-      const basePay = Math.round(grossSalary * 0.75);
-      const targetEmp = employers.find(e => e.id === employerId);
-      const codePrefix = targetEmp ? (targetEmp.company_code || 'ROL').replace('EMP-', '') : 'ROL';
+  // Compile all active roles across employers
+  const allJobRoles = employers.flatMap(emp =>
+    (emp.active_roles || []).map(r => ({
+      ...r,
+      employer_id: emp.id,
+      employer_name: emp.employer_name,
+      company_code: emp.company_code,
+      primary_city: emp.primary_city,
+      allocated_ev_model: emp.allocated_ev_model,
+      contact_phone: emp.contact_phone,
+      contact_person: emp.contact_person
+    }))
+  );
 
-      const newRoleObj = {
-        job_title: newRoleTitle,
-        role_title: newRoleTitle,
-        role_code: `${codePrefix}-${Math.floor(100 + Math.random() * 900)}`,
-        vacancies: parseInt(newRoleVacancies) || 10,
-        monthly_gross_salary: grossSalary,
-        base_pay: basePay,
-        shift_timings: newRoleShift,
-        work_type: newRoleWorkType,
-        required_qualification: `${newRoleEduLevel}, ${newRoleDLReq}. ${newRoleQualification}`,
-        preferred_nf_tier: newRolePreferredTier,
-        perks: newRolePerks
-      };
+  // Compute live KPI metrics
+  const totalLiveVacancies = allJobRoles.reduce((sum, r) => sum + (Number(r.vacancies) - Number(r.placed_count || 0)), 0);
+  const totalPlacedCount = employers.reduce((sum, e) => sum + (Number(e.total_placed_candidates) || 0), 0);
+  const allSalaries = allJobRoles.map(r => Number(r.monthly_gross_salary) || 21500);
+  const avgMonthlySalary = allSalaries.length > 0 ? Math.round(allSalaries.reduce((a, b) => a + b, 0) / allSalaries.length) : 21500;
 
-      try {
-        const postRes = await fetch(`${API_BASE}/employers/${employerId}/roles`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newRoleObj)
-        });
-        if (postRes.ok) {
-          await fetchEmployers();
-        } else {
-          setEmployers(prev =>
-            prev.map(emp => {
-              if (emp.id === employerId) {
-                return {
-                  ...emp,
-                  active_roles: [newRoleObj, ...(emp.active_roles || [])]
-                };
-              }
-              return emp;
-            })
-          );
-        }
-      } catch (apiErr) {
-        console.warn('API backend error, updating local state:', apiErr);
-        setEmployers(prev =>
-          prev.map(emp => {
-            if (emp.id === employerId) {
-              return {
-                ...emp,
-                active_roles: [newRoleObj, ...(emp.active_roles || [])]
-              };
-            }
-            return emp;
-          })
-        );
-      }
-
-      setShowAddRoleModal(false);
-      setToastMessage(`Job opening "${newRoleTitle}" with ${newRoleVacancies} vacancies posted to database!`);
-      setTimeout(() => setToastMessage(''), 4000);
-      setNewRoleTitle('');
-    } catch (err) {
-      console.error('Error adding job role:', err);
-    }
-  };
-
+  // Filter employers
   const filteredEmployers = employers.filter(e => {
-    const matchSearch =
-      e.employer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.primary_city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.active_roles?.some(r => r.job_title.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchCategory = selectedCategory === 'ALL' || e.category === selectedCategory;
+    const q = searchQuery.toLowerCase().trim();
+    const matchSearch = !q ||
+      e.employer_name.toLowerCase().includes(q) ||
+      e.industry?.toLowerCase().includes(q) ||
+      e.primary_city?.toLowerCase().includes(q) ||
+      e.active_roles?.some(r => r.job_title?.toLowerCase().includes(q));
+    const matchCategory = selectedCategory === 'ALL' || e.category === selectedCategory || e.industry_type === selectedCategory;
     const matchCity = selectedCity === 'ALL' || e.primary_city === selectedCity;
     return matchSearch && matchCategory && matchCity;
   });
 
-  // Extract all roles for the roles tab
-  const allJobRoles = employers.flatMap(e =>
-    (e.active_roles || []).map(r => ({
-      ...r,
-      employer_name: e.employer_name,
-      employer_code: e.company_code,
-      employer_logo: e.logo_url,
-      primary_city: e.primary_city,
-      vehicle_model: e.allocated_ev_model
-    }))
-  );
+  // Filter roles
+  const filteredRoles = allJobRoles.filter(r => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchSearch = !q ||
+      r.job_title?.toLowerCase().includes(q) ||
+      r.employer_name?.toLowerCase().includes(q) ||
+      r.primary_city?.toLowerCase().includes(q);
+    const matchCity = selectedCity === 'ALL' || r.primary_city === selectedCity;
+    return matchSearch && matchCity;
+  });
 
-  const totalLiveVacancies = allJobRoles.reduce((sum, r) => sum + (r.vacancies - r.placed_count), 0);
-  const totalPlacedCount = employers.reduce((sum, e) => sum + (e.total_placed_candidates || 0), 0);
+  const uniqueCities = Array.from(new Set(employers.map(e => e.primary_city).filter(Boolean)));
 
-  // Helper function for Company Initials / Fallback Logo
-  const getCompanyInitials = (name) => {
-    if (!name) return 'EP';
-    const words = name.split(' ');
-    if (words.length >= 2) return `${words[0][0]}${words[1][0]}`.toUpperCase();
-    return name.substring(0, 2).toUpperCase();
+  // Add Employer Submit
+  const handleAddEmployerSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setSubmitting(true);
+      const payload = {
+        employer_name: newEmployerName,
+        industry: newIndustry,
+        industry_type: newCategory,
+        primary_city: newPrimaryCity,
+        address: newAddress,
+        contact_person: newContactPerson,
+        contact_designation: newContactDesignation,
+        contact_email: newContactEmail,
+        contact_phone: newContactPhone
+      };
+
+      const res = await fetch(`${API_BASE}/employers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to create employer.');
+
+      setToastMessage({ type: 'success', text: `Employer partner "${newEmployerName}" registered successfully!` });
+      setShowAddEmployerModal(false);
+      setNewEmployerName('');
+      setNewContactPerson('');
+      setNewContactEmail('');
+      setNewContactPhone('');
+      await fetchEmployers();
+    } catch (err) {
+      console.error('Error adding employer:', err);
+      setToastMessage({ type: 'error', text: err.message || 'Failed to create employer.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Add Role Submit
+  const handleAddRoleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setSubmitting(true);
+      const employerId = targetEmployerId || (employers[0] ? employers[0].id : null);
+      if (!employerId) throw new Error('Target employer required.');
+
+      const grossSalary = Number(newRoleSalary) || 21500;
+      const payload = {
+        job_title: newRoleTitle,
+        vacancies: Number(newRoleVacancies) || 10,
+        monthly_gross_salary: grossSalary,
+        base_pay: Math.round(grossSalary * 0.75),
+        shift_timings: `${newRoleShift} Shift (08:00 AM - 04:30 PM)`,
+        preferred_nf_tier: newRoleTier
+      };
+
+      const res = await fetch(`${API_BASE}/employers/${employerId}/roles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to create job role.');
+
+      setToastMessage({ type: 'success', text: `Job opening "${newRoleTitle}" posted to database!` });
+      setShowAddRoleModal(false);
+      setNewRoleTitle('');
+      await fetchEmployers();
+    } catch (err) {
+      console.error('Error adding role:', err);
+      setToastMessage({ type: 'error', text: err.message || 'Failed to create role.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="space-y-4 pb-12 font-sans max-w-7xl mx-auto text-slate-800">
+    <div className="space-y-4 pb-12 font-sans max-w-full text-slate-800 animate-fadeIn">
       
-      {/* ─── Header & Action Toolbar (Compact White Theme) ──────────────── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-xs">
-        <div className="space-y-1.5 flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-2xs">
+      {/* ─── Compact Top Header Banner ────────────────────────────────────── */}
+      <div className="bg-white px-5 py-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/70 inline-flex items-center gap-1">
               <Building2 className="w-3 h-3 text-emerald-600" />
-              <span>PLACEMENT & EMPLOYER HUB</span>
+              Placement & Employer Hub
             </span>
-            <span className="text-slate-400 text-xs font-medium">• Commercial EV Fleet Hiring Partnerships</span>
+            <span className="text-slate-400 text-[11px] font-medium hidden sm:inline">• Commercial Fleet Partnerships</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold font-kaiseiTokumin tracking-tight text-slate-900 leading-tight">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 font-kaiseiTokumin">
             Hiring Employers & Job Opportunities
           </h1>
-          <p className="text-slate-500 text-xs max-w-2xl leading-normal">
-            Register corporate EV fleet partners, configure verified pilot designations, guarantee wage structures, and allocate hyper-local delivery charging hubs.
-          </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 relative z-10 shrink-0 flex-wrap">
+        {/* Compact Action Buttons */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="cursor-pointer px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 whitespace-nowrap shadow-2xs"
-            title="Refresh Employers"
+            className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 shadow-2xs disabled:opacity-50 cursor-pointer"
+            title="Refresh from PostgreSQL"
           >
             <RotateCw className={`w-3.5 h-3.5 text-emerald-600 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>Sync Employers</span>
+            <span>Sync</span>
           </button>
 
           <button
@@ -580,7 +270,7 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
               if (employers.length > 0) setTargetEmployerId(employers[0].id);
               setShowAddRoleModal(true);
             }}
-            className="cursor-pointer px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 whitespace-nowrap shadow-2xs"
+            className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
             <span>Post New Job Role</span>
@@ -588,638 +278,539 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
 
           <button
             onClick={() => setShowAddEmployerModal(true)}
-            className="cursor-pointer px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-xs transition flex items-center gap-1.5 whitespace-nowrap"
+            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
           >
             <PlusCircle className="w-3.5 h-3.5" />
-            <span>Add New Employer Partner</span>
+            <span>Add Employer Partner</span>
           </button>
         </div>
       </div>
 
-      {/* Success Notification Toast */}
+      {/* Toast Feedback */}
       {toastMessage && (
-        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-2xs flex items-center justify-between text-xs font-bold animate-fadeIn">
+        <div className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between shadow-2xs ${
+          toastMessage.type === 'error'
+            ? 'bg-rose-50 border-rose-200 text-rose-800'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+        }`}>
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{toastMessage}</span>
+            {toastMessage.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toastMessage.text}</span>
           </div>
-          <button onClick={() => setToastMessage('')} className="text-emerald-700 hover:text-emerald-900 p-0.5 cursor-pointer">
+          <button onClick={() => setToastMessage(null)} className="p-1 hover:opacity-75 cursor-pointer">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* ─── 1. KPI Metric Summary Cards (Compact White) ────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {/* ─── Compact KPI Cards (1 Row, No Overflow) ─────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         
         {/* Total Employers */}
-        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-emerald-300 transition">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EMPLOYER PARTNERS</span>
-            <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
-              <Building2 className="w-3.5 h-3.5" />
-            </div>
-          </div>
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-xl font-black text-slate-900 font-kaiseiTokumin">{employers.length} Active</div>
-            <div className="text-[10px] font-medium text-emerald-600 mt-0.5">100% Green Fleets (MOU Signed)</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Employer Partners</div>
+            <div className="text-lg font-black text-slate-900 mt-0.5">{employers.length} Active</div>
+            <div className="text-[10px] font-medium text-emerald-600">100% Green Fleets (MOU)</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+            <Building2 className="w-4 h-4" />
           </div>
         </div>
 
-        {/* Live Job Openings */}
-        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-indigo-300 transition">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">LIVE VACANCIES</span>
-            <div className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center">
-              <Briefcase className="w-3.5 h-3.5" />
-            </div>
-          </div>
+        {/* Live Vacancies */}
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-xl font-black text-indigo-900 font-kaiseiTokumin">
-              {totalLiveVacancies} Openings
-            </div>
-            <div className="text-[10px] font-medium text-indigo-600 mt-0.5">Across {allJobRoles.length} Job Roles</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Vacancies</div>
+            <div className="text-lg font-black text-indigo-950 mt-0.5">{totalLiveVacancies} Openings</div>
+            <div className="text-[10px] font-medium text-indigo-600">{allJobRoles.length} Job Roles</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+            <Briefcase className="w-4 h-4" />
           </div>
         </div>
 
-        {/* Average Guaranteed Wage */}
-        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-teal-300 transition">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">AVG MONTHLY SALARY</span>
-            <div className="w-6 h-6 rounded-md bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center">
-              <DollarSign className="w-3.5 h-3.5" />
-            </div>
-          </div>
+        {/* Avg Monthly Salary */}
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-xl font-black text-teal-700 font-kaiseiTokumin">₹21,100 / mo</div>
-            <div className="text-[10px] font-medium text-teal-600 mt-0.5">Base + Performance Incentives</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avg Monthly Salary</div>
+            <div className="text-lg font-black text-teal-800 mt-0.5">₹{avgMonthlySalary.toLocaleString('en-IN')}/mo</div>
+            <div className="text-[10px] font-medium text-teal-600">Base + Performance</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center shrink-0">
+            <DollarSign className="w-4 h-4" />
           </div>
         </div>
 
-        {/* Total Placed Pilots */}
-        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-purple-300 transition">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">CANDIDATES PLACED</span>
-            <div className="w-6 h-6 rounded-md bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center">
-              <Users className="w-3.5 h-3.5" />
-            </div>
-          </div>
+        {/* Candidates Placed */}
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-xl font-black text-purple-700 font-kaiseiTokumin">
-              {totalPlacedCount} Placed
-            </div>
-            <div className="text-[10px] font-medium text-purple-600 mt-0.5">Active in Commercial Delivery</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidates Placed</div>
+            <div className="text-lg font-black text-purple-900 mt-0.5">{totalPlacedCount} Placed</div>
+            <div className="text-[10px] font-medium text-purple-600">Active in Delivery</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
+            <Users className="w-4 h-4" />
           </div>
         </div>
 
-        {/* EV Vehicle Asset Policy */}
-        <div className="p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-blue-300 transition">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EV VEHICLE SUPPORT</span>
-            <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
-              <Car className="w-3.5 h-3.5" />
-            </div>
-          </div>
+        {/* 100% EV Support */}
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between col-span-2 sm:col-span-1">
           <div>
-            <div className="text-xl font-black text-blue-900 font-kaiseiTokumin">100% EV</div>
-            <div className="text-[10px] font-medium text-blue-600 mt-0.5">Employer Provided (Zero Petrol Cost)</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EV Vehicle Support</div>
+            <div className="text-lg font-black text-blue-900 mt-0.5">100% EV</div>
+            <div className="text-[10px] font-medium text-blue-600">Zero Petrol Cost</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+            <Car className="w-4 h-4" />
           </div>
         </div>
 
       </div>
 
-      {/* ─── 2. Main Navigation Tabs (Compact Segmented Strip) ─────────────── */}
-      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200/70">
-        <button
-          onClick={() => setActiveTab('employers')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-            activeTab === 'employers'
-              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Hiring Employer Partners</span>
-          <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
-            {filteredEmployers.length}
-          </span>
-        </button>
+      {/* ─── Compact Navigation Tabs ───────────────────────────────────────── */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit border border-slate-200/70">
+          <button
+            onClick={() => { setActiveTab('employers'); setSelectedRoleForDrawer(null); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'employers'
+                ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Hiring Employer Partners</span>
+            <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+              {filteredEmployers.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('roles')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-            activeTab === 'roles'
-              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
-          <span>All Live Job Openings Directory</span>
-          <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
-            {allJobRoles.length}
-          </span>
-        </button>
+          <button
+            onClick={() => { setActiveTab('roles'); setSelectedEmployerForDrawer(null); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'roles'
+                ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
+            <span>All Live Job Openings Directory</span>
+            <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
+              {filteredRoles.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('hubs')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-            activeTab === 'hubs'
-              ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Operating Hubs & Charging Infrastructure</span>
-        </button>
+          <button
+            onClick={() => { setActiveTab('hubs'); setSelectedEmployerForDrawer(null); setSelectedRoleForDrawer(null); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'hubs'
+                ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Operating Hubs & Infrastructure</span>
+          </button>
+        </div>
+
+        {/* Search & City Filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative min-w-[200px]">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search partner, role, city..."
+              className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          <select
+            value={selectedCity}
+            onChange={e => setSelectedCity(e.target.value)}
+            className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none cursor-pointer"
+          >
+            <option value="ALL">All Cities</option>
+            {uniqueCities.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* ─── 3. TAB 1: Employer Partners Table ──────────────────────────────── */}
+      {/* ─── TAB 1: Employer Partners Table (Zero Horizontal Scroll) ───────── */}
       {activeTab === 'employers' && (
-        <div className="space-y-3">
-          
-          {/* Filters Bar */}
-          <div className="p-2.5 sm:p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
-            
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-[260px]">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search employer name, code, industry, job roles..."
-                className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-slate-50/70 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500 transition"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+              <RotateCw className="w-4 h-4 animate-spin text-emerald-600" />
+              <span>Loading employer partners...</span>
             </div>
-
-            {/* Filter Dropdowns */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <select
-                value={selectedCategory}
-                onChange={e => setSelectedCategory(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg bg-slate-50/70 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500"
-              >
-                <option value="ALL">All Categories</option>
-                <option value="QUICK_COMMERCE">Quick Commerce / Food</option>
-                <option value="INSTANT_DELIVERY">Instant Delivery</option>
-                <option value="RIDE_HAILING">Ride Hailing Fleet</option>
-              </select>
-
-              <select
-                value={selectedCity}
-                onChange={e => setSelectedCity(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg bg-slate-50/70 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:bg-white focus:ring-1 focus:ring-emerald-500"
-              >
-                <option value="ALL">All Cities</option>
-                <option value="Bengaluru">Bengaluru</option>
-                <option value="Delhi NCR">Delhi NCR</option>
-                <option value="Hyderabad">Hyderabad</option>
-                <option value="Mumbai">Mumbai</option>
-              </select>
-
-              {(searchQuery || selectedCategory !== 'ALL' || selectedCity !== 'ALL') && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('ALL');
-                    setSelectedCity('ALL');
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                >
-                  <X className="w-3 h-3" />
-                  <span>Reset</span>
-                </button>
-              )}
-            </div>
-
-          </div>
-
-          {/* Structured Table Display */}
-          {filteredEmployers.length === 0 ? (
-            <div className="bg-white rounded-xl p-10 text-center border border-slate-200 space-y-2 shadow-2xs">
-              <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mx-auto text-slate-400">
-                <Search className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-800">No Employer Partners Found</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                No employer partners matched the selected filters. Click "Add New Employer Partner" to onboard one.
-              </p>
+          ) : filteredEmployers.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs">
+              No employer partners matched the selected filters.
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-2xs">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/90 border-b border-slate-200/80 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                      <th className="py-2.5 px-4">EMPLOYER PARTNER</th>
-                      <th className="py-2.5 px-4">CITY / HUB</th>
-                      <th className="py-2.5 px-4">OPEN VACANCIES</th>
-                      <th className="py-2.5 px-4">GUARANTEED WAGE</th>
-                      <th className="py-2.5 px-4">STATUS</th>
-                      <th className="py-2.5 px-4 text-right">ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredEmployers.map(item => {
-                      const totalOpen = (item.active_roles || []).reduce((sum, r) => sum + (r.vacancies - r.placed_count), 0);
-                      const salaries = (item.active_roles || []).map(r => r.monthly_gross_salary);
-                      const minSalary = salaries.length > 0 ? Math.min(...salaries) : 20000;
-                      const maxSalary = salaries.length > 0 ? Math.max(...salaries) : 20000;
+            <table className="w-full text-left text-xs table-fixed">
+              <colgroup>
+                <col className="w-[35%]" />
+                <col className="w-[20%]" />
+                <col className="w-[15%]" />
+                <col className="w-[15%]" />
+                <col className="w-[15%]" />
+              </colgroup>
+              <thead className="bg-slate-50 border-b border-slate-200/90 text-[10.5px] uppercase font-bold text-slate-500 tracking-wider">
+                <tr>
+                  <th className="py-2.5 px-3">Employer Partner</th>
+                  <th className="py-2.5 px-3">City & Central Hub</th>
+                  <th className="py-2.5 px-3">Open Vacancies</th>
+                  <th className="py-2.5 px-3">Guaranteed Wage</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredEmployers.map(item => {
+                  const totalOpen = (item.active_roles || []).reduce((sum, r) => sum + (r.vacancies - r.placed_count), 0);
+                  const salaries = (item.active_roles || []).map(r => Number(r.monthly_gross_salary) || 21500);
+                  const minSalary = salaries.length > 0 ? Math.min(...salaries) : 21500;
+                  const maxSalary = salaries.length > 0 ? Math.max(...salaries) : 21500;
 
-                      return (
-                        <tr
-                          key={item.id}
-                          onClick={() => setSelectedEmployer(item)}
-                          className={`hover:bg-slate-50/80 transition-colors cursor-pointer group ${
-                            selectedEmployer?.id === item.id ? 'bg-emerald-50/40' : ''
-                          }`}
+                  return (
+                    <tr
+                      key={item.id}
+                      onClick={() => setSelectedEmployerForDrawer(item)}
+                      className={`hover:bg-emerald-50/20 transition-colors cursor-pointer ${
+                        selectedEmployerForDrawer?.id === item.id ? 'bg-emerald-50/50 font-medium' : ''
+                      }`}
+                    >
+                      {/* Employer Partner */}
+                      <td className="py-2.5 px-3 align-middle truncate">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                            {getCompanyInitials(item.employer_name)}
+                          </div>
+                          <div className="min-w-0 truncate">
+                            <div className="font-bold text-slate-900 text-xs truncate flex items-center gap-1.5">
+                              <span>{item.employer_name}</span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                                MOU Signed
+                              </span>
+                            </div>
+                            <div className="text-[10px] font-mono text-slate-400 truncate">
+                              {item.company_code} • {item.industry}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* City & Hub */}
+                      <td className="py-2.5 px-3 align-middle truncate">
+                        <div className="font-semibold text-slate-800 text-xs truncate flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span>{item.primary_city}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          {item.hubs && item.hubs[0] ? (typeof item.hubs[0] === 'string' ? item.hubs[0] : item.hubs[0].name) : 'Central Hub'}
+                        </div>
+                      </td>
+
+                      {/* Open Vacancies */}
+                      <td className="py-2.5 px-3 align-middle truncate">
+                        <span className="px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                          {totalOpen} Openings
+                        </span>
+                      </td>
+
+                      {/* Guaranteed Wage */}
+                      <td className="py-2.5 px-3 align-middle truncate">
+                        <div className="font-bold text-slate-900 text-xs">
+                          {minSalary === maxSalary
+                            ? `₹${minSalary.toLocaleString('en-IN')}`
+                            : `₹${minSalary.toLocaleString('en-IN')} - ₹${maxSalary.toLocaleString('en-IN')}`}
+                          <span className="text-[10px] font-normal text-slate-400 ml-0.5">/mo</span>
+                        </div>
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-2.5 px-3 text-right align-middle" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => setSelectedEmployerForDrawer(item)}
+                          className="px-2.5 py-1 rounded-md bg-slate-50 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200 text-slate-700 font-semibold text-[11px] transition inline-flex items-center gap-1 shadow-2xs whitespace-nowrap cursor-pointer"
                         >
-                          
-                          {/* 1. Employer Name with Clean Avatar */}
-                          <td className="py-3 px-4 align-middle">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
-                                {item.logo_url ? (
-                                  <img
-                                    src={item.logo_url}
-                                    alt=""
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                    }}
-                                  />
-                                ) : (
-                                  <span>{getCompanyInitials(item.employer_name)}</span>
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="font-bold text-slate-900 group-hover:text-emerald-700 transition flex items-center gap-1.5 text-xs whitespace-nowrap">
-                                  <span>{item.employer_name}</span>
-                                  {item.mou_signed && (
-                                    <span className="px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                                      MOU Signed
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-[10px] font-mono text-slate-400">
-                                  {item.company_code}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
+                          <Eye className="w-3 h-3 text-emerald-600" />
+                          <span>Details</span>
+                        </button>
+                      </td>
 
-                          {/* 2. City / Location */}
-                          <td className="py-3 px-4 align-middle">
-                            <div className="text-xs font-semibold text-slate-700 flex items-center gap-1 whitespace-nowrap">
-                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                              <span>{item.primary_city}</span>
-                            </div>
-                          </td>
-
-                          {/* 3. Open Vacancies */}
-                          <td className="py-3 px-4 align-middle">
-                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 text-[11px] font-bold whitespace-nowrap">
-                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
-                              <span>{totalOpen} Openings</span>
-                            </div>
-                          </td>
-
-                          {/* 4. Guaranteed Wage */}
-                          <td className="py-3 px-4 align-middle">
-                            <div className="font-bold text-slate-900 text-xs whitespace-nowrap">
-                              {minSalary === maxSalary
-                                ? `₹${minSalary.toLocaleString('en-IN')}`
-                                : `₹${minSalary.toLocaleString('en-IN')} - ₹${maxSalary.toLocaleString('en-IN')}`}
-                              <span className="text-[10px] font-normal text-slate-400 ml-1">/mo</span>
-                            </div>
-                          </td>
-
-                          {/* 5. Status */}
-                          <td className="py-3 px-4 align-middle">
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                              ACTIVE PARTNER
-                            </span>
-                          </td>
-
-                          {/* 6. Action Button */}
-                          <td className="py-3 px-4 text-right align-middle" onClick={e => e.stopPropagation()}>
-                            <button
-                              onClick={() => setSelectedEmployer(item)}
-                              className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200 text-slate-700 font-bold text-xs transition-all inline-flex items-center gap-1 shadow-2xs group-hover:bg-white whitespace-nowrap cursor-pointer"
-                            >
-                              <Eye className="w-3 h-3 text-emerald-600" />
-                              <span>View Details</span>
-                              <ChevronRight className="w-3 h-3 text-slate-400 group-hover:text-emerald-700 transition-transform" />
-                            </button>
-                          </td>
-
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
-
         </div>
       )}
 
-      {/* ─── 4. TAB 2: All Live Job Openings Directory ──────────────────────── */}
+      {/* ─── TAB 2: Job Openings Directory Table (Zero Horizontal Scroll) ──── */}
       {activeTab === 'roles' && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {allJobRoles.map((role, idx) => (
-              <div key={idx} className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs space-y-3 hover:border-indigo-300 transition">
-                <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-slate-900 text-white font-bold text-xs flex items-center justify-center overflow-hidden shrink-0">
-                      {role.employer_logo ? (
-                        <img src={role.employer_logo} alt="" className="w-full h-full object-cover" onError={e => e.target.style.display = 'none'} />
-                      ) : (
-                        <span>{getCompanyInitials(role.employer_name)}</span>
-                      )}
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{role.employer_name}</span>
-                      <h3 className="font-bold text-slate-900 text-xs sm:text-sm">{role.job_title}</h3>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] font-bold shrink-0">
-                    {role.vacancies - role.placed_count} Openings
-                  </span>
-                </div>
+        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+              <RotateCw className="w-4 h-4 animate-spin text-indigo-600" />
+              <span>Loading job openings directory...</span>
+            </div>
+          ) : filteredRoles.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs">
+              No live job openings match the selected filters.
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs table-fixed">
+              <colgroup>
+                <col className="w-[35%]" />
+                <col className="w-[15%]" />
+                <col className="w-[20%]" />
+                <col className="w-[15%]" />
+                <col className="w-[15%]" />
+              </colgroup>
+              <thead className="bg-slate-50 border-b border-slate-200/90 text-[10.5px] uppercase font-bold text-slate-500 tracking-wider">
+                <tr>
+                  <th className="py-2.5 px-3">Job Role & Hiring Partner</th>
+                  <th className="py-2.5 px-3">Live Vacancies</th>
+                  <th className="py-2.5 px-3">Monthly Wage</th>
+                  <th className="py-2.5 px-3">Shift Schedule</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredRoles.map((role, idx) => {
+                  const available = Number(role.vacancies) - Number(role.placed_count || 0);
 
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500 text-[11px]">Gross Monthly Wage:</span>
-                    <strong className="text-emerald-700 font-bold text-xs">₹{role.monthly_gross_salary.toLocaleString('en-IN')} / mo</strong>
-                  </div>
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-500">Base Pay:</span>
-                    <span className="font-bold text-slate-700">₹{role.base_pay.toLocaleString('en-IN')} + Incentives</span>
-                  </div>
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-500">Shift Schedule:</span>
-                    <span className="font-semibold text-slate-800">{role.shift_timings?.split('(')[0]}</span>
-                  </div>
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-slate-500">Assigned EV Fleet:</span>
-                    <span className="font-semibold text-emerald-700 truncate max-w-[150px]">{role.vehicle_model?.split('(')[0]}</span>
-                  </div>
-                </div>
+                  return (
+                    <tr
+                      key={idx}
+                      onClick={() => setSelectedRoleForDrawer(role)}
+                      className={`hover:bg-indigo-50/20 transition-colors cursor-pointer ${
+                        selectedRoleForDrawer?.id === role.id ? 'bg-indigo-50/50 font-medium' : ''
+                      }`}
+                    >
+                      {/* Job Title & Employer */}
+                      <td className="py-2.5 px-3 align-middle truncate">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-xs flex items-center justify-center shrink-0">
+                            <Briefcase className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0 truncate">
+                            <div className="font-bold text-slate-900 text-xs truncate">
+                              {role.job_title}
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-medium truncate flex items-center gap-1">
+                              <span className="text-emerald-700 font-semibold">{role.employer_name}</span>
+                              <span>• {role.primary_city}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
 
-                <div className="pt-0.5 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500">
-                    Tier: <strong className="text-slate-800 font-bold">{role.preferred_nf_tier}</strong>
-                  </span>
-                  <button
-                    onClick={() => {
-                      const parentEmp = employers.find(e => e.employer_name === role.employer_name);
-                      if (parentEmp) setSelectedEmployer(parentEmp);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>View Role Dossier</span>
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                      {/* Vacancies */}
+                      <td className="py-2.5 px-3 align-middle truncate">
+                        <span className="px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                          {available} Openings
+                        </span>
+                      </td>
+
+                      {/* Wage */}
+                      <td className="py-2.5 px-3 align-middle truncate">
+                        <div className="font-bold text-emerald-800 text-xs">
+                          ₹{Number(role.monthly_gross_salary).toLocaleString('en-IN')}
+                          <span className="text-[10px] font-normal text-slate-400 ml-0.5">/mo</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          Base ₹{Number(role.base_pay || Math.round(role.monthly_gross_salary * 0.75)).toLocaleString('en-IN')} + Incentives
+                        </div>
+                      </td>
+
+                      {/* Shift */}
+                      <td className="py-2.5 px-3 align-middle truncate">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 inline-block truncate max-w-full">
+                          {role.shift_timings?.split('(')[0] || 'Day Shift'}
+                        </span>
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-2.5 px-3 text-right align-middle" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => setSelectedRoleForDrawer(role)}
+                          className="px-2.5 py-1 rounded-md bg-slate-50 hover:bg-indigo-50 hover:text-indigo-800 hover:border-indigo-300 border border-slate-200 text-slate-700 font-semibold text-[11px] transition inline-flex items-center gap-1 shadow-2xs whitespace-nowrap cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3 text-indigo-600" />
+                          <span>Details</span>
+                        </button>
+                      </td>
+
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
-      {/* ─── 5. TAB 3: Operating Hubs & Charging Infrastructure ─────────────── */}
+      {/* ─── TAB 3: Operating Hubs & Infrastructure (Clean Grid) ────────────── */}
       {activeTab === 'hubs' && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {employers.flatMap(e => (e.hubs || []).map((hub, hIdx) => (
-              <div key={`${e.id}-${hIdx}`} className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs space-y-2 hover:border-emerald-300 transition">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {employers.flatMap(e => (e.hubs || []).map((hub, hIdx) => {
+            const hubName = typeof hub === 'string' ? hub : hub.name;
+            const hubAddr = typeof hub === 'string' ? `${e.primary_city} Central Operational Hub` : (hub.address || `${e.primary_city} Hub`);
+            const capacity = hub.capacity || 50;
+            const docks = hub.charging_points || 20;
+
+            return (
+              <div key={`${e.id}-${hIdx}`} className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs space-y-2 hover:border-emerald-300 transition">
                 <div className="flex justify-between items-start gap-2">
                   <div>
-                    <span className="text-[10px] font-bold text-emerald-700 uppercase bg-emerald-50 px-1.5 py-0.2 rounded-md border border-emerald-200">
+                    <span className="text-[9.5px] font-bold text-emerald-700 uppercase bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                       {e.employer_name}
                     </span>
-                    <h3 className="font-bold text-slate-900 text-xs sm:text-sm mt-1">{hub.name}</h3>
+                    <h3 className="font-bold text-slate-900 text-xs mt-1">{hubName}</h3>
                   </div>
-                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold shrink-0">
-                    {hub.capacity} Fleet Capacity
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                    {capacity} Fleet Cap
                   </span>
                 </div>
 
-                <p className="text-[11px] text-slate-500 leading-normal">{hub.address}</p>
+                <p className="text-[11px] text-slate-500 leading-normal">{hubAddr}</p>
 
-                <div className="pt-1.5 border-t border-slate-100 flex justify-between items-center text-xs font-semibold">
-                  <span className="text-slate-500 flex items-center gap-1 text-[11px]">
+                <div className="pt-1.5 border-t border-slate-100 flex justify-between items-center text-xs">
+                  <span className="text-slate-500 flex items-center gap-1 text-[10.5px]">
                     <BatteryCharging className="w-3.5 h-3.5 text-emerald-600" />
-                    Fast Charging Docks:
+                    Charging Docks:
                   </span>
-                  <strong className="text-emerald-700 font-bold text-xs">{hub.charging_points} Docks Active</strong>
+                  <strong className="text-emerald-700 font-bold text-xs">{docks} Active Docks</strong>
                 </div>
               </div>
-            )))}
-          </div>
+            );
+          }))}
         </div>
       )}
 
-      {/* ─── 6. EMPLOYER DETAILS SLIDE-OVER SIDEBAR (White Theme) ──────────── */}
-      {selectedEmployer && (
+      {/* ─── SLIDE-OVER SIDEBAR: Complete Employer Partner Dossier ─────────── */}
+      {selectedEmployerForDrawer && (
         <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop Overlay */}
           <div
             className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs transition-opacity animate-fadeIn"
-            onClick={() => setSelectedEmployer(null)}
+            onClick={() => setSelectedEmployerForDrawer(null)}
           />
 
-          {/* Right Slide-over Sheet */}
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-xl bg-white shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-slideLeft">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-8">
+            <div className="w-screen max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-slideLeft">
               
-              {/* Sidebar Header */}
-              <div className="p-4 sm:p-5 bg-white border-b border-slate-200 flex items-center justify-between">
+              {/* Header */}
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white shadow-2xs flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
-                    {selectedEmployer.logo_url ? (
-                      <img src={selectedEmployer.logo_url} alt="" className="w-full h-full object-cover" onError={e => e.target.style.display = 'none'} />
-                    ) : (
-                      <span>{getCompanyInitials(selectedEmployer.employer_name)}</span>
-                    )}
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
+                    {getCompanyInitials(selectedEmployerForDrawer.employer_name)}
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-base font-bold font-kaiseiTokumin text-slate-900 truncate">{selectedEmployer.employer_name}</h2>
-                      <span className="px-1.5 py-0.2 rounded-md text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Active MOU
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h2 className="text-sm font-bold text-slate-900 truncate">{selectedEmployerForDrawer.employer_name}</h2>
+                      <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-emerald-100 text-emerald-800">
+                        MOU Signed
                       </span>
                     </div>
                     <p className="text-slate-500 text-[11px] font-mono">
-                      {selectedEmployer.company_code} • {selectedEmployer.industry}
-                    </p>
-                    <p className="text-slate-400 text-[10px] flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      <span>{selectedEmployer.primary_city} (Headquarters & Central Hub)</span>
+                      {selectedEmployerForDrawer.company_code} • {selectedEmployerForDrawer.primary_city}
                     </p>
                   </div>
                 </div>
 
                 <button
-                  onClick={() => setSelectedEmployer(null)}
-                  className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer shrink-0"
-                  title="Close Sidebar"
+                  onClick={() => setSelectedEmployerForDrawer(null)}
+                  className="p-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 transition shadow-2xs cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Sidebar Content Scrollable Area */}
-              <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs text-slate-800 flex-1">
+              {/* Content */}
+              <div className="p-4 overflow-y-auto space-y-3.5 text-xs text-slate-800 flex-1">
                 
-                {/* 0. Quick Stats Header Strip */}
-                <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                {/* 1. Quick Stats */}
+                <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
                   <div className="p-2 bg-white rounded-lg border border-slate-100 shadow-2xs">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block">OPENINGS</span>
-                    <strong className="text-xs font-black text-indigo-700 font-kaiseiTokumin">
-                      {(selectedEmployer.active_roles || []).reduce((sum, r) => sum + (r.vacancies - r.placed_count), 0)} Live
+                    <span className="text-[9.5px] font-bold text-slate-400 uppercase block">OPEN VACANCIES</span>
+                    <strong className="text-xs font-black text-indigo-700">
+                      {(selectedEmployerForDrawer.active_roles || []).reduce((sum, r) => sum + (r.vacancies - r.placed_count), 0)} Openings
                     </strong>
                   </div>
                   <div className="p-2 bg-white rounded-lg border border-slate-100 shadow-2xs">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block">PLACED</span>
-                    <strong className="text-xs font-black text-purple-700 font-kaiseiTokumin">
-                      {selectedEmployer.total_placed_candidates || 0} Pilots
+                    <span className="text-[9.5px] font-bold text-slate-400 uppercase block">DEPLOYED PILOTS</span>
+                    <strong className="text-xs font-black text-purple-700">
+                      {selectedEmployerForDrawer.total_placed_candidates || 0} Placed
                     </strong>
                   </div>
-                  <div className="p-2 bg-white rounded-lg border border-slate-100 shadow-2xs">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block">EV FLEET</span>
-                    <strong className="text-xs font-black text-emerald-700 font-kaiseiTokumin">100% EV</strong>
+                </div>
+
+                {/* 2. Commercial EV Fleet Allocation */}
+                <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
+                  <span className="text-emerald-900 font-bold uppercase text-[9.5px] tracking-wider block">COMMERCIAL EV FLEET POLICY</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 text-[11px]">Allocated EV Fleet:</span>
+                    <strong className="text-emerald-900 text-xs font-bold">{selectedEmployerForDrawer.allocated_ev_model || 'Ather 450X Commercial Spec'}</strong>
+                  </div>
+                  <div className="text-[10.5px] text-emerald-800">
+                    ✓ 100% Employer-allocated EV with battery swap access and zero petrol expense.
                   </div>
                 </div>
 
-                {/* 1. Point of Contact Card */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                  <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider">CORPORATE HIRING LEAD</span>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <strong className="text-slate-900 text-sm block">{selectedEmployer.contact_person}</strong>
-                      <span className="text-[11px] text-slate-500">{selectedEmployer.contact_designation}</span>
+                {/* 3. Contact & Talent Lead */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px] tracking-wider block">KEY HIRING CONTACT</span>
+                  <div className="space-y-1 text-[11px] text-slate-700">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Contact Lead:</span>
+                      <strong className="text-slate-900">{selectedEmployerForDrawer.contact_person || 'HR Hiring Lead'}</strong>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`mailto:${selectedEmployer.contact_email}`}
-                        className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs transition flex items-center gap-1.5 shadow-2xs"
-                      >
-                        <Mail className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>Email</span>
-                      </a>
-                      <a
-                        href={`tel:${selectedEmployer.contact_phone}`}
-                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
-                      >
-                        <Phone className="w-3.5 h-3.5" />
-                        <span>Call HR</span>
-                      </a>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Phone:</span>
+                      <strong className="text-slate-900 font-mono">{selectedEmployerForDrawer.contact_phone || '+91 98765 44001'}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Email:</span>
+                      <strong className="text-slate-900 font-mono truncate max-w-[200px]">{selectedEmployerForDrawer.contact_email || 'hiring@evenmobility.org'}</strong>
                     </div>
                   </div>
-                  <div className="pt-2 border-t border-slate-200 flex justify-between text-[11px] text-slate-500">
-                    <span>Email: <strong className="text-slate-800">{selectedEmployer.contact_email}</strong></span>
-                    <span>Phone: <strong className="text-slate-800 font-mono">{selectedEmployer.contact_phone}</strong></span>
-                  </div>
                 </div>
 
-                {/* 2. EV Vehicle Allocation Policy */}
-                <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Car className="w-4 h-4 text-emerald-600" />
-                    <strong className="text-emerald-950 font-bold">Employer-Provided EV Fleet Model</strong>
-                  </div>
-                  <div className="text-slate-900 font-bold text-sm">{selectedEmployer.allocated_ev_model}</div>
-                  <p className="text-emerald-800 text-xs">
-                    100% employer-sponsored commercial EV with zero fuel or battery swapping charges for mobilized pilots.
-                  </p>
-                </div>
-
-                {/* 3. Active Job Openings Under this Employer */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-bold text-slate-900 uppercase text-[10.5px] tracking-wider text-slate-400">
-                      ACTIVE JOB ROLES & VACANCIES ({selectedEmployer.active_roles?.length || 0})
-                    </h4>
-
-                    <button
-                      onClick={() => {
-                        setTargetEmployerId(selectedEmployer.id);
-                        setShowAddRoleModal(true);
-                      }}
-                      className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[11px] flex items-center gap-1"
-                    >
-                      <PlusCircle className="w-3 h-3" />
-                      <span>Add Role</span>
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {(selectedEmployer.active_roles || []).map((role, idx) => (
-                      <div key={idx} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <strong className="text-slate-900 font-bold text-xs block">{role.job_title}</strong>
-                            <span className="text-[10.5px] font-mono text-slate-400">{role.role_code} • {role.work_type}</span>
-                          </div>
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800">
-                            {role.vacancies - role.placed_count} Open / {role.vacancies} Total
-                          </span>
+                {/* 4. Active Roles in Drawer */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px] tracking-wider block">ACTIVE JOB OPENINGS</span>
+                  <div className="space-y-1.5">
+                    {(selectedEmployerForDrawer.active_roles || []).map((r, rIdx) => (
+                      <div key={rIdx} className="p-2 bg-white rounded-lg border border-slate-200 flex justify-between items-center text-[11px]">
+                        <div>
+                          <strong className="text-slate-900 block">{r.job_title}</strong>
+                          <span className="text-slate-400 text-[10px]">{r.shift_timings?.split('(')[0] || 'Day Shift'}</span>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-[11px]">
-                          <div>
-                            <span className="text-slate-500 block">Monthly Gross Salary:</span>
-                            <strong className="text-emerald-700 text-sm">₹{role.monthly_gross_salary.toLocaleString('en-IN')} / mo</strong>
-                          </div>
-                          <div>
-                            <span className="text-slate-500 block">Shift Timings:</span>
-                            <strong className="text-slate-800">{role.shift_timings}</strong>
-                          </div>
-                        </div>
-
-                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] space-y-1">
-                          <span className="font-bold text-slate-700 block">Required Qualification:</span>
-                          <p className="text-slate-600">{role.required_qualification}</p>
-                        </div>
-
-                        {role.perks && (
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {role.perks.map((p, pIdx) => (
-                              <span key={pIdx} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium">
-                                ✓ {p}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 4. Charging & Delivery Hubs */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                  <span className="text-slate-400 font-bold uppercase text-[10px] tracking-wider">OPERATING DELIVERY HUBS</span>
-                  <div className="space-y-2">
-                    {(selectedEmployer.hubs || []).map((hub, idx) => (
-                      <div key={idx} className="p-2.5 rounded-xl bg-white border border-slate-200 space-y-1">
-                        <strong className="text-slate-900 block text-xs">{hub.name}</strong>
-                        <p className="text-slate-500 text-[11px]">{hub.address}</p>
-                        <div className="flex justify-between text-[10.5px] text-emerald-700 font-semibold pt-1">
-                          <span>Capacity: {hub.capacity} Pilots</span>
-                          <span>{hub.charging_points} Charging Docks Active</span>
+                        <div className="text-right">
+                          <span className="text-emerald-700 font-bold block">₹{Number(r.monthly_gross_salary).toLocaleString('en-IN')}/mo</span>
+                          <span className="text-[10px] text-indigo-600 font-semibold">{r.vacancies - r.placed_count} Openings</span>
                         </div>
                       </div>
                     ))}
@@ -1228,24 +819,24 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
 
               </div>
 
-              {/* Sidebar Footer Actions */}
-              <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+              {/* Footer */}
+              <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
                 <button
                   onClick={() => {
-                    setTargetEmployerId(selectedEmployer.id);
+                    setTargetEmployerId(selectedEmployerForDrawer.id);
+                    setSelectedEmployerForDrawer(null);
                     setShowAddRoleModal(true);
                   }}
-                  className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition flex items-center gap-1.5"
+                  className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Post Another Job Role</span>
+                  <span>Post Job Opening</span>
                 </button>
-
                 <button
-                  onClick={() => setSelectedEmployer(null)}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-sm shadow-emerald-600/20"
+                  onClick={() => setSelectedEmployerForDrawer(null)}
+                  className="px-3 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition cursor-pointer"
                 >
-                  Done
+                  Close
                 </button>
               </div>
 
@@ -1254,763 +845,370 @@ export default function EmployerManagement({ placementUser, onSectionChange, ini
         </div>
       )}
 
-      {/* ─── 7. MODAL: Add New Employer Partner (Comprehensive Multi-Section White Theme Form) ───────── */}
+      {/* ─── SLIDE-OVER SIDEBAR: Complete Job Opening Role Dossier ─────────── */}
+      {selectedRoleForDrawer && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div
+            className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs transition-opacity animate-fadeIn"
+            onClick={() => setSelectedRoleForDrawer(null)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-8">
+            <div className="w-screen max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-slideLeft">
+              
+              {/* Header */}
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center justify-center font-bold text-sm shrink-0">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-bold text-slate-900 truncate">{selectedRoleForDrawer.job_title}</h2>
+                    <p className="text-emerald-700 text-[11px] font-semibold truncate">
+                      {selectedRoleForDrawer.employer_name} • {selectedRoleForDrawer.primary_city}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedRoleForDrawer(null)}
+                  className="p-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 transition shadow-2xs cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Role Dossier Content */}
+              <div className="p-4 overflow-y-auto space-y-3.5 text-xs text-slate-800 flex-1">
+                
+                {/* 1. Compensation Box */}
+                <div className="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-emerald-900 font-bold uppercase text-[9.5px]">GROSS MONTHLY COMPENSATION</span>
+                    <strong className="text-emerald-800 text-sm font-black">₹{Number(selectedRoleForDrawer.monthly_gross_salary).toLocaleString('en-IN')} / mo</strong>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-700 pt-1">
+                    <div>Base Pay: <strong className="text-slate-900">₹{Number(selectedRoleForDrawer.base_pay || Math.round(selectedRoleForDrawer.monthly_gross_salary * 0.75)).toLocaleString('en-IN')}</strong></div>
+                    <div>Incentives: <strong className="text-slate-900">Up to ₹{Number(selectedRoleForDrawer.performance_bonus || Math.round(selectedRoleForDrawer.monthly_gross_salary * 0.25)).toLocaleString('en-IN')}</strong></div>
+                  </div>
+                  <div className="text-[10px] text-emerald-800 font-semibold pt-0.5">
+                    ✓ Payout Cycle: Direct weekly or monthly bank transfer.
+                  </div>
+                </div>
+
+                {/* 2. Role Specifications */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px] tracking-wider block">JOB SPECIFICATIONS & SHIFTS</span>
+                  <div className="space-y-1 text-[11px] text-slate-700">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Live Vacancies:</span>
+                      <strong className="text-indigo-700 font-bold">{Number(selectedRoleForDrawer.vacancies) - Number(selectedRoleForDrawer.placed_count || 0)} Openings</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Shift Timings:</span>
+                      <strong className="text-slate-900">{selectedRoleForDrawer.shift_timings || 'Day Shift (08:00 AM - 04:30 PM)'}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Employment Type:</span>
+                      <strong className="text-slate-900">{selectedRoleForDrawer.work_type || 'Full-Time'}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Preferred Tier:</span>
+                      <strong className="text-slate-900">{selectedRoleForDrawer.preferred_nf_tier || 'NF1 / NF2'}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Fleet Asset & Perks */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px] tracking-wider block">EV FLEET & BENEFITS INCLUDED</span>
+                  <div className="space-y-1 text-[11px] text-slate-700">
+                    <div>Vehicle: <strong>{selectedRoleForDrawer.allocated_ev_model || 'Ather 450X Commercial Spec'}</strong></div>
+                    <div>Perks: <strong>Accidental Insurance ₹5 Lakhs, Unlimited Battery Swaps, Safety Kit</strong></div>
+                  </div>
+                </div>
+
+                {/* 4. Contact Lead */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <strong className="text-slate-900 block text-xs">{selectedRoleForDrawer.employer_name}</strong>
+                    <span className="text-slate-500 font-mono text-[11px]">{selectedRoleForDrawer.contact_phone || '+91 98765 44001'}</span>
+                  </div>
+                  <a
+                    href={`tel:${selectedRoleForDrawer.contact_phone || '+919876544001'}`}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1 shadow-2xs"
+                  >
+                    <Phone className="w-3 h-3" />
+                    <span>Call</span>
+                  </a>
+                </div>
+
+              </div>
+
+              {/* Footer */}
+              <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedRoleForDrawer(null);
+                    if (onSectionChange) onSectionChange('deployments');
+                  }}
+                  className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Deploy Candidates Under This Role</span>
+                </button>
+                <button
+                  onClick={() => setSelectedRoleForDrawer(null)}
+                  className="px-3 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: Add Employer Partner ───────────────────────────────────── */}
       {showAddEmployerModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 relative my-8 animate-scaleUp max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200 space-y-4 relative my-6 animate-scaleUp">
             
             <button
               onClick={() => setShowAddEmployerModal(false)}
-              className="absolute right-5 top-5 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
-              title="Close modal"
+              className="absolute right-3.5 top-3.5 p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            {/* Header */}
-            <div className="flex items-center gap-3.5 border-b border-slate-100 pb-5">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-xs">
-                <Building2 className="w-6 h-6" />
+            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shrink-0">
+                <Building2 className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-black text-slate-900 tracking-tight">Register New Commercial Employer Partner</h2>
-                <p className="text-xs text-slate-500 font-medium">Onboard a corporate green fleet partner, define EV vehicle policies, operating hubs & initial hiring quota.</p>
+                <h2 className="text-base font-bold text-slate-900 font-kaiseiTokumin">Register Employer Partner</h2>
+                <p className="text-[11px] text-slate-500">Onboard verified commercial fleet operator.</p>
               </div>
             </div>
 
-            <form onSubmit={handleCreateEmployerSubmit} className="space-y-6 text-xs">
-              
-              {/* SECTION 1: Corporate & Entity Information */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2 text-slate-900 font-bold uppercase text-[11px] tracking-wider">
-                  <Building className="w-4 h-4 text-emerald-600" />
-                  <span>1. Corporate Identity & Legal Profile</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Company / Legal Entity Name *</label>
-                    <input
-                      type="text"
-                      value={newEmployerName}
-                      onChange={e => setNewEmployerName(e.target.value)}
-                      placeholder="e.g. Zepto Electric Logistics Private Limited"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Brand / Trade Display Name</label>
-                    <input
-                      type="text"
-                      value={newBrandName}
-                      onChange={e => setNewBrandName(e.target.value)}
-                      placeholder="e.g. Zepto Green Fleet"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Industry Sector & Domain *</label>
-                    <select
-                      value={newIndustry}
-                      onChange={e => setNewIndustry(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    >
-                      <option value="Quick Commerce EV Logistics">Quick Commerce (10-Min Delivery Logistics)</option>
-                      <option value="Hyperlocal Food Delivery">Hyperlocal Food & Restaurant Delivery</option>
-                      <option value="Clean Urban Ride Hailing">Clean Urban EV Ride Hailing (2W / 4W)</option>
-                      <option value="E-Commerce Express Delivery">E-Commerce 3PL Express Parcel Logistics</option>
-                      <option value="B2B Green Cold Chain">B2B Green Cold Chain & Bulk Fleet</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Employer Partner Category</label>
-                    <select
-                      value={newCategory}
-                      onChange={e => setNewCategory(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    >
-                      <option value="QUICK_COMMERCE">Quick Commerce</option>
-                      <option value="FOOD_DELIVERY">Food Delivery</option>
-                      <option value="RIDE_HAILING">Ride Hailing</option>
-                      <option value="ECOMMERCE">E-Commerce Logistics</option>
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block font-bold text-slate-700 mb-1">CIN / GSTIN Registration Number</label>
-                    <input
-                      type="text"
-                      value={newCinGstin}
-                      onChange={e => setNewCinGstin(e.target.value)}
-                      placeholder="e.g. U74999KA2022PTC128491 / 29AABCE1284P1Z4"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block font-bold text-slate-700 mb-1">Registered Corporate Office Address</label>
-                    <input
-                      type="text"
-                      value={newRegisteredAddress}
-                      onChange={e => setNewRegisteredAddress(e.target.value)}
-                      placeholder="Street address, Tech Park, City, PIN"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-200/80">
-                  <input
-                    type="checkbox"
-                    id="newMouSigned"
-                    checked={newMouSigned}
-                    onChange={e => setNewMouSigned(e.target.checked)}
-                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
-                  />
-                  <label htmlFor="newMouSigned" className="font-semibold text-slate-800 text-xs cursor-pointer">
-                    Commercial Hiring MOU Executed & Legally Signed with Zero Placement Surcharge to Candidates
-                  </label>
-                </div>
+            <form onSubmit={handleAddEmployerSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-0.5">Company / Brand Name *</label>
+                <input
+                  type="text"
+                  value={newEmployerName}
+                  onChange={e => setNewEmployerName(e.target.value)}
+                  placeholder="e.g. BluSmart Mobility EV"
+                  className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
+                  required
+                />
               </div>
 
-              {/* SECTION 2: Operational Footprint & Delivery Hub */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2 text-slate-900 font-bold uppercase text-[11px] tracking-wider">
-                  <MapPin className="w-4 h-4 text-indigo-600" />
-                  <span>2. Operational Footprint & Delivery Hub Allocation</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Primary Operating City *</label>
-                    <select
-                      value={newPrimaryCity}
-                      onChange={e => setNewPrimaryCity(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    >
-                      <option value="Bengaluru">Bengaluru, Karnataka</option>
-                      <option value="Delhi NCR">Delhi NCR (Gurgaon / Noida / Delhi)</option>
-                      <option value="Hyderabad">Hyderabad, Telangana</option>
-                      <option value="Mumbai">Mumbai / MMR, Maharashtra</option>
-                      <option value="Chennai">Chennai, Tamil Nadu</option>
-                      <option value="Pune">Pune, Maharashtra</option>
-                      <option value="Kolkata">Kolkata, West Bengal</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Initial Delivery Hub Name *</label>
-                    <input
-                      type="text"
-                      value={newHubName}
-                      onChange={e => setNewHubName(e.target.value)}
-                      placeholder="e.g. Koramangala 4th Block Mega Dark Store"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                      required
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block font-bold text-slate-700 mb-1">Hub Full Street Address</label>
-                    <input
-                      type="text"
-                      value={newHubAddress}
-                      onChange={e => setNewHubAddress(e.target.value)}
-                      placeholder="e.g. Plot 18, 80ft Road, 4th Block Koramangala, Bengaluru"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Pilot Fleet Parking Capacity</label>
-                    <input
-                      type="number"
-                      value={newHubCapacity}
-                      onChange={e => setNewHubCapacity(e.target.value)}
-                      placeholder="50"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Dedicated EV Fast Charging Docks</label>
-                    <input
-                      type="number"
-                      value={newHubChargingPoints}
-                      onChange={e => setNewHubChargingPoints(e.target.value)}
-                      placeholder="20"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 3: EV Vehicle Fleet Policy */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-4">
-                <div className="flex items-center gap-2 text-emerald-950 font-bold uppercase text-[11px] tracking-wider">
-                  <Car className="w-4 h-4 text-emerald-700" />
-                  <span>3. Commercial EV Fleet Allocation & Battery Policy</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block font-bold text-emerald-950 mb-1">Allocated EV Fleet Model *</label>
-                    <input
-                      type="text"
-                      value={newVehicleModel}
-                      onChange={e => setNewVehicleModel(e.target.value)}
-                      placeholder="e.g. Ather 450X Commercial / TVS iQube Cargo / Hero Nyx"
-                      className="w-full p-2.5 rounded-xl bg-white border border-emerald-300 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-emerald-950 mb-1">Vehicle Provision & Fuel Policy</label>
-                    <select
-                      value={newVehiclePolicy}
-                      onChange={e => setNewVehiclePolicy(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-emerald-300 text-slate-900 font-semibold"
-                    >
-                      <option value="100% Employer Provided EV with Zero Fuel & Swap Cost">100% Employer Provided EV (Zero Fuel & Swap Cost)</option>
-                      <option value="Subsidized Fleet Lease with Free Unlimited Swaps">Subsidized Fleet Lease + Free Unlimited Swaps</option>
-                      <option value="Company Sponsored Battery Swapping Pass">Company Sponsored Battery Swapping Pass</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-white/80 border border-emerald-200 text-[11.5px] text-emerald-900 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Candidates deployed under this employer are protected against vehicle security deposits and out-of-pocket petrol expenses.</span>
-                </div>
-              </div>
-
-              {/* SECTION 4: HR & Operations Point of Contact */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2 text-slate-900 font-bold uppercase text-[11px] tracking-wider">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  <span>4. HR & Operations Point of Contact</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Contact Person Name *</label>
-                    <input
-                      type="text"
-                      value={newContactPerson}
-                      onChange={e => setNewContactPerson(e.target.value)}
-                      placeholder="e.g. Ananya Roy"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Designation</label>
-                    <input
-                      type="text"
-                      value={newContactDesignation}
-                      onChange={e => setNewContactDesignation(e.target.value)}
-                      placeholder="e.g. Talent Acquisition & Diversity Lead"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Official Email Address *</label>
-                    <input
-                      type="email"
-                      value={newContactEmail}
-                      onChange={e => setNewContactEmail(e.target.value)}
-                      placeholder="hiring@zepto-ev.com"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                      required
-                    />
-                  </div>
-
-                  <div className="sm:col-span-3">
-                    <label className="block font-bold text-slate-700 mb-1">Direct Mobile / WhatsApp Phone Number *</label>
-                    <input
-                      type="tel"
-                      value={newContactPhone}
-                      onChange={e => setNewContactPhone(e.target.value)}
-                      placeholder="+91 98765 44000"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-mono font-bold"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 5: Initial Commercial Job Role */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/70 border border-indigo-200 space-y-4">
-                <div className="flex items-center gap-2 text-indigo-950 font-bold uppercase text-[11px] tracking-wider">
-                  <Briefcase className="w-4 h-4 text-indigo-600" />
-                  <span>5. Initial Commercial Job Opening & Wage Package</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  <div>
-                    <label className="block font-bold text-indigo-950 mb-1">Job Designation Title *</label>
-                    <input
-                      type="text"
-                      value={newInitialRole}
-                      onChange={e => setNewInitialRole(e.target.value)}
-                      placeholder="e.g. EV Last-Mile Delivery Pilot"
-                      className="w-full p-2.5 rounded-xl bg-white border border-indigo-300 text-slate-900 font-semibold focus:ring-2 focus:ring-indigo-500/20"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-indigo-950 mb-1">Open Vacancies Count *</label>
-                    <input
-                      type="number"
-                      value={newInitialVacancies}
-                      onChange={e => setNewInitialVacancies(e.target.value)}
-                      placeholder="25"
-                      className="w-full p-2.5 rounded-xl bg-white border border-indigo-300 text-slate-900 font-bold"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-indigo-950 mb-1">Guaranteed Gross Salary (₹/mo) *</label>
-                    <input
-                      type="number"
-                      value={newInitialSalary}
-                      onChange={e => setNewInitialSalary(e.target.value)}
-                      placeholder="21500"
-                      className="w-full p-2.5 rounded-xl bg-white border border-indigo-300 text-slate-900 font-bold"
-                      required
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block font-bold text-indigo-950 mb-1">Shift Schedule</label>
-                    <select
-                      value={newInitialShift}
-                      onChange={e => setNewInitialShift(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-indigo-300 text-slate-900 font-semibold"
-                    >
-                      <option value="08:00 AM - 04:30 PM (Day Shift)">08:00 AM - 04:30 PM (Regular Day Shift)</option>
-                      <option value="07:00 AM - 03:30 PM (Morning Express)">07:00 AM - 03:30 PM (Morning Express)</option>
-                      <option value="12:00 PM - 08:30 PM (Evening Peak)">12:00 PM - 08:30 PM (Evening Peak)</option>
-                      <option value="Flexible (Airport Corridor)">Flexible (Airport / Corridor Shift)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-indigo-950 mb-1">Preferred Candidate Tier</label>
-                    <select
-                      value={newInitialTier}
-                      onChange={e => setNewInitialTier(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-indigo-300 text-slate-900 font-semibold"
-                    >
-                      <option value="NF1 / NF2">NF1 / NF2 (High Readiness)</option>
-                      <option value="NF1">NF1 (Immediate Job Ready)</option>
-                      <option value="NF1 / NF2 / NF3">All Tiers (NF1 / NF2 / NF3)</option>
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-3">
-                    <label className="block font-bold text-indigo-950 mb-1">Minimum Qualification & Driving License Criteria</label>
-                    <input
-                      type="text"
-                      value={newInitialQualification}
-                      onChange={e => setNewInitialQualification(e.target.value)}
-                      placeholder="e.g. 10th Standard Pass, Basic Android Smartphone usage, Learner or Permanent DL"
-                      className="w-full p-2.5 rounded-xl bg-white border border-indigo-300 text-slate-900"
-                    />
-                  </div>
-                </div>
-
-                {/* Salary Breakdown Preview */}
-                <div className="p-3 rounded-xl bg-white border border-indigo-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-emerald-600" />
-                    <span className="font-bold text-slate-700">Wage Structure Breakdown:</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-[11px]">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">
-                      Base Fixed: <strong>₹{Math.round((parseInt(newInitialSalary) || 21500) * 0.75).toLocaleString('en-IN')}</strong>
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-semibold">
-                      Bonus & Incentives: <strong>₹{Math.round((parseInt(newInitialSalary) || 21500) * 0.25).toLocaleString('en-IN')}</strong>
-                    </span>
-                    <span className="px-3 py-1 rounded-lg bg-indigo-600 text-white font-black">
-                      Total CTC: ₹{parseInt(newInitialSalary || 21500).toLocaleString('en-IN')} / mo
-                    </span>
-                  </div>
-                </div>
-
-                {/* Perks Checklist */}
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block font-bold text-indigo-950 mb-1.5">Candidate Benefits & Safety Perks</label>
-                  <div className="flex flex-wrap gap-2">
-                    {ALL_PERKS_OPTIONS.map((perk, idx) => {
-                      const isSelected = newInitialPerks.includes(perk);
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => toggleInitialPerk(perk)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                            isSelected
-                              ? 'bg-emerald-600 text-white shadow-xs'
-                              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
-                          {isSelected ? <Check className="w-3.5 h-3.5" /> : <PlusCircle className="w-3.5 h-3.5 text-slate-400" />}
-                          <span>{perk}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <label className="block font-bold text-slate-700 mb-0.5">Industry Category *</label>
+                  <select
+                    value={newCategory}
+                    onChange={e => setNewCategory(e.target.value)}
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
+                  >
+                    <option value="QUICK_COMMERCE">Quick Commerce</option>
+                    <option value="INSTANT_DELIVERY">Instant Delivery</option>
+                    <option value="RIDE_HAILING">Ride Hailing</option>
+                    <option value="COMMERCIAL_EV">Commercial EV</option>
+                  </select>
                 </div>
-
+                <div>
+                  <label className="block font-bold text-slate-700 mb-0.5">Operating City *</label>
+                  <input
+                    type="text"
+                    value={newPrimaryCity}
+                    onChange={e => setNewPrimaryCity(e.target.value)}
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
+                    required
+                  />
+                </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-0.5">HR / Operations Contact *</label>
+                  <input
+                    type="text"
+                    value={newContactPerson}
+                    onChange={e => setNewContactPerson(e.target.value)}
+                    placeholder="Contact Lead Name"
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-0.5">Mobile Number *</label>
+                  <input
+                    type="text"
+                    value={newContactPhone}
+                    onChange={e => setNewContactPhone(e.target.value)}
+                    placeholder="+91 98765 00000"
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-0.5">Email Address</label>
+                <input
+                  type="email"
+                  value={newContactEmail}
+                  onChange={e => setNewContactEmail(e.target.value)}
+                  placeholder="hiring@company.com"
+                  className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
+                />
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddEmployerModal(false)}
-                  className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition text-xs"
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition text-xs flex items-center gap-2 shadow-sm shadow-emerald-600/20"
+                  disabled={submitting}
+                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition flex items-center gap-1.5 shadow-2xs disabled:opacity-50 cursor-pointer"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>Register & Onboard Employer</span>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{submitting ? 'Registering...' : 'Register Partner'}</span>
                 </button>
               </div>
-
             </form>
 
           </div>
         </div>
       )}
 
-      {/* ─── 8. MODAL: Add New Job Role / Vacancy (Comprehensive Multi-Section White Theme Form) ───────── */}
+      {/* ─── MODAL: Post New Job Role ──────────────────────────────────────── */}
       {showAddRoleModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 relative my-8 animate-scaleUp max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4 relative my-6 animate-scaleUp">
             
             <button
               onClick={() => setShowAddRoleModal(false)}
-              className="absolute right-5 top-5 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
-              title="Close modal"
+              className="absolute right-3.5 top-3.5 p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            {/* Header */}
-            <div className="flex items-center gap-3.5 border-b border-slate-100 pb-5">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center shadow-xs">
-                <Briefcase className="w-6 h-6" />
+            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0">
+                <Briefcase className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-black text-slate-900 tracking-tight">Post New Commercial Job Opening & Role</h2>
-                <p className="text-xs text-slate-500 font-medium">Define candidate eligibility bar, guaranteed wage structure, shift timings & hub location.</p>
+                <h2 className="text-base font-bold text-slate-900 font-kaiseiTokumin">Post New Job Opening</h2>
+                <p className="text-[11px] text-slate-500">Configure pilot designation and wage package.</p>
               </div>
             </div>
 
-            <form onSubmit={handleAddJobRoleSubmit} className="space-y-6 text-xs">
-              
-              {/* SECTION 1: Employer & Role Identity */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2 text-slate-900 font-bold uppercase text-[11px] tracking-wider">
-                  <Building2 className="w-4 h-4 text-indigo-600" />
-                  <span>1. Employer Partner & Role Designation</span>
-                </div>
+            <form onSubmit={handleAddRoleSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-0.5">Target Employer Partner *</label>
+                <select
+                  value={targetEmployerId}
+                  onChange={e => setTargetEmployerId(e.target.value)}
+                  className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-semibold cursor-pointer"
+                  required
+                >
+                  {employers.map(e => (
+                    <option key={e.id} value={e.id}>
+                      {e.employer_name} ({e.company_code})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
+              <div>
+                <label className="block font-bold text-slate-700 mb-0.5">Job Role Title *</label>
+                <input
+                  type="text"
+                  value={newRoleTitle}
+                  onChange={e => setNewRoleTitle(e.target.value)}
+                  placeholder="e.g. EV Last-Mile Delivery Associate"
+                  className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Target Hiring Employer Partner *</label>
-                  <select
-                    value={targetEmployerId || (employers[0]?.id || '')}
-                    onChange={e => setTargetEmployerId(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold text-xs"
+                  <label className="block font-bold text-slate-700 mb-0.5">Open Vacancies *</label>
+                  <input
+                    type="number"
+                    value={newRoleVacancies}
+                    onChange={e => setNewRoleVacancies(e.target.value)}
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
                     required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-0.5">Monthly Gross Salary (₹) *</label>
+                  <input
+                    type="number"
+                    value={newRoleSalary}
+                    onChange={e => setNewRoleSalary(e.target.value)}
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-0.5">Shift Timing</label>
+                  <select
+                    value={newRoleShift}
+                    onChange={e => setNewRoleShift(e.target.value)}
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
                   >
-                    {employers.map(e => (
-                      <option key={e.id} value={e.id}>
-                        {e.employer_name} ({e.company_code} • {e.primary_city})
-                      </option>
-                    ))}
+                    <option value="DAY">Day Shift</option>
+                    <option value="NIGHT">Night Shift</option>
+                    <option value="ROTATIONAL">Rotational Shift</option>
+                    <option value="FLEXIBLE">Flexible Shift</option>
                   </select>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Job Designation Title *</label>
-                    <input
-                      type="text"
-                      value={newRoleTitle}
-                      onChange={e => setNewRoleTitle(e.target.value)}
-                      placeholder="e.g. Dark Store Express Dispatcher & EV Pilot"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Employment Work Type</label>
-                    <select
-                      value={newRoleWorkType}
-                      onChange={e => setNewRoleWorkType(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    >
-                      <option value="Full-Time">Full-Time (8.5 Hours Regular)</option>
-                      <option value="Part-Time Morning">Part-Time Morning (4 Hours)</option>
-                      <option value="Part-Time Evening">Part-Time Evening Peak (4 Hours)</option>
-                      <option value="Weekend Express">Weekend Express Pilot</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Total Open Vacancies *</label>
-                    <input
-                      type="number"
-                      value={newRoleVacancies}
-                      onChange={e => setNewRoleVacancies(e.target.value)}
-                      placeholder="15"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-bold"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Max Delivery Radius (km)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={newRoleDeliveryRadius}
-                      onChange={e => setNewRoleDeliveryRadius(e.target.value)}
-                      placeholder="4.5"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block font-bold text-slate-700 mb-1">Assigned Delivery / Charging Hub</label>
-                    <input
-                      type="text"
-                      value={newRoleHub}
-                      onChange={e => setNewRoleHub(e.target.value)}
-                      placeholder="e.g. Indiranagar 100ft Hub / Koramangala 4th Block Hub"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900"
-                    />
-                  </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-0.5">Preferred Tier</label>
+                  <select
+                    value={newRoleTier}
+                    onChange={e => setNewRoleTier(e.target.value)}
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
+                  >
+                    <option value="NF1">NF1 Only</option>
+                    <option value="NF1 / NF2">NF1 / NF2</option>
+                    <option value="NF1 / NF2 / NF3">NF1 / NF2 / NF3</option>
+                  </select>
                 </div>
               </div>
 
-              {/* SECTION 2: Guaranteed Compensation & Wage Breakdown */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-4">
-                <div className="flex items-center gap-2 text-emerald-950 font-bold uppercase text-[11px] tracking-wider">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
-                  <span>2. Guaranteed Compensation & Wage Breakdown</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block font-bold text-emerald-950 mb-1">Monthly Gross Wage (₹) *</label>
-                    <input
-                      type="number"
-                      value={newRoleSalary}
-                      onChange={e => setNewRoleSalary(e.target.value)}
-                      placeholder="21000"
-                      className="w-full p-2.5 rounded-xl bg-white border border-emerald-300 text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-emerald-950 mb-1">Payout Frequency Cycle</label>
-                    <select
-                      value={newRolePayoutCycle}
-                      onChange={e => setNewRolePayoutCycle(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-emerald-300 text-slate-900 font-semibold"
-                    >
-                      <option value="Weekly Direct Bank Transfer">Weekly Direct Bank Transfer (Every Friday)</option>
-                      <option value="Bi-Weekly Payout">Bi-Weekly Payout (1st & 16th)</option>
-                      <option value="Monthly Direct Bank Payout">Monthly Direct Bank Payout (1st of Month)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Real-time Salary Breakdown Card */}
-                <div className="p-3.5 rounded-2xl bg-white border border-emerald-200 space-y-2">
-                  <span className="font-bold text-emerald-950 text-xs block">Guaranteed Monthly Pilot Compensation Preview</span>
-                  <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
-                    <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
-                      <span className="text-slate-500 block text-[10px]">Fixed Base Pay</span>
-                      <strong className="text-slate-900 text-xs">₹{Math.round((parseInt(newRoleSalary) || 21000) * 0.75).toLocaleString('en-IN')}</strong>
-                    </div>
-                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200">
-                      <span className="text-emerald-700 block text-[10px]">Punctuality & Trip Bonus</span>
-                      <strong className="text-emerald-800 text-xs">₹{Math.round((parseInt(newRoleSalary) || 21000) * 0.25).toLocaleString('en-IN')}</strong>
-                    </div>
-                    <div className="p-2 rounded-xl bg-indigo-600 text-white">
-                      <span className="text-indigo-200 block text-[10px]">Total Gross / mo</span>
-                      <strong className="text-white text-xs">₹{parseInt(newRoleSalary || 21000).toLocaleString('en-IN')}</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 3: Shift Timing & Schedule */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2 text-slate-900 font-bold uppercase text-[11px] tracking-wider">
-                  <Clock className="w-4 h-4 text-indigo-600" />
-                  <span>3. Shift Timing & Work Schedule</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Shift Slot *</label>
-                    <select
-                      value={newRoleShift}
-                      onChange={e => setNewRoleShift(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    >
-                      <option value="08:00 AM - 04:30 PM (Day Shift)">08:00 AM - 04:30 PM (Day Shift)</option>
-                      <option value="07:00 AM - 03:30 PM (Morning Express)">07:00 AM - 03:30 PM (Morning Express)</option>
-                      <option value="12:00 PM - 08:30 PM (Evening Peak)">12:00 PM - 08:30 PM (Evening Peak)</option>
-                      <option value="10:00 PM - 06:00 AM (Night Logistics)">10:00 PM - 06:00 AM (Night Logistics)</option>
-                      <option value="Flexible (Airport Corridor)">Flexible (Airport Corridor)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Working Days per Week</label>
-                    <select
-                      value={newRoleWorkingDays}
-                      onChange={e => setNewRoleWorkingDays(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    >
-                      <option value="6 Days / Week (1 Rostered Off)">6 Days / Week (1 Rostered Off)</option>
-                      <option value="5 Days / Week (2 Rostered Off)">5 Days / Week (2 Rostered Off)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 4: Candidate Eligibility & Readiness */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2 text-slate-900 font-bold uppercase text-[11px] tracking-wider">
-                  <Award className="w-4 h-4 text-emerald-600" />
-                  <span>4. Candidate Eligibility & Assessment Criteria</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Minimum Education</label>
-                    <select
-                      value={newRoleEduLevel}
-                      onChange={e => setNewRoleEduLevel(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    >
-                      <option value="10th Standard Pass">10th Standard Pass (SSLC)</option>
-                      <option value="8th Standard Pass">8th Standard Pass</option>
-                      <option value="12th / ITI Pass">12th / ITI Pass</option>
-                      <option value="No Minimum Bar">No Minimum Bar (Literate)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Driving License Requirement</label>
-                    <select
-                      value={newRoleDLReq}
-                      onChange={e => setNewRoleDLReq(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    >
-                      <option value="Learner or Permanent 2W DL">Learner or Permanent 2W DL</option>
-                      <option value="Permanent 2W License Mandatory">Permanent 2W License Mandatory</option>
-                      <option value="Commercial 4W / LMV License">Commercial 4W / LMV License</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Target Mobilizer Tier</label>
-                    <select
-                      value={newRolePreferredTier}
-                      onChange={e => setNewRolePreferredTier(e.target.value)}
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-semibold"
-                    >
-                      <option value="NF1 / NF2">NF1 / NF2 Preferred</option>
-                      <option value="NF1">NF1 High Readiness Only</option>
-                      <option value="NF1 / NF2 / NF3">Any Assessed Candidate (NF1/NF2/NF3)</option>
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-3">
-                    <label className="block font-bold text-slate-700 mb-1">Detailed Eligibility Notes & Skills</label>
-                    <textarea
-                      rows={2}
-                      value={newRoleQualification}
-                      onChange={e => setNewRoleQualification(e.target.value)}
-                      placeholder="e.g. Basic Android Smartphone literacy, Google Maps navigation, customer politeness"
-                      className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 5: Benefits & Perks */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/70 border border-indigo-200 space-y-3">
-                <div className="flex items-center gap-2 text-indigo-950 font-bold uppercase text-[11px] tracking-wider">
-                  <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                  <span>5. Commercial EV Perks & Safety Shield Checklist</span>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {ALL_PERKS_OPTIONS.map((perk, idx) => {
-                    const isSelected = newRolePerks.includes(perk);
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => toggleRolePerk(perk)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white shadow-xs'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        {isSelected ? <Check className="w-3.5 h-3.5" /> : <PlusCircle className="w-3.5 h-3.5 text-slate-400" />}
-                        <span>{perk}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
+              <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddRoleModal(false)}
-                  className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition text-xs"
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition text-xs flex items-center gap-2 shadow-sm shadow-indigo-600/20"
+                  disabled={submitting}
+                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition flex items-center gap-1.5 shadow-2xs disabled:opacity-50 cursor-pointer"
                 >
-                  <Briefcase className="w-4 h-4" />
-                  <span>Publish Job Role & Openings</span>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{submitting ? 'Posting...' : 'Post Job Opening'}</span>
                 </button>
               </div>
-
             </form>
 
           </div>

@@ -24,14 +24,9 @@ import {
   Check,
   Clock,
   ArrowRight,
-  FileSpreadsheet,
-  Send,
-  Building,
-  UserCheck,
-  TrendingUp,
-  AlertCircle,
   FileCheck,
-  UserPlus
+  UserCheck,
+  AlertCircle
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000/api';
@@ -39,319 +34,60 @@ const API_BASE = 'http://localhost:5000/api';
 export default function PlacementDeployments({ placementUser, onSectionChange }) {
   const [candidates, setCandidates] = useState([]);
   const [employers, setEmployers] = useState([]);
+  const [metrics, setMetrics] = useState({
+    total_ready_for_placement: 0,
+    total_deployed: 0,
+    total_candidates: 0,
+    open_vacancies: 0,
+    corporate_partners_count: 0,
+    avg_monthly_wage: 0,
+    ev_fleet_percentage: 100
+  });
+
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL'); // 'ALL' | 'READY' | 'DEPLOYED'
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL'); // 'ALL' | 'READY' | 'DEPLOYED' | 'TRAINING'
   const [selectedTierFilter, setSelectedTierFilter] = useState('ALL'); // 'ALL' | 'NF1' | 'NF2' | 'NF3'
   const [selectedCityFilter, setSelectedCityFilter] = useState('ALL');
-  
-  // Selection for Batch Actions
+
+  // Selection for Batch Placement
   const [selectedCandidateIds, setSelectedCandidateIds] = useState([]);
-  
+
   // Modals & Drawers
   const [selectedCandidateForDrawer, setSelectedCandidateForDrawer] = useState(null);
   const [deployModalCandidate, setDeployModalCandidate] = useState(null);
   const [showBatchDeployModal, setShowBatchDeployModal] = useState(false);
-  
-  // Deployment Form State
+
+  // Form State
   const [selectedEmployerId, setSelectedEmployerId] = useState('');
   const [selectedRoleId, setSelectedRoleId] = useState('');
   const [selectedHub, setSelectedHub] = useState('');
   const [joiningDate, setJoiningDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
-  const [offerNotes, setOfferNotes] = useState('Offer letter dispatched with 100% EV vehicle allocation and insurance cover.');
-  const [toastMessage, setToastMessage] = useState('');
+  const [offerNotes, setOfferNotes] = useState('Commercial EV allocation with battery swap access, insurance & statutory PF/ESIC.');
+  const [toastMessage, setToastMessage] = useState(null);
 
-  // Initial Candidate Dataset with verified assessment scores & readiness
-  const initialCandidates = [
-    {
-      id: 'cand-101',
-      candidate_code: 'ET-2026-001',
-      full_name: 'Priya Sharma',
-      gender: 'Female',
-      age: 24,
-      city: 'Bengaluru',
-      mobile_number: '+91 98765 11111',
-      training_center: 'Koramangala EV Skills Hub',
-      batch_code: 'BATCH-EV-04',
-      assessment_score: 94,
-      nf_category: 'NF1',
-      dl_status: 'Permanent 2W DL (Verified)',
-      kyc_status: 'VERIFIED',
-      riding_safety_score: 96,
-      navigation_score: 92,
-      customer_service_score: 95,
-      deployment_status: 'DEPLOYMENT_READY', // 'DEPLOYMENT_READY' | 'DEPLOYED'
-      deployed_employer: null,
-      deployed_role: null,
-      deployed_salary: null,
-      deployed_at: null,
-      photo_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80'
-    },
-    {
-      id: 'cand-102',
-      candidate_code: 'ET-2026-002',
-      full_name: 'Anjali Verma',
-      gender: 'Female',
-      age: 26,
-      city: 'Bengaluru',
-      mobile_number: '+91 98765 11112',
-      training_center: 'Indiranagar Training Facility',
-      batch_code: 'BATCH-EV-04',
-      assessment_score: 89,
-      nf_category: 'NF1',
-      dl_status: 'Permanent 2W & 4W LMV',
-      kyc_status: 'VERIFIED',
-      riding_safety_score: 90,
-      navigation_score: 88,
-      customer_service_score: 90,
-      deployment_status: 'DEPLOYED',
-      deployed_employer: 'Zomato Green Fleet',
-      deployed_role: 'EV Last-Mile Delivery Pilot',
-      deployed_salary: 21500,
-      deployed_at: '2026-02-10',
-      photo_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80'
-    },
-    {
-      id: 'cand-103',
-      candidate_code: 'ET-2026-003',
-      full_name: 'Kavita Rajesh Nair',
-      gender: 'Female',
-      age: 23,
-      city: 'Bengaluru',
-      mobile_number: '+91 98765 11113',
-      training_center: 'HSR Sector 2 Hub',
-      batch_code: 'BATCH-EV-05',
-      assessment_score: 86,
-      nf_category: 'NF1',
-      dl_status: 'Permanent 2W DL (Verified)',
-      kyc_status: 'VERIFIED',
-      riding_safety_score: 88,
-      navigation_score: 85,
-      customer_service_score: 87,
-      deployment_status: 'DEPLOYMENT_READY',
-      deployed_employer: null,
-      deployed_role: null,
-      deployed_salary: null,
-      deployed_at: null,
-      photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
-    },
-    {
-      id: 'cand-104',
-      candidate_code: 'ET-2026-004',
-      full_name: 'Deepika S. Murthy',
-      gender: 'Female',
-      age: 28,
-      city: 'Bengaluru',
-      mobile_number: '+91 98765 11114',
-      training_center: 'Whitefield Skills Academy',
-      batch_code: 'BATCH-EV-05',
-      assessment_score: 79,
-      nf_category: 'NF2',
-      dl_status: 'Learner DL (Permanent in process)',
-      kyc_status: 'VERIFIED',
-      riding_safety_score: 80,
-      navigation_score: 78,
-      customer_service_score: 82,
-      deployment_status: 'DEPLOYED',
-      deployed_employer: 'BigBasket Electric (BB Now)',
-      deployed_role: 'Express Dark Store EV Pilot',
-      deployed_salary: 19800,
-      deployed_at: '2026-02-18',
-      photo_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80'
-    },
-    {
-      id: 'cand-105',
-      candidate_code: 'ET-2026-005',
-      full_name: 'Sunita Devi Yadav',
-      gender: 'Female',
-      age: 30,
-      city: 'Bengaluru',
-      mobile_number: '+91 98765 11115',
-      training_center: 'Koramangala EV Skills Hub',
-      batch_code: 'BATCH-EV-06',
-      assessment_score: 91,
-      nf_category: 'NF1',
-      dl_status: 'Permanent 4W Commercial DL',
-      kyc_status: 'VERIFIED',
-      riding_safety_score: 92,
-      navigation_score: 90,
-      customer_service_score: 94,
-      deployment_status: 'DEPLOYMENT_READY',
-      deployed_employer: null,
-      deployed_role: null,
-      deployed_salary: null,
-      deployed_at: null,
-      photo_url: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=200&auto=format&fit=crop&q=80'
-    },
-    {
-      id: 'cand-106',
-      candidate_code: 'ET-2026-006',
-      full_name: 'Meenakshi Sundaram',
-      gender: 'Female',
-      age: 25,
-      city: 'Bengaluru',
-      mobile_number: '+91 98765 11116',
-      training_center: 'HSR Sector 2 Hub',
-      batch_code: 'BATCH-EV-06',
-      assessment_score: 74,
-      nf_category: 'NF2',
-      dl_status: 'Permanent 2W DL (Verified)',
-      kyc_status: 'VERIFIED',
-      riding_safety_score: 76,
-      navigation_score: 75,
-      customer_service_score: 72,
-      deployment_status: 'DEPLOYED',
-      deployed_employer: 'Blinkit Smart Logistics',
-      deployed_role: 'Hub Dispatch & Delivery Associate',
-      deployed_salary: 18500,
-      deployed_at: '2026-02-22',
-      photo_url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&auto=format&fit=crop&q=80'
-    },
-    {
-      id: 'cand-107',
-      candidate_code: 'ET-2026-007',
-      full_name: 'Pooja Laxman Rao',
-      gender: 'Female',
-      age: 27,
-      city: 'Bengaluru',
-      mobile_number: '+91 98765 11117',
-      training_center: 'Indiranagar Training Facility',
-      batch_code: 'BATCH-EV-06',
-      assessment_score: 95,
-      nf_category: 'NF1',
-      dl_status: 'Permanent 4W/LMV Commercial License',
-      kyc_status: 'VERIFIED',
-      riding_safety_score: 97,
-      navigation_score: 94,
-      customer_service_score: 96,
-      deployment_status: 'DEPLOYED',
-      deployed_employer: 'Uber Green Mobility',
-      deployed_role: 'Women EV Ride Fleet Captain',
-      deployed_salary: 24000,
-      deployed_at: '2026-02-25',
-      photo_url: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=200&auto=format&fit=crop&q=80'
-    }
-  ];
-
-  // Fallback employers dataset for job placement dropdowns
-  const fallbackEmployers = [
-    {
-      id: 'emp-01',
-      employer_name: 'Zomato Green Fleet',
-      company_code: 'EMP-ZOM-01',
-      primary_city: 'Bengaluru',
-      allocated_ev_model: 'Ather 450X Commercial Spec',
-      active_roles: [
-        { id: 'role-zom-01', job_title: 'EV Last-Mile Delivery Pilot', vacancies: 35, placed_count: 20, monthly_gross_salary: 21500, shift_timings: '08:00 AM - 04:30 PM (Day Shift)' },
-        { id: 'role-zom-02', job_title: 'Senior Hub EV Fleet Captain', vacancies: 10, placed_count: 6, monthly_gross_salary: 24500, shift_timings: '12:00 PM - 08:30 PM (Evening Peak)' }
-      ],
-      hubs: ['Koramangala 4th Block Hub', 'Indiranagar 100ft Hub']
-    },
-    {
-      id: 'emp-02',
-      employer_name: 'BigBasket Electric (BB Now)',
-      company_code: 'EMP-BB-02',
-      primary_city: 'Bengaluru',
-      allocated_ev_model: 'Hero Electric Nyx Heavy Cargo',
-      active_roles: [
-        { id: 'role-bb-01', job_title: 'Express Dark Store EV Pilot', vacancies: 40, placed_count: 28, monthly_gross_salary: 19800, shift_timings: '07:00 AM - 03:30 PM (Morning Express)' }
-      ],
-      hubs: ['BTM 2nd Stage Dark Store', 'Whitefield EPIP Hub']
-    },
-    {
-      id: 'emp-03',
-      employer_name: 'Blinkit Smart Logistics',
-      company_code: 'EMP-BLK-03',
-      primary_city: 'Bengaluru',
-      allocated_ev_model: 'TVS iQube Commercial Cargo',
-      active_roles: [
-        { id: 'role-blk-01', job_title: 'Hub Dispatch & Delivery Associate', vacancies: 25, placed_count: 15, monthly_gross_salary: 18500, shift_timings: '09:00 AM - 05:30 PM (Regular Day)' }
-      ],
-      hubs: ['HSR Layout Sector 1 Hub']
-    },
-    {
-      id: 'emp-04',
-      employer_name: 'Uber Green Mobility',
-      company_code: 'EMP-UBR-04',
-      primary_city: 'Bengaluru',
-      allocated_ev_model: 'BluSmart / Tata Tigor EV',
-      active_roles: [
-        { id: 'role-ubr-01', job_title: 'Women EV Ride Fleet Captain', vacancies: 20, placed_count: 10, monthly_gross_salary: 24000, shift_timings: 'Flexible (Airport Corridor)' }
-      ],
-      hubs: ['KIAL Clean Airport Hub']
-    }
-  ];
-
+  // Fetch real database records from backend API
   const loadData = async () => {
     try {
       setLoading(true);
+      const res = await fetch(`${API_BASE}/deployments/dashboard`);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
-      // Concurrent fetch for employers, candidates, and deployments
-      const [empRes, candRes, depRes] = await Promise.all([
-        fetch(`${API_BASE}/employers`),
-        fetch(`${API_BASE}/candidates`),
-        fetch(`${API_BASE}/deployments`).catch(() => null)
-      ]);
-
-      // 1. Employers
-      if (empRes && empRes.ok) {
-        const empData = await empRes.json();
-        const emps = empData.data || empData.employers || [];
-        if (emps.length > 0) {
-          setEmployers(emps);
-        } else {
-          setEmployers(fallbackEmployers);
+      const data = await res.json();
+      if (data.success) {
+        setCandidates(data.candidates || []);
+        setEmployers(data.employers || []);
+        if (data.metrics) {
+          setMetrics(data.metrics);
         }
-      } else {
-        setEmployers(fallbackEmployers);
-      }
-
-      // 2. Deployments
-      let liveDeployments = [];
-      if (depRes && depRes.ok) {
-        try {
-          const depData = await depRes.json();
-          liveDeployments = depData.data || [];
-        } catch {}
-      }
-
-      // 3. Candidates
-      if (candRes && candRes.ok) {
-        const candData = await candRes.json();
-        const rawCands = candData.data || (Array.isArray(candData) ? candData : []);
-        if (rawCands.length > 0) {
-          const merged = rawCands.map((c, idx) => {
-            const score = typeof c.readiness_score === 'number' ? c.readiness_score : (80 + (idx % 4) * 4);
-            const isCertified = score >= 75;
-            const matchingDep = liveDeployments.find(d => d.candidate_id === c.id || d.candidate_code === c.candidate_code);
-            const isDeployed = c.deployment_status === 'DEPLOYED' || !!matchingDep;
-
-            return {
-              ...initialCandidates[idx % initialCandidates.length],
-              ...c,
-              id: c.id,
-              candidate_code: c.candidate_code || `ET-2026-00${idx + 1}`,
-              full_name: c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || initialCandidates[idx % initialCandidates.length].full_name,
-              assessment_score: score,
-              deployment_status: isDeployed ? 'DEPLOYED' : (isCertified ? 'DEPLOYMENT_READY' : 'IN_TRAINING'),
-              deployed_employer: isDeployed ? (matchingDep?.employer || c.deployed_employer || 'Even Cargo Fleet Services') : null,
-              deployed_role: isDeployed ? (matchingDep?.role || 'EV Delivery Pilot') : null,
-              deployed_salary: isDeployed ? (matchingDep?.earnings ? parseInt(matchingDep.earnings.replace(/[^\d]/g, '')) : 21500) : null,
-              deployed_at: isDeployed ? (matchingDep?.joining_date || '2026-10-15') : null
-            };
-          });
-          setCandidates(merged);
-        } else {
-          setCandidates(initialCandidates);
-        }
-      } else {
-        setCandidates(initialCandidates);
       }
     } catch (err) {
-      console.warn('Backend API fallback for deployments:', err);
-      setCandidates(initialCandidates);
-      setEmployers(fallbackEmployers);
+      console.error('Failed to load candidate deployment data:', err);
+      setToastMessage({ type: 'error', text: 'Unable to connect to live deployment engine. Please check backend server.' });
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -370,24 +106,26 @@ export default function PlacementDeployments({ placementUser, onSectionChange })
   // Helper for Initials
   const getInitials = (name) => {
     if (!name) return 'CD';
-    const parts = name.split(' ');
+    const parts = name.trim().split(' ');
     if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     return name.substring(0, 2).toUpperCase();
   };
 
   // Filter candidates
   const filteredCandidates = candidates.filter(c => {
-    const matchSearch =
-      c.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.candidate_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.batch_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.deployed_employer?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const q = searchQuery.toLowerCase().trim();
+    const matchSearch = !q ||
+      c.full_name?.toLowerCase().includes(q) ||
+      c.candidate_code?.toLowerCase().includes(q) ||
+      c.city?.toLowerCase().includes(q) ||
+      c.batch_code?.toLowerCase().includes(q) ||
+      c.deployed_employer?.toLowerCase().includes(q);
+
     const matchStatus =
       selectedStatusFilter === 'ALL' ||
       (selectedStatusFilter === 'READY' && c.deployment_status === 'DEPLOYMENT_READY') ||
-      (selectedStatusFilter === 'DEPLOYED' && c.deployment_status === 'DEPLOYED');
+      (selectedStatusFilter === 'DEPLOYED' && c.deployment_status === 'DEPLOYED') ||
+      (selectedStatusFilter === 'TRAINING' && c.deployment_status === 'IN_TRAINING');
 
     const matchTier = selectedTierFilter === 'ALL' || c.nf_category === selectedTierFilter;
     const matchCity = selectedCityFilter === 'ALL' || c.city === selectedCityFilter;
@@ -395,28 +133,24 @@ export default function PlacementDeployments({ placementUser, onSectionChange })
     return matchSearch && matchStatus && matchTier && matchCity;
   });
 
-  // Calculate high-level KPIs
-  const totalReadyForPlacement = candidates.filter(c => c.deployment_status === 'DEPLOYMENT_READY').length;
-  const totalDeployed = candidates.filter(c => c.deployment_status === 'DEPLOYED').length;
-  const allOpenVacancies = employers.reduce((sum, emp) => {
-    return sum + (emp.active_roles || []).reduce((rSum, r) => rSum + (r.vacancies - r.placed_count), 0);
-  }, 0);
+  const uniqueCities = Array.from(new Set(candidates.map(c => c.city).filter(Boolean)));
 
   // Open Deploy Modal for single candidate
-  const handleOpenDeployModal = (candidate) => {
+  const handleOpenDeployModal = (candidate, e) => {
+    if (e) e.stopPropagation();
     setDeployModalCandidate(candidate);
     if (employers.length > 0) {
-      setSelectedEmployerId(employers[0].id);
-      if (employers[0].active_roles && employers[0].active_roles.length > 0) {
-        setSelectedRoleId(employers[0].active_roles[0].id);
+      const defaultEmp = employers[0];
+      setSelectedEmployerId(defaultEmp.id);
+      if (defaultEmp.active_roles && defaultEmp.active_roles.length > 0) {
+        setSelectedRoleId(defaultEmp.active_roles[0].id);
       }
-      if (employers[0].hubs && employers[0].hubs.length > 0) {
-        setSelectedHub(typeof employers[0].hubs[0] === 'string' ? employers[0].hubs[0] : employers[0].hubs[0].name);
+      if (defaultEmp.hubs && defaultEmp.hubs.length > 0) {
+        setSelectedHub(typeof defaultEmp.hubs[0] === 'string' ? defaultEmp.hubs[0] : defaultEmp.hubs[0].name);
       }
     }
   };
 
-  // When selected employer changes in modal, update default role and hub
   const handleEmployerSelectChange = (empId) => {
     setSelectedEmployerId(empId);
     const emp = employers.find(e => e.id === empId);
@@ -431,88 +165,113 @@ export default function PlacementDeployments({ placementUser, onSectionChange })
   };
 
   // Submit Deployment for Single Candidate
-  const handleConfirmDeployment = (e) => {
+  const handleConfirmDeployment = async (e) => {
     e.preventDefault();
     if (!deployModalCandidate) return;
 
-    const emp = employers.find(e => e.id === selectedEmployerId) || employers[0];
-    const role = (emp.active_roles || []).find(r => r.id === selectedRoleId) || (emp.active_roles && emp.active_roles[0]) || { job_title: 'EV Delivery Pilot', monthly_gross_salary: 21500 };
+    try {
+      setSubmitting(true);
+      const emp = employers.find(e => e.id === selectedEmployerId) || employers[0];
+      const role = (emp?.active_roles || []).find(r => r.id === selectedRoleId) || (emp?.active_roles && emp.active_roles[0]) || { job_title: 'EV Delivery Pilot', monthly_gross_salary: 21500 };
 
-    setCandidates(prev =>
-      prev.map(c => {
-        if (c.id === deployModalCandidate.id) {
-          return {
-            ...c,
-            deployment_status: 'DEPLOYED',
-            deployed_employer: emp.employer_name,
-            deployed_role: role.job_title,
-            deployed_salary: role.monthly_gross_salary,
-            deployed_hub: selectedHub,
-            deployed_at: joiningDate
-          };
-        }
-        return c;
-      })
-    );
+      const payload = {
+        candidate_id: deployModalCandidate.id,
+        candidate_code: deployModalCandidate.candidate_code,
+        employer_id: emp?.id,
+        employer_name: emp?.employer_name,
+        job_opportunity_id: role?.id,
+        job_role: role?.job_title,
+        monthly_earnings: role?.monthly_gross_salary,
+        joining_date: joiningDate,
+        work_location_id: selectedHub,
+        notes: offerNotes
+      };
 
-    if (selectedCandidateForDrawer && selectedCandidateForDrawer.id === deployModalCandidate.id) {
-      setSelectedCandidateForDrawer(prev => ({
-        ...prev,
-        deployment_status: 'DEPLOYED',
-        deployed_employer: emp.employer_name,
-        deployed_role: role.job_title,
-        deployed_salary: role.monthly_gross_salary,
-        deployed_hub: selectedHub,
-        deployed_at: joiningDate
-      }));
+      const res = await fetch(`${API_BASE}/deployments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const resData = await res.json();
+      if (!res.ok || !resData.success) {
+        throw new Error(resData.message || 'Failed to confirm deployment.');
+      }
+
+      setToastMessage({
+        type: 'success',
+        text: `🎉 ${deployModalCandidate.full_name} deployed to ${emp.employer_name} as ${role.job_title} at ₹${Number(role.monthly_gross_salary).toLocaleString('en-IN')}/mo!`
+      });
+
+      setDeployModalCandidate(null);
+      await loadData();
+    } catch (err) {
+      console.error('Error issuing deployment:', err);
+      setToastMessage({ type: 'error', text: err.message || 'Failed to deploy candidate.' });
+    } finally {
+      setSubmitting(false);
     }
-
-    setToastMessage(`🎉 Congratulations! ${deployModalCandidate.full_name} has been successfully deployed to ${emp.employer_name} as ${role.job_title} at ₹${role.monthly_gross_salary.toLocaleString('en-IN')}/mo!`);
-    setTimeout(() => setToastMessage(''), 6000);
-    setDeployModalCandidate(null);
   };
 
   // Submit Batch Deployment
-  const handleBatchDeploySubmit = (e) => {
+  const handleBatchDeploySubmit = async (e) => {
     e.preventDefault();
     if (selectedCandidateIds.length === 0) return;
 
-    const emp = employers.find(e => e.id === selectedEmployerId) || employers[0];
-    const role = (emp.active_roles || []).find(r => r.id === selectedRoleId) || (emp.active_roles && emp.active_roles[0]) || { job_title: 'EV Delivery Pilot', monthly_gross_salary: 21500 };
+    try {
+      setSubmitting(true);
+      const emp = employers.find(e => e.id === selectedEmployerId) || employers[0];
+      const role = (emp?.active_roles || []).find(r => r.id === selectedRoleId) || (emp?.active_roles && emp.active_roles[0]) || { job_title: 'EV Delivery Pilot', monthly_gross_salary: 21500 };
 
-    setCandidates(prev =>
-      prev.map(c => {
-        if (selectedCandidateIds.includes(c.id)) {
-          return {
-            ...c,
-            deployment_status: 'DEPLOYED',
-            deployed_employer: emp.employer_name,
-            deployed_role: role.job_title,
-            deployed_salary: role.monthly_gross_salary,
-            deployed_hub: selectedHub,
-            deployed_at: joiningDate
-          };
-        }
-        return c;
-      })
-    );
+      const payload = {
+        candidate_ids: selectedCandidateIds,
+        employer_id: emp?.id,
+        job_role_id: role?.id,
+        job_role_title: role?.job_title,
+        monthly_earnings: role?.monthly_gross_salary,
+        joining_date: joiningDate,
+        work_hub: selectedHub,
+        notes: offerNotes
+      };
 
-    setToastMessage(`⚡ Batch Deployment Successful! ${selectedCandidateIds.length} assessed candidates deployed to ${emp.employer_name} for ${role.job_title}!`);
-    setTimeout(() => setToastMessage(''), 6000);
-    setSelectedCandidateIds([]);
-    setShowBatchDeployModal(false);
+      const res = await fetch(`${API_BASE}/deployments/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const resData = await res.json();
+      if (!res.ok || !resData.success) {
+        throw new Error(resData.message || 'Failed to execute batch deployment.');
+      }
+
+      setToastMessage({
+        type: 'success',
+        text: `⚡ Batch Placement: ${selectedCandidateIds.length} candidates deployed to ${emp.employer_name}!`
+      });
+
+      setSelectedCandidateIds([]);
+      setShowBatchDeployModal(false);
+      await loadData();
+    } catch (err) {
+      console.error('Error executing batch deployment:', err);
+      setToastMessage({ type: 'error', text: err.message || 'Failed to execute batch deployment.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSelectAllReady = () => {
     const readyIds = filteredCandidates.filter(c => c.deployment_status === 'DEPLOYMENT_READY').map(c => c.id);
-    if (selectedCandidateIds.length === readyIds.length) {
+    if (selectedCandidateIds.length === readyIds.length && readyIds.length > 0) {
       setSelectedCandidateIds([]);
     } else {
       setSelectedCandidateIds(readyIds);
     }
   };
 
-  const handleToggleCandidate = (id) => {
+  const handleToggleCandidate = (id, e) => {
+    if (e) e.stopPropagation();
     setSelectedCandidateIds(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
@@ -522,205 +281,207 @@ export default function PlacementDeployments({ placementUser, onSectionChange })
   const currentSelectedRole = (currentSelectedEmp.active_roles || []).find(r => r.id === selectedRoleId) || (currentSelectedEmp.active_roles && currentSelectedEmp.active_roles[0]) || {};
 
   return (
-    <div className="space-y-6 pb-20 font-sans max-w-[1600px] mx-auto text-slate-800">
+    <div className="space-y-4 pb-12 font-sans max-w-full text-slate-800">
       
-      {/* ─── Header & Action Toolbar (100% White Light Theme) ──────────────── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
-        <div className="space-y-1.5 relative z-10 flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3 py-1 rounded-full text-[11px] font-bold tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5 shadow-2xs">
-              <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
-              CANDIDATE PLACEMENT & DEPLOYMENT
+      {/* ─── Compact Top Header Banner ────────────────────────────────────── */}
+      <div className="bg-white px-5 py-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200/70 inline-flex items-center gap-1">
+              <UserCheck className="w-3 h-3 text-indigo-600" />
+              Candidate Deployment Engine
             </span>
-            <span className="text-slate-400 text-xs font-medium">• Commercial Fleet Hiring & Job Matching</span>
+            <span className="text-slate-400 text-[11px] font-medium hidden sm:inline">• Commercial Fleet Hiring</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
-            Assessed Candidate Deployment Engine
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 font-kaiseiTokumin">
+            Assessed Candidate Deployment
           </h1>
-          <p className="text-slate-500 text-xs sm:text-sm max-w-2xl leading-relaxed">
-            Review certified & assessed candidates, evaluate training readiness metrics, and deploy candidates directly into live vacancies across employer partners.
-          </p>
         </div>
 
-        {/* Action Buttons - Fixed single-row */}
-        <div className="flex items-center gap-2.5 relative z-10 shrink-0 flex-nowrap overflow-x-auto pb-1 lg:pb-0">
+        {/* Compact Action Buttons */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleRefresh}
-            className="px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition flex items-center gap-2 whitespace-nowrap shrink-0 shadow-2xs"
-            title="Refresh Candidate Data"
+            disabled={isRefreshing}
+            className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 transition flex items-center gap-1.5 shadow-2xs disabled:opacity-50 cursor-pointer"
+            title="Refresh from PostgreSQL"
           >
             <RotateCw className={`w-3.5 h-3.5 text-indigo-600 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>Sync Candidates</span>
+            <span>Sync</span>
           </button>
 
           {selectedCandidateIds.length > 0 && (
             <button
-              onClick={() => setShowBatchDeployModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white shadow-sm shadow-indigo-600/20 transition flex items-center gap-2 whitespace-nowrap shrink-0 animate-scaleUp"
+              onClick={() => {
+                if (employers.length > 0) {
+                  setSelectedEmployerId(employers[0].id);
+                  if (employers[0].active_roles && employers[0].active_roles.length > 0) {
+                    setSelectedRoleId(employers[0].active_roles[0].id);
+                  }
+                  if (employers[0].hubs && employers[0].hubs.length > 0) {
+                    setSelectedHub(typeof employers[0].hubs[0] === 'string' ? employers[0].hubs[0] : employers[0].hubs[0].name);
+                  }
+                }
+                setShowBatchDeployModal(true);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white shadow-2xs transition flex items-center gap-1.5 cursor-pointer animate-scaleUp"
             >
-              <Zap className="w-3.5 h-3.5" />
-              <span>Deploy {selectedCandidateIds.length} Selected Candidates</span>
+              <Zap className="w-3.5 h-3.5 text-amber-300" />
+              <span>Deploy {selectedCandidateIds.length} Selected</span>
             </button>
           )}
 
           <button
             onClick={() => onSectionChange && onSectionChange('employers')}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-sm shadow-emerald-600/20 transition flex items-center gap-2 whitespace-nowrap shrink-0"
+            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
           >
-            <Building2 className="w-4 h-4" />
-            <span>Manage Employer Openings</span>
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Employer Openings</span>
           </button>
         </div>
       </div>
 
-      {/* Success Notification Toast */}
+      {/* Toast Feedback */}
       {toastMessage && (
-        <div className="p-4.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-sm flex items-center justify-between text-xs font-bold animate-fadeIn">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span>{toastMessage}</span>
+        <div className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between shadow-2xs ${
+          toastMessage.type === 'error'
+            ? 'bg-rose-50 border-rose-200 text-rose-800'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+        }`}>
+          <div className="flex items-center gap-2">
+            {toastMessage.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            )}
+            <span>{toastMessage.text}</span>
           </div>
-          <button onClick={() => setToastMessage('')} className="text-emerald-700 hover:text-emerald-900 p-1">
-            <X className="w-4 h-4" />
+          <button onClick={() => setToastMessage(null)} className="p-1 hover:opacity-75 cursor-pointer">
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* ─── 1. KPI Metric Summary Cards (Clean Elevated White) ────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+      {/* ─── Compact KPI Cards (1 Row, No Overflow) ─────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         
-        {/* Assessed & Ready for Placement */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-indigo-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">READY TO DEPLOY</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
-            </div>
-          </div>
+        {/* Ready to Deploy */}
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-2xl font-black text-indigo-900">{totalReadyForPlacement} Candidates</div>
-            <div className="text-[11px] font-semibold text-indigo-600 mt-0.5">Assessed & DL Verified</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ready to Deploy</div>
+            <div className="text-lg font-black text-indigo-950 mt-0.5">{metrics.total_ready_for_placement} Candidates</div>
+            <div className="text-[10px] font-medium text-indigo-600">Assessed & DL Verified</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4" />
           </div>
         </div>
 
-        {/* Live Vacancies */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-emerald-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">OPEN VACANCIES</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
-              <Briefcase className="w-4 h-4" />
-            </div>
-          </div>
+        {/* Live Openings */}
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-2xl font-black text-emerald-900">{allOpenVacancies || 115} Openings</div>
-            <div className="text-[11px] font-semibold text-emerald-600 mt-0.5">Across 4 Corporate Partners</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Open Vacancies</div>
+            <div className="text-lg font-black text-emerald-950 mt-0.5">{metrics.open_vacancies} Openings</div>
+            <div className="text-[10px] font-medium text-emerald-600">{metrics.corporate_partners_count} Partners</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+            <Briefcase className="w-4 h-4" />
           </div>
         </div>
 
-        {/* Total Placed / Deployed */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-purple-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">DEPLOYED PILOTS</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
+        {/* Deployed */}
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-2xl font-black text-purple-800">{totalDeployed} Placed</div>
-            <div className="text-[11px] font-semibold text-purple-600 mt-0.5">Active in Fleet Operations</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Deployed Pilots</div>
+            <div className="text-lg font-black text-purple-900 mt-0.5">{metrics.total_deployed} Placed</div>
+            <div className="text-[10px] font-medium text-purple-600">Active Fleet Pilots</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
+            <Users className="w-4 h-4" />
           </div>
         </div>
 
-        {/* Average Guaranteed Wage */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-teal-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">AVG MONTHLY WAGE</span>
-            <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </div>
+        {/* Avg Wage */}
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-2xl font-black text-teal-700">₹21,100 / mo</div>
-            <div className="text-[11px] font-semibold text-teal-600 mt-0.5">100% On-Time Bank Transfer</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avg Monthly Wage</div>
+            <div className="text-lg font-black text-teal-800 mt-0.5">
+              ₹{metrics.avg_monthly_wage ? metrics.avg_monthly_wage.toLocaleString('en-IN') : '21,500'}/mo
+            </div>
+            <div className="text-[10px] font-medium text-teal-600">Bank Transfer</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center shrink-0">
+            <DollarSign className="w-4 h-4" />
           </div>
         </div>
 
-        {/* 100% EV Support */}
-        <div className="p-4.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">EV FLEET ASSET</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
-              <Car className="w-4 h-4" />
-            </div>
-          </div>
+        {/* 100% EV */}
+        <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex items-center justify-between col-span-2 sm:col-span-1">
           <div>
-            <div className="text-2xl font-black text-blue-900">100% EV</div>
-            <div className="text-[11px] font-semibold text-blue-600 mt-0.5">Zero Petrol & Battery Swaps</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Fleet Asset</div>
+            <div className="text-lg font-black text-blue-900 mt-0.5">{metrics.ev_fleet_percentage}% EV</div>
+            <div className="text-[10px] font-medium text-blue-600">Zero Petrol</div>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+            <Car className="w-4 h-4" />
           </div>
         </div>
 
       </div>
 
-      {/* ─── 2. Search & Filter Bar ────────────────────────────────────────── */}
-      <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        
-        {/* Search Input */}
-        <div className="relative flex-1 min-w-[260px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+      {/* ─── Compact Search & Filters Bar ──────────────────────────────────── */}
+      <div className="p-2.5 bg-white rounded-xl border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search candidate name, ID, city, batch code, or employer..."
-            className="w-full pl-9.5 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+            placeholder="Search candidate, code, city, employer..."
+            className="w-full pl-8.5 pr-7 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
             </button>
           )}
         </div>
 
-        {/* Filter Dropdowns */}
-        <div className="flex items-center gap-2 flex-wrap">
-          
-          {/* Status Filter */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           <select
             value={selectedStatusFilter}
             onChange={e => setSelectedStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none"
           >
-            <option value="ALL">All Placement Statuses</option>
-            <option value="READY">Ready to Deploy ({totalReadyForPlacement})</option>
-            <option value="DEPLOYED">Already Deployed ({totalDeployed})</option>
+            <option value="ALL">All Statuses</option>
+            <option value="READY">Ready ({metrics.total_ready_for_placement})</option>
+            <option value="DEPLOYED">Deployed ({metrics.total_deployed})</option>
+            <option value="TRAINING">In Training</option>
           </select>
 
-          {/* Assessment Tier */}
           <select
             value={selectedTierFilter}
             onChange={e => setSelectedTierFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none"
           >
-            <option value="ALL">All Assessment Tiers</option>
-            <option value="NF1">NF1 (Score 85%+ High Readiness)</option>
-            <option value="NF2">NF2 (Score 70-84% Moderate)</option>
-            <option value="NF3">NF3 (Score 50-69% Basic)</option>
+            <option value="ALL">All Tiers</option>
+            <option value="NF1">NF1 (85%+)</option>
+            <option value="NF2">NF2 (70-84%)</option>
+            <option value="NF3">NF3 (&lt;70%)</option>
           </select>
 
-          {/* City */}
           <select
             value={selectedCityFilter}
             onChange={e => setSelectedCityFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none"
           >
-            <option value="ALL">All Hub Cities</option>
-            <option value="Bengaluru">Bengaluru</option>
-            <option value="Delhi NCR">Delhi NCR</option>
-            <option value="Hyderabad">Hyderabad</option>
-            <option value="Mumbai">Mumbai</option>
+            <option value="ALL">All Cities</option>
+            {uniqueCities.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
           </select>
 
           {(searchQuery || selectedStatusFilter !== 'ALL' || selectedTierFilter !== 'ALL' || selectedCityFilter !== 'ALL') && (
@@ -731,274 +492,446 @@ export default function PlacementDeployments({ placementUser, onSectionChange })
                 setSelectedTierFilter('ALL');
                 setSelectedCityFilter('ALL');
               }}
-              className="px-3 py-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition flex items-center gap-1.5"
+              className="px-2 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
               <span>Reset</span>
             </button>
           )}
-
         </div>
-
       </div>
 
-      {/* ─── 3. Candidate Deployment Table (Structured Row Format) ─────────── */}
-      {filteredCandidates.length === 0 ? (
-        <div className="bg-white rounded-3xl p-14 text-center border border-slate-200 space-y-3 shadow-xs">
-          <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
-            <Search className="w-6 h-6" />
+      {/* ─── Compact Table (Zero Horizontal Scroll on Desktop) ─────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+            <RotateCw className="w-4 h-4 animate-spin text-indigo-600" />
+            <span>Loading deployment records...</span>
           </div>
-          <h3 className="text-base font-bold text-slate-800">No Candidates Found</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            No candidates matched the selected search or filter criteria.
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase text-[11px] tracking-wider">
-                  <th className="py-4.5 px-5 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedCandidateIds.length > 0 && selectedCandidateIds.length === filteredCandidates.filter(c => c.deployment_status === 'DEPLOYMENT_READY').length}
-                      onChange={handleSelectAllReady}
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      title="Select all ready candidates"
-                    />
-                  </th>
-                  <th className="py-4.5 px-5">ASSESSED CANDIDATE</th>
-                  <th className="py-4.5 px-5">TRAINING BATCH & CITY</th>
-                  <th className="py-4.5 px-5">ASSESSMENT GRADE & DL</th>
-                  <th className="py-4.5 px-5">DEPLOYMENT STATUS</th>
-                  <th className="py-4.5 px-5 text-right">ACTION</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/90">
-                {filteredCandidates.map(candidate => {
-                  const isReady = candidate.deployment_status === 'DEPLOYMENT_READY';
-                  const isSelected = selectedCandidateIds.includes(candidate.id);
+        ) : filteredCandidates.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-xs">
+            No candidates match the selected filters.
+          </div>
+        ) : (
+          <table className="w-full text-left text-xs table-fixed">
+            <colgroup>
+              <col className="w-10" />
+              <col className="w-[30%]" />
+              <col className="w-[20%]" />
+              <col className="w-[25%]" />
+              <col className="w-[25%]" />
+            </colgroup>
+            <thead className="bg-slate-50 border-b border-slate-200/90 text-[10.5px] uppercase font-bold text-slate-500 tracking-wider">
+              <tr>
+                <th className="py-2.5 px-3 text-center">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedCandidateIds.length > 0 &&
+                      selectedCandidateIds.length === filteredCandidates.filter(c => c.deployment_status === 'DEPLOYMENT_READY').length
+                    }
+                    onChange={handleSelectAllReady}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    title="Select all ready"
+                  />
+                </th>
+                <th className="py-2.5 px-3">Candidate</th>
+                <th className="py-2.5 px-3">Assessment & Tier</th>
+                <th className="py-2.5 px-3">Placement Status</th>
+                <th className="py-2.5 px-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredCandidates.map(candidate => {
+                const isReady = candidate.deployment_status === 'DEPLOYMENT_READY';
+                const isDeployed = candidate.deployment_status === 'DEPLOYED';
+                const isSelected = selectedCandidateIds.includes(candidate.id);
 
-                  return (
-                    <tr
-                      key={candidate.id}
-                      onClick={() => setSelectedCandidateForDrawer(candidate)}
-                      className={`hover:bg-slate-50/70 transition-colors cursor-pointer group ${
-                        isSelected ? 'bg-indigo-50/30' : ''
-                      } ${selectedCandidateForDrawer?.id === candidate.id ? 'bg-indigo-50/50' : ''}`}
-                    >
-                      {/* Checkbox */}
-                      <td className="py-4.5 px-5 text-center align-middle" onClick={e => e.stopPropagation()}>
-                        {isReady ? (
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleToggleCandidate(candidate.id)}
-                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                          />
-                        ) : (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" />
-                        )}
-                      </td>
+                return (
+                  <tr
+                    key={candidate.id}
+                    onClick={() => setSelectedCandidateForDrawer(candidate)}
+                    className={`hover:bg-indigo-50/20 transition-colors cursor-pointer ${
+                      isSelected ? 'bg-indigo-50/40' : ''
+                    } ${selectedCandidateForDrawer?.id === candidate.id ? 'bg-indigo-50/60 font-medium' : ''}`}
+                  >
+                    {/* Checkbox */}
+                    <td className="py-2.5 px-3 text-center align-middle" onClick={e => e.stopPropagation()}>
+                      {isReady ? (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleToggleCandidate(candidate.id, e)}
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                      ) : isDeployed ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mx-auto" />
+                      ) : (
+                        <Clock className="w-3.5 h-3.5 text-amber-500 mx-auto" />
+                      )}
+                    </td>
 
-                      {/* Candidate Avatar & Info */}
-                      <td className="py-4.5 px-5 align-middle">
-                        <div className="flex items-center gap-3.5">
-                          <div className="w-10 h-10 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-2xs shrink-0 flex items-center justify-center font-black text-slate-700 text-xs">
-                            {candidate.photo_url ? (
-                              <img
-                                src={candidate.photo_url}
-                                alt=""
-                                className="w-full h-full object-cover"
-                                onError={(e) => { e.target.style.display = 'none'; }}
-                              />
-                            ) : (
-                              <span>{getInitials(candidate.full_name)}</span>
-                            )}
+                    {/* Candidate Name & Code */}
+                    <td className="py-2.5 px-3 align-middle truncate">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center font-bold text-xs ${
+                          isDeployed
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : isReady
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}>
+                          {getInitials(candidate.full_name)}
+                        </div>
+                        <div className="min-w-0 truncate">
+                          <div className="font-bold text-slate-900 text-xs truncate">
+                            {candidate.full_name}
                           </div>
-                          <div>
-                            <div className="font-bold text-slate-900 group-hover:text-indigo-700 transition flex items-center gap-2 text-sm whitespace-nowrap">
-                              <span>{candidate.full_name}</span>
-                              <span className="text-[11px] font-normal text-slate-400">
-                                ({candidate.age} yrs • {candidate.gender})
-                              </span>
-                            </div>
-                            <div className="text-[11px] font-mono text-slate-400 mt-0.5">
-                              {candidate.candidate_code} • {candidate.mobile_number}
-                            </div>
+                          <div className="text-[10px] text-slate-400 font-mono truncate">
+                            {candidate.candidate_code} • {candidate.city}
                           </div>
                         </div>
-                      </td>
+                      </div>
+                    </td>
 
-                      {/* Training & City */}
-                      <td className="py-4.5 px-5 align-middle">
-                        <div className="font-semibold text-slate-800 text-xs">
-                          {candidate.batch_code}
-                        </div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>{candidate.city}</span>
-                        </div>
-                      </td>
+                    {/* Assessment Grade */}
+                    <td className="py-2.5 px-3 align-middle truncate">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] whitespace-nowrap inline-flex items-center gap-1 border ${
+                          candidate.assessment_score >= 80
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : candidate.assessment_score >= 70
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          <Award className="w-3 h-3 shrink-0" />
+                          {candidate.assessment_score}% ({candidate.nf_category})
+                        </span>
+                      </div>
+                    </td>
 
-                      {/* Assessment Grade & DL */}
-                      <td className="py-4.5 px-5 align-middle">
-                        <div className="flex items-center gap-1.5">
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-extrabold text-[11px] whitespace-nowrap flex items-center gap-1">
-                            <Award className="w-3 h-3 text-emerald-600" />
-                            {candidate.assessment_score}% ({candidate.nf_category})
-                          </span>
-                        </div>
-                        <div className="text-[10.5px] text-slate-500 mt-1 truncate max-w-[190px]">
-                          {candidate.dl_status}
-                        </div>
-                      </td>
+                    {/* Placement Status Badge */}
+                    <td className="py-2.5 px-3 align-middle truncate">
+                      {isReady ? (
+                        <span className="px-2.5 py-0.5 rounded-md text-[10.5px] font-bold uppercase inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 border border-indigo-200 whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shrink-0" />
+                          Ready to Deploy
+                        </span>
+                      ) : isDeployed ? (
+                        <span className="px-2.5 py-0.5 rounded-md text-[10.5px] font-bold inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 truncate max-w-full" title={`Deployed: ${candidate.deployed_employer}`}>
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="truncate">Deployed: {candidate.deployed_employer}</span>
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-md text-[10.5px] font-bold inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+                          <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+                          In Training / Retest
+                        </span>
+                      )}
+                    </td>
 
-                      {/* Deployment Status */}
-                      <td className="py-4.5 px-5 align-middle">
-                        {isReady ? (
-                          <span className="px-3 py-1 rounded-full text-[10.5px] font-bold uppercase inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 whitespace-nowrap">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shrink-0" />
-                            Ready to Deploy
-                          </span>
-                        ) : (
-                          <div className="space-y-0.5">
-                            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                              <Check className="w-3 h-3 text-emerald-600 shrink-0" />
-                              Deployed: {candidate.deployed_employer}
-                            </span>
-                            <div className="text-[11px] text-slate-500 font-semibold pl-1">
-                              {candidate.deployed_role} (₹{candidate.deployed_salary?.toLocaleString('en-IN')}/mo)
-                            </div>
-                          </div>
-                        )}
-                      </td>
+                    {/* Action */}
+                    <td className="py-2.5 px-3 text-right align-middle" onClick={e => e.stopPropagation()}>
+                      {isReady ? (
+                        <button
+                          onClick={(e) => handleOpenDeployModal(candidate, e)}
+                          className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition inline-flex items-center gap-1 shadow-2xs whitespace-nowrap cursor-pointer"
+                        >
+                          <Building2 className="w-3 h-3" />
+                          <span>Place</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setSelectedCandidateForDrawer(candidate)}
+                          className="px-2.5 py-1 rounded-md bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px] transition inline-flex items-center gap-1 shadow-2xs whitespace-nowrap cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3 text-indigo-600" />
+                          <span>Details</span>
+                        </button>
+                      )}
+                    </td>
 
-                      {/* Action Button */}
-                      <td className="py-4.5 px-5 text-right align-middle" onClick={e => e.stopPropagation()}>
-                        {isReady ? (
-                          <button
-                            onClick={() => handleOpenDeployModal(candidate)}
-                            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all inline-flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 whitespace-nowrap"
-                          >
-                            <Building2 className="w-3.5 h-3.5" />
-                            <span>Place Under Opening</span>
-                            <ChevronRight className="w-3 h-3" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setSelectedCandidateForDrawer(candidate)}
-                            className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs transition-all inline-flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>View Dossier</span>
-                          </button>
-                        )}
-                      </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
 
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      {/* ─── SLIDE-OVER SIDEBAR: Complete Candidate Dossier (All Details) ──── */}
+      {selectedCandidateForDrawer && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div
+            className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs transition-opacity animate-fadeIn"
+            onClick={() => setSelectedCandidateForDrawer(null)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-8">
+            <div className="w-screen max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-slideLeft">
+              
+              {/* Drawer Header */}
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-800 text-sm shrink-0 shadow-2xs">
+                    {getInitials(selectedCandidateForDrawer.full_name)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h2 className="text-sm font-bold text-slate-900 truncate">{selectedCandidateForDrawer.full_name}</h2>
+                      <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-emerald-100 text-emerald-800">
+                        {selectedCandidateForDrawer.nf_category}
+                      </span>
+                    </div>
+                    <p className="text-slate-500 text-[11px] font-mono">
+                      {selectedCandidateForDrawer.candidate_code} • {selectedCandidateForDrawer.city}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedCandidateForDrawer(null)}
+                  className="p-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 transition shadow-2xs cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Drawer Content with All Detailed Information */}
+              <div className="p-4 overflow-y-auto space-y-3.5 text-xs text-slate-800 flex-1">
+                
+                {/* 1. Candidate Personal Details */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px] tracking-wider block">PROFILE & DEMOGRAPHICS</span>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-slate-500 block">Age & Gender:</span>
+                      <strong className="text-slate-800">{selectedCandidateForDrawer.age} yrs • {selectedCandidateForDrawer.gender}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Mobile:</span>
+                      <strong className="text-slate-800 font-mono">{selectedCandidateForDrawer.mobile_number}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Batch Cohort:</span>
+                      <strong className="text-slate-800">{selectedCandidateForDrawer.batch_code}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block">Training Center:</span>
+                      <strong className="text-slate-800 truncate block">{selectedCandidateForDrawer.training_center}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Assessment Scores Matrix */}
+                <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-indigo-900 font-bold uppercase text-[9.5px] tracking-wider">ASSESSMENT PERFORMANCE</span>
+                    <span className="text-xs font-black text-indigo-700">Total: {selectedCandidateForDrawer.assessment_score}%</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 text-center">
+                    <div className="p-1.5 bg-white rounded-lg border border-indigo-100 shadow-2xs">
+                      <span className="text-[9px] text-slate-400 font-semibold block">RIDING SAFETY</span>
+                      <strong className="text-indigo-700 text-xs font-black">{selectedCandidateForDrawer.riding_safety_score}%</strong>
+                    </div>
+                    <div className="p-1.5 bg-white rounded-lg border border-indigo-100 shadow-2xs">
+                      <span className="text-[9px] text-slate-400 font-semibold block">NAVIGATION</span>
+                      <strong className="text-indigo-700 text-xs font-black">{selectedCandidateForDrawer.navigation_score}%</strong>
+                    </div>
+                    <div className="p-1.5 bg-white rounded-lg border border-indigo-100 shadow-2xs">
+                      <span className="text-[9px] text-slate-400 font-semibold block">CUSTOMER SVC</span>
+                      <strong className="text-indigo-700 text-xs font-black">{selectedCandidateForDrawer.customer_service_score}%</strong>
+                    </div>
+                  </div>
+                  <p className="text-[10.5px] text-indigo-950 font-medium">
+                    Feedback: {selectedCandidateForDrawer.assessment_feedback}
+                  </p>
+                </div>
+
+                {/* 3. KYC & Driving License */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px] tracking-wider block">DRIVING LICENSE & VERIFICATION</span>
+                  <div className="space-y-1 text-[11px] text-slate-700">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">License Status:</span>
+                      <strong className="text-slate-900">{selectedCandidateForDrawer.dl_status}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">KYC Status:</span>
+                      <strong className="text-emerald-700">✓ Aadhaar & Bank Verified</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Placement / Deployment Record */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                  <span className="text-slate-400 font-bold uppercase text-[9.5px] tracking-wider block">EMPLOYMENT STATUS & FLEET ALLOCATION</span>
+                  {selectedCandidateForDrawer.deployment_status === 'DEPLOYED' ? (
+                    <div className="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 text-emerald-950 space-y-1">
+                      <div className="flex justify-between items-center">
+                        <strong className="text-xs font-bold text-emerald-800">{selectedCandidateForDrawer.deployed_employer}</strong>
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-900 text-[9px] font-bold">ACTIVE</span>
+                      </div>
+                      <p className="text-[11px] font-medium">{selectedCandidateForDrawer.deployed_role}</p>
+                      <div className="pt-1 flex justify-between font-bold text-[10.5px] border-t border-emerald-200/60 mt-1">
+                        <span>Wage: ₹{selectedCandidateForDrawer.deployed_salary ? Number(selectedCandidateForDrawer.deployed_salary).toLocaleString('en-IN') : '21,500'}/mo</span>
+                        <span>Joined: {selectedCandidateForDrawer.deployed_at}</span>
+                      </div>
+                    </div>
+                  ) : selectedCandidateForDrawer.deployment_status === 'DEPLOYMENT_READY' ? (
+                    <div className="p-2.5 bg-indigo-50 rounded-lg border border-indigo-200 text-indigo-900 flex justify-between items-center">
+                      <div>
+                        <strong className="block text-xs font-bold">Ready for Corporate Placement</strong>
+                        <span className="text-[10px] text-indigo-700">Passed assessment. Eligible for all partner openings.</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const candidate = selectedCandidateForDrawer;
+                          setSelectedCandidateForDrawer(null);
+                          handleOpenDeployModal(candidate);
+                        }}
+                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs whitespace-nowrap cursor-pointer"
+                      >
+                        Deploy Now
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-amber-900 text-[11px]">
+                      <strong className="block text-xs font-bold mb-0.5">Retest Required</strong>
+                      Candidate scored {selectedCandidateForDrawer.assessment_score}%. Minimum 70% passing score is required for fleet deployment.
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Contact Actions */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <strong className="text-slate-900 block text-xs">{selectedCandidateForDrawer.full_name}</strong>
+                    <span className="text-slate-500 font-mono text-[11px]">{selectedCandidateForDrawer.mobile_number}</span>
+                  </div>
+                  <a
+                    href={`tel:${selectedCandidateForDrawer.mobile_number}`}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1 shadow-2xs"
+                  >
+                    <Phone className="w-3 h-3" />
+                    <span>Call</span>
+                  </a>
+                </div>
+
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="p-3.5 bg-slate-50 border-t border-slate-200">
+                {selectedCandidateForDrawer.deployment_status === 'DEPLOYMENT_READY' ? (
+                  <button
+                    onClick={() => {
+                      const candidate = selectedCandidateForDrawer;
+                      setSelectedCandidateForDrawer(null);
+                      handleOpenDeployModal(candidate);
+                    }}
+                    className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>Place Under Live Opening</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setSelectedCandidateForDrawer(null)}
+                    className="w-full py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition cursor-pointer"
+                  >
+                    Close Dossier
+                  </button>
+                )}
+              </div>
+
+            </div>
           </div>
         </div>
       )}
 
-      {/* ─── 4. MODAL: Deploy Single Candidate Under an Employer Opening ───── */}
+      {/* ─── MODAL: Deploy Candidate Under Opening ─────────────────────────── */}
       {deployModalCandidate && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 relative my-8 animate-scaleUp">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200 space-y-4 relative my-6 animate-scaleUp">
             
             <button
               onClick={() => setDeployModalCandidate(null)}
-              className="absolute right-4 top-4 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+              className="absolute right-3.5 top-3.5 p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg shrink-0">
-                <Briefcase className="w-6 h-6" />
+            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm shrink-0">
+                <Briefcase className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-black text-slate-900">Place Candidate Under Live Job Opening</h2>
-                <p className="text-xs text-slate-500">Allocate corporate employer partner, designate EV delivery pilot role, and generate guaranteed wage package.</p>
+                <h2 className="text-base font-bold text-slate-900 font-kaiseiTokumin">Place Under Job Opening</h2>
+                <p className="text-[11px] text-slate-500">Allocate employer partner, role, and compensation package.</p>
               </div>
             </div>
 
-            {/* Candidate Summary Card */}
-            <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl overflow-hidden bg-white border border-indigo-200 flex items-center justify-center font-bold text-indigo-800 text-xs shrink-0 shadow-2xs">
-                  {deployModalCandidate.photo_url ? (
-                    <img src={deployModalCandidate.photo_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span>{getInitials(deployModalCandidate.full_name)}</span>
-                  )}
+            {/* Candidate Summary */}
+            <div className="p-2.5 rounded-xl bg-indigo-50/70 border border-indigo-200 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-white border border-indigo-200 flex items-center justify-center font-bold text-indigo-800 text-xs shrink-0">
+                  {getInitials(deployModalCandidate.full_name)}
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-sm">{deployModalCandidate.full_name}</h3>
-                  <p className="text-slate-500 text-xs">
-                    {deployModalCandidate.candidate_code} • {deployModalCandidate.city}
-                  </p>
+                  <h3 className="font-bold text-slate-900">{deployModalCandidate.full_name}</h3>
+                  <p className="text-slate-500 text-[10.5px] font-mono">{deployModalCandidate.candidate_code} • {deployModalCandidate.city}</p>
                 </div>
               </div>
               <div className="text-right">
-                <span className="px-3 py-1 rounded-full bg-white text-emerald-700 border border-emerald-200 font-extrabold text-xs shadow-2xs">
+                <span className="px-2 py-0.5 rounded-md bg-white text-emerald-700 border border-emerald-200 font-bold text-[10px]">
                   Score: {deployModalCandidate.assessment_score}% ({deployModalCandidate.nf_category})
                 </span>
-                <span className="block text-[10.5px] text-slate-500 mt-1">{deployModalCandidate.dl_status}</span>
               </div>
             </div>
 
-            <form onSubmit={handleConfirmDeployment} className="space-y-4 text-xs">
-              
-              {/* Employer Partner Selection */}
+            <form onSubmit={handleConfirmDeployment} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1.5">1. Select Hiring Employer Partner *</label>
+                <label className="block font-bold text-slate-700 mb-1">Employer Partner *</label>
                 <select
                   value={selectedEmployerId}
                   onChange={e => handleEmployerSelectChange(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-semibold text-xs cursor-pointer"
                   required
                 >
                   {employers.map(e => (
                     <option key={e.id} value={e.id}>
-                      {e.employer_name} ({e.company_code} - {e.primary_city})
+                      {e.employer_name} ({e.company_code})
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Active Job Role Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1.5">2. Select Active Job Opening *</label>
+                  <label className="block font-bold text-slate-700 mb-1">Job Role Opening *</label>
                   <select
                     value={selectedRoleId}
                     onChange={e => setSelectedRoleId(e.target.value)}
-                    className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-semibold text-xs cursor-pointer"
                     required
                   >
                     {(currentSelectedEmp.active_roles || []).map(r => (
                       <option key={r.id} value={r.id}>
-                        {r.job_title} ({r.vacancies - r.placed_count} Openings - ₹{r.monthly_gross_salary?.toLocaleString('en-IN')}/mo)
+                        {r.job_title} (₹{Number(r.monthly_gross_salary).toLocaleString('en-IN')}/mo)
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1.5">3. Allocated Delivery Hub *</label>
+                  <label className="block font-bold text-slate-700 mb-1">Assigned EV Hub *</label>
                   <select
                     value={selectedHub}
                     onChange={e => setSelectedHub(e.target.value)}
-                    className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs"
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-semibold text-xs cursor-pointer"
                     required
                   >
-                    {(currentSelectedEmp.hubs || ['Central Hub', 'North City Hub']).map((hub, idx) => {
+                    {(currentSelectedEmp.hubs || ['Central Hub', 'South City Hub']).map((hub, idx) => {
                       const hubName = typeof hub === 'string' ? hub : hub.name;
                       return (
                         <option key={idx} value={hubName}>
@@ -1010,57 +943,51 @@ export default function PlacementDeployments({ placementUser, onSectionChange })
                 </div>
               </div>
 
-              {/* Live Compensation Preview Box */}
-              <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-emerald-900 font-bold uppercase text-[10.5px]">GUARANTEED COMPENSATION & EV ALLOCATION</span>
-                  <strong className="text-emerald-700 text-base font-black">
-                    ₹{currentSelectedRole.monthly_gross_salary ? currentSelectedRole.monthly_gross_salary.toLocaleString('en-IN') : '21,500'} / mo
-                  </strong>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-emerald-950">
-                  <div>Assigned Fleet: <strong>{currentSelectedEmp.allocated_ev_model || 'Ather 450X Commercial Spec'}</strong></div>
-                  <div>Shift Schedule: <strong>{currentSelectedRole.shift_timings || '08:00 AM - 04:30 PM (Day Shift)'}</strong></div>
-                </div>
+              {/* Wage Box */}
+              <div className="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200 flex justify-between items-center text-xs">
+                <span className="text-emerald-900 font-bold text-[11px]">Guaranteed Monthly Wage:</span>
+                <strong className="text-emerald-700 text-sm font-black">
+                  ₹{currentSelectedRole.monthly_gross_salary ? Number(currentSelectedRole.monthly_gross_salary).toLocaleString('en-IN') : '21,500'} / mo
+                </strong>
               </div>
 
-              {/* Joining Date & Notes */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Effective Deployment Date *</label>
+                  <label className="block font-bold text-slate-700 mb-0.5">Deployment Date *</label>
                   <input
                     type="date"
                     value={joiningDate}
                     onChange={e => setJoiningDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-semibold"
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-semibold text-xs"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Offer Letter Dispatch Status</label>
+                  <label className="block font-bold text-slate-700 mb-0.5">Notes</label>
                   <input
                     type="text"
                     value={offerNotes}
                     onChange={e => setOfferNotes(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900"
+                    className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 text-xs"
                   />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2.5">
+              <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setDeployModalCandidate(null)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition"
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition flex items-center gap-2 shadow-sm shadow-emerald-600/20"
+                  disabled={submitting}
+                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition flex items-center gap-1.5 shadow-2xs disabled:opacity-50 cursor-pointer"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>Confirm Job Offer & Deploy Candidate</span>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{submitting ? 'Deploying...' : 'Confirm & Deploy'}</span>
                 </button>
               </div>
 
@@ -1070,259 +997,91 @@ export default function PlacementDeployments({ placementUser, onSectionChange })
         </div>
       )}
 
-      {/* ─── 5. MODAL: Batch Deploy Selected Candidates ────────────────────── */}
+      {/* ─── MODAL: Batch Deploy Candidates ───────────────────────────────── */}
       {showBatchDeployModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 relative my-8 animate-scaleUp">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4 relative my-6 animate-scaleUp">
             
             <button
               onClick={() => setShowBatchDeployModal(false)}
-              className="absolute right-4 top-4 p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+              className="absolute right-3.5 top-3.5 p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-3.5 border-b border-slate-100 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-lg shrink-0">
-                <Zap className="w-6 h-6" />
+            <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0">
+                <Zap className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg font-black text-slate-900">Batch Deploy {selectedCandidateIds.length} Candidates</h2>
-                <p className="text-xs text-slate-500">Assign multiple assessed candidates to an employer partner in a single verified batch transaction.</p>
+                <h2 className="text-base font-bold text-slate-900 font-kaiseiTokumin">Batch Deploy Candidates</h2>
+                <p className="text-[11px] text-slate-500">Deploy {selectedCandidateIds.length} candidates in a single transaction.</p>
               </div>
             </div>
 
-            <form onSubmit={handleBatchDeploySubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleBatchDeploySubmit} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Target Employer Partner *</label>
+                <label className="block font-bold text-slate-700 mb-1">Target Employer *</label>
                 <select
                   value={selectedEmployerId}
                   onChange={e => handleEmployerSelectChange(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                  className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-semibold cursor-pointer"
                   required
                 >
                   {employers.map(e => (
                     <option key={e.id} value={e.id}>
-                      {e.employer_name} ({e.company_code} - {e.primary_city})
+                      {e.employer_name} ({e.company_code})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Job Designation Role *</label>
+                <label className="block font-bold text-slate-700 mb-1">Job Role *</label>
                 <select
                   value={selectedRoleId}
                   onChange={e => setSelectedRoleId(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold"
+                  className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-semibold cursor-pointer"
                   required
                 >
                   {(currentSelectedEmp.active_roles || []).map(r => (
                     <option key={r.id} value={r.id}>
-                      {r.job_title} ({r.vacancies - r.placed_count} Openings - ₹{r.monthly_gross_salary?.toLocaleString('en-IN')}/mo)
+                      {r.job_title} (₹{Number(r.monthly_gross_salary).toLocaleString('en-IN')}/mo)
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Deployment Effective Date</label>
+                <label className="block font-bold text-slate-700 mb-1">Effective Date</label>
                 <input
                   type="date"
                   value={joiningDate}
                   onChange={e => setJoiningDate(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-semibold"
+                  className="w-full p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-semibold"
                   required
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2.5">
+              <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowBatchDeployModal(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition"
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition flex items-center gap-2 shadow-sm shadow-indigo-600/20"
+                  disabled={submitting}
+                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition flex items-center gap-1.5 shadow-2xs disabled:opacity-50 cursor-pointer"
                 >
-                  <Zap className="w-4 h-4" />
-                  <span>Execute Batch Placement</span>
+                  <Zap className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{submitting ? 'Placing...' : 'Execute Placement'}</span>
                 </button>
               </div>
             </form>
 
-          </div>
-        </div>
-      )}
-
-      {/* ─── 6. SLIDE-OVER SIDEBAR: Full Candidate Dossier ────────────────── */}
-      {selectedCandidateForDrawer && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          <div
-            className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs transition-opacity animate-fadeIn"
-            onClick={() => setSelectedCandidateForDrawer(null)}
-          />
-
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-xl bg-white shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-slideLeft">
-              
-              {/* Sidebar Header */}
-              <div className="p-6 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between">
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-14 h-14 rounded-2xl bg-white border-2 border-slate-200 shadow-sm flex items-center justify-center font-black text-slate-800 text-lg overflow-hidden shrink-0">
-                    {selectedCandidateForDrawer.photo_url ? (
-                      <img src={selectedCandidateForDrawer.photo_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span>{getInitials(selectedCandidateForDrawer.full_name)}</span>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-lg font-black text-slate-900 truncate">{selectedCandidateForDrawer.full_name}</h2>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
-                        {selectedCandidateForDrawer.nf_category} Certified
-                      </span>
-                    </div>
-                    <p className="text-slate-500 text-xs mt-0.5 font-mono">
-                      {selectedCandidateForDrawer.candidate_code} • {selectedCandidateForDrawer.city}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setSelectedCandidateForDrawer(null)}
-                  className="p-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 transition shadow-2xs shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Sidebar Content */}
-              <div className="p-6 overflow-y-auto space-y-5 text-xs text-slate-800 flex-1">
-                
-                {/* 1. Assessment Scores Matrix */}
-                <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 space-y-3">
-                  <span className="text-indigo-900 font-bold uppercase text-[10.5px]">EV TRAINING & ASSESSMENT PERFORMANCE</span>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 bg-white rounded-xl border border-indigo-100 shadow-2xs">
-                      <span className="text-[10px] text-slate-400 font-bold block">RIDING SAFETY</span>
-                      <strong className="text-indigo-700 text-sm font-black">{selectedCandidateForDrawer.riding_safety_score}%</strong>
-                    </div>
-                    <div className="p-2 bg-white rounded-xl border border-indigo-100 shadow-2xs">
-                      <span className="text-[10px] text-slate-400 font-bold block">NAVIGATION</span>
-                      <strong className="text-indigo-700 text-sm font-black">{selectedCandidateForDrawer.navigation_score}%</strong>
-                    </div>
-                    <div className="p-2 bg-white rounded-xl border border-indigo-100 shadow-2xs">
-                      <span className="text-[10px] text-slate-400 font-bold block">CUSTOMER SVC</span>
-                      <strong className="text-indigo-700 text-sm font-black">{selectedCandidateForDrawer.customer_service_score}%</strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Driving License & Identity Verification */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                  <span className="text-slate-400 font-bold uppercase text-[10px]">KYC & DRIVING LICENSE VERIFICATION</span>
-                  <div className="space-y-1.5 text-slate-700">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Driving License:</span>
-                      <strong className="text-slate-900">{selectedCandidateForDrawer.dl_status}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">KYC Status:</span>
-                      <strong className="text-emerald-700 font-bold">✓ 100% Aadhaar & Bank Verified</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Training Batch:</span>
-                      <strong className="text-slate-800">{selectedCandidateForDrawer.batch_code} ({selectedCandidateForDrawer.training_center})</strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Deployment Status & Employer Offer */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                  <span className="text-slate-400 font-bold uppercase text-[10px]">DEPLOYMENT STATUS & PLACEMENT RECORD</span>
-                  {selectedCandidateForDrawer.deployment_status === 'DEPLOYED' ? (
-                    <div className="space-y-2">
-                      <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-950 space-y-1">
-                        <div className="flex justify-between items-center">
-                          <strong className="text-sm font-black text-emerald-800">{selectedCandidateForDrawer.deployed_employer}</strong>
-                          <span className="px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 text-[10px] font-bold">ACTIVE</span>
-                        </div>
-                        <p className="text-xs">{selectedCandidateForDrawer.deployed_role}</p>
-                        <div className="pt-1 flex justify-between font-bold text-xs">
-                          <span>Monthly Wage: ₹{selectedCandidateForDrawer.deployed_salary?.toLocaleString('en-IN')} / mo</span>
-                          <span>Joined: {selectedCandidateForDrawer.deployed_at}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200 text-indigo-900 flex justify-between items-center">
-                      <div>
-                        <strong className="block text-xs font-bold">Ready for Corporate Placement</strong>
-                        <span className="text-[11px] text-indigo-700">Passed training assessments. Eligible for all commercial EV roles.</span>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const candidate = selectedCandidateForDrawer;
-                          setSelectedCandidateForDrawer(null);
-                          handleOpenDeployModal(candidate);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs whitespace-nowrap"
-                      >
-                        Deploy Now
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* 4. Candidate Contact Actions */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                  <span className="text-slate-400 font-bold uppercase text-[10px]">CANDIDATE DIRECT CONTACT</span>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <strong className="text-slate-900 block text-xs">{selectedCandidateForDrawer.full_name}</strong>
-                      <span className="text-slate-500 font-mono text-[11px]">{selectedCandidateForDrawer.mobile_number}</span>
-                    </div>
-                    <a
-                      href={`tel:${selectedCandidateForDrawer.mobile_number}`}
-                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-1.5"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>Call Candidate</span>
-                    </a>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Sidebar Footer */}
-              <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-                {selectedCandidateForDrawer.deployment_status === 'DEPLOYMENT_READY' ? (
-                  <button
-                    onClick={() => {
-                      const candidate = selectedCandidateForDrawer;
-                      setSelectedCandidateForDrawer(null);
-                      handleOpenDeployModal(candidate);
-                    }}
-                    className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-sm shadow-emerald-600/20"
-                  >
-                    <Briefcase className="w-4 h-4" />
-                    <span>Place Candidate Under Job Opening</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setSelectedCandidateForDrawer(null)}
-                    className="w-full py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition"
-                  >
-                    Close Dossier
-                  </button>
-                )}
-              </div>
-
-            </div>
           </div>
         </div>
       )}

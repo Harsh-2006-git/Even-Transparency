@@ -582,7 +582,7 @@ export default function App() {
             <TrainingAssessments user={user} onSectionChange={handleSectionChange} />
           )}
 
-          {(activeSection === 'deployments' || activeSection === 'placements' || activeSection === 'offers') && (currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && (
+          {(activeSection === 'deployments' || activeSection === 'placements' || activeSection === 'offers') && (currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator' || currentUserType === 'Admin') && (
             <PlacementDeployments
               placementUser={user}
               onSectionChange={handleSectionChange}

@@ -141,10 +141,10 @@ export default function CandidateDashboard({ user, onSectionChange }) {
 
   return (
     <div className="w-full space-y-5 animate-in fade-in duration-200">
-      
+
       {/* ─── 1. TOP HEADER & JOURNEY STEPPER HERO CARD ─────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
-        
+
         {/* Welcome Text + Date Banner */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-5">
           <div>
@@ -165,11 +165,11 @@ export default function CandidateDashboard({ user, onSectionChange }) {
 
         {/* Journey Progress Track + Current Stage Box */}
         <div className="pt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-          
+
           {/* Stepper (9 Cols) */}
           <div className="lg:col-span-9 overflow-x-auto pb-2 lg:pb-0">
             <div className="flex items-center justify-between min-w-[620px] relative">
-              
+
               {/* Connecting Line Behind Steps */}
               <div className="absolute left-6 right-6 top-4 h-0.5 bg-slate-200 -z-0" />
               <div className="absolute left-6 w-[55%] top-4 h-0.5 bg-emerald-500 -z-0" />
@@ -180,16 +180,15 @@ export default function CandidateDashboard({ user, onSectionChange }) {
 
                 return (
                   <div key={idx} className="flex flex-col items-center text-center relative z-10 px-2">
-                    
+
                     {/* Circle Node */}
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                        isDone
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isDone
                           ? 'bg-emerald-500 text-white shadow-sm ring-4 ring-emerald-50'
                           : isCurrent
-                          ? 'bg-[#F72570] text-white shadow-md ring-4 ring-pink-100'
-                          : 'bg-white border-2 border-slate-300 text-slate-400'
-                      }`}
+                            ? 'bg-[#F72570] text-white shadow-md ring-4 ring-pink-100'
+                            : 'bg-white border-2 border-slate-300 text-slate-400'
+                        }`}
                     >
                       {isDone ? (
                         <Check className="w-4 h-4 stroke-[3]" />
@@ -202,9 +201,8 @@ export default function CandidateDashboard({ user, onSectionChange }) {
 
                     {/* Step Title */}
                     <span
-                      className={`text-xs font-bold mt-2 whitespace-nowrap ${
-                        isCurrent ? 'text-slate-900 font-extrabold' : isDone ? 'text-slate-800' : 'text-slate-400'
-                      }`}
+                      className={`text-xs font-bold mt-2 whitespace-nowrap ${isCurrent ? 'text-slate-900 font-extrabold' : isDone ? 'text-slate-800' : 'text-slate-400'
+                        }`}
                     >
                       {stage.label}
                     </span>
@@ -250,7 +248,7 @@ export default function CandidateDashboard({ user, onSectionChange }) {
 
       {/* ─── 2. FIVE SUMMARY STAT CARDS (ROW OF 5 CARDS) ───────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-stretch">
-        
+
         {/* CARD 1: NF Status */}
         <div className="bg-white rounded-2xl border border-slate-200/90 p-4.5 shadow-2xs flex flex-col justify-between hover:border-pink-200 transition">
           <div>
@@ -469,7 +467,7 @@ export default function CandidateDashboard({ user, onSectionChange }) {
 
       {/* ─── 3. MIDDLE SECTION (TRAINING PROGRESS | ATTENDANCE | RECENT ACTIVITY) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        
+
         {/* COLUMN 1: Training Progress (5 cols) */}
         <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs flex flex-col justify-between">
           <div>
@@ -514,20 +512,18 @@ export default function CandidateDashboard({ user, onSectionChange }) {
                         </span>
                       )}
                       <span
-                        className={`text-[11.5px] truncate ${
-                          mod.status === 'Completed' ? 'text-slate-700 font-medium' : 'text-slate-900 font-bold'
-                        }`}
+                        className={`text-[11.5px] truncate ${mod.status === 'Completed' ? 'text-slate-700 font-medium' : 'text-slate-900 font-bold'
+                          }`}
                         title={mod.name}
                       >
                         {mod.name}
                       </span>
                     </div>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold shrink-0 whitespace-nowrap ${
-                        mod.status === 'Completed'
+                      className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold shrink-0 whitespace-nowrap ${mod.status === 'Completed'
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
                           : 'bg-pink-50 text-[#F72570] border border-pink-200/80'
-                      }`}
+                        }`}
                     >
                       {mod.status}
                     </span>
@@ -613,9 +609,8 @@ export default function CandidateDashboard({ user, onSectionChange }) {
               ].map((b, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
                   <div
-                    className={`w-full rounded-t-md transition-all ${
-                      b.val > 0 ? 'bg-[#F72570]' : 'bg-slate-100 border border-dashed border-slate-300'
-                    }`}
+                    className={`w-full rounded-t-md transition-all ${b.val > 0 ? 'bg-[#F72570]' : 'bg-slate-100 border border-dashed border-slate-300'
+                      }`}
                     style={{ height: b.val > 0 ? `${b.val}%` : '8px' }}
                   />
                   <span className="text-[9px] font-bold text-slate-400">{b.label}</span>
@@ -670,7 +665,7 @@ export default function CandidateDashboard({ user, onSectionChange }) {
 
       {/* ─── 4. BOTTOM SECTION (MY DOCUMENTS TABLE | UPCOMING | QUICK ACTIONS) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        
+
         {/* LEFT: My Documents Table (5 cols) */}
         <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -697,11 +692,10 @@ export default function CandidateDashboard({ user, onSectionChange }) {
                     <td className="py-2 px-2 font-semibold text-slate-800">{d.name}</td>
                     <td className="py-2 px-2">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          d.status === 'Verified'
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${d.status === 'Verified'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}
+                          }`}
                       >
                         {d.status}
                       </span>

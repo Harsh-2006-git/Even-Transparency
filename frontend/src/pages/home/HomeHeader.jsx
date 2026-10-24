@@ -12,7 +12,8 @@ import {
   Briefcase,
   UserCheck,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Building2
 } from 'lucide-react';
 
 export default function HomeHeader({ onNavigate, onOpenDemoModal }) {
@@ -118,6 +119,15 @@ export default function HomeHeader({ onNavigate, onOpenDemoModal }) {
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
       border: 'hover:border-emerald-300'
+    },
+    {
+      id: 'employer',
+      name: 'Hiring Employer',
+      sub: 'Fleet Jobs & Driver Hiring',
+      icon: Building2,
+      color: 'text-sky-600',
+      bg: 'bg-sky-50',
+      border: 'hover:border-sky-300'
     },
     {
       id: 'candidate',

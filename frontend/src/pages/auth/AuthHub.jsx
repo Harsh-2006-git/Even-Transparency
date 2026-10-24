@@ -9,7 +9,8 @@ import {
   Layers, 
   Sparkles,
   ArrowLeft,
-  Lock
+  Lock,
+  Building2
 } from 'lucide-react';
 
 export default function AuthHub({ onSelectRole, onGoToLanding }) {
@@ -69,6 +70,20 @@ export default function AuthHub({ onSelectRole, onGoToLanding }) {
       borderColor: 'border-emerald-200 hover:border-emerald-500',
       buttonColor: 'bg-emerald-600 hover:bg-emerald-700 text-white',
       credentials: 'placement@evenshift.org / placement@pass123'
+    },
+    {
+      id: 'employer',
+      roleType: 'Employer',
+      title: 'Hiring Partner & Employer Portal',
+      subtitle: 'Commercial Fleet & EV Hiring',
+      desc: 'Direct female EV driver hiring, vacancy mandates, candidate scorecards, and deployment tracking.',
+      icon: <Building2 className="w-5 h-5 text-sky-600" />,
+      badge: 'Employer',
+      badgeColor: 'bg-sky-50 text-sky-700 border-sky-200',
+      gradient: 'from-sky-50/50 to-blue-50/50',
+      borderColor: 'border-sky-200 hover:border-sky-500',
+      buttonColor: 'bg-sky-600 hover:bg-sky-700 text-white',
+      credentials: 'employer@evenshift.org / employer@pass123'
     },
     {
       id: 'candidate',

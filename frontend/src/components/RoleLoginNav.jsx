@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Users, GraduationCap, Briefcase, UserCheck, Home } from 'lucide-react';
+import { Shield, Users, GraduationCap, Briefcase, UserCheck, Home, Building2 } from 'lucide-react';
 
 export const ROLE_CONFIGS = {
   admin: {
@@ -49,6 +49,18 @@ export const ROLE_CONFIGS = {
     btnGradient: 'from-emerald-600 to-teal-700',
     accentBorder: 'focus:border-emerald-600 focus:ring-emerald-600/10',
     icon: Briefcase
+  },
+  employer: {
+    id: 'employer',
+    userType: 'Employer',
+    name: 'Employer',
+    fullName: 'Hiring Partner & Employer',
+    path: '#login/employer',
+    color: '#0284C7',
+    badgeClass: 'bg-sky-50 text-sky-700 border-sky-200',
+    btnGradient: 'from-sky-600 to-blue-700',
+    accentBorder: 'focus:border-sky-600 focus:ring-sky-600/10',
+    icon: Building2
   },
   candidate: {
     id: 'candidate',

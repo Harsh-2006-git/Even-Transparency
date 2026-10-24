@@ -80,6 +80,7 @@ export default function TrainingAssessments({ user, onSectionChange }) {
   const [selectedTrackId, setSelectedTrackId] = useState('PRACTICAL_DRIVING');
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
+  const [updatingCandidateId, setUpdatingCandidateId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -313,11 +314,17 @@ export default function TrainingAssessments({ user, onSectionChange }) {
     });
   };
 
-  // Save assessments
-  const handleSaveAssessments = async () => {
-    if (!currentCohort) return;
+  // Update assessment for a single specific candidate
+  const handleUpdateCandidateAssessment = async (cand) => {
+    if (!currentCohort || !cand) return;
     try {
-      setSaving(true);
+      setUpdatingCandidateId(cand.candidate_id);
+      const ev = cand.evaluations?.[selectedTrackId] || cand.evalData || {};
+      const payloadScore = ev.score !== undefined ? ev.score : 80;
+      const payloadRating = ev.rating || 4;
+      const payloadRec = ev.recommendation || (payloadScore >= activeTrack.passScore ? 'READY_FOR_DEPLOYMENT' : 'REQUIRES_RETEST');
+      const payloadFeedback = ev.feedback || 'Demonstrates good foundational skills and vehicle control.';
+
       const res = await fetch(`${API_BASE}/batches/${currentCohort.id}/assessments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -325,28 +332,28 @@ export default function TrainingAssessments({ user, onSectionChange }) {
           batch_id: currentCohort.id,
           assessment_type: selectedTrackId,
           passing_score: activeTrack.passScore,
-          evaluations: currentCohort.candidates.map(c => {
-            const ev = c.evaluations?.[selectedTrackId] || {};
-            return {
-              candidate_id: c.candidate_id,
-              score: ev.score !== undefined ? ev.score : 80,
-              rating: ev.rating || 4,
-              recommendation: ev.recommendation || 'READY_FOR_DEPLOYMENT',
-              feedback: ev.feedback || 'Demonstrates good foundational skills and vehicle control.',
-              evaluations: c.evaluations
-            };
-          })
+          evaluations: [
+            {
+              candidate_id: cand.candidate_id,
+              score: payloadScore,
+              rating: payloadRating,
+              recommendation: payloadRec,
+              feedback: payloadFeedback,
+              evaluations: cand.evaluations
+            }
+          ]
         })
       });
+
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to save evaluations');
+        throw new Error(data.message || 'Failed to update evaluation');
       }
-      showToast(`🎉 Evaluations successfully saved for ${data.count || currentCohort.candidates.length} candidates in database!`);
+      showToast(`✅ Evaluation updated successfully for ${cand.full_name} (${payloadScore}/100 - ${payloadRec.replace(/_/g, ' ')})`);
     } catch (err) {
-      showToast(err.message || 'Error saving evaluations. Please retry.', 'error');
+      showToast(err.message || 'Error updating evaluation. Please retry.', 'error');
     } finally {
-      setSaving(false);
+      setUpdatingCandidateId(null);
     }
   };
 
@@ -415,19 +422,6 @@ export default function TrainingAssessments({ user, onSectionChange }) {
           >
             <Download className="w-4 h-4 text-slate-600" />
             <span>Export Scores</span>
-          </button>
-
-          <button
-            onClick={handleSaveAssessments}
-            disabled={saving}
-            className="cursor-pointer px-4 py-2.5 rounded-xl bg-[#F72570] hover:bg-[#de1b60] text-white text-xs font-bold shadow-sm shadow-[#F72570]/20 transition flex items-center gap-2 disabled:opacity-50"
-          >
-            {saving ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            <span>Save Evaluations</span>
           </button>
         </div>
       </div>
@@ -755,6 +749,21 @@ export default function TrainingAssessments({ user, onSectionChange }) {
                       >
                         <span>Full Scorecard</span>
                         <ChevronRight className="w-3 h-3" />
+                      </button>
+
+                      {/* Individual Update Button per Candidate */}
+                      <button
+                        onClick={() => handleUpdateCandidateAssessment(cand)}
+                        disabled={updatingCandidateId === cand.candidate_id}
+                        className="cursor-pointer px-3.5 py-1.5 rounded-xl bg-[#F72570] hover:bg-[#de1b60] text-white text-xs font-bold shadow-sm shadow-[#F72570]/20 transition flex items-center gap-1.5 disabled:opacity-50"
+                        title={`Update assessment for ${cand.full_name}`}
+                      >
+                        {updatingCandidateId === cand.candidate_id ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>Update Assessment</span>
                       </button>
                     </div>
                   </div>

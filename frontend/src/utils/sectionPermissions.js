@@ -11,7 +11,7 @@ import { normalizeRole } from './roleUtils.js';
  */
 export const SECTION_PERMISSIONS = {
   // Common Dashboards (rendered per role)
-  'overview': ['Admin', 'Mobilizer', 'Trainer', 'PlacementCoordinator'],
+  'overview': ['Admin', 'Mobilizer', 'Trainer', 'PlacementCoordinator', 'Employer'],
   'dashboard': ['Candidate', 'Admin'],
 
   // Super Admin Management Only
@@ -40,8 +40,8 @@ export const SECTION_PERMISSIONS = {
   'targets': ['Mobilizer', 'Admin'],
   'goals': ['Mobilizer', 'Admin'],
 
-  // Candidates & Documents (Mobilizer, Admin, or Trainer for assigned candidates)
-  'candidates': ['Admin', 'Mobilizer', 'Trainer'],
+  // Candidates & Documents (Mobilizer, Admin, Trainer, or Employer for shortlists)
+  'candidates': ['Admin', 'Mobilizer', 'Trainer', 'Employer'],
   'documents': ['Candidate', 'Mobilizer', 'Admin'],
   'document-verification': ['Admin', 'Mobilizer'],
 
@@ -62,15 +62,15 @@ export const SECTION_PERMISSIONS = {
   'trainer-reports': ['Trainer', 'Admin'],
   'trainer-support': ['Trainer', 'Admin'],
 
-  // Placement Management (PlacementCoordinator & Admin)
-  'employers': ['PlacementCoordinator', 'Admin'],
-  'openings': ['PlacementCoordinator', 'Admin'],
-  'job-opportunities': ['PlacementCoordinator', 'Admin'],
-  'applications': ['PlacementCoordinator', 'Admin'],
-  'interviews': ['PlacementCoordinator', 'Admin'],
-  'deployments': ['PlacementCoordinator', 'Admin'],
-  'placements': ['PlacementCoordinator', 'Admin'],
-  'employment-tracking': ['PlacementCoordinator', 'Admin'],
+  // Placement Management (PlacementCoordinator, Admin & Employer)
+  'employers': ['PlacementCoordinator', 'Admin', 'Employer'],
+  'openings': ['PlacementCoordinator', 'Admin', 'Employer'],
+  'job-opportunities': ['PlacementCoordinator', 'Admin', 'Employer'],
+  'applications': ['PlacementCoordinator', 'Admin', 'Employer'],
+  'interviews': ['PlacementCoordinator', 'Admin', 'Employer'],
+  'deployments': ['PlacementCoordinator', 'Admin', 'Employer'],
+  'placements': ['PlacementCoordinator', 'Admin', 'Employer'],
+  'employment-tracking': ['PlacementCoordinator', 'Admin', 'Employer'],
 
   // Candidate Portal Exclusives
   'profile': ['Candidate'],
@@ -80,8 +80,8 @@ export const SECTION_PERMISSIONS = {
   'offers': ['Candidate'],
   'job-offers': ['Candidate'],
   'support': ['Candidate', 'Trainer'],
-  'notifications': ['Candidate', 'Admin', 'Mobilizer', 'Trainer', 'PlacementCoordinator'],
-  'settings': ['Admin', 'Candidate', 'Mobilizer', 'Trainer', 'PlacementCoordinator'],
+  'notifications': ['Candidate', 'Admin', 'Mobilizer', 'Trainer', 'PlacementCoordinator', 'Employer'],
+  'settings': ['Admin', 'Candidate', 'Mobilizer', 'Trainer', 'PlacementCoordinator', 'Employer'],
 };
 
 /**

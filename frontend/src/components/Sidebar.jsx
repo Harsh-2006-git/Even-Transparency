@@ -121,8 +121,7 @@ export default function Sidebar({
           { id: 'candidates', label: 'Candidate List', icon: Users },
           { id: 'onboard-candidate', label: 'Add Candidate', icon: UserPlus, badge: 'New' },
           { id: 'documents', label: 'Candidate Documents', icon: ScrollText },
-          { id: 'assessments-placements', label: 'Assessments & Placements', icon: Award },
-          s
+          { id: 'assessments-placements', label: 'Assessments & Placements', icon: Award }
         ];
       case 'Trainer':
         return [
@@ -145,6 +144,12 @@ export default function Sidebar({
           { id: 'employers', label: 'Hiring Employers', icon: Building2 },
           { id: 'deployments', label: 'Candidate Deployments', icon: Briefcase, badge: 'Offers' },
           { id: 'openings', label: 'Job Opportunities', icon: Award },
+        ];
+      case 'Employer':
+        return [
+          { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'openings', label: 'Job Openings', icon: Award },
+          { id: 'candidates', label: 'Candidate Showcase', icon: Users, badge: 'Placed' },
         ];
       case 'Candidate':
         return [

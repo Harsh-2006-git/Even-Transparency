@@ -8,6 +8,7 @@ import MobilizerLogin from './pages/mobilizer/Login';
 import TrainerLogin from './pages/trainer/Login';
 import PlacementLogin from './pages/placement/Login';
 import CandidateLogin from './pages/candidate/Login';
+import EmployerLogin from './pages/employer/Login';
 
 // Stakeholder Dashboard & Management Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -21,6 +22,9 @@ import ReadinessManagement from './pages/mobilizer/ReadinessManagement';
 import TrainerDashboard from './pages/trainer/Dashboard';
 import PlacementDashboard from './pages/placement/Dashboard';
 import CandidateDashboard from './pages/candidate/Dashboard';
+import EmployerOverview from './pages/employer/EmployerOverview';
+import EmployerOpenings from './pages/employer/EmployerOpenings';
+import EmployerCandidates from './pages/employer/EmployerCandidates';
 import CandidateProfilePage from './pages/candidate/Profile';
 import CandidateDocumentsPage from './pages/candidate/Documents';
 import CandidateNFStatusPage from './pages/candidate/NFStatus';
@@ -71,7 +75,7 @@ export default function App() {
   // Helper to extract section from hash
   const extractSectionFromHash = (hash) => {
     if (!hash) return null;
-    const clean = hash.replace(/^#\/?/, '').replace(/^(admin|mobilizer|trainer|placement|me|candidate)\//, '');
+    const clean = hash.replace(/^#\/?/, '').replace(/^(admin|mobilizer|trainer|placement|me|candidate|employer)\//, '');
     if (clean && !clean.startsWith('login') && clean !== 'landing' && clean !== 'home') {
       return clean;
     }
@@ -94,12 +98,13 @@ export default function App() {
     return 'landing';
   });
 
-  // Active Login Role: 'admin' | 'mobilizer' | 'trainer' | 'placement' | 'me' | 'candidate'
+  // Active Login Role: 'admin' | 'mobilizer' | 'trainer' | 'placement' | 'employer' | 'me' | 'candidate'
   const [activeLoginRole, setActiveLoginRole] = useState(() => {
     const hash = window.location.hash;
     if (hash.includes('mobilizer')) return 'mobilizer';
     if (hash.includes('trainer')) return 'trainer';
     if (hash.includes('placement')) return 'placement';
+    if (hash.includes('employer')) return 'employer';
     if (hash.includes('me')) return 'me';
     if (hash.includes('candidate')) return 'candidate';
     return 'admin';
@@ -162,6 +167,7 @@ export default function App() {
           if (hash.includes('mobilizer')) setActiveLoginRole('mobilizer');
           else if (hash.includes('trainer')) setActiveLoginRole('trainer');
           else if (hash.includes('placement')) setActiveLoginRole('placement');
+          else if (hash.includes('employer')) setActiveLoginRole('employer');
           else if (hash.includes('candidate')) setActiveLoginRole('candidate');
           else setActiveLoginRole('admin');
           setCurrentView('login');
@@ -207,6 +213,7 @@ export default function App() {
       mobilizer: 'Mobilizer',
       trainer: 'Trainer',
       placement: 'PlacementCoordinator',
+      employer: 'Employer',
       candidate: 'Candidate'
     };
     const expected = expectedRoleMap[activeLoginRole];
@@ -296,6 +303,8 @@ export default function App() {
               handleSelectLoginRole('trainer');
             } else if (view === 'login/placement' || view === 'placement') {
               handleSelectLoginRole('placement');
+            } else if (view === 'login/employer' || view === 'employer') {
+              handleSelectLoginRole('employer');
             } else if (view === 'login/candidate' || view === 'candidate') {
               handleSelectLoginRole('candidate');
             } else {
@@ -343,6 +352,16 @@ export default function App() {
     if (activeLoginRole === 'candidate') {
       return (
         <CandidateLogin
+          onLoginSuccess={handleLoginSuccess}
+          onGoToLanding={handleGoToLanding}
+          onSwitchRole={handleSelectLoginRole}
+        />
+      );
+    }
+
+    if (activeLoginRole === 'employer') {
+      return (
+        <EmployerLogin
           onLoginSuccess={handleLoginSuccess}
           onGoToLanding={handleGoToLanding}
           onSwitchRole={handleSelectLoginRole}
@@ -441,6 +460,22 @@ export default function App() {
               );
             }
 
+            if (currentUserType === 'Employer') {
+              return (
+                <>
+                  {activeSection === 'openings' && (
+                    <EmployerOpenings user={user} onSectionChange={handleSectionChange} />
+                  )}
+                  {activeSection === 'candidates' && (
+                    <EmployerCandidates user={user} onSectionChange={handleSectionChange} />
+                  )}
+                  {(activeSection === 'overview' || (!['openings', 'candidates'].includes(activeSection))) && (
+                    <EmployerOverview user={user} onSectionChange={handleSectionChange} />
+                  )}
+                </>
+              );
+            }
+
             return (
               <>
                 {/* A. Role-Specific Dashboards for 'overview' */}
@@ -448,10 +483,10 @@ export default function App() {
                 <>
                   {currentUserType === 'Mobilizer' && <MobilizerDashboard user={user} onSectionChange={handleSectionChange} />}
                   {currentUserType === 'Trainer' && <TrainerDashboard user={user} onSectionChange={handleSectionChange} />}
-                  {(currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') && (
+                  {(currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator' || currentUserType === 'Employer') && (
                     <PlacementDashboard user={user} onSectionChange={handleSectionChange} />
                   )}
-                  {(currentUserType === 'Admin' || isSuperAdminRole(currentUserType) || (!['Mobilizer', 'Trainer', 'PlacementCoordinator', 'Placement Coordinator'].includes(currentUserType))) && (
+                  {(currentUserType === 'Admin' || isSuperAdminRole(currentUserType) || (!['Mobilizer', 'Trainer', 'PlacementCoordinator', 'Placement Coordinator', 'Employer'].includes(currentUserType))) && (
                     <AdminDashboard onSectionChange={handleSectionChange} user={user} />
                   )}
                 </>

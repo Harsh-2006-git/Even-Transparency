@@ -13,6 +13,7 @@ export const normalizeRole = (roleOrType) => {
   if (clean.includes('mobiliz')) return 'Mobilizer';
   if (clean.includes('train')) return 'Trainer';
   if (clean.includes('placement') || clean.includes('coord')) return 'PlacementCoordinator';
+  if (clean.includes('employ') || clean.includes('partner') || clean.includes('hiring')) return 'Employer';
   if (clean.includes('cand')) return 'Candidate';
   return 'Admin';
 };

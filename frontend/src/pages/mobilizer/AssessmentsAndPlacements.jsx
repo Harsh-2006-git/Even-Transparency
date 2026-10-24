@@ -43,6 +43,64 @@ import {
 
 const API_BASE = 'http://localhost:5000/api';
 
+const isGenericStockPhoto = (url) => {
+  if (!url || typeof url !== 'string') return true;
+  return url.includes('photo-1573496359142-b8d87734a5a2');
+};
+
+const getCandidateInitials = (name) => {
+  if (!name || typeof name !== 'string') return 'CD';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'CD';
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const getAvatarStyle = (name) => {
+  const styles = [
+    { bg: 'bg-gradient-to-br from-pink-500 to-rose-600', text: 'text-white' },
+    { bg: 'bg-gradient-to-br from-indigo-500 to-purple-600', text: 'text-white' },
+    { bg: 'bg-gradient-to-br from-emerald-500 to-teal-600', text: 'text-white' },
+    { bg: 'bg-gradient-to-br from-amber-500 to-orange-600', text: 'text-white' },
+    { bg: 'bg-gradient-to-br from-cyan-500 to-blue-600', text: 'text-white' },
+    { bg: 'bg-gradient-to-br from-violet-500 to-fuchsia-600', text: 'text-white' },
+    { bg: 'bg-gradient-to-br from-teal-500 to-emerald-600', text: 'text-white' },
+    { bg: 'bg-gradient-to-br from-rose-500 to-red-600', text: 'text-white' },
+  ];
+  if (!name) return styles[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return styles[Math.abs(hash) % styles.length];
+};
+
+function CandidateAvatar({ name, photoUrl, size = 'w-9 h-9', textSize = 'text-xs', border = 'border border-slate-200' }) {
+  const [imageError, setImageError] = useState(false);
+  const showPhoto = Boolean(photoUrl) && !isGenericStockPhoto(photoUrl) && !imageError;
+  const style = getAvatarStyle(name);
+
+  if (showPhoto) {
+    return (
+      <img
+        src={photoUrl}
+        alt={name || 'Candidate'}
+        onError={() => setImageError(true)}
+        className={`${size} rounded-full object-cover ${border} shrink-0`}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`${size} rounded-full flex items-center justify-center font-bold tracking-tight select-none shrink-0 shadow-2xs ${border} ${style.bg} ${style.text} ${textSize}`}
+      title={name || 'Candidate'}
+    >
+      {getCandidateInitials(name)}
+    </div>
+  );
+}
+
 export default function AssessmentsAndPlacements({ mobilizerUser, onSectionChange, defaultTab = 'combined' }) {
   const [activeTab, setActiveTab] = useState(defaultTab); // 'combined' | 'assessments' | 'placements'
   const [loading, setLoading] = useState(true);
@@ -634,10 +692,10 @@ export default function AssessmentsAndPlacements({ mobilizerUser, onSectionChang
                       {/* Candidate Column */}
                       <td className="py-3 pl-4">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={cand.photo_url}
-                            alt={cand.candidate_name}
-                            className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                          <CandidateAvatar
+                            name={cand.candidate_name}
+                            photoUrl={cand.photo_url}
+                            size="w-9 h-9"
                           />
                           <div>
                             <div className="font-bold text-slate-900 text-xs group-hover:text-[#FF408A] transition">
@@ -828,10 +886,10 @@ export default function AssessmentsAndPlacements({ mobilizerUser, onSectionChang
                     <tr key={ass.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-3 pl-4">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={ass.photo_url}
-                            alt={ass.candidate_name}
-                            className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                          <CandidateAvatar
+                            name={ass.candidate_name}
+                            photoUrl={ass.photo_url}
+                            size="w-9 h-9"
                           />
                           <div>
                             <div className="font-bold text-slate-900 text-xs">
@@ -971,10 +1029,10 @@ export default function AssessmentsAndPlacements({ mobilizerUser, onSectionChang
                     <tr key={plc.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-3 pl-4">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={plc.photo_url}
-                            alt={plc.candidate_name}
-                            className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                          <CandidateAvatar
+                            name={plc.candidate_name}
+                            photoUrl={plc.photo_url}
+                            size="w-9 h-9"
                           />
                           <div>
                             <div className="font-bold text-slate-900 text-xs">
@@ -1089,10 +1147,12 @@ export default function AssessmentsAndPlacements({ mobilizerUser, onSectionChang
               {/* Candidate Info Strip */}
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
                 <div className="flex items-center gap-3.5">
-                  <img
-                    src={certificateData.photo_url}
-                    alt={certificateData.candidate_name}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-purple-200"
+                  <CandidateAvatar
+                    name={certificateData.candidate_name}
+                    photoUrl={certificateData.photo_url}
+                    size="w-12 h-12"
+                    textSize="text-sm"
+                    border="border-2 border-purple-200"
                   />
                   <div>
                     <h4 className="font-bold text-sm text-slate-900">{certificateData.candidate_name}</h4>
@@ -1209,10 +1269,11 @@ export default function AssessmentsAndPlacements({ mobilizerUser, onSectionChang
 
             <div className="p-5 space-y-4 text-xs">
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100">
-                <img
-                  src={checkInTarget.photo_url}
-                  alt={checkInTarget.candidate_name}
-                  className="w-10 h-10 rounded-full object-cover border border-emerald-200"
+                <CandidateAvatar
+                  name={checkInTarget.candidate_name}
+                  photoUrl={checkInTarget.photo_url}
+                  size="w-10 h-10"
+                  border="border border-emerald-200"
                 />
                 <div>
                   <div className="font-bold text-slate-900">{checkInTarget.candidate_name}</div>
@@ -1276,10 +1337,12 @@ export default function AssessmentsAndPlacements({ mobilizerUser, onSectionChang
             
             <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img
-                  src={selectedCandidateDetail.photo_url}
-                  alt={selectedCandidateDetail.candidate_name}
-                  className="w-11 h-11 rounded-full object-cover border-2 border-[#FF408A]"
+                <CandidateAvatar
+                  name={selectedCandidateDetail.candidate_name}
+                  photoUrl={selectedCandidateDetail.photo_url}
+                  size="w-11 h-11"
+                  textSize="text-sm"
+                  border="border-2 border-[#FF408A]"
                 />
                 <div>
                   <h3 className="font-extrabold text-base">{selectedCandidateDetail.candidate_name}</h3>

@@ -182,6 +182,8 @@ export const getDeploymentDashboardData = async (req, res) => {
         navigation_score: Math.max(50, Math.round(assessmentScore * 0.96)),
         customer_service_score: Math.min(100, Math.round(assessmentScore * 1.02)),
         deployment_status: deploymentStatus,
+        deployed_employer_id: activeDeployment?.employer_id || null,
+        deployed_job_id: activeDeployment?.job_opportunity_id || activeDeployment?.job_role_id || null,
         deployed_employer: isDeployed ? deployedEmployerName : null,
         deployed_role: isDeployed ? (activeDeployment?.job_role_title || 'EV Delivery Pilot') : null,
         deployed_salary: deployedSalary,

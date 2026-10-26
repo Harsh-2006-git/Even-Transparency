@@ -44,6 +44,33 @@ import BatchCreate from './BatchCreate';
 
 const API_BASE = (import.meta.env.API_BASE_URL || (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '')).replace(/\/+$/, '') + '/training';
 
+// Helper to automatically compute batch status based on start_date and end_date
+export const computeBatchStatus = (batch) => {
+  if (!batch) return 'UPCOMING';
+  if (batch.status && batch.status.toUpperCase() === 'CANCELLED') return 'CANCELLED';
+
+  const startDateStr = batch.start_date ? String(batch.start_date).split('T')[0] : null;
+  const endDateStr = batch.end_date ? String(batch.end_date).split('T')[0] : null;
+
+  if (!startDateStr || !endDateStr) {
+    return batch.status ? batch.status.toUpperCase() : 'UPCOMING';
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
+
+  if (todayStr < startDateStr) {
+    return 'UPCOMING';
+  } else if (todayStr > endDateStr) {
+    return 'COMPLETED';
+  } else {
+    return 'ONGOING';
+  }
+};
+
 export default function BatchManagement({ user, onSectionChange }) {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -113,7 +140,16 @@ export default function BatchManagement({ user, onSectionChange }) {
       const res = await fetch(`${API_BASE}/batches`);
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
-        setBatches(json.data);
+        const enriched = json.data.map(b => ({
+          ...b,
+          status: computeBatchStatus(b)
+        }));
+        setBatches(enriched);
+        setSidebarBatch(prev => {
+          if (!prev) return null;
+          const found = enriched.find(b => b.id === prev.id);
+          return found ? { ...found, status: computeBatchStatus(found) } : prev;
+        });
       } else {
         setBatches([]);
       }

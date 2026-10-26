@@ -290,6 +290,35 @@ const candidateMasterPool = [
 ];
 
 // ==========================================
+// HELPER: Auto-compute Batch Status from Dates
+// ==========================================
+export const computeBatchStatusFromDates = (startDate, endDate, existingStatus = '') => {
+  if (existingStatus && existingStatus.toUpperCase() === 'CANCELLED') {
+    return 'CANCELLED';
+  }
+  if (!startDate || !endDate) {
+    return existingStatus ? existingStatus.toUpperCase() : 'UPCOMING';
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
+
+  const startStr = String(startDate).split('T')[0];
+  const endStr = String(endDate).split('T')[0];
+
+  if (todayStr < startStr) {
+    return 'UPCOMING';
+  } else if (todayStr > endStr) {
+    return 'COMPLETED';
+  } else {
+    return 'ONGOING';
+  }
+};
+
+// ==========================================
 // HELPER: Format Batch with Full Relational Data
 // ==========================================
 const formatBatchRecord = (b) => {
@@ -355,6 +384,8 @@ const formatBatchRecord = (b) => {
     });
   }
 
+  const calculatedStatus = computeBatchStatusFromDates(json.start_date, json.end_date, json.status);
+
   return {
     ...json,
     module: moduleData,
@@ -363,7 +394,7 @@ const formatBatchRecord = (b) => {
     enrolled_candidates: enrolledCandidates,
     enrolled_count: enrolledCandidates.length,
     candidate_ids: enrolledCandidates.map(c => c.candidate_id),
-    status: json.status ? json.status.toUpperCase() : 'UPCOMING'
+    status: calculatedStatus
   };
 };
 
@@ -400,6 +431,14 @@ export const getBatches = async (req, res) => {
           include: BATCH_INCLUDES,
           order: [['created_at', 'DESC']]
         });
+
+        // Automatically update any out-of-sync batch status in database
+        for (const b of (dbBatches || [])) {
+          const expectedStatus = computeBatchStatusFromDates(b.start_date, b.end_date, b.status);
+          if (b.status !== expectedStatus && b.status !== 'CANCELLED') {
+            b.update({ status: expectedStatus }).catch(() => {});
+          }
+        }
 
         dbQueriedSuccessfully = true;
         batchesList = (dbBatches || []).map(formatBatchRecord);
@@ -680,7 +719,7 @@ export const createBatch = async (req, res) => {
           daily_start_time,
           daily_end_time,
           capacity: parseInt(capacity) || 25,
-          status: 'UPCOMING',
+          status: computeBatchStatusFromDates(start_date, end_date, 'UPCOMING'),
           average_attendance_percentage: 0,
           completion_rate_percentage: 0,
           remarks

@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 async function createAdmin() {
   try {
-    const email = (process.argv[2] || 'admin@evenshift.org').trim().toLowerCase();
-    const password = (process.argv[3] || 'admin@pass123').trim();
+    const email = (process.argv[2] || 'admin@transparency.in').trim().toLowerCase();
+    const password = (process.argv[3] || 'admin@123').trim();
     const fullName = (process.argv[4] || 'System Administrator').trim();
 
     console.log(`Connecting to database to create admin user: ${email}...`);

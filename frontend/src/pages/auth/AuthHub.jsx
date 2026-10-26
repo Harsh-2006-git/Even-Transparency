@@ -27,7 +27,7 @@ export default function AuthHub({ onSelectRole, onGoToLanding }) {
       gradient: 'from-pink-500/10 to-rose-500/10',
       borderColor: 'border-[#FF408A]/30 hover:border-[#FF408A]',
       buttonColor: 'bg-[#FF408A] hover:bg-[#E02670] text-white',
-      credentials: 'admin@evenshift.org / admin@pass123'
+      credentials: 'admin@transparency.in / admin@123'
     },
     {
       id: 'mobilizer',

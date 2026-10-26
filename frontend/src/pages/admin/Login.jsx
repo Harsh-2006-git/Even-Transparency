@@ -192,7 +192,7 @@ export default function AdminLogin({ onLoginSuccess, onGoToLanding, onSwitchRole
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@evenshift.org"
+                    placeholder="admin@transparency.in"
                     className="w-full h-9.5 rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-800 outline-none focus:border-[#FF408A] focus:ring-2 focus:ring-[#FF408A]/10 transition shadow-2xs"
                     required
                   />

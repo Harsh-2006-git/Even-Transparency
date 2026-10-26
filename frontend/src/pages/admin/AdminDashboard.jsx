@@ -595,6 +595,11 @@ export default function AdminDashboard({ onSectionChange, user }) {
                       style={{ backgroundColor: stg.color }}
                     />
                     <span className="font-bold text-slate-800">{stg.stage}</span>
+                    {stg.scoreInfo && (
+                      <span className="text-[9.5px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/50">
+                        {stg.scoreInfo}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-black text-slate-900 text-xs">{stg.formattedCount}</span>
@@ -1641,7 +1646,14 @@ export default function AdminDashboard({ onSectionChange, user }) {
               {funnelStages.map((stg, i) => (
                 <div key={i} className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
                   <div>
-                    <span className="font-bold text-slate-900">{stg.stage}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900">{stg.stage}</span>
+                      {stg.scoreInfo && (
+                        <span className="text-[10px] font-semibold text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded">
+                          {stg.scoreInfo}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">{stg.description}</p>
                   </div>
                   <div className="text-right shrink-0">

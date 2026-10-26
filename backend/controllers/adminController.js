@@ -115,99 +115,95 @@ export const getAdminDashboardStats = async (req, res) => {
       return passedInAssessment || passedInEnrollment;
     };
 
-    // 3. Candidate Lifecycle Funnel (from actual database candidate stages)
-    // Note: Initial mobilisation screening/score is NOT counted as batch assessment.
-    // Batch assessment is the final training scoring, and passing marks are required for deployment readiness.
-    let registeredCount = totalCandidates;
-    let inTrainingCount = 0;
-    let assessedCount = 0;
-    let readyForDeploymentCount = 0;
-    let employedCount = activeEmployed;
+    // 3. Candidate Lifecycle Funnel (strictly truthful 4-stage pipeline)
+    // 1st: Mobilised candidate count and their scoring
+    // 2nd: Added to training batch count
+    // 3rd: Assessed in the batch (NOT at mobilization screening)
+    // 4th: Really placed by placement coordinator
+    const registeredCount = totalCandidates;
 
+    // 1st: Mobilisation readiness score
+    const scoresWithVal = candidates
+      .map(c => Number(c.readiness_score || c.readinessProfile?.score || 0))
+      .filter(s => s > 0);
+    const avgMobilisationScore = scoresWithVal.length > 0 
+      ? Math.round(scoresWithVal.reduce((a, b) => a + b, 0) / scoresWithVal.length)
+      : null;
+
+    // 2nd: Added to training batch
+    const enrolledCandIds = new Set(enrollments.map(e => e.candidate_id));
+    const inTrainingCount = candidates.filter(c => 
+      enrolledCandIds.has(c.id) || ['IN_TRAINING', 'TRAINING'].includes((c.current_stage || '').toUpperCase())
+    ).length;
+
+    // 3rd: Assessed in the batch by trainer
+    const assessedCount = candidates.filter(c => candHasBatchAssessment(c.id)).length;
+    const batchScores = assessments.map(a => Number(a.score)).filter(s => !isNaN(s) && s > 0);
+    const avgBatchAssessmentScore = batchScores.length > 0 
+      ? Math.round(batchScores.reduce((a, b) => a + b, 0) / batchScores.length)
+      : null;
+
+    // 4th: Really placed by placement coordinator (unique deployed candidates, strictly matching active_employed)
+    const deployedCandIds = new Set(
+      deployments
+        .filter(d => ['ACTIVE_EMPLOYED', 'EMPLOYED', 'DEPLOYED'].includes((d.deployment_status || '').toUpperCase()))
+        .map(d => d.candidate_id)
+    );
     candidates.forEach(c => {
-      const stage = (c.current_stage || '').toUpperCase();
-      const candId = c.id;
-
-      // In Training (enrolled in batch or stage indicates in training / beyond)
-      const hasEnrollment = enrollments.some(e => e.candidate_id === candId);
-      const isPostTraining = ['DEPLOYMENT_READY', 'DEPLOYED', 'EMPLOYED', 'ACTIVE_EMPLOYED'].includes(stage);
-      if (['IN_TRAINING', 'TRAINING', 'TRAINING_RECOMMENDED'].includes(stage) || hasEnrollment || isPostTraining) {
-        inTrainingCount++;
-      }
-
-      // Batch Assessed (only final batch training evaluation, NOT mobilization intake screening)
-      const hasBatchAss = candHasBatchAssessment(candId);
-      if (hasBatchAss || ['BATCH_ASSESSED', 'DEPLOYED'].includes(stage)) {
-        assessedCount++;
-      }
-
-      // Ready for Deployment (must have successfully completed batch and achieved passing marks)
-      const passedBatch = candPassedBatch(candId);
-      if (passedBatch || ['DEPLOYED', 'EMPLOYED', 'ACTIVE_EMPLOYED'].includes(stage)) {
-        readyForDeploymentCount++;
-      }
-
-      // Employed (placed under active partner contract)
-      if (['DEPLOYED', 'EMPLOYED', 'ACTIVE_EMPLOYED'].includes(stage)) {
-        employedCount++;
+      if (['DEPLOYED', 'EMPLOYED', 'ACTIVE_EMPLOYED'].includes((c.current_stage || '').toUpperCase())) {
+        deployedCandIds.add(c.id);
       }
     });
+    const employedCount = deployedCandIds.size;
 
     const funnelStages = [
       {
-        stage: 'Registered',
+        stage: 'Mobilised Candidates',
         count: registeredCount,
         formattedCount: registeredCount.toLocaleString('en-IN'),
+        scoreInfo: avgMobilisationScore ? `${avgMobilisationScore}% Avg Score` : 'Field Mobilised',
         conversion: '100%',
         dropOff: '0%',
         color: '#F72570',
         width: '100%',
         badgeBg: 'bg-pink-100 text-pink-800',
-        description: 'Candidate intake and verified territory roster profiles',
+        description: `Candidate field intake with initial readiness scoring (${avgMobilisationScore || 0}% avg)`,
       },
       {
-        stage: 'In Training',
+        stage: 'In Training Batch',
         count: inTrainingCount,
         formattedCount: inTrainingCount.toLocaleString('en-IN'),
+        scoreInfo: 'Batch Enrolled',
         conversion: registeredCount > 0 ? `${Math.round((inTrainingCount / registeredCount) * 100)}%` : '0%',
         dropOff: registeredCount > 0 ? `${Math.max(0, 100 - Math.round((inTrainingCount / registeredCount) * 100))}%` : '0%',
         color: '#F59E0B',
         width: registeredCount > 0 ? `${Math.max(20, Math.round((inTrainingCount / registeredCount) * 100))}%` : '20%',
         badgeBg: 'bg-amber-100 text-amber-800',
-        description: 'Enrolled in 2W EV dynamics and battery swapping training batch',
+        description: 'Candidates formally enrolled into structured training cohort batches',
       },
       {
-        stage: 'Assessed',
+        stage: 'Batch Assessed',
         count: assessedCount,
         formattedCount: assessedCount.toLocaleString('en-IN'),
+        scoreInfo: avgBatchAssessmentScore ? `${avgBatchAssessmentScore}% Exam Avg` : 'Batch Evaluated',
         conversion: registeredCount > 0 ? `${Math.round((assessedCount / registeredCount) * 100)}%` : '0%',
         dropOff: inTrainingCount > 0 ? `${Math.max(0, 100 - Math.round((assessedCount / inTrainingCount) * 100))}%` : '0%',
         color: '#8B5CF6',
         width: registeredCount > 0 ? `${Math.max(20, Math.round((assessedCount / registeredCount) * 100))}%` : '20%',
         badgeBg: 'bg-purple-100 text-purple-800',
-        description: 'Completed batch practical driving and theory final assessment',
+        description: 'Evaluated by certified trainer in cohort practical & theory tests',
       },
       {
-        stage: 'Ready for Deployment',
-        count: readyForDeploymentCount,
-        formattedCount: readyForDeploymentCount.toLocaleString('en-IN'),
-        conversion: registeredCount > 0 ? `${Math.round((readyForDeploymentCount / registeredCount) * 100)}%` : '0%',
-        dropOff: assessedCount > 0 ? `${Math.max(0, 100 - Math.round((readyForDeploymentCount / assessedCount) * 100))}%` : '0%',
-        color: '#10B981',
-        width: registeredCount > 0 ? `${Math.max(20, Math.round((readyForDeploymentCount / registeredCount) * 100))}%` : '20%',
-        badgeBg: 'bg-emerald-100 text-emerald-800',
-        description: 'Completed batch with passing marks (certified for employer placement)',
-      },
-      {
-        stage: 'Employed',
+        stage: 'Placed by Coordinator',
         count: employedCount,
         formattedCount: employedCount.toLocaleString('en-IN'),
+        scoreInfo: 'Verified Fleet Contract',
         conversion: registeredCount > 0 ? `${Math.round((employedCount / registeredCount) * 100)}%` : '0%',
-        dropOff: readyForDeploymentCount > 0 ? `${Math.max(0, 100 - Math.round((employedCount / readyForDeploymentCount) * 100))}%` : '0%',
-        color: '#0284C7',
+        dropOff: assessedCount > 0 ? `${Math.max(0, 100 - Math.round((employedCount / assessedCount) * 100))}%` : '0%',
+        color: '#10B981',
         width: registeredCount > 0 ? `${Math.max(20, Math.round((employedCount / registeredCount) * 100))}%` : '20%',
-        badgeBg: 'bg-blue-100 text-blue-800',
-        description: 'Active with partner EV fleets under verified employment contracts',
+        badgeBg: 'bg-emerald-100 text-emerald-800',
+        description: 'Verified employer placements finalized by Placement Coordinator',
       },
     ];
 
@@ -229,7 +225,7 @@ export const getAdminDashboardStats = async (req, res) => {
     // Candidates currently in training who are awaiting final batch assessment:
     const inTrainingCandidates = candidates.filter(c => ['IN_TRAINING', 'TRAINING'].includes(c.current_stage) || enrollments.some(e => e.candidate_id === c.id));
     const pendingAssessmentsCount = inTrainingCandidates.filter(c => !candHasBatchAssessment(c.id)).length;
-    const readyDeploymentCount = readyForDeploymentCount;
+    const readyDeploymentCount = candidates.filter(c => candPassedBatch(c.id)).length;
 
     const operationalHealth = [
       {

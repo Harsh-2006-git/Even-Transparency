@@ -17,15 +17,16 @@ async function run() {
     await seq.authenticate();
     console.log('✓ Connected to Remote Aiven Database.');
 
-    // 1. Find all tables starting with portal_
-    const [rawTables] = await seq.query(`
+    const { QueryTypes } = seq;
+    const rawTables = await seq.query(`
       SELECT table_name FROM information_schema.tables 
       WHERE table_schema = 'public' AND table_name LIKE 'portal_%';
-    `);
+    `, { type: QueryTypes.SELECT });
 
-    // Extract table names
-    const allPortalTables = rawTables.map(r => typeof r === 'string' ? r : (r.table_name || Object.values(r)[0]));
-    console.log(`Found ${allPortalTables.length} total portal_ tables.`);
+    console.log('rawTables length:', rawTables.length);
+    console.log('rawTables sample:', rawTables.slice(0, 5));
+    const allPortalTables = rawTables.map(r => r.table_name || r.TABLE_NAME || Object.values(r)[0]).filter(Boolean);
+    console.log(`Found ${allPortalTables.length} total portal_ tables:`, allPortalTables);
 
     // Truncate all portal_ tables EXCEPT portal_users
     const tablesToTruncate = allPortalTables.filter(t => t !== 'portal_users');

@@ -43,7 +43,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '');
 
 const DEFAULT_CITIES = [
   { city: 'Bengaluru', state: 'Karnataka' },
@@ -517,7 +517,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
       const targetName = passwordModalItem.full_name || passwordModalItem.employer_name || passwordModalItem.name;
       const targetRole = config.singularTitle;
 
-      const res = await fetch(`http://localhost:5000/api/users/${targetId}/password`, {
+      const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/users/${targetId}/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

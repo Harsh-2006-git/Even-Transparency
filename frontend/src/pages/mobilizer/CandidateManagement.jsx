@@ -67,7 +67,7 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
   const fetchCandidates = async () => {
     try {
       setLoading(true);
-      const r = await fetch('http://localhost:5000/api/candidates');
+      const r = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates`);
       const res = await r.json();
       if (res.success && Array.isArray(res.data)) {
         const mapped = res.data.map(c => {
@@ -209,7 +209,7 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
           emergency_contact_phone: formData.emergency_contact_phone,
           status: formData.status
         };
-        const res = await fetch(`http://localhost:5000/api/candidates/${editingCandidate.id}`, {
+        const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates/${editingCandidate.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -250,7 +250,7 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
           emergency_contact_phone: formData.emergency_contact_phone,
           status: formData.status || 'active'
         };
-        const res = await fetch('http://localhost:5000/api/candidates', {
+        const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -275,7 +275,7 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
   const handleConfirmDelete = async () => {
     if (!deletingCandidate) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/candidates/${deletingCandidate.id}`, {
+      const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates/${deletingCandidate.id}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -335,7 +335,7 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
       const targetEmail = passwordModalCandidate.email;
       const targetName = passwordModalCandidate.full_name;
 
-      const res = await fetch(`http://localhost:5000/api/users/${targetId}/password`, {
+      const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/users/${targetId}/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

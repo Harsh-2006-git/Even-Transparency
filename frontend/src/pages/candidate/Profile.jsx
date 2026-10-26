@@ -142,7 +142,7 @@ export default function CandidateProfile({ user, onSectionChange }) {
 
     try {
       const candId = currentCandidate._id || currentCandidate.id || 'cand_demo_001';
-      const res = await fetch(`http://localhost:5000/api/candidates/${candId}`, {
+      const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates/${candId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profileForm)

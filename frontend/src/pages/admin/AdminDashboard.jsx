@@ -42,7 +42,8 @@ import {
   MessageSquare
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api';
+import API_BASE_URL from '../../config/api.js';
+const API_BASE = API_BASE_URL;
 
 export default function AdminDashboard({ onSectionChange, user }) {
   // State variables for interactive controls

@@ -31,7 +31,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '');
 
 const DEFAULT_CITIES = [
   { city_id: 'city-blr-01', city: 'Bengaluru', state_id: 'state-ka-01', state: 'Karnataka' },

@@ -54,7 +54,7 @@ export default function DocumentKYCManagement({ mobilizerUser, onSectionChange }
   // Fetch candidates from backend API
   const fetchCandidates = () => {
     setLoading(true);
-    fetch('http://localhost:5000/api/candidates')
+    fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates`)
       .then(r => r.json())
       .then(res => {
         if (res.success && res.data) {
@@ -185,7 +185,7 @@ export default function DocumentKYCManagement({ mobilizerUser, onSectionChange }
     reader.onload = async () => {
       try {
         const base64Data = reader.result;
-        const res = await fetch('http://localhost:5000/api/upload', {
+        const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/upload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -226,7 +226,7 @@ export default function DocumentKYCManagement({ mobilizerUser, onSectionChange }
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      await fetch(`http://localhost:5000/api/candidates/${selectedCandidate.id}`, {
+      await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates/${selectedCandidate.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(selectedCandidate)

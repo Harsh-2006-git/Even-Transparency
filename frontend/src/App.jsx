@@ -183,7 +183,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem('eventransparency_token');
     if (token) {
-      fetch('http://localhost:5000/api/auth/me', {
+      fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => res.json())

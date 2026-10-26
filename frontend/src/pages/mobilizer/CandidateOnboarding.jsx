@@ -242,7 +242,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
     const targetId = candidateToEdit.id || candidateToEdit.candidate_code;
     if (targetId) {
       let isMounted = true;
-      fetch(`http://localhost:5000/api/candidates/${targetId}`)
+      fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates/${targetId}`)
         .then(res => res.json())
         .then(resData => {
           if (isMounted && resData.success && resData.data) {
@@ -507,8 +507,8 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
 
     try {
       const url = isEditing
-        ? `http://localhost:5000/api/candidates/${candidateToEdit.id}`
-        : 'http://localhost:5000/api/candidates';
+        ? `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates/${candidateToEdit.id}`
+        : `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates`;
       const method = isEditing ? 'PUT' : 'POST';
 
       const res = await fetch(url, {

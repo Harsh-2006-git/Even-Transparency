@@ -49,7 +49,7 @@ export default function MobilizerDashboard({ user, onSectionChange }) {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:5000/api/mobilizers/stats');
+      const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/mobilizers/stats`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {

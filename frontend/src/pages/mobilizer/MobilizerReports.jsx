@@ -34,7 +34,7 @@ import {
   Info
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '');
 
 export default function MobilizerReports({ mobilizerUser, onSectionChange }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState('Q1-2026'); // 'Q1-2026' | 'MAR-2026' | 'FEB-2026' | 'ALL'

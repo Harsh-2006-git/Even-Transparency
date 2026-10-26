@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import RoleLoginNav from '../../components/RoleLoginNav';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '');
 
 export default function EmployerLogin({ onLoginSuccess, onGoToLanding, onSwitchRole }) {
   const [email, setEmail] = useState('');

@@ -90,7 +90,7 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
   // Fetch candidates from backend API
   const fetchCandidates = () => {
     setLoading(true);
-    fetch('http://localhost:5000/api/candidates')
+    fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates`)
       .then(r => r.json())
       .then(res => {
         if (res.success && res.data) {
@@ -143,7 +143,7 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
         let finalFileUrl = base64Data;
 
         try {
-          const res = await fetch('http://localhost:5000/api/upload', {
+          const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/upload`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -196,7 +196,7 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
         );
 
         try {
-          const updateRes = await fetch(`http://localhost:5000/api/candidates/${selectedCandidate.id}`, {
+          const updateRes = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates/${selectedCandidate.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ documents: updatedDocs })
@@ -248,7 +248,7 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
     );
 
     try {
-      await fetch(`http://localhost:5000/api/candidates/${selectedCandidate.id}`, {
+      await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates/${selectedCandidate.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documents: updatedDocs })

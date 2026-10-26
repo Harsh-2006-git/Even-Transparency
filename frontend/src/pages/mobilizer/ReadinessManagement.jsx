@@ -44,7 +44,7 @@ export default function ReadinessManagement({ mobilizerUser, onSectionChange }) 
 
   const fetchCandidates = () => {
     setLoading(true);
-    fetch('http://localhost:5000/api/candidates')
+    fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates`)
       .then(r => r.json())
       .then(res => {
         if (res.success && res.data) {
@@ -110,7 +110,7 @@ export default function ReadinessManagement({ mobilizerUser, onSectionChange }) 
     if (!selectedCandidate) return;
     setIsSaving(true);
     try {
-      await fetch(`http://localhost:5000/api/candidates/${selectedCandidate.id}`, {
+      await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates/${selectedCandidate.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(selectedCandidate)

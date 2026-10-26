@@ -28,7 +28,7 @@ import {
   CheckSquare
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api/training';
+const API_BASE = (import.meta.env.API_BASE_URL || (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '')).replace(/\/+$/, '') + '/training';
 
 // Assessment Rubrics Master
 const ASSESSMENT_TRACKS = [

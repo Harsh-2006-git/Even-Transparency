@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import CandidateAvatar from '../../components/CandidateAvatar';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '');
 
 export default function EmployerOverview({ user, onSectionChange }) {
   const [loading, setLoading] = useState(true);

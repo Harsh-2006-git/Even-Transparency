@@ -30,7 +30,7 @@ import {
   Lock
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '');
 
 const DEFAULT_ROLES = [
   { id: 'Mobilizer', label: 'Mobilizer (Field Lead)', icon: UserCheck, color: 'text-[#FF408A] bg-[#FFF8FA] border-[#FF408A]/30' },

@@ -178,27 +178,33 @@ export default function AdminDashboard({ onSectionChange, user }) {
   ];
 
   // 2. Candidate Lifecycle Funnel Stages from Real Database
+  const totalCandidates = dashboardData.stats?.total_candidates || 0;
+  const activeEmployedCount = dashboardData.stats?.active_employed || 0;
+  const overallConversion = totalCandidates > 0
+    ? ((activeEmployedCount / totalCandidates) * 100).toFixed(1) + '%'
+    : '0.0%';
+
   const funnelStages = dashboardData.funnel_stages && dashboardData.funnel_stages.length > 0
     ? dashboardData.funnel_stages
     : [
       {
-        stage: 'Registered',
-        count: dashboardData.stats?.total_candidates || 0,
-        formattedCount: String(dashboardData.stats?.total_candidates || 0),
-        conversion: '100%',
+        stage: 'Mobilised Candidates',
+        count: totalCandidates,
+        formattedCount: String(totalCandidates),
+        conversion: totalCandidates > 0 ? '100%' : '0%',
         color: '#F72570',
-        description: 'Candidate intake and verified territory roster profiles',
+        description: 'Candidate field intake and verified territory roster profiles',
       },
       {
-        stage: 'In Training',
+        stage: 'In Training Batch',
         count: 0,
         formattedCount: '0',
         conversion: '0%',
         color: '#F59E0B',
-        description: 'Enrolled in 2W EV dynamics and battery swapping training',
+        description: 'Enrolled in 2W EV training cohort batches',
       },
       {
-        stage: 'Assessed',
+        stage: 'Batch Assessed',
         count: 0,
         formattedCount: '0',
         conversion: '0%',
@@ -206,28 +212,14 @@ export default function AdminDashboard({ onSectionChange, user }) {
         description: 'Completed batch practical driving and theory final assessment',
       },
       {
-        stage: 'Ready for Deployment',
+        stage: 'Placed by Coordinator',
         count: 0,
         formattedCount: '0',
         conversion: '0%',
         color: '#10B981',
-        description: 'Completed batch with passing marks (certified for employer placement)',
-      },
-      {
-        stage: 'Employed',
-        count: 0,
-        formattedCount: '0',
-        conversion: '0%',
-        color: '#0284C7',
-        description: 'Active with partner EV fleets under verified employment contracts',
+        description: 'Verified employer placements finalized by Placement Coordinator',
       },
     ];
-
-  const totalCandidates = dashboardData.stats?.total_candidates || 0;
-  const activeEmployedCount = dashboardData.stats?.active_employed || 0;
-  const overallConversion = totalCandidates > 0
-    ? ((activeEmployedCount / totalCandidates) * 100).toFixed(1) + '%'
-    : '0.0%';
 
   // 3. Operational Health Items from Real Candidate States
   const operationalHealthItems = dashboardData.operational_health && dashboardData.operational_health.length > 0
@@ -372,8 +364,8 @@ export default function AdminDashboard({ onSectionChange, user }) {
       { month: 'Jun', registrations: 0, assessments: 0, placements: 0, cumulative_registrations: 0, cumulative_assessments: 0, cumulative_placements: 0 },
       { month: 'Jul', registrations: 0, assessments: 0, placements: 0, cumulative_registrations: 0, cumulative_assessments: 0, cumulative_placements: 0 },
       { month: 'Aug', registrations: 0, assessments: 0, placements: 0, cumulative_registrations: 0, cumulative_assessments: 0, cumulative_placements: 0 },
-      { month: 'Sep', registrations: 2, assessments: 0, placements: 0, cumulative_registrations: 2, cumulative_assessments: 0, cumulative_placements: 0 },
-      { month: 'Oct', registrations: 2, assessments: 0, placements: 0, cumulative_registrations: 4, cumulative_assessments: 0, cumulative_placements: 0 },
+      { month: 'Sep', registrations: 0, assessments: 0, placements: 0, cumulative_registrations: 0, cumulative_assessments: 0, cumulative_placements: 0 },
+      { month: 'Oct', registrations: 0, assessments: 0, placements: 0, cumulative_registrations: 0, cumulative_assessments: 0, cumulative_placements: 0 },
     ];
 
   const getTrendVal = (d, key) => {
@@ -603,7 +595,9 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-black text-slate-900 text-xs">{stg.formattedCount}</span>
-                    <span className="text-[10px] font-bold text-slate-500 w-11 text-right">{stg.conversion}</span>
+                    <span className="text-[10px] font-bold text-slate-500 w-11 text-right">
+                      {Number(stg.count) > 0 ? stg.conversion : '0%'}
+                    </span>
                   </div>
                 </div>
 
@@ -612,7 +606,7 @@ export default function AdminDashboard({ onSectionChange, user }) {
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
-                      width: stg.conversion,
+                      width: Number(stg.count) > 0 ? (stg.conversion || '0%') : '0%',
                       backgroundColor: stg.color,
                     }}
                   />

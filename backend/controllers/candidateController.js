@@ -22,8 +22,32 @@ export const getCandidates = async (req, res) => {
         if (stage) whereClause.current_stage = stage;
         if (nf_category) whereClause.nf_category = nf_category;
         if (city) whereClause.city = city;
-        if (mobilizer_id) whereClause.mobilizer_id = mobilizer_id;
         if (status) whereClause.status = status;
+        if (mobilizer_id) {
+          const mobIds = [mobilizer_id];
+          try {
+            if (db.Mobilizer) {
+              const mobRec = await db.Mobilizer.findOne({
+                where: {
+                  [db.Sequelize.Op.or]: [
+                    { id: mobilizer_id },
+                    { user_id: mobilizer_id }
+                  ]
+                }
+              });
+              if (mobRec) {
+                if (mobRec.id && !mobIds.includes(mobRec.id)) mobIds.push(mobRec.id);
+                if (mobRec.user_id && !mobIds.includes(mobRec.user_id)) mobIds.push(mobRec.user_id);
+              }
+            }
+          } catch (mobLookupErr) {
+            console.warn('Could not resolve linked mobilizer IDs:', mobLookupErr.message);
+          }
+          whereClause[db.Sequelize.Op.or] = [
+            { mobilizer_id: { [db.Sequelize.Op.in]: mobIds } },
+            { assigned_mobilizer_id: { [db.Sequelize.Op.in]: mobIds } }
+          ];
+        }
 
         const candidates = await db.Candidate.findAll({
           where: whereClause,
@@ -116,6 +140,9 @@ export const getCandidates = async (req, res) => {
     }
     if (status) {
       result = result.filter(c => c.status === status);
+    }
+    if (mobilizer_id) {
+      result = result.filter(c => c.mobilizer_id === mobilizer_id || c.assigned_mobilizer_id === mobilizer_id);
     }
 
     res.json({
@@ -319,13 +346,6 @@ export const createCandidate = async (req, res) => {
               const associatedMob = await db.Mobilizer.findOne({ where: { user_id: uRec.id } });
               if (associatedMob) validMobilizerRecordId = associatedMob.id;
             }
-          }
-        }
-        if (!validMobilizerRecordId) {
-          const defaultMob = await db.Mobilizer.findOne();
-          if (defaultMob) {
-            validMobilizerRecordId = defaultMob.id;
-            validUserId = validUserId || defaultMob.user_id;
           }
         }
       } catch (e) {

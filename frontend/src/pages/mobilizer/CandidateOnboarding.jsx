@@ -488,9 +488,15 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
     const isUUID = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
     const combinedName = formData.full_name || `${formData.first_name || ''} ${formData.middle_name || ''} ${formData.last_name || ''}`.replace(/\s+/g, ' ').trim();
 
+    const resolvedMobUserId = isUUID(formData.mobilizer_id)
+      ? formData.mobilizer_id
+      : (isUUID(mobilizerUser?.id) ? mobilizerUser.id : (isUUID(mobilizerUser?.user_id) ? mobilizerUser.user_id : null));
+
     const assignedMobId = isUUID(candidateToEdit?.assigned_mobilizer_id)
       ? candidateToEdit.assigned_mobilizer_id
-      : (isUUID(formData.assigned_mobilizer_id) ? formData.assigned_mobilizer_id : null);
+      : (isUUID(formData.assigned_mobilizer_id)
+          ? formData.assigned_mobilizer_id
+          : (isUUID(mobilizerUser?.mobilizer_id) ? mobilizerUser.mobilizer_id : resolvedMobUserId));
 
     const payload = {
       ...formData,
@@ -498,7 +504,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
       candidate_code: candidateCodePreview,
       organization_id: isUUID(formData.organization_id) ? formData.organization_id : (isUUID(mobilizerUser?.organization_id) ? mobilizerUser.organization_id : null),
       partner_id: isUUID(formData.partner_id) ? formData.partner_id : (isUUID(mobilizerUser?.partner_id) ? mobilizerUser.partner_id : null),
-      mobilizer_id: isUUID(formData.mobilizer_id) ? formData.mobilizer_id : (isUUID(mobilizerUser?.id) ? mobilizerUser.id : null),
+      mobilizer_id: resolvedMobUserId,
       assigned_mobilizer_id: assignedMobId,
       photo_url: formData.photo_url && String(formData.photo_url).trim() !== '' ? String(formData.photo_url).trim() : null,
       date_of_birth: formData.date_of_birth || null,

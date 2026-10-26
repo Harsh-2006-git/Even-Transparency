@@ -57,7 +57,12 @@ export default function MobilizerTargets({ mobilizerUser, onSectionChange }) {
   const fetchTargets = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/mobilizers/targets`);
+      const isAdmin = 
+        mobilizerUser?.role?.toLowerCase()?.includes('admin') ||
+        mobilizerUser?.userType?.toLowerCase()?.includes('admin');
+      const mobId = isAdmin ? '' : (mobilizerUser?.id || mobilizerUser?.user_id || mobilizerUser?.mobilizer_id || '');
+      const queryParam = mobId ? `?mobilizer_id=${encodeURIComponent(mobId)}` : '';
+      const res = await fetch(`${API_BASE}/mobilizers/targets${queryParam}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.data) {

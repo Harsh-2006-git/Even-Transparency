@@ -66,8 +66,12 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
   // Fetch real candidates from backend PostgreSQL database
   const fetchCandidates = async () => {
     try {
-      setLoading(true);
-      const r = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates`);
+      const isAdmin = 
+        mobilizerUser?.role?.toLowerCase()?.includes('admin') ||
+        mobilizerUser?.userType?.toLowerCase()?.includes('admin');
+      const mobId = isAdmin ? '' : (mobilizerUser?.id || mobilizerUser?.user_id || mobilizerUser?.mobilizer_id || '');
+      const queryParam = mobId ? `?mobilizer_id=${encodeURIComponent(mobId)}` : '';
+      const r = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates${queryParam}`);
       const res = await r.json();
       if (res.success && Array.isArray(res.data)) {
         const mapped = res.data.map(c => {
@@ -246,6 +250,14 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
           license_number: formData.license_number,
           driving_experience: formData.prior_driving_experience,
           has_smartphone: formData.has_smartphone,
+          mobilizer_id: (mobilizerUser?.role?.toLowerCase()?.includes('admin') || mobilizerUser?.userType?.toLowerCase()?.includes('admin'))
+            ? null 
+            : (mobilizerUser?.id || mobilizerUser?.user_id || null),
+          assigned_mobilizer_id: (mobilizerUser?.role?.toLowerCase()?.includes('admin') || mobilizerUser?.userType?.toLowerCase()?.includes('admin'))
+            ? null 
+            : (mobilizerUser?.mobilizer_id || mobilizerUser?.id || null),
+          organization_id: mobilizerUser?.organization_id || null,
+          partner_id: mobilizerUser?.partner_id || null,
           emergency_contact_name: formData.emergency_contact_name,
           emergency_contact_phone: formData.emergency_contact_phone,
           status: formData.status || 'active'

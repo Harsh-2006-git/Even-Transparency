@@ -56,8 +56,12 @@ export default function CandidateAssessments({ mobilizerUser, onSectionChange })
   const fetchAssessments = async () => {
     setLoading(true);
     try {
-      const mobId = mobilizerUser?.id || mobilizerUser?.mobilizer_id || 'all';
-      const res = await fetch(`${API_BASE}/mobilizers/assessments?mobilizer_id=${mobId}`);
+      const isAdmin = 
+        mobilizerUser?.role?.toLowerCase()?.includes('admin') ||
+        mobilizerUser?.userType?.toLowerCase()?.includes('admin');
+      const mobId = isAdmin ? '' : (mobilizerUser?.id || mobilizerUser?.user_id || mobilizerUser?.mobilizer_id || '');
+      const queryParam = mobId ? `?mobilizer_id=${encodeURIComponent(mobId)}` : '';
+      const res = await fetch(`${API_BASE}/mobilizers/assessments${queryParam}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {

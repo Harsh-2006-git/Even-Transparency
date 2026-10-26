@@ -90,7 +90,12 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
   // Fetch candidates from backend API
   const fetchCandidates = () => {
     setLoading(true);
-    fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates`)
+    const isAdmin = 
+      mobilizerUser?.role?.toLowerCase()?.includes('admin') ||
+      mobilizerUser?.userType?.toLowerCase()?.includes('admin');
+    const mobId = isAdmin ? '' : (mobilizerUser?.id || mobilizerUser?.user_id || mobilizerUser?.mobilizer_id || '');
+    const queryParam = mobId ? `?mobilizer_id=${encodeURIComponent(mobId)}` : '';
+    fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates${queryParam}`)
       .then(r => r.json())
       .then(res => {
         if (res.success && res.data) {
@@ -106,9 +111,12 @@ export default function DocumentManagement({ mobilizerUser, onSectionChange }) {
           setCandidates(mapped);
           if (mapped.length > 0) {
             setSelectedCandidate(mapped[0]);
+          } else {
+            setSelectedCandidate(null);
           }
         } else {
           setCandidates([]);
+          setSelectedCandidate(null);
         }
       })
       .catch(err => {

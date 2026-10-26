@@ -49,14 +49,14 @@ export default function MobilizerDashboard({ user, onSectionChange }) {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/mobilizers/stats`);
+      const mobId = user?.id || user?.user_id || user?.mobilizer_id || '';
+      const queryParam = mobId ? `?mobilizer_id=${encodeURIComponent(mobId)}` : '';
+      const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/mobilizers/stats${queryParam}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
           if (json.stats) setStats(json.stats);
-          if (json.recent_candidates && json.recent_candidates.length > 0) {
-            setRecentCandidates(json.recent_candidates);
-          }
+          setRecentCandidates(json.recent_candidates || []);
           setLastUpdated(
             new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', ' +
             new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })

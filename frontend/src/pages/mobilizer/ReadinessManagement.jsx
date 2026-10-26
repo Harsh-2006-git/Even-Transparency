@@ -44,7 +44,12 @@ export default function ReadinessManagement({ mobilizerUser, onSectionChange }) 
 
   const fetchCandidates = () => {
     setLoading(true);
-    fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates`)
+    const isAdmin = 
+      mobilizerUser?.role?.toLowerCase()?.includes('admin') ||
+      mobilizerUser?.userType?.toLowerCase()?.includes('admin');
+    const mobId = isAdmin ? '' : (mobilizerUser?.id || mobilizerUser?.user_id || mobilizerUser?.mobilizer_id || '');
+    const queryParam = mobId ? `?mobilizer_id=${encodeURIComponent(mobId)}` : '';
+    fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/candidates${queryParam}`)
       .then(r => r.json())
       .then(res => {
         if (res.success && res.data) {

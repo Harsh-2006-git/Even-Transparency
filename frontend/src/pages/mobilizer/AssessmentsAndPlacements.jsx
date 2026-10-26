@@ -148,11 +148,15 @@ export default function AssessmentsAndPlacements({ mobilizerUser, onSectionChang
   const fetchData = async () => {
     try {
       setLoading(true);
-      const mobId = mobilizerUser?.id || mobilizerUser?.mobilizer_id || 'all';
+      const isAdmin = 
+        mobilizerUser?.role?.toLowerCase()?.includes('admin') ||
+        mobilizerUser?.userType?.toLowerCase()?.includes('admin');
+      const mobId = isAdmin ? '' : (mobilizerUser?.id || mobilizerUser?.user_id || mobilizerUser?.mobilizer_id || '');
+      const queryParam = mobId ? `?mobilizer_id=${encodeURIComponent(mobId)}` : '';
       
       const [assRes, plcRes] = await Promise.all([
-        fetch(`${API_BASE}/mobilizers/assessments?mobilizer_id=${mobId}`),
-        fetch(`${API_BASE}/mobilizers/placements?mobilizer_id=${mobId}`)
+        fetch(`${API_BASE}/mobilizers/assessments${queryParam}`),
+        fetch(`${API_BASE}/mobilizers/placements${queryParam}`)
       ]);
 
       if (assRes.ok) {

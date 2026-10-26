@@ -108,7 +108,12 @@ export default function MobilizerReports({ mobilizerUser, onSectionChange }) {
   const fetchLiveReports = async () => {
     try {
       setIsRefreshing(true);
-      const res = await fetch(`${API_BASE}/mobilizers/reports`);
+      const isAdmin = 
+        mobilizerUser?.role?.toLowerCase()?.includes('admin') ||
+        mobilizerUser?.userType?.toLowerCase()?.includes('admin');
+      const mobId = isAdmin ? '' : (mobilizerUser?.id || mobilizerUser?.user_id || mobilizerUser?.mobilizer_id || '');
+      const queryParam = mobId ? `?mobilizer_id=${encodeURIComponent(mobId)}` : '';
+      const res = await fetch(`${API_BASE}/mobilizers/reports${queryParam}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data && json.data.length > 0) {

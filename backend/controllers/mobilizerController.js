@@ -558,11 +558,45 @@ export const deleteMobilizer = async (req, res) => {
   }
 };
 
+// Helper to build Sequelize where clause scoping candidates strictly to a given mobilizer
+const getMobilizerCandidateWhere = async (mobilizer_id) => {
+  if (!mobilizer_id || mobilizer_id === 'all' || mobilizer_id === 'ALL') return null;
+  const mobIds = [mobilizer_id];
+  try {
+    if (db.Mobilizer) {
+      const mobRec = await db.Mobilizer.findOne({
+        where: {
+          [db.Sequelize.Op.or]: [
+            { id: mobilizer_id },
+            { user_id: mobilizer_id }
+          ]
+        }
+      });
+      if (mobRec) {
+        if (mobRec.id && !mobIds.includes(mobRec.id)) mobIds.push(mobRec.id);
+        if (mobRec.user_id && !mobIds.includes(mobRec.user_id)) mobIds.push(mobRec.user_id);
+      }
+    }
+  } catch (e) {
+    console.warn('Error resolving mobilizer IDs in where helper:', e.message);
+  }
+  return {
+    [db.Sequelize.Op.or]: [
+      { mobilizer_id: { [db.Sequelize.Op.in]: mobIds } },
+      { assigned_mobilizer_id: { [db.Sequelize.Op.in]: mobIds } }
+    ]
+  };
+};
+
 export const getMobilizerStats = async (req, res) => {
   try {
+    const { mobilizer_id } = req.query;
+
     if (db.Candidate) {
       try {
+        const mobWhere = await getMobilizerCandidateWhere(mobilizer_id);
         const candidates = await db.Candidate.findAll({
+          where: mobWhere || {},
           include: [
             { model: db.CandidateDocument, as: 'documents', required: false }
           ],
@@ -837,7 +871,9 @@ export const getMobilizerCandidateAssessments = async (req, res) => {
 
     if (db.Candidate) {
       try {
+        const mobWhere = await getMobilizerCandidateWhere(mobilizer_id);
         const candidates = await db.Candidate.findAll({
+          where: mobWhere || {},
           include: [
             { model: db.CandidateReadiness, as: 'readinessProfile', required: false }
           ],
@@ -987,13 +1023,20 @@ export const getMobilizerCandidatePlacements = async (req, res) => {
 
     if (db.CandidateDeployment) {
       try {
+        const mobWhere = await getMobilizerCandidateWhere(mobilizer_id);
+        const candidateInclude = {
+          model: db.Candidate,
+          as: 'candidate',
+          attributes: ['id', 'candidate_code', 'full_name', 'photo_url', 'mobile_number', 'city', 'state', 'nf_category', 'current_stage', 'mobilizer_id', 'assigned_mobilizer_id']
+        };
+        if (mobWhere) {
+          candidateInclude.where = mobWhere;
+          candidateInclude.required = true;
+        }
+
         const deployments = await db.CandidateDeployment.findAll({
           include: [
-            {
-              model: db.Candidate,
-              as: 'candidate',
-              attributes: ['id', 'candidate_code', 'full_name', 'photo_url', 'mobile_number', 'city', 'state', 'nf_category', 'current_stage']
-            },
+            candidateInclude,
             {
               model: db.Employer,
               as: 'employer',
@@ -1119,7 +1162,9 @@ export const getMobilizerTargets = async (req, res) => {
     let candidates = [];
     if (db.Candidate) {
       try {
+        const mobWhere = await getMobilizerCandidateWhere(mobilizer_id);
         candidates = await db.Candidate.findAll({
+          where: mobWhere || {},
           include: [
             { model: db.CandidateDocument, as: 'documents', required: false }
           ],
@@ -1319,7 +1364,9 @@ export const getMobilizerReports = async (req, res) => {
     let candidates = [];
     if (db.Candidate) {
       try {
+        const mobWhere = await getMobilizerCandidateWhere(mobilizer_id);
         candidates = await db.Candidate.findAll({
+          where: mobWhere || {},
           include: [
             { model: db.CandidateDocument, as: 'documents', required: false }
           ],

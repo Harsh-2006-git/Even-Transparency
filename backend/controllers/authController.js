@@ -267,8 +267,34 @@ export const login = async (req, res) => {
           const u = userRecord.toJSON();
           delete u.password_hash;
 
+          let linkedMobId = null;
+          let linkedCity = null;
+          let linkedState = null;
+          let linkedPartnerId = null;
+          let linkedOrgId = null;
+          if (db.Mobilizer) {
+            try {
+              const mobProfile = await db.Mobilizer.findOne({ where: { user_id: u.id } });
+              if (mobProfile) {
+                linkedMobId = mobProfile.id;
+                linkedCity = mobProfile.assigned_city;
+                linkedState = mobProfile.assigned_state;
+                linkedPartnerId = mobProfile.partner_id;
+                linkedOrgId = mobProfile.organization_id;
+              }
+            } catch (mobErr) {
+              // Ignore lookup error
+            }
+          }
+
           const userObj = {
             id: u.id,
+            user_id: u.id,
+            mobilizer_id: linkedMobId || u.id,
+            assigned_city: linkedCity || u.city || 'Bengaluru',
+            assigned_state: linkedState || u.state || 'Karnataka',
+            partner_id: linkedPartnerId || u.partner_id || null,
+            organization_id: linkedOrgId || u.organization_id || null,
             full_name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Portal User',
             first_name: u.first_name || '',
             last_name: u.last_name || '',

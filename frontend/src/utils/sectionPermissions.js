@@ -63,6 +63,7 @@ export const SECTION_PERMISSIONS = {
   'trainer-support': ['Trainer', 'Admin'],
 
   // Placement Management (PlacementCoordinator, Admin & Employer)
+  'placement-hub': ['PlacementCoordinator', 'Admin', 'Employer'],
   'employers': ['PlacementCoordinator', 'Admin', 'Employer'],
   'openings': ['PlacementCoordinator', 'Admin', 'Employer'],
   'job-opportunities': ['PlacementCoordinator', 'Admin', 'Employer'],
@@ -70,6 +71,7 @@ export const SECTION_PERMISSIONS = {
   'interviews': ['PlacementCoordinator', 'Admin', 'Employer'],
   'deployments': ['PlacementCoordinator', 'Admin', 'Employer'],
   'placements': ['PlacementCoordinator', 'Admin', 'Employer'],
+  'candidate-showcase': ['PlacementCoordinator', 'Admin', 'Employer'],
   'employment-tracking': ['PlacementCoordinator', 'Admin', 'Employer'],
 
   // Candidate Portal Exclusives

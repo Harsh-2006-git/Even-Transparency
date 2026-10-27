@@ -442,6 +442,7 @@ export const batchDeployCandidates = async (req, res) => {
       if (dep) {
         await dep.update({
           employer_id: employer ? employer.id : dep.employer_id,
+          job_opportunity_id: job_role_id || dep.job_opportunity_id,
           job_role_title: role,
           work_hub_address: hub,
           joining_date: effectiveJoiningDate,
@@ -488,6 +489,13 @@ export const batchDeployCandidates = async (req, res) => {
 
     if (employer && deployedList.length > 0) {
       await employer.increment('total_placed_candidates', { by: deployedList.length });
+    }
+
+    if (job_role_id && deployedList.length > 0) {
+      const job = await db.JobOpportunity.findByPk(job_role_id);
+      if (job) {
+        await job.increment('filled_positions', { by: deployedList.length });
+      }
     }
 
     return res.status(200).json({

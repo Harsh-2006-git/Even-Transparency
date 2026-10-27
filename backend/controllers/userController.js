@@ -473,22 +473,51 @@ export const changeUserPassword = async (req, res) => {
         user = await db.User.findOne({ where: { email: String(matchedPartner.contact_email || matchedPartner.email).toLowerCase().trim() } });
       }
     }
+    let matchedCandidate = null;
     if (!user && db.Candidate) {
-      const cand = await db.Candidate.findByPk(id);
-      if (cand?.user_id) user = await db.User.findByPk(cand.user_id);
-      if (!user && cand?.email) user = await db.User.findOne({ where: { email: String(cand.email).toLowerCase().trim() } });
+      matchedCandidate = await db.Candidate.findByPk(id);
+      if (!matchedCandidate) {
+        matchedCandidate = await db.Candidate.findOne({
+          where: { candidate_code: String(id).toUpperCase().trim() }
+        });
+      }
+      if (matchedCandidate) {
+        if (matchedCandidate.email) {
+          user = await db.User.findOne({ where: { email: String(matchedCandidate.email).toLowerCase().trim() } });
+        }
+        if (!user && matchedCandidate.mobile_number) {
+          user = await db.User.findOne({ where: { mobile_number: matchedCandidate.mobile_number } });
+        }
+      }
     }
-    const incomingEmail = email || req.body.email;
+
+    let incomingEmail = email || req.body.email;
+    if (!incomingEmail && matchedCandidate) {
+      incomingEmail = matchedCandidate.email || (matchedCandidate.candidate_code ? `${matchedCandidate.candidate_code.toLowerCase()}@candidate.org` : null);
+    }
+    if (!incomingEmail && matchedEmployer) {
+      incomingEmail = matchedEmployer.contact_email || matchedEmployer.email;
+    }
+    if (!incomingEmail && matchedPartner) {
+      incomingEmail = matchedPartner.contact_email || matchedPartner.email;
+    }
+
     if (!user && incomingEmail) {
       const lookupEmail = String(incomingEmail).toLowerCase().trim();
       user = await db.User.findOne({ where: { email: lookupEmail } });
+      if (!matchedCandidate && db.Candidate) {
+        matchedCandidate = await db.Candidate.findOne({ where: { email: lookupEmail } });
+      }
     }
 
     // Auto-provision portal login if the user row does not exist yet (e.g. for employers, partners, candidates)
-    if (!user && incomingEmail) {
-      const targetEmail = String(incomingEmail).toLowerCase().trim();
-      const name = req.body.full_name || req.body.name || req.body.employer_name || targetEmail.split('@')[0];
-      const rawRole = req.body.role || req.body.userType || 'staff';
+    if (!user && (incomingEmail || matchedCandidate)) {
+      const targetEmail = String(incomingEmail || `${(matchedCandidate?.candidate_code || 'cand').toLowerCase()}@candidate.org`).toLowerCase().trim();
+      const name = matchedCandidate
+        ? (matchedCandidate.full_name || `${matchedCandidate.first_name || ''} ${matchedCandidate.last_name || ''}`.trim())
+        : (req.body.full_name || req.body.name || req.body.employer_name || targetEmail.split('@')[0]);
+
+      const rawRole = matchedCandidate ? 'candidate' : (req.body.role || req.body.userType || 'staff');
       const rLower = String(rawRole).toLowerCase();
       let targetRole = 'staff';
       if (rLower.includes('admin')) targetRole = 'org_admin';
@@ -503,21 +532,22 @@ export const changeUserPassword = async (req, res) => {
       const password_hash = await bcrypt.hash(String(targetPassword).trim(), salt);
       user = await db.User.create({
         id: uuidv4(),
-        employee_id: `USR-${Math.floor(1000 + Math.random() * 9000)}`,
-        first_name: name.split(' ')[0],
-        last_name: name.split(' ').slice(1).join(' ') || '',
+        employee_id: matchedCandidate?.candidate_code || `USR-${Math.floor(1000 + Math.random() * 9000)}`,
+        first_name: matchedCandidate?.first_name || name.split(' ')[0],
+        last_name: matchedCandidate?.last_name || name.split(' ').slice(1).join(' ') || '',
         full_name: name,
         email: targetEmail,
+        mobile_number: matchedCandidate?.mobile_number || req.body.mobile_number || null,
         password_hash,
         role: targetRole,
         status: 'active'
       });
 
-      if (matchedEmployer && !matchedEmployer.user_id) {
+      if (matchedCandidate && !matchedCandidate.email) {
         try {
-          await matchedEmployer.update({ user_id: user.id });
+          await matchedCandidate.update({ email: targetEmail });
         } catch (e) {
-          // ignore if user_id column doesn't exist on Employer
+          // ignore
         }
       }
 
@@ -535,6 +565,14 @@ export const changeUserPassword = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     user.password_hash = await bcrypt.hash(String(targetPassword).trim(), salt);
     await user.save();
+
+    if (matchedCandidate && !matchedCandidate.email) {
+      try {
+        await matchedCandidate.update({ email: user.email });
+      } catch (e) {
+        // ignore
+      }
+    }
 
     return res.json({
       success: true,

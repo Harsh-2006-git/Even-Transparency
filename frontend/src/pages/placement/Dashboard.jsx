@@ -57,6 +57,7 @@ export default function PlacementDashboard({ user, onSectionChange }) {
     candidate_code: '',
     employer_id: '',
     employer_name: 'Even Cargo Fleet Services',
+    job_opportunity_id: '',
     job_role: 'Two-Wheeler EV Delivery Associate',
     work_location_id: 'Bengaluru South Cluster Hub (Koramangala)',
     monthly_earnings: 19500,
@@ -208,7 +209,8 @@ export default function PlacementDashboard({ user, onSectionChange }) {
           active_deployments: e.total_placed_candidates || 12,
           starting_salary: e.active_roles?.[0]?.monthly_gross_salary || 19500,
           ev_model: e.allocated_ev_model || 'Hero Nyx Electric Cargo Spec',
-          hubs: e.operating_cities || ['Bengaluru South Hub', 'Indiranagar Hub']
+          hubs: e.operating_cities || ['Bengaluru South Hub', 'Indiranagar Hub'],
+          active_roles: e.active_roles || []
         }));
         setEmployers(formattedEmps);
       } else {
@@ -221,7 +223,7 @@ export default function PlacementDashboard({ user, onSectionChange }) {
           const score = typeof c.readiness_score === 'number' ? c.readiness_score : (80 + (i % 4) * 4);
           const isCertified = score >= 75;
           const matchingDep = liveDeployments.find(d => d.candidate_id === c.id || d.candidate_code === c.candidate_code);
-          const isDeployed = c.deployment_status === 'DEPLOYED' || c.current_stage === 'PLACED' || !!matchingDep;
+          const isDeployed = c.deployment_status === 'DEPLOYED' || c.current_stage === 'PLACED' || c.current_stage === 'DEPLOYED' || !!matchingDep;
 
           let status = 'IN_TRAINING';
           if (isDeployed) {
@@ -335,16 +337,69 @@ export default function PlacementDashboard({ user, onSectionChange }) {
   // Pre-fill deploy modal for a specific candidate
   const handleOpenDeployForCandidate = (cand) => {
     setSelectedCandidateForDeploy(cand);
+    const defaultEmp = employers[0] || null;
+    const defaultRole = defaultEmp?.active_roles?.[0] || null;
+
     setDeployForm(prev => ({
       ...prev,
       candidate_id: cand.id,
       candidate_name: cand.full_name,
       candidate_code: cand.candidate_code,
-      employer_name: employers[0]?.name || 'Even Cargo Fleet Services',
-      job_role: 'Two-Wheeler EV Delivery Associate',
-      monthly_earnings: 19500
+      employer_id: defaultEmp?.id || '',
+      employer_name: defaultEmp?.name || 'Even Cargo Fleet Services',
+      job_opportunity_id: defaultRole?.id || '',
+      job_role: defaultRole?.job_title || 'Two-Wheeler EV Delivery Associate',
+      monthly_earnings: defaultRole?.monthly_gross_salary || defaultEmp?.starting_salary || 19500,
+      shift_preference: defaultRole?.shift_timings || 'Day Shift (08:00 AM - 04:30 PM)',
+      work_location_id: (Array.isArray(defaultEmp?.hubs) && defaultEmp.hubs.length > 0
+        ? (typeof defaultEmp.hubs[0] === 'string' ? defaultEmp.hubs[0] : defaultEmp.hubs[0].name)
+        : `${defaultEmp?.city || 'Bengaluru'} Central EV Hub`),
+      ev_vehicle_allocated: defaultEmp?.ev_model || 'Ather 450X Commercial Cargo Spec'
     }));
     setIsDeployModalOpen(true);
+  };
+
+  const handleEmployerSelect = (employerId) => {
+    const selectedEmp = employers.find(e => e.id === employerId || e.name === employerId);
+    if (!selectedEmp) return;
+
+    const firstRole = selectedEmp.active_roles?.[0] || null;
+    const hubName = Array.isArray(selectedEmp.hubs) && selectedEmp.hubs.length > 0
+      ? (typeof selectedEmp.hubs[0] === 'string' ? selectedEmp.hubs[0] : selectedEmp.hubs[0].name)
+      : `${selectedEmp.city || 'Bengaluru'} Operations Hub`;
+
+    setDeployForm(prev => ({
+      ...prev,
+      employer_id: selectedEmp.id,
+      employer_name: selectedEmp.name,
+      job_opportunity_id: firstRole?.id || '',
+      job_role: firstRole?.job_title || 'EV Delivery Pilot',
+      monthly_earnings: firstRole?.monthly_gross_salary || selectedEmp.starting_salary || 21500,
+      shift_preference: firstRole?.shift_timings || 'Day Shift (08:00 AM - 04:30 PM)',
+      work_location_id: hubName,
+      ev_vehicle_allocated: selectedEmp.ev_model || prev.ev_vehicle_allocated
+    }));
+  };
+
+  const handleJobRoleSelect = (roleId) => {
+    const curEmp = employers.find(e => e.id === deployForm.employer_id || e.name === deployForm.employer_name);
+    const selectedRole = curEmp?.active_roles?.find(r => r.id === roleId);
+
+    if (selectedRole) {
+      setDeployForm(prev => ({
+        ...prev,
+        job_opportunity_id: selectedRole.id,
+        job_role: selectedRole.job_title,
+        monthly_earnings: selectedRole.monthly_gross_salary || prev.monthly_earnings,
+        shift_preference: selectedRole.shift_timings || prev.shift_preference
+      }));
+    } else {
+      setDeployForm(prev => ({
+        ...prev,
+        job_opportunity_id: roleId,
+        job_role: roleId
+      }));
+    }
   };
 
   // Submit candidate deployment offer to PostgreSQL
@@ -355,70 +410,41 @@ export default function PlacementDashboard({ user, onSectionChange }) {
       return;
     }
 
-    const newDep = {
-      id: `dep-${Date.now()}`,
-      candidate_id: deployForm.candidate_id,
-      candidate_name: deployForm.candidate_name,
-      candidate_code: deployForm.candidate_code || 'ET-2026',
-      employer: deployForm.employer_name,
-      role: deployForm.job_role,
-      earnings: `₹${Number(deployForm.monthly_earnings).toLocaleString('en-IN')}/mo`,
-      hub: deployForm.work_location_id,
-      joining_date: deployForm.joining_date,
-      status: 'Joined & Active',
-      ev_allocated: deployForm.ev_vehicle_allocated
-    };
-
     try {
+      const payload = {
+        candidate_id: deployForm.candidate_id,
+        candidate_code: deployForm.candidate_code,
+        candidate_name: deployForm.candidate_name,
+        employer_id: deployForm.employer_id,
+        employer_name: deployForm.employer_name,
+        job_opportunity_id: deployForm.job_opportunity_id,
+        job_role: deployForm.job_role,
+        monthly_earnings: Number(deployForm.monthly_earnings),
+        joining_date: deployForm.joining_date,
+        work_location_id: deployForm.work_location_id,
+        shift_preference: deployForm.shift_preference,
+        ev_vehicle_allocated: deployForm.ev_vehicle_allocated,
+        notes: deployForm.notes
+      };
+
       const res = await fetch(`${API_BASE}/deployments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          candidate_id: deployForm.candidate_id,
-          candidate_code: deployForm.candidate_code,
-          candidate_name: deployForm.candidate_name,
-          employer_name: deployForm.employer_name,
-          job_role: deployForm.job_role,
-          monthly_earnings: deployForm.monthly_earnings,
-          joining_date: deployForm.joining_date,
-          work_location_id: deployForm.work_location_id,
-          shift_preference: deployForm.shift_preference,
-          ev_vehicle_allocated: deployForm.ev_vehicle_allocated,
-          notes: deployForm.notes
-        })
+        body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          setDeployments(prev => [json.data, ...prev]);
-        } else {
-          setDeployments(prev => [newDep, ...prev]);
-        }
-      } else {
-        setDeployments(prev => [newDep, ...prev]);
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Failed to deploy candidate');
       }
+
+      showToast(`🎉 ${deployForm.candidate_name} deployed to ${deployForm.employer_name} as ${deployForm.job_role}!`, 'success');
+      setIsDeployModalOpen(false);
+      await loadDashboardData();
     } catch (apiErr) {
-      console.warn('API error saving deployment, updating local state:', apiErr);
-      setDeployments(prev => [newDep, ...prev]);
+      console.error('API error saving deployment:', apiErr);
+      showToast(apiErr.message || 'Failed to submit deployment to database', 'error');
     }
-
-    // Update candidate status in local state
-    setCandidates(prev => prev.map(c => {
-      if (c.candidate_code === deployForm.candidate_code || c.id === deployForm.candidate_id) {
-        return {
-          ...c,
-          deployment_status: 'DEPLOYED',
-          deployed_employer: deployForm.employer_name,
-          deployed_salary: deployForm.monthly_earnings,
-          deployed_at: deployForm.joining_date
-        };
-      }
-      return c;
-    }));
-
-    setIsDeployModalOpen(false);
-    showToast(`🎉 Corporate Offer Letter issued for ${newDep.candidate_name} with ${newDep.employer}!`);
   };
 
   // Filter candidates for priority pool
@@ -496,9 +522,8 @@ export default function PlacementDashboard({ user, onSectionChange }) {
     <div className="space-y-4 pb-12 font-sans max-w-7xl mx-auto">
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed top-16 right-6 z-50 px-3.5 py-2.5 rounded-xl shadow-xl text-white text-xs font-semibold flex items-center gap-2 transition-all animate-bounce ${
-          toast.type === 'error' ? 'bg-red-600' : 'bg-emerald-600'
-        }`}>
+        <div className={`fixed top-16 right-6 z-50 px-3.5 py-2.5 rounded-xl shadow-xl text-white text-xs font-semibold flex items-center gap-2 transition-all animate-bounce ${toast.type === 'error' ? 'bg-red-600' : 'bg-emerald-600'
+          }`}>
           {toast.type === 'error' ? <AlertCircle className="w-3.5 h-3.5 shrink-0" /> : <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
           <span>{toast.msg}</span>
         </div>
@@ -517,9 +542,7 @@ export default function PlacementDashboard({ user, onSectionChange }) {
               Placement & Corporate Deployment Command Center
             </h1>
 
-            <p className="text-xs text-slate-500 leading-normal">
-              Match graduation-certified candidates with verified EV fleet partners, dispatch fair-wage employment offers, and monitor active road deployments.
-            </p>
+
 
             <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] font-medium text-slate-600">
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 font-semibold">
@@ -660,97 +683,6 @@ export default function PlacementDashboard({ user, onSectionChange }) {
         </div>
       </div>
 
-      {/* ─── 3. COMPACT PLACEMENT FUNNEL ─────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Candidate Transition & Placement Funnel
-            </h3>
-          </div>
-          <span className="text-[11px] font-bold text-slate-500">
-            {metrics.totalCandidates} Total Candidate Pool
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-          {/* Step 1 */}
-          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70 space-y-1">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
-              <span>1. Skill Certified</span>
-              <span className="font-mono text-indigo-600">{metrics.certifiedCandidates}</span>
-            </div>
-            <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
-              <div
-                className="bg-indigo-600 h-full transition-all duration-500"
-                style={{ width: `${Math.round((metrics.certifiedCandidates / (metrics.totalCandidates || 1)) * 100)}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-slate-500">EV Riding & Swap Passed</p>
-          </div>
-
-          {/* Step 2 */}
-          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70 space-y-1">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
-              <span>2. Partner Match</span>
-              <span className="font-mono text-blue-600">{metrics.certifiedCandidates}</span>
-            </div>
-            <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
-              <div
-                className="bg-blue-600 h-full transition-all duration-500"
-                style={{ width: `${Math.round((metrics.certifiedCandidates / (metrics.totalCandidates || 1)) * 100)}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-slate-500">Mapped to Nearby Hubs</p>
-          </div>
-
-          {/* Step 3 */}
-          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70 space-y-1">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
-              <span>3. Offer Dispatched</span>
-              <span className="font-mono text-amber-600">{metrics.deployedCandidates}</span>
-            </div>
-            <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
-              <div
-                className="bg-amber-500 h-full transition-all duration-500"
-                style={{ width: `${Math.round((metrics.deployedCandidates / (metrics.totalCandidates || 1)) * 100)}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-slate-500">Terms Accepted</p>
-          </div>
-
-          {/* Step 4 */}
-          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70 space-y-1">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
-              <span>4. EV Allocated</span>
-              <span className="font-mono text-cyan-600">{metrics.deployedCandidates}</span>
-            </div>
-            <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
-              <div
-                className="bg-cyan-600 h-full transition-all duration-500"
-                style={{ width: `${Math.round((metrics.deployedCandidates / (metrics.totalCandidates || 1)) * 100)}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-slate-500">Helmet & Battery Bay</p>
-          </div>
-
-          {/* Step 5 */}
-          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70 space-y-1">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-800">
-              <span>5. Placed on Road</span>
-              <span className="font-mono text-emerald-600">{metrics.deployedCandidates}</span>
-            </div>
-            <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
-              <div
-                className="bg-emerald-600 h-full transition-all duration-500"
-                style={{ width: `${Math.round((metrics.deployedCandidates / (metrics.totalCandidates || 1)) * 100)}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-slate-500">Live Commercial Rides</p>
-          </div>
-        </div>
-      </div>
 
       {/* ─── 4. MAIN TWO-COLUMN SPLIT ─────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -773,34 +705,30 @@ export default function PlacementDashboard({ user, onSectionChange }) {
             <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg shrink-0 text-[11px]">
               <button
                 onClick={() => setCandidateFilter('ALL')}
-                className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${
-                  candidateFilter === 'ALL' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-                }`}
+                className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${candidateFilter === 'ALL' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                  }`}
               >
                 All ({candidates.length})
               </button>
               <button
                 onClick={() => setCandidateFilter('READY')}
-                className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${
-                  candidateFilter === 'READY' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-slate-500 hover:text-emerald-700'
-                }`}
+                className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${candidateFilter === 'READY' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-slate-500 hover:text-emerald-700'
+                  }`}
               >
                 Ready ({metrics.readyCandidates})
               </button>
               <button
                 onClick={() => setCandidateFilter('DEPLOYED')}
-                className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${
-                  candidateFilter === 'DEPLOYED' ? 'bg-white text-blue-800 shadow-2xs' : 'text-slate-500 hover:text-blue-700'
-                }`}
+                className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${candidateFilter === 'DEPLOYED' ? 'bg-white text-blue-800 shadow-2xs' : 'text-slate-500 hover:text-blue-700'
+                  }`}
               >
                 Placed ({metrics.deployedCandidates})
               </button>
               {metrics.inTrainingCandidates > 0 && (
                 <button
                   onClick={() => setCandidateFilter('IN_TRAINING')}
-                  className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${
-                    candidateFilter === 'IN_TRAINING' ? 'bg-white text-amber-800 shadow-2xs' : 'text-slate-500 hover:text-amber-700'
-                  }`}
+                  className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${candidateFilter === 'IN_TRAINING' ? 'bg-white text-amber-800 shadow-2xs' : 'text-slate-500 hover:text-amber-700'
+                    }`}
                 >
                   Training ({metrics.inTrainingCandidates})
                 </button>
@@ -835,20 +763,18 @@ export default function PlacementDashboard({ user, onSectionChange }) {
                 return (
                   <div
                     key={cand.id}
-                    className={`p-3 rounded-xl border transition space-y-2 ${
-                      isReady
-                        ? 'bg-white border-emerald-200/90 hover:border-emerald-400 shadow-2xs'
-                        : isDeployed
+                    className={`p-3 rounded-xl border transition space-y-2 ${isReady
+                      ? 'bg-white border-emerald-200/90 hover:border-emerald-400 shadow-2xs'
+                      : isDeployed
                         ? 'bg-slate-50/50 border-slate-200'
                         : 'bg-amber-50/20 border-amber-200/70'
-                    }`}
+                      }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                       {/* Candidate Avatar & Info */}
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs ${
-                          isInTraining ? 'bg-amber-700 text-white' : 'bg-slate-900 text-white'
-                        }`}>
+                        <div className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs ${isInTraining ? 'bg-amber-700 text-white' : 'bg-slate-900 text-white'
+                          }`}>
                           {cand.full_name.split(' ').map(n => n[0]).slice(0, 2).join('')}
                         </div>
                         <div className="space-y-0.5 min-w-0">
@@ -859,18 +785,17 @@ export default function PlacementDashboard({ user, onSectionChange }) {
                             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700">
                               {cand.nf_category}
                             </span>
-                            <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${
-                              isReady
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : isDeployed
+                            <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold ${isReady
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : isDeployed
                                 ? 'bg-blue-50 text-blue-700 border border-blue-200'
                                 : 'bg-amber-50 text-amber-700 border border-amber-200'
-                            }`}>
+                              }`}>
                               {isReady
                                 ? 'Ready to Deploy'
                                 : isDeployed
-                                ? `Employed: ${cand.deployed_employer}`
-                                : 'In Training (Score < 75%)'}
+                                  ? `Employed: ${cand.deployed_employer}`
+                                  : 'In Training (Score < 75%)'}
                             </span>
                           </div>
                           <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
@@ -888,13 +813,11 @@ export default function PlacementDashboard({ user, onSectionChange }) {
                       <div className="flex items-center gap-2 sm:self-center shrink-0">
                         <div className="text-right">
                           <div className="text-[11px] font-bold text-slate-600">
-                            Score: <span className={`font-black ${
-                              cand.readiness_score >= 75 ? 'text-emerald-700' : 'text-amber-600'
-                            }`}>{cand.readiness_score}/100</span>
+                            Score: <span className={`font-black ${cand.readiness_score >= 75 ? 'text-emerald-700' : 'text-amber-600'
+                              }`}>{cand.readiness_score}/100</span>
                           </div>
-                          <div className={`text-[10px] font-semibold flex items-center gap-0.5 justify-end ${
-                            cand.readiness_score >= 75 ? 'text-emerald-600' : 'text-amber-600'
-                          }`}>
+                          <div className={`text-[10px] font-semibold flex items-center gap-0.5 justify-end ${cand.readiness_score >= 75 ? 'text-emerald-600' : 'text-amber-600'
+                            }`}>
                             <ShieldCheck className="w-3 h-3" />
                             <span>{cand.readiness_score >= 75 ? 'DL Verified' : 'Retest Required'}</span>
                           </div>
@@ -1012,75 +935,7 @@ export default function PlacementDashboard({ user, onSectionChange }) {
         </div>
       </div>
 
-      {/* ─── 5. RECENT DEPLOYMENTS LOGBOOK & OFFER HISTORY ──────────── */}
-      <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-2.5">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <FileCheck className="w-4 h-4 text-emerald-600" />
-              <h3 className="text-sm font-bold text-slate-900 font-kaiseiTokumin">
-                Recent Corporate Deployments & Active Placements
-              </h3>
-            </div>
-            <p className="text-[11px] text-slate-500">Live operational log of candidate placement letters and on-road transitions</p>
-          </div>
 
-          <button
-            onClick={() => onSectionChange && onSectionChange('deployments')}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
-          >
-            <span>Full Deployment Logbook</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[10px] border-b border-slate-200/80">
-              <tr>
-                <th className="px-3 py-2">Candidate</th>
-                <th className="px-3 py-2">Employer Partner</th>
-                <th className="px-3 py-2">Assigned Role & EV Spec</th>
-                <th className="px-3 py-2">Monthly Wage</th>
-                <th className="px-3 py-2">Assigned Hub</th>
-                <th className="px-3 py-2">Joining Date</th>
-                <th className="px-3 py-2 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {deployments.map((dep) => (
-                <tr key={dep.id} className="hover:bg-slate-50/80 transition">
-                  <td className="px-3 py-2.5">
-                    <div className="font-bold text-slate-900">{dep.candidate_name}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">{dep.candidate_code}</div>
-                  </td>
-                  <td className="px-3 py-2.5 font-semibold text-slate-800">
-                    {dep.employer}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <div className="font-medium text-slate-900">{dep.role}</div>
-                    <div className="text-[10px] text-slate-500">{dep.ev_allocated}</div>
-                  </td>
-                  <td className="px-3 py-2.5 font-bold text-emerald-700">
-                    {dep.earnings}
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-600">
-                    {dep.hub}
-                  </td>
-                  <td className="px-3 py-2.5 text-slate-600">
-                    {dep.joining_date}
-                  </td>
-                  <td className="px-3 py-2.5 text-right">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      {dep.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       {/* ─── 6. MODAL: ISSUE CANDIDATE DEPLOYMENT OFFER ─────────────── */}
       {isDeployModalOpen && (
@@ -1141,27 +996,51 @@ export default function PlacementDashboard({ user, onSectionChange }) {
                     Employer Partner
                   </label>
                   <select
-                    value={deployForm.employer_name}
-                    onChange={(e) => setDeployForm({ ...deployForm, employer_name: e.target.value })}
+                    value={deployForm.employer_id || deployForm.employer_name}
+                    onChange={(e) => handleEmployerSelect(e.target.value)}
                     className="w-full p-2 rounded-lg border border-slate-200 font-semibold bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   >
                     {employers.map(emp => (
-                      <option key={emp.id} value={emp.name}>{emp.name}</option>
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} ({emp.company_code}) • {emp.open_roles} Vacancies
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1 text-[10px]">
-                    Designated Job Role
+                    Designated Job Opening
                   </label>
-                  <input
-                    type="text"
-                    value={deployForm.job_role}
-                    onChange={(e) => setDeployForm({ ...deployForm, job_role: e.target.value })}
-                    className="w-full p-2 rounded-lg border border-slate-200 font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    required
-                  />
+                  {(() => {
+                    const currentEmp = employers.find(e => e.id === deployForm.employer_id || e.name === deployForm.employer_name);
+                    const roles = currentEmp?.active_roles || [];
+                    if (roles.length > 0) {
+                      return (
+                        <select
+                          value={deployForm.job_opportunity_id || deployForm.job_role}
+                          onChange={(e) => handleJobRoleSelect(e.target.value)}
+                          className="w-full p-2 rounded-lg border border-slate-200 font-semibold bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        >
+                          {roles.map(r => (
+                            <option key={r.id} value={r.id}>
+                              {r.job_title} • ₹{Number(r.monthly_gross_salary).toLocaleString('en-IN')}/mo • {r.vacancies ? `${Math.max(0, r.vacancies - (r.placed_count || 0))} open` : 'Active'}
+                            </option>
+                          ))}
+                        </select>
+                      );
+                    }
+                    return (
+                      <input
+                        type="text"
+                        value={deployForm.job_role}
+                        onChange={(e) => setDeployForm({ ...deployForm, job_role: e.target.value })}
+                        placeholder="e.g. EV Delivery Pilot"
+                        className="w-full p-2 rounded-lg border border-slate-200 font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        required
+                      />
+                    );
+                  })()}
                 </div>
               </div>
 

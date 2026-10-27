@@ -5,7 +5,9 @@ import {
   createCandidate,
   updateCandidate,
   deleteCandidate,
-  getCandidateStats
+  getCandidateStats,
+  addCandidateDocument,
+  deleteCandidateDocument
 } from '../controllers/candidateController.js';
 
 const router = express.Router();
@@ -17,4 +19,8 @@ router.post('/', createCandidate);
 router.put('/:id', updateCandidate);
 router.delete('/:id', deleteCandidate);
 
+router.post('/:id/documents', addCandidateDocument);
+router.delete('/:id/documents/:docId', deleteCandidateDocument);
+
 export default router;
+

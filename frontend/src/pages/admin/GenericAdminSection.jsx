@@ -343,7 +343,8 @@ const SECTION_CONFIGS = {
 };
 
 export default function GenericAdminSection({ sectionId, onSectionChange }) {
-  const config = SECTION_CONFIGS[sectionId] || SECTION_CONFIGS.candidates;
+  const config = SECTION_CONFIGS[sectionId];
+  if (!config) return null;
   const Icon = config.icon || Users;
 
   return (

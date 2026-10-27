@@ -1,5 +1,6 @@
 import db from '../models/index.js';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 
 // In-memory initial data matching Candidate model
 export let localCandidates = [];
@@ -170,6 +171,26 @@ export const getCandidateById = async (req, res) => {
             { model: db.CandidateDocument, as: 'documents', required: false },
             { model: db.MobilizationRecord, as: 'mobilization', required: false },
             { model: db.CandidateReadiness, as: 'readinessProfile', required: false },
+            {
+              model: db.BatchEnrollment,
+              as: 'enrollments',
+              required: false,
+              include: [
+                { model: db.TrainingBatch, as: 'batch', required: false },
+                { model: db.TrainingModule, as: 'module', required: false }
+              ]
+            },
+            { model: db.TrainingAssessment, as: 'assessments', required: false },
+            { model: db.CandidateCertification, as: 'certifications', required: false },
+            {
+              model: db.CandidateDeployment,
+              as: 'deployments',
+              required: false,
+              include: [
+                { model: db.Employer, as: 'employer', required: false },
+                { model: db.JobOpportunity, as: 'jobOpportunity', required: false }
+              ]
+            },
             { model: db.Organization, as: 'organization', required: false },
             { model: db.Partner, as: 'partner', required: false }
           ]
@@ -348,6 +369,13 @@ export const createCandidate = async (req, res) => {
             }
           }
         }
+        if (!validMobilizerRecordId) {
+          const defaultMob = await db.Mobilizer.findOne();
+          if (defaultMob) {
+            validMobilizerRecordId = defaultMob.id;
+            if (!validUserId) validUserId = defaultMob.user_id;
+          }
+        }
       } catch (e) {
         console.warn('Mobilizer resolution error:', e.message);
       }
@@ -477,6 +505,7 @@ export const createCandidate = async (req, res) => {
           middle_name: newCandidate.middle_name,
           last_name: newCandidate.last_name,
           full_name: newCandidate.full_name,
+          email: newCandidate.email,
           photo_url: newCandidate.photo_url,
           mobile_number: newCandidate.mobile_number,
           alternate_mobile: newCandidate.alternate_mobile,
@@ -540,8 +569,8 @@ export const createCandidate = async (req, res) => {
             location_details: newCandidate.location_details,
             initial_interest_level: newCandidate.initial_interest_level,
             counseling_notes: newCandidate.counseling_notes,
-            partner_id: newCandidate.partner_id,
-            mobilizer_id: newCandidate.mobilizer_id,
+            partner_id: validPartnerId,
+            mobilizer_id: validMobilizerRecordId,
             referrer_name: newCandidate.referrer_name,
             referrer_contact: newCandidate.referrer_contact
           }).catch(e => console.warn('MobilizationRecord creation notice:', e.message));
@@ -571,6 +600,53 @@ export const createCandidate = async (req, res) => {
             can_ride_two_wheeler: newCandidate.driving_skill === 'Yes / Verified' || newCandidate.driving_skill === 'Basic',
             has_smartphone: Boolean(newCandidate.has_smartphone && !newCandidate.has_smartphone.toLowerCase().includes('no'))
           }).catch(e => console.warn('CandidateReadiness creation notice:', e.message));
+        }
+
+        // Also provision Candidate User account in portal_users if password is provided
+        if (payload.password && String(payload.password).trim().length >= 6 && db.User) {
+          try {
+            const cleanEmail = (newCandidate.email || '').toLowerCase().trim() || `${(newCandidate.candidate_code || 'cand').toLowerCase()}@candidate.org`;
+            const salt = await bcrypt.genSalt(10);
+            const password_hash = await bcrypt.hash(String(payload.password).trim(), salt);
+
+            let candUser = await db.User.findOne({
+              where: {
+                [Op.or]: [
+                  { email: cleanEmail },
+                  ...(newCandidate.mobile_number ? [{ mobile_number: newCandidate.mobile_number }] : [])
+                ]
+              }
+            });
+            if (candUser) {
+              candUser.password_hash = password_hash;
+              candUser.role = 'candidate';
+              candUser.status = 'active';
+              if (newCandidate.mobile_number) candUser.mobile_number = newCandidate.mobile_number;
+              await candUser.save();
+            } else {
+              candUser = await db.User.create({
+                id: uuidv4(),
+                employee_id: `CND-${Math.floor(1000 + Math.random() * 9000)}`,
+                first_name: newCandidate.first_name,
+                last_name: newCandidate.last_name,
+                full_name: newCandidate.full_name,
+                email: cleanEmail,
+                mobile_number: newCandidate.mobile_number,
+                password_hash,
+                role: 'candidate',
+                status: 'active'
+              });
+            }
+            if (candUser?.id) {
+              if (!createdInDb.email) {
+                await createdInDb.update({ email: cleanEmail }).catch(() => {});
+              }
+              newCandidate.user_id = candUser.id;
+              newCandidate.email = cleanEmail;
+            }
+          } catch (uErr) {
+            console.warn('Candidate User creation notice:', uErr.message);
+          }
         }
 
         localCandidates.unshift(newCandidate);
@@ -726,21 +802,28 @@ export const updateCandidate = async (req, res) => {
           // Synchronize MobilizationRecord
           if (db.MobilizationRecord) {
             try {
+              let validMobPartnerId = safeUUID(payload.partner_id || payload.assigned_partner_id);
+              if (validMobPartnerId && db.Partner) {
+                const p = await db.Partner.findByPk(validMobPartnerId);
+                if (!p) validMobPartnerId = null;
+              }
+
               const mobSource = payload.source || 'COMMUNITY_OUTREACH';
+              const existingMob = await db.MobilizationRecord.findOne({ where: { candidate_id: targetId } });
+
               const mobData = {
                 candidate_id: targetId,
                 source: mobSource,
-                camp_or_event_name: payload.camp_or_event_name || '',
-                location_details: payload.location_details || '',
-                initial_interest_level: payload.initial_interest_level || 'HIGH',
-                counseling_notes: payload.counseling_notes || '',
-                referrer_name: payload.referrer_name || '',
-                referrer_contact: payload.referrer_contact || '',
-                partner_id: safeUUID(payload.partner_id),
-                mobilizer_id: safeUUID(payload.mobilizer_id)
+                camp_or_event_name: payload.camp_or_event_name !== undefined ? (payload.camp_or_event_name || '') : (existingMob?.camp_or_event_name || ''),
+                location_details: payload.location_details !== undefined ? (payload.location_details || '') : (existingMob?.location_details || ''),
+                initial_interest_level: payload.initial_interest_level || existingMob?.initial_interest_level || 'HIGH',
+                counseling_notes: payload.counseling_notes !== undefined ? (payload.counseling_notes || '') : (existingMob?.counseling_notes || ''),
+                referrer_name: payload.referrer_name !== undefined ? (payload.referrer_name || '') : (existingMob?.referrer_name || ''),
+                referrer_contact: payload.referrer_contact !== undefined ? (payload.referrer_contact || '') : (existingMob?.referrer_contact || ''),
+                partner_id: validMobPartnerId || existingMob?.partner_id || null,
+                mobilizer_id: validMobilizerRecordId || existingMob?.mobilizer_id || null
               };
 
-              const existingMob = await db.MobilizationRecord.findOne({ where: { candidate_id: targetId } });
               if (existingMob) {
                 await existingMob.update(mobData);
               } else {
@@ -814,6 +897,60 @@ export const updateCandidate = async (req, res) => {
 
             } catch (docErr) {
               console.warn('CandidateDocument sync notice:', docErr.message);
+            }
+          }
+
+          // Also synchronize Candidate User password in portal_users if provided
+          if (payload.password && String(payload.password).trim().length >= 6 && db.User) {
+            try {
+              const cleanEmail = (payload.email || candidateRecord.email || `${(candidateRecord.candidate_code || 'cand').toLowerCase()}@candidate.org`).toLowerCase().trim();
+              const salt = await bcrypt.genSalt(10);
+              const password_hash = await bcrypt.hash(String(payload.password).trim(), salt);
+
+              let candUser = null;
+              if (candidateRecord.user_id) {
+                candUser = await db.User.findByPk(candidateRecord.user_id);
+              }
+              if (!candUser) {
+                candUser = await db.User.findOne({
+                  where: {
+                    [Op.or]: [
+                      { email: cleanEmail },
+                      ...((updateData.mobile_number || candidateRecord.mobile_number) ? [{ mobile_number: updateData.mobile_number || candidateRecord.mobile_number }] : [])
+                    ]
+                  }
+                });
+              }
+
+              if (candUser) {
+                candUser.password_hash = password_hash;
+                candUser.role = 'candidate';
+                candUser.status = 'active';
+                if (updateData.mobile_number || candidateRecord.mobile_number) {
+                  candUser.mobile_number = updateData.mobile_number || candidateRecord.mobile_number;
+                }
+                await candUser.save();
+              } else if (cleanEmail) {
+                candUser = await db.User.create({
+                  id: uuidv4(),
+                  employee_id: `CND-${Math.floor(1000 + Math.random() * 9000)}`,
+                  first_name: firstName,
+                  last_name: lastName,
+                  full_name: fullName,
+                  email: cleanEmail,
+                  mobile_number: updateData.mobile_number || candidateRecord.mobile_number || '',
+                  password_hash,
+                  role: 'candidate',
+                  status: 'active'
+                });
+              }
+              if (candUser?.id) {
+                if (!candidateRecord.email) {
+                  await candidateRecord.update({ email: cleanEmail }).catch(() => {});
+                }
+              }
+            } catch (uErr) {
+              console.warn('Candidate User update notice:', uErr.message);
             }
           }
 
@@ -951,3 +1088,85 @@ export const getCandidateStats = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// 7. ADD CANDIDATE DOCUMENT
+export const addCandidateDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      document_type,
+      document_number,
+      file_url,
+      document_url,
+      file_name,
+      file_size_bytes,
+      mime_type,
+      verification_status
+    } = req.body;
+
+    if (!db.CandidateDocument) {
+      return res.status(500).json({ success: false, message: 'CandidateDocument model not available' });
+    }
+
+    let candidate = await db.Candidate.findOne({
+      where: {
+        [db.Sequelize.Op.or]: [{ id }, { candidate_code: id }]
+      }
+    });
+
+    if (!candidate) {
+      return res.status(404).json({ success: false, message: 'Candidate not found' });
+    }
+
+    const docUrl = file_url || document_url || '';
+    const vStatus = (verification_status || 'VERIFIED').toUpperCase();
+
+    const newDoc = await db.CandidateDocument.create({
+      id: uuidv4(),
+      candidate_id: candidate.id,
+      document_type: document_type || 'Identity Proof',
+      document_number: document_number || null,
+      file_url: docUrl,
+      document_url: docUrl,
+      file_name: file_name || 'candidate_document',
+      file_size_bytes: file_size_bytes || null,
+      mime_type: mime_type || null,
+      verification_status: vStatus === 'APPROVED' ? 'VERIFIED' : vStatus,
+      uploaded_at: new Date()
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Document uploaded and attached successfully',
+      data: newDoc
+    });
+  } catch (error) {
+    console.error('Error adding candidate document:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 8. DELETE CANDIDATE DOCUMENT
+export const deleteCandidateDocument = async (req, res) => {
+  try {
+    const { id, docId } = req.params;
+    if (!db.CandidateDocument) {
+      return res.status(500).json({ success: false, message: 'CandidateDocument model not available' });
+    }
+
+    const doc = await db.CandidateDocument.findOne({
+      where: { id: docId }
+    });
+
+    if (!doc) {
+      return res.status(404).json({ success: false, message: 'Document not found' });
+    }
+
+    await doc.destroy();
+    return res.json({ success: true, message: 'Document removed successfully' });
+  } catch (error) {
+    console.error('Error deleting candidate document:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

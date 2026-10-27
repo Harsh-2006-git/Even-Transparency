@@ -6,19 +6,18 @@ import {
   EyeOff,
   Building2,
   Briefcase,
-  CheckCircle2,
+  Users,
+  Award,
+  TrendingUp,
   ArrowRight,
   Sparkles,
-  ShieldCheck,
-  TrendingUp,
-  Award,
-  Users
+  Shield
 } from 'lucide-react';
 import RoleLoginNav from '../../components/RoleLoginNav';
 
 const API_BASE_URL = (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '');
 
-export default function EmployerLogin({ onLoginSuccess, onGoToLanding, onSwitchRole }) {
+export default function EmployerLogin({ onLoginSuccess, onGoToLanding, onSwitchRole, onGoToHub }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -33,26 +32,20 @@ export default function EmployerLogin({ onLoginSuccess, onGoToLanding, onSwitchR
     },
     {
       icon: <Award className="w-3.5 h-3.5 text-sky-600" />,
-      title: 'Practical Driving & Battery Swapping Scorecards',
+      title: 'Practical Driving & Battery Scorecards',
       desc: 'Inspect real track scores, slalom balance tests, and battery swapping drill ratings.',
     },
     {
       icon: <Briefcase className="w-3.5 h-3.5 text-sky-600" />,
-      title: 'Direct Mandate Postings & Offer Issuance',
+      title: 'Direct Mandates & Offer Issuance',
       desc: 'Submit fleet vacancy demands, schedule interview cohorts, and release verified job offers.',
     },
     {
       icon: <TrendingUp className="w-3.5 h-3.5 text-sky-600" />,
-      title: 'Retention Tracking & ESG Reporting',
+      title: 'Retention & ESG Fleet Metrics',
       desc: 'Monitor 90-day shift continuity, monthly earnings compliance, and green mile milestones.',
     },
   ];
-
-  const handleFillDemo = () => {
-    setEmail('employer@evenshift.org');
-    setPassword('employer@pass123');
-    setError('');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -83,6 +76,12 @@ export default function EmployerLogin({ onLoginSuccess, onGoToLanding, onSwitchR
         throw new Error(data.message || 'No employer account found with this email.');
       }
 
+      // Dedicated portal check: ensure only Employer role is admitted
+      const userRole = (data.user?.role || data.user?.userType || '').toLowerCase();
+      if (!userRole.includes('employ') && !userRole.includes('partner')) {
+        throw new Error('No employer account found with this email.');
+      }
+
       onLoginSuccess(data.user, data.token);
     } catch (err) {
       setError(err.message || 'No employer account found with this email.');
@@ -99,171 +98,163 @@ export default function EmployerLogin({ onLoginSuccess, onGoToLanding, onSwitchR
         activeRole="employer"
         onSwitchRole={onSwitchRole}
         onGoToLanding={onGoToLanding}
+        onGoToHub={onGoToHub}
       />
 
-      {/* Main Login Card */}
-      <div className="w-full max-w-[1050px] max-h-[calc(100dvh-55px)] bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden flex flex-col md:flex-row">
+      {/* Main Split Container */}
+      <div className="w-full max-w-[1050px] bg-white rounded-2xl lg:rounded-3xl overflow-hidden shadow-[0_12px_40px_rgba(2,132,199,0.06)] border border-sky-100 grid lg:grid-cols-2 max-h-[calc(100vh-68px)]">
         
-        {/* Left Col: Portal Capabilities & Value Proposition */}
-        <div className="w-full md:w-5/12 bg-gradient-to-br from-sky-500/10 via-blue-500/5 to-slate-50 p-5 sm:p-6 lg:p-7 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-200/80">
-          <div>
-            {/* Badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 text-sky-700 text-xs font-bold border border-sky-200 shadow-2xs mb-3">
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Hiring Partner & Employer Portal</span>
+        {/* Left Column: Brand & Employer Highlights */}
+        <div className="relative bg-gradient-to-br from-[#F0F9FF] via-[#E0F2FE]/60 to-[#BAE6FD]/40 p-5 sm:p-6 lg:p-7 flex flex-col justify-between overflow-hidden border-r border-sky-100 hidden lg:flex">
+          <div className="absolute top-[-80px] right-[-80px] h-[220px] w-[220px] rounded-full bg-sky-400/10 blur-3xl" />
+          <div className="absolute bottom-[-80px] left-[-80px] h-[220px] w-[220px] rounded-full bg-blue-400/15 blur-3xl" />
+
+          <div className="relative z-10 space-y-4">
+            
+            {/* Brand Header */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-white border border-sky-200 flex items-center justify-center text-sky-600 shadow-xs">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 font-kaiseiTokumin tracking-tight">
+                  Even Transparency
+                </h1>
+                <p className="text-[11px] text-sky-700 font-semibold">Employer & Hiring Partner Portal</p>
+              </div>
             </div>
 
-            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              Scale Your Fleet with Certified Female EV Drivers
-            </h2>
-            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-              Transparent, tamper-proof candidate talent pipeline with verified driving readiness and attendance track records.
-            </p>
+            {/* Title & Subtitle */}
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 font-kaiseiTokumin leading-snug">
+                Scale your fleet with certified, job-ready female EV drivers.
+              </h2>
+              <p className="text-[11px] leading-relaxed text-slate-600 mt-1 max-w-[390px]">
+                Sign in to browse verified candidate pipelines, inspect practical driving & swapping test scores, post fleet vacancies, and release verified job offers.
+              </p>
+            </div>
 
-            {/* Feature Bullets */}
-            <div className="mt-4 space-y-2.5">
-              {employerFeatures.map((feat, idx) => (
-                <div key={idx} className="flex items-start gap-2.5 p-2 rounded-xl bg-white/80 border border-slate-200/70 shadow-2xs">
-                  <div className="p-1.5 rounded-lg bg-sky-50 shrink-0 mt-0.5">
-                    {feat.icon}
+            {/* Feature Cards List */}
+            <div className="space-y-2 pt-1">
+              {employerFeatures.map((feature, index) => (
+                <div key={index} className="flex items-start gap-2.5 bg-white/80 backdrop-blur-xs p-2 rounded-xl border border-sky-100 shadow-2xs">
+                  <div className="h-7 w-7 rounded-lg bg-white border border-sky-200 flex items-center justify-center shrink-0 shadow-2xs text-sky-600">
+                    {feature.icon}
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800 leading-snug">{feat.title}</h4>
-                    <p className="text-[10.5px] text-slate-500 leading-tight mt-0.5">{feat.desc}</p>
+                  <div className="space-y-0.5">
+                    <h4 className="text-[11.5px] font-bold text-slate-900 leading-tight">
+                      {feature.title}
+                    </h4>
+                    <p className="text-[10px] leading-snug text-slate-500 font-medium">
+                      {feature.desc}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
+
           </div>
 
-          {/* Trust Badge */}
-          <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center gap-2 text-[11px] text-slate-500">
-            <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" />
+          <div className="relative z-10 pt-2 text-[10.5px] text-slate-400 font-medium flex items-center gap-1.5">
+            <Shield className="w-3 h-3 text-sky-500" />
             <span>Pre-screened Aadhaar, DL & Background Verified Candidates</span>
           </div>
         </div>
 
-        {/* Right Col: Authentication Form */}
-        <div className="w-full md:w-7/12 p-5 sm:p-7 lg:p-8 flex flex-col justify-between bg-white overflow-y-auto">
-          <div>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-900 font-kaiseiTokumin tracking-tight">
-                  Employer Sign In
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Enter your corporate partner credentials to access the hiring hub
-                </p>
+        {/* Right Column: Sign In Form */}
+        <div className="bg-white flex flex-col justify-center p-5 sm:p-7 lg:p-8 relative">
+          <div className="w-full max-w-[360px] mx-auto space-y-3.5">
+            
+            {/* Header */}
+            <div>
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-[10px] font-bold mb-1.5">
+                <Sparkles className="w-2.5 h-2.5" />
+                <span>Hiring Partner Access</span>
               </div>
-
-              {/* Demo Fill Helper Button */}
-              <button
-                type="button"
-                onClick={handleFillDemo}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 text-[11px] font-bold border border-sky-200 transition cursor-pointer"
-                title="Fill with employer@evenshift.org demo account"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Fill Demo Login</span>
-              </button>
+              <h2 className="text-xl font-bold font-kaiseiTokumin text-slate-900">
+                Employer Sign In
+              </h2>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Enter corporate credentials to access the hiring hub
+              </p>
             </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-rose-500 rotate-45" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Login Form */}
-            <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
-              {/* Email / Corporate ID */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-3">
+              
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider block">
                   Work Email / Corporate Account
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="email"
-                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="employer@evenshift.org"
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-600 focus:ring-1 focus:ring-sky-600/20 transition bg-slate-50/50"
+                    className="w-full h-9.5 rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/10 transition shadow-2xs"
+                    required
                   />
                 </div>
               </div>
 
               {/* Password */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+              <div className="space-y-1">
+                <label className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider block">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Lock className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full pl-9 pr-10 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-sky-600 focus:ring-1 focus:ring-sky-600/20 transition bg-slate-50/50"
+                    placeholder="Password"
+                    className="w-full h-9.5 rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-xs text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/10 transition shadow-2xs"
+                    required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Pre-filled credentials demo hint */}
-              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-[11px] text-slate-600 flex items-center justify-between">
-                <div>
-                  <span className="font-semibold text-slate-700">Demo Account:</span>{' '}
-                  <span className="font-mono text-slate-500">employer@evenshift.org / employer@pass123</span>
+              {/* Error Box */}
+              {error && (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] font-semibold text-rose-700">
+                  {error}
                 </div>
-                <button
-                  type="button"
-                  onClick={handleFillDemo}
-                  className="text-xs font-bold text-sky-600 hover:text-sky-700 underline cursor-pointer"
-                >
-                  Apply
-                </button>
-              </div>
+              )}
 
               {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 text-white text-xs font-bold shadow-md shadow-sky-600/20 transition flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer mt-2"
+                className="cursor-pointer w-full h-10.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-700 text-white font-bold text-xs shadow-md shadow-sky-600/20 hover:shadow-lg transition active:scale-98 disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 {loading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Authenticating...</span>
                 ) : (
                   <>
                     <span>Sign In to Employer Hub</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>
             </form>
-          </div>
 
-          {/* Footer note */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Corporate EV Fleet Onboarding</span>
-            <button
-              type="button"
-              onClick={onGoToLanding}
-              className="text-slate-500 hover:text-slate-800 font-semibold transition"
-            >
-              Back to Public Portal →
-            </button>
+            <div className="pt-1 text-center">
+              <p className="text-[10px] text-slate-400">
+                © {new Date().getFullYear()} Even Transparency. Corporate Fleet Portal.
+              </p>
+            </div>
+
           </div>
         </div>
 

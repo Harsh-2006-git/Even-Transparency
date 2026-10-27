@@ -509,16 +509,20 @@ export default function App() {
             <StakeholderManagement categoryKey="partners" onSectionChange={handleSectionChange} />
           )}
 
-          {activeSection === 'employers' && (
-            (currentUserType === 'PlacementCoordinator' || currentUserType === 'Placement Coordinator') ? (
-              <EmployerManagement placementUser={user} onSectionChange={handleSectionChange} initialTab="employers" />
-            ) : (
-              <StakeholderManagement categoryKey="employers" onSectionChange={handleSectionChange} />
-            )
+          {(activeSection === 'employers' || activeSection === 'hiring-employers') && (
+            <EmployerManagement placementUser={user} onSectionChange={handleSectionChange} initialTab="employers" />
           )}
 
-          {activeSection === 'openings' && (
+          {(activeSection === 'openings' || activeSection === 'job-opportunities' || activeSection === 'applications' || activeSection === 'interviews') && (
             <EmployerManagement placementUser={user} onSectionChange={handleSectionChange} initialTab="roles" />
+          )}
+
+          {activeSection === 'placement-hub' && (
+            <PlacementDashboard user={user} onSectionChange={handleSectionChange} />
+          )}
+
+          {(activeSection === 'candidate-showcase' || activeSection === 'showcase' || activeSection === 'placed-drivers' || activeSection === 'employment-tracking') && (
+            <EmployerCandidates user={user} onSectionChange={handleSectionChange} />
           )}
 
           {activeSection === 'user-management' && (
@@ -690,6 +694,15 @@ export default function App() {
             activeSection !== 'deployments' &&
             activeSection !== 'placements' &&
             activeSection !== 'offers' &&
+            activeSection !== 'placement-hub' &&
+            activeSection !== 'candidate-showcase' &&
+            activeSection !== 'showcase' &&
+            activeSection !== 'placed-drivers' &&
+            activeSection !== 'job-opportunities' &&
+            activeSection !== 'applications' &&
+            activeSection !== 'interviews' &&
+            activeSection !== 'employment-tracking' &&
+            activeSection !== 'hiring-employers' &&
             activeSection !== 'practical-sessions' &&
             activeSection !== 'feedback' &&
             activeSection !== 'certifications' &&

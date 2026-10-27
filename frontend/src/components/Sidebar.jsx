@@ -75,9 +75,7 @@ export default function Sidebar({
         { id: 'trainers', label: 'Trainers', icon: GraduationCap },
         { id: 'placement-coordinators', label: 'Placement Coordinators', icon: Briefcase },
         { id: 'partners', label: 'Partners', icon: Handshake },
-        { id: 'employers', label: 'Employers', icon: Building2 },
         { id: 'user-management', label: 'Admin Users', icon: UserCog },
-
       ]
     },
     {
@@ -85,7 +83,6 @@ export default function Sidebar({
       items: [
         { id: 'candidates', label: 'All Candidates', icon: Users },
         { id: 'document-verification', label: 'Candidate Verification', icon: SearchCheck },
-
       ]
     },
     {
@@ -102,11 +99,10 @@ export default function Sidebar({
     {
       groupTitle: 'PLACEMENT MANAGEMENT',
       items: [
-        { id: 'job-opportunities', label: 'Job Opportunities', icon: Award },
-        { id: 'applications', label: 'Applications', icon: FileSpreadsheet },
-        { id: 'interviews', label: 'Interviews', icon: CalendarCheck },
-        { id: 'deployments', label: 'Deployments', icon: Briefcase },
-        { id: 'employment-tracking', label: 'Employment Tracking', icon: HeartHandshake },
+        { id: 'placement-hub', label: 'Placement Hub', icon: LayoutDashboard },
+        { id: 'employers', label: 'Hiring Employers', icon: Building2 },
+        { id: 'openings', label: 'Job Openings', icon: Award },
+        { id: 'deployments', label: 'Candidate Deployments', icon: Briefcase, },
       ]
     },
 

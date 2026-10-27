@@ -344,8 +344,8 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
 
     try {
       const targetId = passwordModalCandidate.user_id || passwordModalCandidate.id;
-      const targetEmail = passwordModalCandidate.email;
-      const targetName = passwordModalCandidate.full_name;
+      const targetEmail = passwordModalCandidate.email || (passwordModalCandidate.candidate_code ? `${passwordModalCandidate.candidate_code.toLowerCase()}@candidate.org` : '');
+      const targetName = passwordModalCandidate.full_name || `${passwordModalCandidate.first_name || ''} ${passwordModalCandidate.last_name || ''}`.trim();
 
       const res = await fetch(`${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}/users/${targetId}/password`, {
         method: 'PUT',
@@ -354,6 +354,8 @@ export default function CandidateManagement({ mobilizerUser, onNavigateToOnboard
           password: newPassword,
           email: targetEmail,
           full_name: targetName,
+          candidate_code: passwordModalCandidate.candidate_code,
+          mobile_number: passwordModalCandidate.mobile_number,
           role: 'Candidate'
         })
       });

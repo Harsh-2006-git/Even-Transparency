@@ -24,6 +24,9 @@ import {
   Heart,
   UploadCloud,
   Eye,
+  EyeOff,
+  Lock,
+  KeyRound,
   Trash2,
   Plus,
   ArrowRight,
@@ -56,6 +59,7 @@ const INITIAL_FORM_STATE = {
   mobile_number: '',
   alternate_mobile: '',
   email: '',
+  password: 'Harsh@1234',
   address_line_1: '',
   address_line_2: '',
   address: '',
@@ -224,11 +228,13 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
       risk_level: candidate.risk_level || 'NORMAL',
       status: candidate.status || 'active',
       notes: candidate.notes || '',
+      password: candidate.password || (isEditing ? '' : 'Harsh@1234'),
       documents: Array.isArray(candidate.documents) ? candidate.documents : []
     };
   };
 
   const [formData, setFormData] = useState(() => buildFormData(candidateToEdit));
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!candidateToEdit) {
@@ -412,6 +418,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
 
   // Autofill realistic sample profile
   const handleAutofillSample = () => {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     setFormData({
       first_name: 'Lakshmi',
       middle_name: 'Devi',
@@ -424,31 +431,35 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
       marital_status: 'Married',
       family_dependents_count: 2,
       monthly_household_income: 9500,
-      aadhaar_number: '6543-9821-1104',
-      mobile_number: '+91 98452 33441',
-      alternate_mobile: '+91 98452 33442',
-      email: 'lakshmi.rao@candidate.org',
+      aadhaar_number: `6543-9821-${randomSuffix}`,
+      mobile_number: `+91 98452 ${randomSuffix}`,
+      alternate_mobile: `+91 98452 ${randomSuffix + 1}`,
+      email: `lakshmi.rao${randomSuffix}@candidate.org`,
+      password: 'Harsh@1234',
       address_line_1: 'Plot 52, 2nd Main Road',
       address_line_2: 'Near Mahila Sangha Office, Jayanagar 4th Block',
       address: 'Plot 52, 2nd Main Road, Near Mahila Sangha Office, Jayanagar 4th Block, Bengaluru, Karnataka, PIN: 560011',
-      city: 'Bengaluru',
-      state: 'Karnataka',
+      city: mobilizerUser?.assigned_city || 'Bengaluru',
+      state: mobilizerUser?.assigned_state || 'Karnataka',
       pincode: '560011',
       emergency_contact_name: 'Suresh Rao',
-      emergency_contact_phone: '+91 98452 33443',
+      emergency_contact_phone: `+91 98452 ${randomSuffix + 2}`,
       emergency_contact_relation: 'Spouse',
       education_level: '12th Pass',
       employment_status: 'Unemployed',
       current_employment_status: 'Unemployed',
+      driving_skill: 'Yes / Verified',
+      has_scooty_access: 'Yes',
+      has_driving_licence: 'Yes',
       has_valid_license: 'Yes (2W Permanent)',
-      license_number: 'KA-01-2023-0094182',
+      license_number: `KA-01-2023-${randomSuffix}`,
       driving_experience: '2-3 Years 2W Scooter',
       has_smartphone: 'Yes (Android 4G/5G)',
       source: 'NGO_PARTNER',
       camp_or_event_name: 'Jayanagar Women EV Livelihood Drive',
       location_details: 'Community Center Ward 153',
-      organization_id: '',
-      partner_id: '',
+      organization_id: (mobilizerUser?.organization_id && mobilizerUser.organization_id !== 'org-1') ? mobilizerUser.organization_id : '',
+      partner_id: (mobilizerUser?.partner_id && mobilizerUser.partner_id !== 'prt-1') ? mobilizerUser.partner_id : '',
       initial_interest_level: 'HIGH',
       referrer_name: 'Meena Tai (SHG Leader)',
       referrer_contact: '+91 98450 11223',
@@ -500,6 +511,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
 
     const payload = {
       ...formData,
+      password: formData.password && String(formData.password).trim() !== '' ? String(formData.password).trim() : 'Harsh@1234',
       full_name: combinedName,
       candidate_code: candidateCodePreview,
       organization_id: isUUID(formData.organization_id) ? formData.organization_id : (isUUID(mobilizerUser?.organization_id) ? mobilizerUser.organization_id : null),
@@ -577,7 +589,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl mx-auto mb-8 text-left text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl mx-auto mb-6 text-left text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
             <div>
               <span className="text-slate-400 block mb-1">Assigned NF Level</span>
               <span className="font-semibold text-slate-800 bg-white px-2 py-1 rounded border border-slate-200 block">
@@ -596,6 +608,31 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
                 {successData.city || 'Bengaluru'}
               </span>
             </div>
+          </div>
+
+          {/* Candidate Portal Login Credentials Display */}
+          <div className="bg-gradient-to-r from-pink-50/70 via-rose-50/40 to-slate-50 p-4 rounded-xl border border-pink-200/90 max-w-xl mx-auto mb-8 text-left">
+            <div className="flex items-center gap-2 mb-2 font-bold text-xs text-slate-800">
+              <Lock className="w-3.5 h-3.5 text-[#FF408A]" />
+              Candidate Portal Login Credentials
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                <span className="text-[10px] text-slate-400 block font-medium">Username / Login ID</span>
+                <span className="font-mono font-bold text-slate-800 truncate block">
+                  {successData.email || successData.mobile_number || successData.candidate_code}
+                </span>
+              </div>
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                <span className="text-[10px] text-slate-400 block font-medium">Portal Password</span>
+                <span className="font-mono font-bold text-[#FF408A] block">
+                  {formData.password || 'Harsh@1234'}
+                </span>
+              </div>
+            </div>
+            <p className="text-[10.5px] text-slate-500 mt-2">
+              The candidate can log into the Candidate Dashboard directly using either their Email, Mobile Number, or Candidate Code with this password.
+            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -976,7 +1013,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Primary Mobile Number <span className="text-rose-500">*</span>
@@ -1010,20 +1047,82 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="candidate@evenshift.org"
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                    />
+              </div>
+
+              {/* Dedicated Candidate Portal Login Credentials Box */}
+              <div className="bg-gradient-to-r from-pink-50/70 via-rose-50/40 to-slate-50 p-4 rounded-xl border border-pink-200/90 mb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-[#FF408A] text-white">
+                      <Lock className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900">Candidate Portal Login Credentials</h3>
+                      <p className="text-[10.5px] text-slate-500">
+                        Candidate uses their Email or Mobile Number and this password to sign in to the Candidate Dashboard.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-100 text-[#FF408A] border border-pink-200">
+                    Editable Access
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Candidate Email Address (Username)
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="candidate@evenshift.org"
+                        className="w-full pl-9 pr-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#FF408A] focus:border-transparent outline-none transition"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">If blank, candidate code will be used as login handle.</p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Portal Password <span className="text-rose-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, password: 'Harsh@1234' }))}
+                        className="text-[10.5px] text-[#FF408A] hover:underline font-semibold cursor-pointer"
+                      >
+                        Set Default (Harsh@1234)
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        value={formData.password || ''}
+                        onChange={handleChange}
+                        placeholder="Enter password (e.g. Harsh@1234)"
+                        className="w-full pl-9 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#FF408A] focus:border-transparent outline-none transition font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      <span>Password is encrypted with bcrypt and synced directly to PostgreSQL portal_users.</span>
+                    </p>
                   </div>
                 </div>
               </div>

@@ -30,7 +30,9 @@ import {
   Phone,
   CalendarCheck,
   Zap,
-  LayoutGrid
+  LayoutGrid,
+  CalendarPlus,
+  Trash2
 } from 'lucide-react';
 
 const API_BASE = (import.meta.env.API_BASE_URL || (import.meta.env.API_BASE_URL || `${(import.meta.env.API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')}`).replace(/\/+$/, '')).replace(/\/+$/, '') + '/training';
@@ -41,65 +43,41 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-// Helper: Generate assigned cohort training days from batch schedule
-const generateCohortDays = (batch) => {
+// Helper: Extract training days from explicit batch data or saved attendance records
+// Trainer adds daily sessions dynamically; no fixed dummy schedule!
+const getCohortDays = (batch, attendanceRecords = []) => {
   if (Array.isArray(batch.days) && batch.days.length > 0) {
     return batch.days;
   }
 
-  const startDateStr = batch.start_date || '2026-10-17';
-  const endDateStr = batch.end_date || '2026-10-22';
-
-  const start = new Date(startDateStr + 'T00:00:00');
-  const end = new Date(endDateStr + 'T00:00:00');
-
-  // Daily hours calculation from daily_start_time & daily_end_time
-  let hours = 4;
-  if (batch.daily_start_time && batch.daily_end_time) {
-    const [sh, sm] = batch.daily_start_time.split(':').map(Number);
-    const [eh, em] = batch.daily_end_time.split(':').map(Number);
-    const diff = (eh + (em || 0) / 60) - (sh + (sm || 0) / 60);
-    if (diff > 0) hours = Math.round(diff);
-  }
-
-  const defaultTopics = [
-    'EV Scooter Controls & Pre-Ride Inspection',
-    'Throttle Curves & Regenerative Braking',
-    'Battery Swap Bay Docking & Telematics',
-    'Figure-8 Slalom Balance & Cornering',
-    'Wet Track Braking & Pothole Avoidance',
-    'Live Road Trial & Deployment Readiness',
-    'Defensive Traffic & Night Drills',
-    'Digital App Navigation & Delivery Handshake',
-    'Emergency Protocols & Rapid Battery Swap',
-    'Final Graduation Practical Road Certification'
-  ];
-
-  const days = [];
-  let curr = new Date(start);
-  let dayIndex = 1;
-
-  while (curr <= end) {
-    const y = curr.getFullYear();
-    const m = String(curr.getMonth() + 1).padStart(2, '0');
-    const d = String(curr.getDate()).padStart(2, '0');
-    const dateStr = `${y}-${m}-${d}`;
-    const dayName = curr.toLocaleDateString('en-US', { weekday: 'short' });
-
-    days.push({
-      dayIndex,
-      date: dateStr,
-      label: `Day ${dayIndex}`,
-      dayName,
-      topic: defaultTopics[(dayIndex - 1) % defaultTopics.length],
-      hours
+  if (Array.isArray(attendanceRecords) && attendanceRecords.length > 0) {
+    const sessionMap = new Map();
+    attendanceRecords.forEach(rec => {
+      if (rec.session_date && !sessionMap.has(rec.session_date)) {
+        sessionMap.set(rec.session_date, {
+          topic: rec.session_topic || 'Practical Training Session',
+          hours: rec.hours_attended || 4
+        });
+      }
     });
 
-    curr.setDate(curr.getDate() + 1);
-    dayIndex++;
+    const sortedDates = Array.from(sessionMap.keys()).sort();
+    return sortedDates.map((dateStr, idx) => {
+      const info = sessionMap.get(dateStr);
+      const d = new Date(dateStr + 'T00:00:00');
+      return {
+        dayIndex: idx + 1,
+        date: dateStr,
+        label: `Day ${idx + 1}`,
+        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        topic: info.topic,
+        hours: info.hours
+      };
+    });
   }
 
-  return days;
+  // If no sessions scheduled yet, return empty list (trainer will add them!)
+  return [];
 };
 
 export default function TrainingAttendance({ user, onSectionChange }) {
@@ -107,10 +85,11 @@ export default function TrainingAttendance({ user, onSectionChange }) {
   const [selectedCohortId, setSelectedCohortId] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Calendar state (defaults to October 2026)
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(9); // 9 = October (0-indexed)
-  const [selectedDate, setSelectedDate] = useState('2026-10-17');
+  // Calendar state (defaults to current date)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [selectedDate, setSelectedDate] = useState(todayStr);
 
   // View Layout tab: 'split-calendar' (Assigned Sessions + Candidate Roll Call) | 'matrix' (Spreadsheet Matrix)
   const [viewLayout, setViewLayout] = useState('split-calendar');
@@ -122,13 +101,32 @@ export default function TrainingAttendance({ user, onSectionChange }) {
 
   // Add Day modal
   const [isAddDayModalOpen, setIsAddDayModalOpen] = useState(false);
-  const [newDayDate, setNewDayDate] = useState('2026-10-23');
-  const [newDayTopic, setNewDayTopic] = useState('EV Road Trial & Live Deployment Readiness');
+  const [newDayDate, setNewDayDate] = useState('');
+  const [newDayTopic, setNewDayTopic] = useState('');
   const [newDayHours, setNewDayHours] = useState(4);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  // Helper to open Add Day modal with smart default date
+  const openAddDayModal = (preferredDate = null) => {
+    let defaultDate = preferredDate;
+    if (!defaultDate) {
+      if (currentCohort?.days && currentCohort.days.length > 0) {
+        const lastDate = currentCohort.days[currentCohort.days.length - 1].date;
+        const d = new Date(lastDate + 'T00:00:00');
+        d.setDate(d.getDate() + 1);
+        defaultDate = d.toISOString().split('T')[0];
+      } else {
+        defaultDate = currentCohort?.start_date || new Date().toISOString().split('T')[0];
+      }
+    }
+    setNewDayDate(defaultDate);
+    setNewDayTopic('');
+    setNewDayHours(4);
+    setIsAddDayModalOpen(true);
   };
 
   // Fetch real cohorts from backend & merge attendance
@@ -143,8 +141,6 @@ export default function TrainingAttendance({ user, onSectionChange }) {
           setSelectedCohortId(null);
         } else {
           const loadedCohorts = json.data.map(batch => {
-            const days = generateCohortDays(batch);
-
             let candidates = [];
             if (Array.isArray(batch.enrolled_candidates) && batch.enrolled_candidates.length > 0) {
               candidates = batch.enrolled_candidates.map(ec => ({
@@ -175,18 +171,23 @@ export default function TrainingAttendance({ user, onSectionChange }) {
               },
               trainer: batch.trainer,
               trainingCenter: batch.trainingCenter,
-              days,
+              days: [],
               candidates
             };
           });
 
-          // Hydrate saved attendance records from PostgreSQL database
+          // Hydrate saved attendance records and sessions from PostgreSQL database
           for (const cohort of loadedCohorts) {
             try {
               const attRes = await fetch(`${API_BASE}/batches/${cohort.id}/attendance`);
               const attJson = await attRes.json();
-              if (attJson.success && Array.isArray(attJson.data) && attJson.data.length > 0) {
-                attJson.data.forEach(rec => {
+              const attRecords = (attJson.success && Array.isArray(attJson.data)) ? attJson.data : [];
+
+              // Dynamically build scheduled days from database attendance records
+              cohort.days = getCohortDays(cohort, attRecords);
+
+              if (attRecords.length > 0) {
+                attRecords.forEach(rec => {
                   const cand = cohort.candidates.find(
                     c => c.candidate_id === rec.candidate_id || c.candidate_code === rec.candidate?.candidate_code
                   );
@@ -213,6 +214,14 @@ export default function TrainingAttendance({ user, onSectionChange }) {
               const firstDay = first.days[0].date;
               setSelectedDate(firstDay);
               const [y, m] = firstDay.split('-').map(Number);
+              if (y && m) {
+                setCurrentYear(y);
+                setCurrentMonth(m - 1);
+              }
+            } else {
+              const defaultDate = first.start_date || new Date().toISOString().split('T')[0];
+              setSelectedDate(defaultDate);
+              const [y, m] = defaultDate.split('-').map(Number);
               if (y && m) {
                 setCurrentYear(y);
                 setCurrentMonth(m - 1);
@@ -479,19 +488,43 @@ export default function TrainingAttendance({ user, onSectionChange }) {
     };
   }, [candidateStats]);
 
-  // Set individual candidate status for selected date
-  const handleSetCandidateStatus = (candidateId, status) => {
+  // Helper: Persist attendance records to PostgreSQL database via backend API
+  const persistAttendanceToBackend = async (cohortId, batchCode, sessionDate, sessionTopic, records, candidates) => {
+    try {
+      const res = await fetch(`${API_BASE}/batches/${cohortId}/attendance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batch_id: cohortId,
+          batch_code: batchCode,
+          session_date: sessionDate,
+          session_topic: sessionTopic || 'Practical Training Session',
+          records,
+          candidates
+        })
+      });
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      console.error('Error persisting attendance to DB:', err);
+      return { success: false, message: err.message };
+    }
+  };
+
+  // Set individual candidate status for selected date (instant UI + real DB persist)
+  const handleSetCandidateStatus = async (candidateId, status) => {
     if (!isAllottedDate) {
       showToast('⚠️ Attendance can only be marked on assigned batch dates.', 'error');
       return;
     }
 
+    const dayHours = activeDayObj.hours || 4;
+    const hours = status === 'PRESENT' ? dayHours : status === 'LATE' ? dayHours / 2 : 0;
+
+    // 1. Instant optimistic state update
     setCohorts(prevCohorts => {
       return prevCohorts.map(cohort => {
         if (cohort.id !== currentCohort.id) return cohort;
-
-        const dayHours = activeDayObj.hours || 4;
-        const hours = status === 'PRESENT' ? dayHours : status === 'LATE' ? dayHours / 2 : 0;
 
         const updatedCandidates = (cohort.candidates || []).map(cand => {
           if (cand.candidate_id !== candidateId) return cand;
@@ -513,42 +546,88 @@ export default function TrainingAttendance({ user, onSectionChange }) {
         return { ...cohort, candidates: updatedCandidates };
       });
     });
+
+    // 2. Real-time permanent database write
+    const cand = currentCohort.candidates?.find(c => c.candidate_id === candidateId);
+    if (cand) {
+      const dbResult = await persistAttendanceToBackend(
+        currentCohort.id,
+        currentCohort.batch_code,
+        selectedDate,
+        activeDayObj.topic,
+        [{
+          candidate_id: cand.candidate_id,
+          candidate_code: cand.candidate_code,
+          full_name: cand.full_name,
+          status,
+          hours,
+          notes: cand.attendance?.[selectedDate]?.notes || ''
+        }]
+      );
+      if (!dbResult?.success) {
+        showToast('Warning: Attendance saved locally but DB sync failed.', 'error');
+      }
+    }
   };
 
-  // Bulk mark all candidates for selected date
-  const handleBulkMarkSelectedDay = (status) => {
+  // Bulk mark all candidates for selected date (instant UI + real DB persist)
+  const handleBulkMarkSelectedDay = async (status) => {
     if (!isAllottedDate) {
       showToast('⚠️ Attendance can only be marked on assigned batch dates.', 'error');
       return;
     }
 
+    const dayHours = activeDayObj.hours || 4;
+    const hours = status === 'PRESENT' ? dayHours : status === 'LATE' ? dayHours / 2 : 0;
+
+    const updatedCandidates = (currentCohort.candidates || []).map(cand => ({
+      ...cand,
+      attendance: {
+        ...cand.attendance,
+        [selectedDate]: {
+          status,
+          hours,
+          notes: status === 'PRESENT' ? 'Completed full session' : ''
+        }
+      }
+    }));
+
     setCohorts(prevCohorts => {
       return prevCohorts.map(cohort => {
         if (cohort.id !== currentCohort.id) return cohort;
-
-        const dayHours = activeDayObj.hours || 4;
-        const hours = status === 'PRESENT' ? dayHours : status === 'LATE' ? dayHours / 2 : 0;
-
-        const updatedCandidates = (cohort.candidates || []).map(cand => ({
-          ...cand,
-          attendance: {
-            ...cand.attendance,
-            [selectedDate]: {
-              status,
-              hours,
-              notes: status === 'PRESENT' ? 'Completed full session' : ''
-            }
-          }
-        }));
-
         return { ...cohort, candidates: updatedCandidates };
       });
     });
 
-    showToast(`Marked all candidates as ${status} for ${activeDayObj.label || selectedDate}`);
+    // Permanent database write
+    const records = updatedCandidates.map(cand => ({
+      candidate_id: cand.candidate_id,
+      candidate_code: cand.candidate_code,
+      full_name: cand.full_name,
+      status,
+      hours,
+      notes: status === 'PRESENT' ? 'Completed full session' : ''
+    }));
+
+    setSaving(true);
+    const dbResult = await persistAttendanceToBackend(
+      currentCohort.id,
+      currentCohort.batch_code,
+      selectedDate,
+      activeDayObj.topic,
+      records,
+      updatedCandidates
+    );
+    setSaving(false);
+
+    if (dbResult?.success) {
+      showToast(`✓ Marked all candidates as ${status} & saved to database!`);
+    } else {
+      showToast(`Marked candidates as ${status} (local update).`, 'error');
+    }
   };
 
-  // Save changes
+  // Explicit Save & Sync button
   const handleSaveAttendance = async () => {
     if (!isAllottedDate) {
       showToast('⚠️ Cannot save: Attendance can only be recorded on assigned batch dates.', 'error');
@@ -571,23 +650,21 @@ export default function TrainingAttendance({ user, onSectionChange }) {
         };
       });
 
-      const res = await fetch(`${API_BASE}/batches/${currentCohort.id}/attendance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          batch_id: currentCohort.id,
-          batch_code: currentCohort.batch_code,
-          session_date: selectedDate,
-          session_topic: activeDayObj.topic || 'Practical EV Road Trial & Maneuver Drill',
-          records,
-          candidates: currentCohort.candidates
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast(data.message || '🎉 All attendance records saved & synced successfully!');
+      const dbResult = await persistAttendanceToBackend(
+        currentCohort.id,
+        currentCohort.batch_code,
+        selectedDate,
+        activeDayObj.topic || 'Practical EV Road Trial & Maneuver Drill',
+        records,
+        currentCohort.candidates
+      );
+
+      if (dbResult?.success) {
+        showToast(dbResult.message || '🎉 All attendance records saved & synced permanently to PostgreSQL database!');
+        // Refresh from database to ensure 100% sync
+        fetchCohortsAndAttendance();
       } else {
-        showToast(data.message || 'Attendance saved locally.', 'error');
+        showToast(dbResult?.message || 'Attendance saved locally.', 'error');
       }
     } catch (err) {
       console.error('Error saving attendance:', err);
@@ -616,40 +693,129 @@ export default function TrainingAttendance({ user, onSectionChange }) {
     }
   };
 
-  // Add new day
-  const handleAddNewDay = (e) => {
+  // Add new day (trainer defined session with immediate permanent DB storage)
+  const handleAddNewDay = async (e) => {
     e.preventDefault();
-    if (!newDayDate) return;
+    if (!newDayDate || !currentCohort) return;
 
-    if (currentCohort.days.some(d => d.date === newDayDate)) {
+    if ((currentCohort.days || []).some(d => d.date === newDayDate)) {
       showToast('A session is already scheduled on this date!', 'error');
       return;
     }
 
     const dateObj = new Date(newDayDate + 'T00:00:00');
     const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-    const dayCount = (currentCohort.days?.length || 0) + 1;
 
-    const newDayObj = {
-      dayIndex: dayCount,
-      date: newDayDate,
-      label: `Day ${dayCount}`,
-      dayName: dayName,
-      topic: newDayTopic || 'Practical Training Session',
-      hours: Number(newDayHours) || 4
-    };
+    const newTopic = newDayTopic.trim() || 'Practical EV Training Session';
+    const newHours = Number(newDayHours) || 4;
+
+    // Immediately persist initial candidate records for this session into PostgreSQL
+    const initialRecords = (currentCohort.candidates || []).map(cand => ({
+      candidate_id: cand.candidate_id,
+      candidate_code: cand.candidate_code,
+      full_name: cand.full_name,
+      status: 'PRESENT',
+      hours: newHours,
+      notes: ''
+    }));
+
+    setSaving(true);
+    await persistAttendanceToBackend(
+      currentCohort.id,
+      currentCohort.batch_code,
+      newDayDate,
+      newTopic,
+      initialRecords,
+      currentCohort.candidates
+    );
+    setSaving(false);
 
     setCohorts(prev => prev.map(c => {
       if (c.id !== currentCohort.id) return c;
+      const updatedDays = [...(c.days || []), {
+        date: newDayDate,
+        dayName,
+        topic: newTopic,
+        hours: newHours
+      }];
+      // Chronological sort
+      updatedDays.sort((a, b) => a.date.localeCompare(b.date));
+      const reindexed = updatedDays.map((d, i) => ({
+        ...d,
+        dayIndex: i + 1,
+        label: `Day ${i + 1}`
+      }));
+
+      // Initialize candidate attendance in local state
+      const updatedCandidates = (c.candidates || []).map(cand => ({
+        ...cand,
+        attendance: {
+          ...cand.attendance,
+          [newDayDate]: {
+            status: 'PRESENT',
+            hours: newHours,
+            notes: ''
+          }
+        }
+      }));
+
       return {
         ...c,
-        days: [...(c.days || []), newDayObj]
+        days: reindexed,
+        candidates: updatedCandidates
       };
     }));
 
     setSelectedDate(newDayDate);
+    const [y, m] = newDayDate.split('-').map(Number);
+    if (y && m) {
+      setCurrentYear(y);
+      setCurrentMonth(m - 1);
+    }
     setIsAddDayModalOpen(false);
-    showToast(`Added ${newDayObj.label} (${newDayDate}) to training schedule!`);
+    showToast(`✓ Session & initial attendance saved permanently to database for ${newDayDate}!`);
+  };
+
+  // Remove a session (permanent delete from database + local state update)
+  const handleDeleteDay = async (dateToDelete, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to remove the session on ${dateToDelete}? This will permanently remove its records from the database.`)) {
+      return;
+    }
+
+    try {
+      await fetch(`${API_BASE}/batches/${currentCohort.id}/attendance?session_date=${dateToDelete}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn('Backend session deletion error:', err.message);
+    }
+
+    setCohorts(prev => prev.map(c => {
+      if (c.id !== currentCohort.id) return c;
+      const remainingDays = (c.days || []).filter(d => d.date !== dateToDelete);
+      remainingDays.sort((a, b) => a.date.localeCompare(b.date));
+      const reindexed = remainingDays.map((d, i) => ({
+        ...d,
+        dayIndex: i + 1,
+        label: `Day ${i + 1}`
+      }));
+      return {
+        ...c,
+        days: reindexed
+      };
+    }));
+
+    if (selectedDate === dateToDelete) {
+      const remaining = (currentCohort?.days || []).filter(d => d.date !== dateToDelete);
+      if (remaining.length > 0) {
+        setSelectedDate(remaining[0].date);
+      } else {
+        setSelectedDate(currentCohort?.start_date || new Date().toISOString().split('T')[0]);
+      }
+    }
+
+    showToast(`Session on ${dateToDelete} removed from database.`);
   };
 
   // Export CSV
@@ -826,23 +992,27 @@ export default function TrainingAttendance({ user, onSectionChange }) {
       </div>
 
       {/* ─── Batch Selector & View Layout Switcher ────────────────── */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5 shrink-0">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
             <Layers className="w-4 h-4 text-indigo-600" />
             <span>Assigned Batch:</span>
           </span>
-          <select
-            value={selectedCohortId}
-            onChange={(e) => setSelectedCohortId(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs sm:text-sm font-bold bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          >
-            {accessibleCohorts.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.batch_code} — {c.title}
-              </option>
-            ))}
-          </select>
+          <div className="relative w-64 sm:w-80 max-w-[320px]">
+            <select
+              value={selectedCohortId}
+              onChange={(e) => setSelectedCohortId(e.target.value)}
+              className="w-full px-3 py-2 pr-8 rounded-xl border border-slate-200 text-xs sm:text-sm font-bold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs truncate cursor-pointer appearance-none"
+              title={currentCohort?.title || currentCohort?.batch_code || 'Select Batch'}
+            >
+              {accessibleCohorts.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.title || c.batch_code}
+                </option>
+              ))}
+            </select>
+            <ChevronRight className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none rotate-90" />
+          </div>
         </div>
 
         <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl shrink-0">
@@ -890,7 +1060,7 @@ export default function TrainingAttendance({ user, onSectionChange }) {
               </div>
 
               <button
-                onClick={() => setIsAddDayModalOpen(true)}
+                onClick={() => openAddDayModal()}
                 className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100/80 px-2.5 py-1.5 rounded-xl border border-indigo-200/60 flex items-center gap-1 cursor-pointer transition shadow-2xs"
                 title="Add a custom training session"
               >
@@ -899,115 +1069,150 @@ export default function TrainingAttendance({ user, onSectionChange }) {
               </button>
             </div>
 
-            {/* List of ONLY Assigned Cohort Dates */}
+            {/* List of Scheduled Sessions */}
             <div className="space-y-2 max-h-[620px] overflow-y-auto pr-1">
-              {(currentCohort?.days || []).map((day) => {
-                const isSelected = day.date === selectedDate;
-
-                // Calculate attendance summary for this assigned day
-                let presentCount = 0;
-                let lateCount = 0;
-                let absentCount = 0;
-                let totalCands = currentCohort?.candidates?.length || 0;
-                let isMarked = false;
-
-                currentCohort?.candidates?.forEach(c => {
-                  const st = c.attendance?.[day.date]?.status;
-                  if (st) isMarked = true;
-                  if (st === 'PRESENT') presentCount++;
-                  else if (st === 'LATE') lateCount++;
-                  else if (st === 'ABSENT' || st === 'EXCUSED') absentCount++;
-                });
-
-                const isFullPresent = isMarked && totalCands > 0 && presentCount === totalCands;
-
-                const dayDateObj = new Date(day.date + 'T00:00:00');
-                const formattedDateStr = dayDateObj.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                });
-
-                return (
+              {(currentCohort?.days || []).length === 0 ? (
+                <div className="py-10 px-4 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/60 flex flex-col items-center justify-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs">
+                    <CalendarPlus className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-slate-800">No Sessions Scheduled</h4>
+                    <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                      Trainers can add their own sessions for particular days. Click below to add Day 1.
+                    </p>
+                  </div>
                   <button
-                    key={day.date}
                     type="button"
-                    onClick={() => setSelectedDate(day.date)}
-                    className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex flex-col space-y-2 group ${
-                      isSelected
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-500/30'
-                        : 'bg-slate-50/70 hover:bg-indigo-50/40 text-slate-800 border-slate-200/80 hover:border-indigo-200'
-                    }`}
+                    onClick={() => openAddDayModal()}
+                    className="mt-1 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-indigo-600/20 cursor-pointer"
                   >
-                    {/* Top Row: Day Pill, Date & Status */}
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[11px] font-black font-mono px-2 py-0.5 rounded-md ${
-                          isSelected
-                            ? 'bg-white/20 text-white border border-white/20'
-                            : 'bg-indigo-100 text-indigo-700 border border-indigo-200/70'
-                        }`}>
-                          {day.label}
-                        </span>
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Day 1 Session</span>
+                  </button>
+                </div>
+              ) : (
+                (currentCohort?.days || []).map((day) => {
+                  const isSelected = day.date === selectedDate;
 
-                        <span className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                          {formattedDateStr}
-                        </span>
+                  // Calculate attendance summary for this assigned day
+                  let presentCount = 0;
+                  let lateCount = 0;
+                  let absentCount = 0;
+                  let totalCands = currentCohort?.candidates?.length || 0;
+                  let isMarked = false;
+
+                  currentCohort?.candidates?.forEach(c => {
+                    const st = c.attendance?.[day.date]?.status;
+                    if (st) isMarked = true;
+                    if (st === 'PRESENT') presentCount++;
+                    else if (st === 'LATE') lateCount++;
+                    else if (st === 'ABSENT' || st === 'EXCUSED') absentCount++;
+                  });
+
+                  const isFullPresent = isMarked && totalCands > 0 && presentCount === totalCands;
+
+                  const dayDateObj = new Date(day.date + 'T00:00:00');
+                  const formattedDateStr = dayDateObj.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  });
+
+                  return (
+                    <button
+                      key={day.date}
+                      type="button"
+                      onClick={() => setSelectedDate(day.date)}
+                      className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex flex-col space-y-2 group ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-500/30'
+                          : 'bg-slate-50/70 hover:bg-indigo-50/40 text-slate-800 border-slate-200/80 hover:border-indigo-200'
+                      }`}
+                    >
+                      {/* Top Row: Day Pill, Date & Status + Delete */}
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[11px] font-black font-mono px-2 py-0.5 rounded-md ${
+                            isSelected
+                              ? 'bg-white/20 text-white border border-white/20'
+                              : 'bg-indigo-100 text-indigo-700 border border-indigo-200/70'
+                          }`}>
+                            {day.label}
+                          </span>
+
+                          <span className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                            {formattedDateStr}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          {/* Attendance Status Badge */}
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                            isSelected
+                              ? isFullPresent
+                                ? 'bg-emerald-500 text-white'
+                                : isMarked
+                                ? 'bg-amber-400 text-slate-900'
+                                : 'bg-white/20 text-white'
+                              : isFullPresent
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : isMarked
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {isFullPresent ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>{presentCount}/{totalCands} Present</span>
+                              </>
+                            ) : isMarked ? (
+                              <>
+                                <Clock className="w-3 h-3" />
+                                <span>{presentCount} Present</span>
+                              </>
+                            ) : (
+                              <span>Unrecorded</span>
+                            )}
+                          </span>
+
+                          {/* Delete Session Button */}
+                          <span
+                            onClick={(e) => handleDeleteDay(day.date, e)}
+                            className={`p-1 rounded-md transition opacity-60 hover:opacity-100 cursor-pointer ${
+                              isSelected ? 'hover:bg-white/20 text-white' : 'hover:bg-red-50 text-slate-400 hover:text-red-600'
+                            }`}
+                            title="Remove this session"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Attendance Status Badge */}
-                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                        isSelected
-                          ? isFullPresent
-                            ? 'bg-emerald-500 text-white'
-                            : isMarked
-                            ? 'bg-amber-400 text-slate-900'
-                            : 'bg-white/20 text-white'
-                          : isFullPresent
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : isMarked
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {isFullPresent ? (
-                          <>
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>{presentCount}/{totalCands} Present</span>
-                          </>
-                        ) : isMarked ? (
-                          <>
-                            <Clock className="w-3 h-3" />
-                            <span>{presentCount} Present</span>
-                          </>
-                        ) : (
-                          <span>Unrecorded</span>
-                        )}
-                      </span>
-                    </div>
-
-                    {/* Topic & Hours */}
-                    <div className="flex items-center justify-between text-xs">
-                      <p className={`line-clamp-1 font-medium ${isSelected ? 'text-indigo-100' : 'text-slate-600'}`}>
-                        {day.topic}
-                      </p>
-                      <span className={`text-[10px] shrink-0 font-bold ml-2 ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
-                        {day.hours || 4}h
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+                      {/* Topic & Hours */}
+                      <div className="flex items-center justify-between text-xs">
+                        <p className={`line-clamp-1 font-medium ${isSelected ? 'text-indigo-100' : 'text-slate-600'}`}>
+                          {day.topic}
+                        </p>
+                        <span className={`text-[10px] shrink-0 font-bold ml-2 ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
+                          {day.hours || 4}h
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
             </div>
 
             {/* Schedule Footnote */}
             <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-indigo-600" />
-                <span>Strict Cohort Scope (Assigned Dates Only)</span>
+                <span>Trainer Managed Daily Sessions</span>
               </span>
               <span className="font-bold text-slate-700">
-                {currentCohort?.days?.length || 0} Sessions Allotted
+                {currentCohort?.days?.length || 0} Sessions Scheduled
               </span>
             </div>
           </div>
@@ -1016,15 +1221,36 @@ export default function TrainingAttendance({ user, onSectionChange }) {
              RIGHT: CANDIDATE LIST & ATTENDANCE MARKING FOR SELECTED DATE
              ═════════════════════════════════════════════════════════════ */}
           <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
-            {/* When selected date is NOT allotted to the batch */}
-            {!isAllottedDate ? (
+            {(currentCohort?.days || []).length === 0 ? (
+              <div className="p-8 text-center rounded-2xl bg-slate-50/70 border border-slate-200/90 flex flex-col items-center justify-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#FFF0F5] text-[#F72570] flex items-center justify-center">
+                  <CalendarDays className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-base font-bold text-slate-900 font-kaiseiTokumin">
+                    No Daily Sessions Added Yet
+                  </h4>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    The trainer adds all sessions for this cohort. Add a session to start marking daily candidate attendance.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openAddDayModal()}
+                  className="px-4 py-2 rounded-xl bg-[#F72570] hover:bg-[#de1b60] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-[#F72570]/20 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add First Session for this Batch</span>
+                </button>
+              </div>
+            ) : !isAllottedDate ? (
               <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3">
                 <div className="flex items-center gap-2.5 text-amber-900 font-bold text-sm">
                   <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                  <span>Date Not Allotted for This Batch — Attendance Disabled</span>
+                  <span>No Session Scheduled on This Date</span>
                 </div>
                 <p className="text-xs text-amber-800 leading-relaxed">
-                  No training session is scheduled for <strong>{currentCohort?.batch_code}</strong> on{' '}
+                  No training session is currently scheduled for <strong>{currentCohort?.batch_code}</strong> on{' '}
                   <span className="font-semibold underline">
                     {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
                       weekday: 'long',
@@ -1033,11 +1259,21 @@ export default function TrainingAttendance({ user, onSectionChange }) {
                       year: 'numeric'
                     })}
                   </span>
-                  . Attendance can only be recorded on assigned cohort training dates.
+                  . You can schedule a session on this date or select an existing session below.
                 </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => openAddDayModal(selectedDate)}
+                    className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Schedule Session on {selectedDate}</span>
+                  </button>
+                </div>
                 <div className="pt-2 border-t border-amber-200/60">
                   <span className="text-[11px] font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
-                    Select an assigned batch date to mark attendance:
+                    Or select an existing scheduled session:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {(currentCohort?.days || []).map((d) => (

@@ -364,9 +364,36 @@ const formatBatchRecord = (b) => {
   if (Array.isArray(json.enrollments)) {
     enrolledCandidates = json.enrollments.map(e => {
       const cand = e.candidate;
+      const cId = cand?.id || e.candidate_id;
+
+      // Find real assessments for this candidate in this batch
+      const candAssessments = Array.isArray(json.assessments)
+        ? json.assessments.filter(a => a.candidate_id === cId)
+        : [];
+
+      let candScore = null;
+      if (candAssessments.length > 0) {
+        const finalExam = candAssessments.find(a => a.assessment_type === 'FINAL_CERTIFICATION');
+        if (finalExam && (finalExam.score != null || finalExam.score_obtained != null)) {
+          candScore = parseFloat(finalExam.score != null ? finalExam.score : finalExam.score_obtained);
+        } else {
+          const totalScore = candAssessments.reduce((sum, a) => {
+            const sc = a.score != null ? a.score : (a.score_obtained != null ? a.score_obtained : null);
+            return sum + (parseFloat(sc) || 0);
+          }, 0);
+          candScore = Math.round(totalScore / candAssessments.length);
+        }
+      } else if (e.assessment_score !== null && e.assessment_score !== undefined) {
+        candScore = parseFloat(e.assessment_score);
+      } else if (cand?.readiness_score !== null && cand?.readiness_score !== undefined) {
+        candScore = parseFloat(cand.readiness_score);
+      } else {
+        candScore = 85;
+      }
+
       return {
         enrollment_id: e.id,
-        candidate_id: cand?.id || e.candidate_id,
+        candidate_id: cId,
         candidate_code: cand?.candidate_code || 'ET-2026',
         full_name: cand?.full_name || `${cand?.first_name || ''} ${cand?.last_name || ''}`.trim() || 'Candidate',
         mobile_number: cand?.mobile_number || '+91 98765 00000',
@@ -376,9 +403,9 @@ const formatBatchRecord = (b) => {
         mobilizer_name: 'Even Mobilizer Lead',
         attendance_percentage: e.attendance_percentage !== null && e.attendance_percentage !== undefined ? parseFloat(e.attendance_percentage) : 90,
         progress_percentage: e.progress_percentage !== null && e.progress_percentage !== undefined ? parseFloat(e.progress_percentage) : 50,
-        assessment_score: e.assessment_score !== null && e.assessment_score !== undefined ? parseFloat(e.assessment_score) : 85,
+        assessment_score: candScore,
         status: e.status || 'IN_PROGRESS',
-        recommendation: (parseFloat(e.assessment_score) >= 80 || parseFloat(e.progress_percentage) >= 70) ? 'READY_FOR_DEPLOYMENT' : 'IN_TRAINING',
+        recommendation: (parseFloat(candScore) >= 80 || parseFloat(e.progress_percentage) >= 70) ? 'READY_FOR_DEPLOYMENT' : 'IN_TRAINING',
         enrollment_date: e.enrollment_date
       };
     });
@@ -412,7 +439,12 @@ const BATCH_INCLUDES = [
     as: 'enrollments',
     required: false,
     include: [{ model: db.Candidate, as: 'candidate', required: false }]
-  }
+  },
+  ...(db.TrainingAssessment ? [{
+    model: db.TrainingAssessment,
+    as: 'assessments',
+    required: false
+  }] : [])
 ];
 
 // ==========================================
@@ -2244,6 +2276,49 @@ export const getBatchAttendance = async (req, res) => {
 };
 
 // ==========================================
+// 12B. DELETE BATCH ATTENDANCE SESSION (Real PostgreSQL DB)
+// ==========================================
+export const deleteBatchAttendanceSession = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { session_date } = req.query;
+    if (!session_date) {
+      return res.status(400).json({ success: false, message: 'session_date is required' });
+    }
+    const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+    let dbBatch = null;
+    if (db.TrainingBatch) {
+      if (isUUID(id)) {
+        dbBatch = await db.TrainingBatch.findByPk(id);
+      } else {
+        const lookupCode = id === 'bat-001' ? 'BAT-2026-BLR-01' : id === 'bat-002' ? 'BAT-2026-LKO-02' : id;
+        dbBatch = await db.TrainingBatch.findOne({ where: { batch_code: lookupCode } });
+      }
+    }
+
+    if (dbBatch && db.TrainingAttendance) {
+      const deletedCount = await db.TrainingAttendance.destroy({
+        where: {
+          batch_id: dbBatch.id,
+          session_date
+        }
+      });
+      return res.json({
+        success: true,
+        message: `Successfully deleted session records on ${session_date} from database.`,
+        deleted_count: deletedCount
+      });
+    }
+
+    return res.json({ success: true, message: 'Session deleted' });
+  } catch (error) {
+    console.error('Error deleting batch attendance session:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ==========================================
 // ==========================================
 // 13. RECORD ASSESSMENT & FEEDBACK (Trainer / Admin - Real PostgreSQL DB)
 // ==========================================
@@ -2885,12 +2960,6 @@ export const getTrainerDashboardData = async (req, res) => {
       const presentToday = todayAttendances.filter(a => (a.status || '').toUpperCase() === 'PRESENT').length;
       attendanceTodayStr = `${presentToday}/${todayAttendances.length}`;
       attendanceTodayPct = Math.round((presentToday / todayAttendances.length) * 100);
-    } else if (attendances.length > 0) {
-      const latestDate = attendances[attendances.length - 1].session_date;
-      const latestAtts = attendances.filter(a => a.session_date === latestDate);
-      const presentLatest = latestAtts.filter(a => (a.status || '').toUpperCase() === 'PRESENT').length;
-      attendanceTodayStr = `${presentLatest}/${latestAtts.length}`;
-      attendanceTodayPct = Math.round((presentLatest / latestAtts.length) * 100);
     } else {
       attendanceTodayStr = '0/0';
       attendanceTodayPct = 0;
@@ -2960,63 +3029,60 @@ export const getTrainerDashboardData = async (req, res) => {
       }
     }
 
-    // 7. Today's Schedule
-    const scheduleBatches = activeBatchList.length > 0 ? activeBatchList : batches.slice(0, 3);
-    const scheduleList = scheduleBatches.map((b, idx) => {
-      const presentCount = b.enrollments ? b.enrollments.filter(e => e.attendance_percentage >= 75).length : (b.enrolled_count || 0);
-      const totalCand = b.enrollments ? b.enrollments.length : (b.enrolled_count || b.capacity || 20);
+    // 7. Today's Schedule - strictly from real session attendances recorded for today
+    const todayBatchMap = new Map();
+    todayAttendances.forEach(att => {
+      if (!todayBatchMap.has(att.batch_id)) todayBatchMap.set(att.batch_id, []);
+      todayBatchMap.get(att.batch_id).push(att);
+    });
+
+    const scheduleList = [];
+    for (const [batchId, attRecords] of todayBatchMap.entries()) {
+      const b = batches.find(item => item.id === batchId);
+      if (!b) continue;
+      const presentCount = attRecords.filter(a => (a.status || '').toUpperCase() === 'PRESENT').length;
+      const totalCand = attRecords.length;
+      const firstRec = attRecords[0];
       const mod = b.module || {};
       const tc = b.trainingCenter || {};
 
-      const defaultTimes = [
-        '09:00 AM - 10:30 AM',
-        '11:00 AM - 12:30 PM',
-        '02:00 PM - 03:30 PM'
-      ];
-
-      const topic = b.remarks && b.remarks.trim().length > 0
-        ? b.remarks
-        : (Array.isArray(mod.curriculum_topics) && mod.curriculum_topics.length > 0
-            ? mod.curriculum_topics[0]
-            : 'EV Riding Dynamics & Safety Checks');
-
-      return {
+      scheduleList.push({
         id: b.id,
-        time: `${b.daily_start_time || '09:00'} - ${b.daily_end_time || '10:30'}`,
-        display_time: defaultTimes[idx % defaultTimes.length],
+        time: `${b.daily_start_time || '09:00 AM'} - ${b.daily_end_time || '01:00 PM'}`,
+        display_time: `${b.daily_start_time || '09:00 AM'} - ${b.daily_end_time || '01:00 PM'}`,
         batch_code: b.batch_code,
         title: b.title,
-        nf_level: mod.is_mandatory_for_nf ? (Array.isArray(mod.is_mandatory_for_nf) ? mod.is_mandatory_for_nf[0] : 'NF2') : 'NF3',
+        nf_level: mod.is_mandatory_for_nf ? (Array.isArray(mod.is_mandatory_for_nf) ? mod.is_mandatory_for_nf[0] : 'NF2') : 'NF1',
         module: mod.title || 'Driving Fundamentals',
         module_id: mod.id,
-        module_description: mod.description || 'Comprehensive certified two-wheeler EV practical and theoretical instruction.',
+        module_description: mod.description || '',
         module_category: mod.category || 'MOBILITY',
         duration_hours: mod.duration_hours || 30,
         passing_score: mod.passing_assessment_score || 75,
-        curriculum_topics: Array.isArray(mod.curriculum_topics) ? mod.curriculum_topics : ['EV Controls & Balance', 'Regenerative Braking', 'Battery Swap Operations', 'Defensive Urban Riding'],
-        session_topic: topic,
-        venue: tc.name || 'Training Center 1',
-        venue_city: tc.city || '',
+        curriculum_topics: Array.isArray(mod.curriculum_topics) ? mod.curriculum_topics : [],
+        session_topic: firstRec?.session_topic || b.remarks || 'Daily Practical Training',
+        venue: tc.name || 'Bengaluru EV Excellence Centre',
+        venue_city: tc.city || 'Bengaluru',
         venue_address: tc.address || '',
         capacity: b.capacity || totalCand,
         start_date: b.start_date,
         end_date: b.end_date,
-        daily_start_time: b.daily_start_time || '09:00',
-        daily_end_time: b.daily_end_time || '10:30',
-        candidates: (b.enrollments || []).map(e => ({
-          id: e.candidate?.id,
-          name: e.candidate?.full_name || 'Candidate',
-          code: e.candidate?.candidate_code || `ET-${(e.candidate?.id || '').substring(0, 4)}`,
-          nf_category: e.candidate?.nf_category || 'NF1',
-          progress: e.progress_percentage || 0,
-          attendance: e.attendance_percentage || 0,
-          status: e.status || 'IN_PROGRESS'
+        daily_start_time: b.daily_start_time || '09:00 AM',
+        daily_end_time: b.daily_end_time || '01:00 PM',
+        candidates: attRecords.map(a => ({
+          id: a.candidate?.id || a.candidate_id,
+          name: a.candidate?.full_name || 'Candidate',
+          code: a.candidate?.candidate_code || `ET-${(a.candidate_id || '').substring(0, 4)}`,
+          nf_category: a.candidate?.nf_category || 'NF1',
+          progress: a.candidate?.progress || 0,
+          attendance: (a.status || '').toUpperCase() === 'PRESENT' ? 100 : 0,
+          status: a.status || 'IN_PROGRESS'
         })),
         present_count: presentCount,
         total_candidates: totalCand,
         status: b.status === 'ONGOING' ? 'In Progress' : 'Ready'
-      };
-    });
+      });
+    }
 
     // 8. Recent Activities Feed
     let observations = [];

@@ -684,26 +684,36 @@ export default function TrainerDashboard({ user, onSectionChange }) {
             {(() => {
               const hasAssessments = (assessmentPerformance.total || 0) > 0;
               const avgScore = hasAssessments ? (assessmentPerformance.average_score || 0) : 0;
-              const dashOffset = hasAssessments ? 125.6 - (125.6 * avgScore) / 100 : 125.6;
+              const arcLength = 119.38;
+              const dashOffset = hasAssessments ? arcLength - (arcLength * Math.min(Math.max(avgScore, 0), 100)) / 100 : arcLength;
 
               return (
                 <>
-                  <div className="relative w-32 h-18 overflow-hidden flex items-end justify-center">
-                    <svg className="w-32 h-32" viewBox="0 0 100 100">
-                      <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#f1f5f9" strokeWidth="10" strokeLinecap="round" />
+                  <div className="relative w-44 h-24 flex items-center justify-center my-1">
+                    <svg className="w-40 h-24" viewBox="0 0 100 60">
                       <path
-                        d="M 10 50 A 40 40 0 0 1 90 50"
+                        d="M 12 50 A 38 38 0 0 1 88 50"
                         fill="none"
-                        stroke="#F72570"
-                        strokeWidth="10"
-                        strokeDasharray="125.6"
-                        strokeDashoffset={dashOffset}
+                        stroke="#f1f5f9"
+                        strokeWidth="8"
                         strokeLinecap="round"
                       />
+                      <path
+                        d="M 12 50 A 38 38 0 0 1 88 50"
+                        fill="none"
+                        stroke="#F72570"
+                        strokeWidth="8"
+                        strokeDasharray={arcLength}
+                        strokeDashoffset={dashOffset}
+                        strokeLinecap="round"
+                        className="transition-all duration-700 ease-out"
+                      />
                     </svg>
-                    <div className="absolute bottom-0 text-center">
-                      <span className="text-2xl font-black text-slate-900">{hasAssessments ? `${avgScore}%` : '0%'}</span>
-                      <span className="text-[9px] font-bold text-slate-400 block uppercase">
+                    <div className="absolute bottom-1 inset-x-0 flex flex-col items-center justify-center text-center">
+                      <span className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+                        {hasAssessments ? `${avgScore}%` : '0%'}
+                      </span>
+                      <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider mt-1">
                         {hasAssessments ? 'Average Score' : '0 Assessments'}
                       </span>
                     </div>

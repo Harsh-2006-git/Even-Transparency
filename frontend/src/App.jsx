@@ -678,6 +678,9 @@ export default function App() {
             activeSection !== 'create-batch' &&
             activeSection !== 'training-modules' &&
             activeSection !== 'training-centres' &&
+            activeSection !== 'batch-calendar' &&
+            activeSection !== 'calendar' &&
+            activeSection !== 'timetable' &&
             activeSection !== 'attendance' &&
             activeSection !== 'assessments' &&
             activeSection !== 'targets' &&

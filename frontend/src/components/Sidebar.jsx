@@ -132,9 +132,7 @@ export default function Sidebar({
           { id: 'attendance', label: 'Attendance', icon: CheckSquare },
           { id: 'assessments', label: 'Assessments', icon: ShieldCheck },
           { id: 'training-modules', label: 'Training Modules', icon: BookOpen },
-          { id: 'practical-sessions', label: 'Practical Sessions', icon: Radio },
-          { id: 'feedback', label: 'Feedback & Notes', icon: FileText },
-          { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
+
 
         ];
       case 'PlacementCoordinator':

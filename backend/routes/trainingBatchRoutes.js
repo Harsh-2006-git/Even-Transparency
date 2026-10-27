@@ -21,6 +21,7 @@ import {
   deleteTrainingCenter,
   markAttendance,
   getBatchAttendance,
+  deleteBatchAttendanceSession,
   recordAssessment,
   getBatchAssessments,
   updateProgress,
@@ -66,6 +67,7 @@ router.put('/batches/:id/progress', updateProgress);
 // Attendance
 router.post('/batches/:id/attendance', markAttendance);
 router.get('/batches/:id/attendance', getBatchAttendance);
+router.delete('/batches/:id/attendance', deleteBatchAttendanceSession);
 
 // Assessments & Feedback
 router.post('/batches/:id/assessments', recordAssessment);

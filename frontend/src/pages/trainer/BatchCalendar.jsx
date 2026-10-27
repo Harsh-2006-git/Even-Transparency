@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -10,302 +10,18 @@ import {
   BookOpen,
   CheckCircle2,
   Filter,
-  Play,
   CheckSquare,
   Layers,
   GraduationCap,
-  Award,
-  AlertCircle,
-  X,
-  FileSpreadsheet,
-  Download,
-  Search,
   CalendarCheck,
   Zap,
-  Shield,
-  Info,
-  SlidersHorizontal,
-  LayoutGrid,
   CalendarDays,
-  ListOrdered
+  ListOrdered,
+  X
 } from 'lucide-react';
+import { API_BASE_URL } from '../../config/api';
 
-// Comprehensive Master Schedule Dataset
-const MOCK_OLD_SESSIONS = [
-  // --- September 2026 sessions (Current local date context) ---
-  {
-    id: 'sess-01',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    module_code: 'MOD-EV-01',
-    module_title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-    topic: 'Regenerative Braking & Throttle Calibration',
-    type: 'PRACTICAL', // PRACTICAL | THEORY | WORKSHOP | ASSESSMENT
-    date: '2026-09-07', // Today
-    start_time: '09:00',
-    end_time: '11:00',
-    time_display: '09:00 AM - 11:00 AM',
-    center: 'Bengaluru EV Excellence Centre',
-    city: 'Bengaluru',
-    venue: 'EV Driving Circuit - Track 1',
-    trainer_name: 'Rahul Sharma',
-    trainer_role: 'Master EV Trainer',
-    enrolled_count: 22,
-    expected_count: 22,
-    status: 'IN_PROGRESS', // UPCOMING | IN_PROGRESS | COMPLETED
-    description: 'Hands-on throttle sensitivity drills, progressive braking exercises, and simulated urban hazard stopping on EV test circuit.',
-    topics: [
-      'Gradual throttle curve control',
-      'Regenerative braking deceleration distances',
-      'Wet track emergency braking drills'
-    ]
-  },
-  {
-    id: 'sess-02',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    module_code: 'MOD-EV-01',
-    module_title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-    topic: 'Rapid Battery Swap Station Protocols',
-    type: 'WORKSHOP',
-    date: '2026-09-07', // Today
-    start_time: '11:30',
-    end_time: '13:00',
-    time_display: '11:30 AM - 01:00 PM',
-    center: 'Bengaluru EV Excellence Centre',
-    city: 'Bengaluru',
-    venue: 'Swap Bay Station Alpha',
-    trainer_name: 'Rahul Sharma',
-    trainer_role: 'Master EV Trainer',
-    enrolled_count: 22,
-    expected_count: 22,
-    status: 'UPCOMING',
-    description: 'Practical live battery unlocking, docking, safety lock inspection, thermal check, and digital app handshake verification.',
-    topics: [
-      'Battery lock mechanical disengagement',
-      'Docking station alignment and safety latch',
-      'SOC (State of Charge) telematics verification'
-    ]
-  },
-  {
-    id: 'sess-03',
-    batch_code: 'BAT-2026-LKO-02',
-    batch_title: 'Lucknow Road Safety & Defensive Traffic Drill',
-    module_code: 'MOD-SAF-02',
-    module_title: 'Defensive City Riding & Night Navigation',
-    topic: 'Heavy Traffic Lane Discipline & Blind Spot Avoidance',
-    type: 'PRACTICAL',
-    date: '2026-09-08',
-    start_time: '10:00',
-    end_time: '12:30',
-    time_display: '10:00 AM - 12:30 PM',
-    center: 'Lucknow Prime Skill Hub',
-    city: 'Lucknow',
-    venue: 'Urban Simulation Zone B',
-    trainer_name: 'Meena Yadav',
-    trainer_role: 'Road Safety Specialist',
-    enrolled_count: 20,
-    expected_count: 20,
-    status: 'UPCOMING',
-    description: 'Defensive positioning behind commercial vehicles, side mirror calibration, and turn indicator timing drills.',
-    topics: [
-      '3-Second safe trailing rule',
-      'Blind-spot overtaking checks',
-      'Intersection priority protocols'
-    ]
-  },
-  {
-    id: 'sess-04',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    module_code: 'MOD-EV-01',
-    module_title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-    topic: 'Battery Health Monitoring & Diagnostics',
-    type: 'THEORY',
-    date: '2026-09-09',
-    start_time: '09:00',
-    end_time: '11:00',
-    time_display: '09:00 AM - 11:00 AM',
-    center: 'Bengaluru EV Excellence Centre',
-    city: 'Bengaluru',
-    venue: 'Tech Lab 2',
-    trainer_name: 'Rahul Sharma',
-    trainer_role: 'Master EV Trainer',
-    enrolled_count: 22,
-    expected_count: 22,
-    status: 'UPCOMING',
-    description: 'Understanding BMS (Battery Management System), cell balancing, temperature limits, and error codes.',
-    topics: [
-      'BMS alerts and critical warnings',
-      'Optimal charging cycle management',
-      'Overheating & rain water immersion precautions'
-    ]
-  },
-  {
-    id: 'sess-05',
-    batch_code: 'BAT-2026-PUN-03',
-    batch_title: 'Pune Urban Navigation & Customer Readiness',
-    module_code: 'MOD-APP-03',
-    module_title: 'Smartphone GPS Navigation & Delivery Apps',
-    topic: 'Live Delivery Order Flow & Route Optimization',
-    type: 'THEORY',
-    date: '2026-09-10',
-    start_time: '09:30',
-    end_time: '12:00',
-    time_display: '09:30 AM - 12:00 PM',
-    center: 'Pune Livelihood Campus',
-    city: 'Pune',
-    venue: 'Digital Skill Lab 1',
-    trainer_name: 'Kiran Dave',
-    trainer_role: 'App & Navigation Trainer',
-    enrolled_count: 25,
-    expected_count: 25,
-    status: 'UPCOMING',
-    description: 'Hands-on simulator training for accepting delivery batches, handling multi-stop pickups, and battery-saving GPS routing.',
-    topics: [
-      'Rider app UI navigation',
-      'Pinpoint customer location verification',
-      'Handling route rerouting in poor network zones'
-    ]
-  },
-  {
-    id: 'sess-06',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    module_code: 'MOD-EV-01',
-    module_title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-    topic: 'Practical Riding & Slalom Track Evaluation',
-    type: 'ASSESSMENT',
-    date: '2026-09-11',
-    start_time: '09:00',
-    end_time: '13:00',
-    time_display: '09:00 AM - 01:00 PM',
-    center: 'Bengaluru EV Excellence Centre',
-    city: 'Bengaluru',
-    venue: 'Evaluation Test Track 1',
-    trainer_name: 'Rahul Sharma',
-    trainer_role: 'Master EV Trainer',
-    enrolled_count: 22,
-    expected_count: 22,
-    status: 'UPCOMING',
-    description: 'End-of-week practical assessment: Figure-8 balance test, obstacle avoidance drill, and swap station timed execution.',
-    topics: [
-      'Figure-8 continuous balance test',
-      'Timed battery swap completion (<3 mins)',
-      'Pre-ride 10-point vehicle safety checklist'
-    ]
-  },
-  {
-    id: 'sess-07',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    module_code: 'MOD-SAF-02',
-    module_title: 'Defensive City Riding & Night Navigation',
-    topic: 'Night Riding Drills & High-Beam Glare Management',
-    type: 'PRACTICAL',
-    date: '2026-09-14',
-    start_time: '17:30',
-    end_time: '19:30',
-    time_display: '05:30 PM - 07:30 PM',
-    center: 'Bengaluru EV Excellence Centre',
-    city: 'Bengaluru',
-    venue: 'Simulated Night Track Zone',
-    trainer_name: 'Rahul Sharma',
-    trainer_role: 'Master EV Trainer',
-    enrolled_count: 22,
-    expected_count: 22,
-    status: 'UPCOMING',
-    description: 'Special evening training module for high-contrast reflector gear, night visibility distances, and pothole hazard detection.',
-    topics: [
-      'Reflective vest & helmet visor maintenance',
-      'Low beam vs high beam urban etiquette',
-      'Night-time blind corner negotiation'
-    ]
-  },
-  {
-    id: 'sess-08',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    module_code: 'MOD-SOFT-04',
-    module_title: 'Customer Interaction & Workplace Etiquette',
-    topic: 'Customer Communication & Dispute De-escalation',
-    type: 'THEORY',
-    date: '2026-09-16',
-    start_time: '10:00',
-    end_time: '12:30',
-    time_display: '10:00 AM - 12:30 PM',
-    center: 'Bengaluru EV Excellence Centre',
-    city: 'Bengaluru',
-    venue: 'Seminar Hall B',
-    trainer_name: 'Rahul Sharma',
-    trainer_role: 'Master EV Trainer',
-    enrolled_count: 22,
-    expected_count: 22,
-    status: 'UPCOMING',
-    description: 'Professional handover etiquette, handling delayed consignments, polite phone communication, and safety SOS triggers.',
-    topics: [
-      'Doorstep delivery greeting and handover',
-      'Handling damaged parcel escalation',
-      'Emergency safety SOS app features'
-    ]
-  },
-  {
-    id: 'sess-09',
-    batch_code: 'BAT-2026-BLR-01',
-    batch_title: 'EV Pilot Induction Batch - Feb 2026',
-    module_code: 'MOD-EV-01',
-    module_title: 'Two-Wheeler EV Dynamics & Battery Swapping',
-    topic: 'Final Practical Certification & Sign-off',
-    type: 'ASSESSMENT',
-    date: '2026-09-18',
-    start_time: '09:00',
-    end_time: '14:00',
-    time_display: '09:00 AM - 02:00 PM',
-    center: 'Bengaluru EV Excellence Centre',
-    city: 'Bengaluru',
-    venue: 'Main Audit Track & Auditorium',
-    trainer_name: 'Rahul Sharma',
-    trainer_role: 'Master EV Trainer',
-    enrolled_count: 22,
-    expected_count: 22,
-    status: 'UPCOMING',
-    description: 'Comprehensive 100-point skill evaluation before graduation to placement pool.',
-    topics: [
-      'Live road trial with supervisor',
-      'Written road signs & safety quiz',
-      'Master trainer sign-off & certification'
-    ]
-  },
-  {
-    id: 'sess-10',
-    batch_code: 'BAT-2026-LKO-02',
-    batch_title: 'Lucknow Road Safety & Defensive Traffic Drill',
-    module_code: 'MOD-SAF-02',
-    module_title: 'Defensive City Riding & Night Navigation',
-    topic: 'Monsoon Riding & Aquaplaning Prevention',
-    type: 'WORKSHOP',
-    date: '2026-09-22',
-    start_time: '10:00',
-    end_time: '12:30',
-    time_display: '10:00 AM - 12:30 PM',
-    center: 'Lucknow Prime Skill Hub',
-    city: 'Lucknow',
-    venue: 'Wet Track Testing Ground',
-    trainer_name: 'Meena Yadav',
-    trainer_role: 'Road Safety Specialist',
-    enrolled_count: 20,
-    expected_count: 20,
-    status: 'UPCOMING',
-    description: 'Riding safely on wet painted road markings, maintaining traction on muddy patches, and avoiding sudden skids.',
-    topics: [
-      'Traction loss recovery',
-      'Braking distance doubling in rain',
-      'Waterlogged road safety thresholds'
-    ]
-  }
-];
-
-const MASTER_SESSIONS = [];
+const API_BASE = `${API_BASE_URL}/training`;
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -313,73 +29,180 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+// Helper: Format Date object to local YYYY-MM-DD string without UTC timezone shift
+const formatLocalDate = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+// Helper: Parse YYYY-MM-DD into a local Date object without UTC timezone shift
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 export default function BatchCalendar({ user, onSectionChange }) {
-  // Current view context: defaulting to Sept 2026
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(8); // 0-indexed: 8 = September
-  const [selectedDate, setSelectedDate] = useState('2026-09-07');
-  
-  // View mode: 'month' | 'week' | 'agenda'
+  const [batches, setBatches] = useState([]);
+  const [attendanceMap, setAttendanceMap] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  // Real local today date
+  const now = new Date();
+  const todayStr = formatLocalDate(now);
+
+  const [currentYear, setCurrentYear] = useState(now.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(now.getMonth());
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+
+  // View mode: 'month' | 'agenda'
   const [viewMode, setViewMode] = useState('month');
 
   // Filters
   const [selectedBatchFilter, setSelectedBatchFilter] = useState('ALL');
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState('ALL');
-  const [selectedCityFilter, setSelectedCityFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Selected session for slide-over drawer
+  // Selected session for details modal
   const [selectedSession, setSelectedSession] = useState(null);
 
   // Trainer check
   const userRole = (user?.userType || user?.role || '').toLowerCase();
   const isTrainer = userRole.includes('trainer') || window.location.hash.includes('trainer');
 
-  // Helper: check if session matches trainer
-  const isAssignedToTrainer = (sess) => {
-    if (!user) return true;
-    if (user.id && sess.trainer_id === user.id) return true;
-    if (user.email && sess.trainer_email?.toLowerCase() === user.email.toLowerCase()) return true;
-    const userName = (user.full_name || user.name || user.first_name || '').toLowerCase().trim();
-    if (userName && sess.trainer_name.toLowerCase().includes(userName)) return true;
-    return true; // Default to accessible if trainer
-  };
+  // Fetch real batches and attendance from PostgreSQL
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRealBatches = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/batches`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && isMounted) {
+          const loadedBatches = json.data;
+          setBatches(loadedBatches);
+
+          // Fetch real attendance records for each batch
+          const attMap = {};
+          for (const b of loadedBatches) {
+            try {
+              const attRes = await fetch(`${API_BASE}/batches/${b.id}/attendance`);
+              const attJson = await attRes.json();
+              if (attJson.success && Array.isArray(attJson.data)) {
+                attMap[b.id] = attJson.data;
+              }
+            } catch (err) {
+              // Ignore network fail per batch
+            }
+          }
+          if (isMounted) {
+            setAttendanceMap(attMap);
+
+            // Align calendar view with the active batch or real today
+            if (loadedBatches.length > 0) {
+              const active = loadedBatches.find(b => b.status === 'ONGOING') || loadedBatches[0];
+              if (active && active.start_date && active.end_date) {
+                const s = parseLocalDate(active.start_date);
+                const e = parseLocalDate(active.end_date);
+                if (now >= s && now <= e) {
+                  setCurrentYear(now.getFullYear());
+                  setCurrentMonth(now.getMonth());
+                  setSelectedDate(todayStr);
+                } else if (!isNaN(s.getTime())) {
+                  setCurrentYear(s.getFullYear());
+                  setCurrentMonth(s.getMonth());
+                  setSelectedDate(active.start_date);
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching calendar batches:', e);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchRealBatches();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Only real sessions from database: if that day has some then only!
+  const masterSessions = useMemo(() => {
+    const list = [];
+
+    batches.forEach(b => {
+      const attList = attendanceMap[b.id] || [];
+      const attSessionMap = new Map();
+
+      attList.forEach(rec => {
+        if (rec.session_date && !attSessionMap.has(rec.session_date)) {
+          const present = attList.filter(x => x.session_date === rec.session_date && (x.status || '').toUpperCase() === 'PRESENT').length;
+          const total = attList.filter(x => x.session_date === rec.session_date).length;
+          attSessionMap.set(rec.session_date, {
+            topic: rec.session_topic || 'Training Session',
+            hours: rec.hours_attended || 4,
+            present,
+            total
+          });
+        }
+      });
+
+      for (const [dateStr, info] of attSessionMap.entries()) {
+        const fullTopic = info.topic || 'Training Session';
+        const shortTopic = fullTopic.length > 20 ? `${fullTopic.substring(0, 18)}...` : fullTopic;
+
+        list.push({
+          id: `sess-${b.id}-${dateStr}`,
+          batch_id: b.id,
+          batch_code: b.batch_code,
+          batch_title: b.title,
+          module_title: b.module?.title || b.title,
+          module_code: b.module?.code || '',
+          topic: fullTopic,
+          short_topic: shortTopic,
+          date: dateStr,
+          time_display: `${b.daily_start_time || '09:00 AM'} - ${b.daily_end_time || '01:00 PM'}`,
+          venue: b.trainingCenter?.name || 'Training Center',
+          city: b.trainingCenter?.city || '',
+          trainer_name: b.trainer?.full_name || user?.full_name || 'Trainer',
+          enrolled_count: info.total || b.enrolled_count || 1,
+          status: dateStr < todayStr ? 'COMPLETED' : (dateStr === todayStr ? 'IN_PROGRESS' : 'UPCOMING'),
+          is_today: dateStr === todayStr,
+          has_attendance: true,
+          attendance_present: info.present,
+          attendance_total: info.total,
+          hours: info.hours
+        });
+      }
+    });
+
+    return list;
+  }, [batches, attendanceMap, todayStr, user]);
+
+  // Unique batches for filter dropdown
+  const availableBatches = useMemo(() => {
+    return batches.map(b => ({ code: b.batch_code, title: b.title, id: b.id }));
+  }, [batches]);
 
   // Filtered Sessions
   const filteredSessions = useMemo(() => {
-    return MASTER_SESSIONS.filter(sess => {
-      if (isTrainer && !isAssignedToTrainer(sess)) return false;
+    return masterSessions.filter(sess => {
       if (selectedBatchFilter !== 'ALL' && sess.batch_code !== selectedBatchFilter) return false;
-      if (selectedTypeFilter !== 'ALL' && sess.type !== selectedTypeFilter) return false;
-      if (selectedCityFilter !== 'ALL' && sess.city.toLowerCase() !== selectedCityFilter.toLowerCase()) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matches =
           sess.topic.toLowerCase().includes(q) ||
           sess.batch_code.toLowerCase().includes(q) ||
           sess.module_title.toLowerCase().includes(q) ||
-          sess.venue.toLowerCase().includes(q) ||
-          sess.trainer_name.toLowerCase().includes(q);
+          sess.venue.toLowerCase().includes(q);
         if (!matches) return false;
       }
       return true;
     });
-  }, [isTrainer, selectedBatchFilter, selectedTypeFilter, selectedCityFilter, searchQuery, user]);
-
-  // Unique batches and cities for filter dropdowns
-  const availableBatches = useMemo(() => {
-    const map = new Map();
-    MASTER_SESSIONS.forEach(s => {
-      if (!map.has(s.batch_code)) {
-        map.set(s.batch_code, s.batch_title);
-      }
-    });
-    return Array.from(map.entries()).map(([code, title]) => ({ code, title }));
-  }, []);
-
-  const availableCities = useMemo(() => {
-    return Array.from(new Set(MASTER_SESSIONS.map(s => s.city)));
-  }, []);
+  }, [masterSessions, selectedBatchFilter, searchQuery]);
 
   // Sessions on the currently selected date
   const selectedDateSessions = useMemo(() => {
@@ -398,48 +221,49 @@ export default function BatchCalendar({ user, onSectionChange }) {
     for (let i = firstDayIndex - 1; i >= 0; i--) {
       const dayNum = daysInPrevMonth - i;
       const prevMonthDate = new Date(currentYear, currentMonth - 1, dayNum);
-      const dateStr = prevMonthDate.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(prevMonthDate);
       days.push({
         dayNumber: dayNum,
         dateStr,
         isCurrentMonth: false,
         isPrevMonth: true,
+        isToday: dateStr === todayStr,
         sessions: filteredSessions.filter(s => s.date === dateStr)
       });
     }
 
     // Current month days
     for (let i = 1; i <= daysInMonth; i++) {
-      const monthStr = String(currentMonth + 1).padStart(2, '0');
-      const dayStr = String(i).padStart(2, '0');
-      const dateStr = `${currentYear}-${monthStr}-${dayStr}`;
+      const dObj = new Date(currentYear, currentMonth, i);
+      const dateStr = formatLocalDate(dObj);
       days.push({
         dayNumber: i,
         dateStr,
         isCurrentMonth: true,
         isPrevMonth: false,
-        isToday: dateStr === '2026-09-07',
+        isToday: dateStr === todayStr,
         sessions: filteredSessions.filter(s => s.date === dateStr)
       });
     }
 
-    // Next month padding days to complete full grid (total multiples of 7)
+    // Next month padding days to complete full grid
     const totalSlots = Math.ceil(days.length / 7) * 7;
     const remainingSlots = totalSlots - days.length;
     for (let i = 1; i <= remainingSlots; i++) {
       const nextMonthDate = new Date(currentYear, currentMonth + 1, i);
-      const dateStr = nextMonthDate.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(nextMonthDate);
       days.push({
         dayNumber: i,
         dateStr,
         isCurrentMonth: false,
         isNextMonth: true,
+        isToday: dateStr === todayStr,
         sessions: filteredSessions.filter(s => s.date === dateStr)
       });
     }
 
     return days;
-  }, [currentYear, currentMonth, filteredSessions]);
+  }, [currentYear, currentMonth, filteredSessions, todayStr]);
 
   // Month navigation helpers
   const handlePrevMonth = () => {
@@ -461,62 +285,45 @@ export default function BatchCalendar({ user, onSectionChange }) {
   };
 
   const handleToday = () => {
-    setCurrentYear(2026);
-    setCurrentMonth(8); // September
-    setSelectedDate('2026-09-07');
+    const d = new Date();
+    setCurrentYear(d.getFullYear());
+    setCurrentMonth(d.getMonth());
+    setSelectedDate(todayStr);
   };
 
-  // Helper for Session Type pill styling
-  const getTypeBadge = (type) => {
-    switch (type) {
-      case 'PRACTICAL':
-        return {
-          bg: 'bg-emerald-50',
-          text: 'text-emerald-700',
-          border: 'border-emerald-200',
-          dot: 'bg-emerald-500',
-          label: 'Practical Riding'
-        };
-      case 'THEORY':
-        return {
-          bg: 'bg-indigo-50',
-          text: 'text-indigo-700',
-          border: 'border-indigo-200',
-          dot: 'bg-indigo-500',
-          label: 'Classroom Theory'
-        };
-      case 'WORKSHOP':
-        return {
-          bg: 'bg-amber-50',
-          text: 'text-amber-700',
-          border: 'border-amber-200',
-          dot: 'bg-amber-500',
-          label: 'Swap Workshop'
-        };
-      case 'ASSESSMENT':
-        return {
-          bg: 'bg-[#FFF0F5]',
-          text: 'text-[#F72570]',
-          border: 'border-[#F72570]/30',
-          dot: 'bg-[#F72570]',
-          label: 'Skill Evaluation'
-        };
-      default:
-        return {
-          bg: 'bg-slate-50',
-          text: 'text-slate-700',
-          border: 'border-slate-200',
-          dot: 'bg-slate-400',
-          label: 'Session'
-        };
+  // DIVERT TO ATTENDANCE WITH THAT PARTICULAR DATE
+  const handleDateClickAndDivert = (dateStr, cohortId) => {
+    setSelectedDate(dateStr);
+    localStorage.setItem('eventransparency_attendance_date', dateStr);
+    const targetCohort = cohortId || (selectedBatchFilter !== 'ALL' ? batches.find(b => b.batch_code === selectedBatchFilter)?.id : batches[0]?.id);
+    if (targetCohort) {
+      localStorage.setItem('eventransparency_attendance_cohort_id', targetCohort);
+    }
+    if (onSectionChange) {
+      onSectionChange('attendance');
+    } else {
+      window.location.hash = '#/attendance';
     }
   };
 
-  // Metrics calculation
-  const totalMonthSessions = filteredSessions.length;
-  const practicalCount = filteredSessions.filter(s => s.type === 'PRACTICAL').length;
-  const theoryCount = filteredSessions.filter(s => s.type === 'THEORY' || s.type === 'WORKSHOP').length;
-  const assessmentCount = filteredSessions.filter(s => s.type === 'ASSESSMENT').length;
+  // Real Batch Metrics & Target Batch
+  const activeBatch = batches.find(b => b.status === 'ONGOING') || batches[0] || null;
+  const targetBatch = useMemo(() => {
+    if (selectedBatchFilter !== 'ALL') {
+      return batches.find(b => b.batch_code === selectedBatchFilter) || activeBatch;
+    }
+    return activeBatch;
+  }, [batches, selectedBatchFilter, activeBatch]);
+
+  const batchDurationDays = useMemo(() => {
+    if (!targetBatch?.start_date || !targetBatch?.end_date) return 0;
+    const s = parseLocalDate(targetBatch.start_date);
+    const e = parseLocalDate(targetBatch.end_date);
+    if (isNaN(s.getTime()) || isNaN(e.getTime()) || s > e) return 0;
+    return Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
+  }, [targetBatch]);
+
+  const recordedCount = masterSessions.filter(s => s.has_attendance).length;
 
   return (
     <div className="space-y-4 pb-16 font-sans max-w-7xl mx-auto relative">
@@ -532,22 +339,35 @@ export default function BatchCalendar({ user, onSectionChange }) {
           </h1>
           <p className="text-xs text-slate-500">
             {isTrainer
-              ? `Welcome, ${user?.full_name || 'Trainer'}. View your daily session schedules, EV driving test tracks, battery swap drills, and upcoming skill evaluations.`
-              : 'Interactive month calendar, weekly training matrices, and daily timetable agendas across all skill campuses.'
-            }
+              ? `Welcome, ${user?.full_name || 'Trainer'}. View all batch dates from start to finish, today's live drills, and click any date to open attendance.`
+              : 'Interactive month calendar, master training dates, and daily timetable agendas.'}
           </p>
+
+          {activeBatch && (
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+              <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                {activeBatch.batch_code}
+              </span>
+              <span className="font-semibold text-slate-700">
+                {activeBatch.title}
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                {activeBatch.start_date} to {activeBatch.end_date}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          {onSectionChange && (
-            <button
-              onClick={() => onSectionChange('attendance')}
-              className="cursor-pointer px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-2"
-            >
-              <CheckSquare className="w-4 h-4" />
-              <span>Mark Attendance</span>
-            </button>
-          )}
+          <button
+            onClick={() => handleDateClickAndDivert(todayStr)}
+            className="cursor-pointer px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-2"
+            title="Divert to Attendance for Today"
+          >
+            <CheckSquare className="w-4 h-4" />
+            <span>Mark Today's Attendance</span>
+          </button>
 
           {onSectionChange && (
             <button
@@ -561,14 +381,14 @@ export default function BatchCalendar({ user, onSectionChange }) {
         </div>
       </div>
 
-      {/* ─── Metrics Strip ──────────────────────────────────────── */}
+      {/* ─── REAL METRICS STRIP (NO SYNTHESIZED/FAKE COUNTS) ────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Scheduled Sessions</span>
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Total Batch Duration</span>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-2xl font-black text-slate-900 font-kaiseiTokumin">{totalMonthSessions}</span>
-              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded">This Term</span>
+              <span className="text-2xl font-black text-slate-900 font-kaiseiTokumin">{batchDurationDays}</span>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded">Calendar Days</span>
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
@@ -578,40 +398,44 @@ export default function BatchCalendar({ user, onSectionChange }) {
 
         <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Practical Riding Drills</span>
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Recorded Sessions</span>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-2xl font-black text-emerald-700 font-kaiseiTokumin">{practicalCount}</span>
-              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">Track Sessions</span>
+              <span className="text-2xl font-black text-emerald-700 font-kaiseiTokumin">{recordedCount}</span>
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">In Database</span>
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <Zap className="w-4 h-4" />
+            <CheckCircle2 className="w-4 h-4" />
           </div>
         </div>
 
         <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Classroom & Lab</span>
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Enrolled Candidates</span>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-2xl font-black text-indigo-700 font-kaiseiTokumin">{theoryCount}</span>
-              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded">Modules</span>
+              <span className="text-2xl font-black text-indigo-700 font-kaiseiTokumin">
+                {activeBatch?.enrolled_count || (activeBatch?.enrolled_candidates ? activeBatch.enrolled_candidates.length : 1)}
+              </span>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded">In Cohort</span>
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <BookOpen className="w-4 h-4" />
+            <Users className="w-4 h-4" />
           </div>
         </div>
 
         <div className="p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Skill Assessments</span>
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Batch Status</span>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="text-2xl font-black text-[#F72570] font-kaiseiTokumin">{assessmentCount}</span>
-              <span className="text-[10px] font-bold text-pink-600 bg-[#FFF0F5] px-1.5 py-0.2 rounded">Evaluations</span>
+              <span className="text-xl font-black text-[#F72570] font-kaiseiTokumin uppercase">
+                {activeBatch?.status || 'ONGOING'}
+              </span>
+              <span className="text-[10px] font-bold text-pink-600 bg-[#FFF0F5] px-1.5 py-0.2 rounded">Active</span>
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-[#FFF0F5] text-[#F72570] flex items-center justify-center shrink-0">
-            <Award className="w-4 h-4" />
+            <Zap className="w-4 h-4" />
           </div>
         </div>
       </div>
@@ -643,13 +467,14 @@ export default function BatchCalendar({ user, onSectionChange }) {
 
             <button
               onClick={handleToday}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 transition cursor-pointer"
+              className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 transition cursor-pointer flex items-center gap-1.5"
             >
-              Today (Sept 7)
+              <span className="w-2 h-2 rounded-full bg-[#F72570] animate-pulse" />
+              <span>Today ({now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</span>
             </button>
           </div>
 
-          {/* View Mode Switcher: Month Calendar vs Daily Agenda vs Weekly Grid */}
+          {/* View Mode Switcher: Month Calendar vs Chronological List */}
           <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl shrink-0">
             <button
               onClick={() => setViewMode('month')}
@@ -668,7 +493,7 @@ export default function BatchCalendar({ user, onSectionChange }) {
               }`}
             >
               <ListOrdered className="w-3.5 h-3.5" />
-              <span>Daily Timetable</span>
+              <span>Cohort Days List</span>
             </button>
           </div>
         </div>
@@ -688,66 +513,71 @@ export default function BatchCalendar({ user, onSectionChange }) {
             >
               <option value="ALL">All Cohorts ({availableBatches.length})</option>
               {availableBatches.map(b => (
-                <option key={b.code} value={b.code}>{b.code} - {b.title.substring(0, 24)}...</option>
+                <option key={b.code} value={b.code}>{b.code} - {b.title.substring(0, 30)}...</option>
               ))}
             </select>
-
-            {/* Session Type Filter */}
-            <select
-              value={selectedTypeFilter}
-              onChange={(e) => setSelectedTypeFilter(e.target.value)}
-              className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 bg-white hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="ALL">All Session Types</option>
-              <option value="PRACTICAL">Practical Riding Drills</option>
-              <option value="THEORY">Classroom Theory</option>
-              <option value="WORKSHOP">Swap Station Workshops</option>
-              <option value="ASSESSMENT">Skill Evaluations</option>
-            </select>
-
-            {/* City Filter */}
-            {availableCities.length > 1 && (
-              <select
-                value={selectedCityFilter}
-                onChange={(e) => setSelectedCityFilter(e.target.value)}
-                className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 bg-white hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="ALL">All Hub Campuses</option>
-                {availableCities.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            )}
           </div>
 
           <div className="flex items-center gap-3 ml-auto">
             <span className="text-slate-400 text-[11px] font-medium">
-              Showing <span className="font-bold text-slate-700">{filteredSessions.length}</span> sessions
+              Showing <span className="font-bold text-slate-700">{filteredSessions.length}</span> batch training days
             </span>
-            {(selectedBatchFilter !== 'ALL' || selectedTypeFilter !== 'ALL' || selectedCityFilter !== 'ALL') && (
+            {selectedBatchFilter !== 'ALL' && (
               <button
-                onClick={() => {
-                  setSelectedBatchFilter('ALL');
-                  setSelectedTypeFilter('ALL');
-                  setSelectedCityFilter('ALL');
-                }}
+                onClick={() => setSelectedBatchFilter('ALL')}
                 className="text-xs text-[#F72570] font-bold hover:underline cursor-pointer"
               >
-                Reset Filters
+                Reset Filter
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* ─── MAIN CONTENT: MONTH MATRIX OR DAILY TIMETABLE ──────── */}
+      {/* ─── MAIN CONTENT: MONTH MATRIX OR CHRONOLOGICAL AGENDAS ─── */}
       {viewMode === 'month' ? (
         /* ═════════════════════════════════════════════════════════════════════
-           1. FULL MONTH CALENDAR MATRIX WITH TIME TABLE PREVIEWS
+           1. FULL MONTH CALENDAR MATRIX (CLICK ANY DATE TO DIVERT TO ATTENDANCE)
            ═════════════════════════════════════════════════════════════════════ */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Left / Main: Month Grid */}
+          {/* Main Month Grid */}
           <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col">
+            {/* Batch Timeline Legend & Duration Strip */}
+            {targetBatch && targetBatch.start_date && targetBatch.end_date && (
+              <div className="px-4 py-2.5 bg-gradient-to-r from-indigo-50/90 via-indigo-50/40 to-white border-b border-indigo-100/80 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center w-5 h-5 rounded-md bg-indigo-600 text-white font-bold text-[10px] shadow-2xs">
+                    <CalendarIcon className="w-3 h-3" />
+                  </div>
+                  <span className="font-extrabold text-indigo-950 font-kaiseiTokumin">
+                    Cohort Timeline:
+                  </span>
+                  <span className="font-mono font-bold text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200/80 shadow-2xs text-[11px]">
+                    {targetBatch.start_date} → {targetBatch.end_date}
+                  </span>
+                  <span className="text-[11px] font-bold text-indigo-700 bg-indigo-100/90 px-2.5 py-0.5 rounded-full">
+                    {batchDurationDays} Days Total
+                  </span>
+                </div>
+
+                {/* Legend Indicators */}
+                <div className="flex items-center gap-3 text-[11px] text-slate-600 font-medium ml-auto">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 ring-1 ring-indigo-600 inline-block"></span>
+                    <span className="text-slate-700 font-semibold">Cohort Timeline</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#F72570] inline-block"></span>
+                    <span className="text-slate-700 font-semibold">Today</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-[#FFF0F5] border border-[#F72570]/50 inline-block"></span>
+                    <span className="text-slate-700 font-semibold">Live Session</span>
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Days of Week Header */}
             <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80 text-center text-[11px] font-extrabold text-slate-600 py-2.5">
               {DAYS_OF_WEEK.map((d, i) => (
@@ -757,71 +587,115 @@ export default function BatchCalendar({ user, onSectionChange }) {
               ))}
             </div>
 
-            {/* Matrix Days */}
-            <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 flex-1">
+            {/* Matrix Days: gap-px with bg-slate-200/80 creates clean 1px borders without overflow bugs */}
+            <div className="grid grid-cols-7 gap-px bg-slate-200/80 rounded-b-2xl overflow-hidden flex-1 auto-rows-fr">
               {calendarDays.map((day, idx) => {
                 const isSelected = day.dateStr === selectedDate;
                 const hasSessions = day.sessions && day.sessions.length > 0;
+                const session = hasSessions ? day.sessions[0] : null;
+
+                // Timeline status relative to active/selected cohort
+                const isInBatchTimeline = targetBatch?.start_date && targetBatch?.end_date
+                  ? (day.dateStr >= targetBatch.start_date && day.dateStr <= targetBatch.end_date)
+                  : false;
+                const isBatchStart = targetBatch?.start_date === day.dateStr;
+                const isBatchEnd = targetBatch?.end_date === day.dateStr;
+
+                let batchDayNumber = null;
+                if (isInBatchTimeline && targetBatch?.start_date) {
+                  const s = parseLocalDate(targetBatch.start_date);
+                  const cur = parseLocalDate(day.dateStr);
+                  if (!isNaN(s.getTime()) && !isNaN(cur.getTime())) {
+                    batchDayNumber = Math.round((cur - s) / (1000 * 60 * 60 * 24)) + 1;
+                  }
+                }
 
                 return (
                   <div
                     key={idx}
-                    onClick={() => setSelectedDate(day.dateStr)}
-                    className={`min-h-[100px] p-2 flex flex-col justify-between transition cursor-pointer group ${
-                      !day.isCurrentMonth
-                        ? 'bg-slate-50/40 text-slate-300'
-                        : isSelected
-                        ? 'bg-indigo-50/60 ring-2 ring-indigo-500/50 inset-0 z-10'
-                        : 'bg-white hover:bg-slate-50/80'
+                    onClick={() => handleDateClickAndDivert(day.dateStr, session?.batch_id || targetBatch?.id)}
+                    className={`min-h-[96px] sm:min-h-[105px] h-full p-2 flex flex-col justify-between transition-colors cursor-pointer group relative overflow-hidden ${
+                      isSelected
+                        ? 'ring-2 ring-inset ring-indigo-600 z-10 ' + (day.isToday ? 'bg-[#FFF0F5]' : isInBatchTimeline ? 'bg-indigo-100/90' : 'bg-indigo-50/90')
+                        : day.isToday
+                        ? 'bg-[#FFF0F5]/80 hover:bg-[#FFF0F5]'
+                        : isInBatchTimeline
+                        ? (day.isCurrentMonth ? 'bg-indigo-50/50 hover:bg-indigo-50/80' : 'bg-indigo-50/20 text-indigo-900/40')
+                        : (!day.isCurrentMonth ? 'bg-slate-50/40 text-slate-300' : 'bg-white hover:bg-slate-50/80')
                     }`}
+                    title={
+                      hasSessions
+                        ? `Click to open attendance for ${day.dateStr} (${session.topic})`
+                        : isInBatchTimeline
+                        ? `Batch Day ${batchDayNumber} (${day.dateStr})`
+                        : day.dateStr
+                    }
                   >
+                    {/* Continuous Top Timeline Bar across all cohort dates */}
+                    {isInBatchTimeline && (
+                      <div
+                        className={`absolute top-0 inset-x-0 h-1.5 transition-all ${
+                          isBatchStart
+                            ? 'left-1 rounded-l-full bg-indigo-600'
+                            : isBatchEnd
+                            ? 'right-1 rounded-r-full bg-indigo-600'
+                            : 'bg-indigo-500/80'
+                        }`}
+                      />
+                    )}
+
                     {/* Day Number and Badges */}
                     <div className="flex items-center justify-between">
-                      <span className={`text-xs font-black inline-flex items-center justify-center w-6 h-6 rounded-full ${
-                        day.isToday
-                          ? 'bg-[#F72570] text-white shadow-xs'
-                          : isSelected
-                          ? 'bg-indigo-600 text-white'
-                          : day.isCurrentMonth
-                          ? 'text-slate-800 group-hover:text-indigo-600'
-                          : 'text-slate-300'
-                      }`}>
-                        {day.dayNumber}
-                      </span>
-
-                      {hasSessions && (
-                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded-full border border-indigo-100">
-                          {day.sessions.length}
+                      <div className="flex items-center gap-1">
+                        <span className={`text-xs font-black inline-flex items-center justify-center w-6 h-6 rounded-full transition ${
+                          day.isToday
+                            ? 'bg-[#F72570] text-white shadow-xs ring-2 ring-[#F72570]/30'
+                            : isSelected
+                            ? 'bg-indigo-600 text-white'
+                            : day.isCurrentMonth
+                            ? 'text-slate-800 group-hover:text-indigo-600'
+                            : 'text-slate-300'
+                        }`}>
+                          {day.dayNumber}
                         </span>
-                      )}
+
+                        {day.isToday && (
+                          <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-[#F72570] text-white tracking-wider shadow-2xs">
+                            Today
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Batch Start / End / Day Mark */}
+                      {isBatchStart ? (
+                        <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-indigo-600 text-white tracking-wider shadow-2xs">
+                          Start
+                        </span>
+                      ) : isBatchEnd ? (
+                        <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-indigo-700 text-white tracking-wider shadow-2xs">
+                          End
+                        </span>
+                      ) : isInBatchTimeline && batchDayNumber ? (
+                        <span className="text-[9px] font-bold text-indigo-500/90 font-mono tracking-tight">
+                          Day {batchDayNumber}
+                        </span>
+                      ) : null}
                     </div>
 
-                    {/* Session Pills inside Calendar Cell */}
-                    <div className="space-y-1 mt-1.5 flex-1">
-                      {day.sessions.slice(0, 2).map((s) => {
-                        const style = getTypeBadge(s.type);
-                        return (
-                          <div
-                            key={s.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedDate(s.date);
-                              setSelectedSession(s);
-                            }}
-                            className={`p-1 rounded-md text-[10px] font-semibold border leading-tight truncate transition hover:opacity-90 ${style.bg} ${style.text} ${style.border}`}
-                            title={`${s.start_time} - ${s.topic}`}
-                          >
-                            <span className="font-mono font-bold mr-1">{s.start_time}</span>
-                            <span>{s.topic}</span>
-                          </div>
-                        );
-                      })}
-
-                      {day.sessions.length > 2 && (
-                        <div className="text-[9px] font-bold text-slate-400 pl-0.5">
-                          +{day.sessions.length - 2} more session{day.sessions.length - 2 > 1 ? 's' : ''}
-                        </div>
-                      )}
+                    {/* Show ONLY the short session name if that day has some then only */}
+                    <div className="mt-1 flex-1 flex flex-col justify-end">
+                      {hasSessions ? (
+                        <span
+                          className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/30 truncate block text-left shadow-2xs hover:bg-[#F72570] hover:text-white transition"
+                          title={session.topic}
+                        >
+                          {session.short_topic || session.topic}
+                        </span>
+                      ) : isInBatchTimeline && !day.isToday ? (
+                        <span className="text-[10px] text-indigo-400/80 font-medium italic block truncate">
+                          Batch Day {batchDayNumber}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -836,13 +710,20 @@ export default function BatchCalendar({ user, onSectionChange }) {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                   Daily Timetable
                 </span>
-                <h3 className="text-base font-bold text-slate-900 font-kaiseiTokumin">
-                  {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
+                <h3 className="text-base font-bold text-slate-900 font-kaiseiTokumin flex items-center gap-2">
+                  <span>
+                    {parseLocalDate(selectedDate).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </span>
+                  {selectedDate === todayStr && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-[#FFF0F5] text-[#F72570] border border-[#F72570]/30">
+                      Today
+                    </span>
+                  )}
                 </h3>
               </div>
 
@@ -851,22 +732,32 @@ export default function BatchCalendar({ user, onSectionChange }) {
               </span>
             </div>
 
+            {/* Action Button: Divert to Attendance with this exact date */}
+            <button
+              type="button"
+              onClick={() => handleDateClickAndDivert(selectedDate, selectedDateSessions[0]?.batch_id)}
+              className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
+            >
+              <CheckSquare className="w-4 h-4" />
+              <span>Mark Attendance for {parseLocalDate(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              <ChevronRight className="w-4 h-4 ml-auto" />
+            </button>
+
             {/* List of Sessions for Selected Date */}
-            <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[560px] pr-0.5">
+            <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[520px] pr-0.5">
               {selectedDateSessions.length === 0 ? (
                 <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-slate-400 space-y-2 my-auto">
                   <CalendarIcon className="w-7 h-7 mx-auto text-slate-300" />
-                  <p className="text-xs font-semibold text-slate-600">No sessions on this date</p>
-                  <p className="text-[11px] text-slate-400">Select another date with session indicators in the calendar matrix.</p>
+                  <p className="text-xs font-semibold text-slate-600">No batch session on this date</p>
+                  <p className="text-[11px] text-slate-400">Select any date within the batch start and end dates.</p>
                 </div>
               ) : (
                 selectedDateSessions.map((sess) => {
-                  const style = getTypeBadge(sess.type);
                   return (
                     <div
                       key={sess.id}
-                      onClick={() => setSelectedSession(sess)}
-                      className="p-3.5 rounded-xl border border-slate-200/90 bg-white hover:border-indigo-300 hover:shadow-xs transition cursor-pointer space-y-2 group"
+                      onClick={() => handleDateClickAndDivert(sess.date, sess.batch_id)}
+                      className="p-3.5 rounded-xl border border-slate-200/90 bg-white hover:border-indigo-300 hover:shadow-xs transition cursor-pointer space-y-2.5 group"
                     >
                       {/* Top row: Time & Badge */}
                       <div className="flex items-center justify-between gap-2">
@@ -875,39 +766,40 @@ export default function BatchCalendar({ user, onSectionChange }) {
                           <span>{sess.time_display}</span>
                         </span>
 
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1 border ${style.bg} ${style.text} ${style.border}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                          <span>{style.label}</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          {sess.day_label}
                         </span>
                       </div>
 
-                      {/* Topic Title */}
-                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition leading-snug">
-                        {sess.topic}
-                      </h4>
+                      {/* Day Label & Topic */}
+                      <div>
+                        <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-indigo-600 uppercase mb-0.5">
+                          <span>{sess.batch_code}</span>
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition leading-snug">
+                          {sess.topic}
+                        </h4>
+                      </div>
 
-                      {/* Venue & Cohort */}
+                      {/* Venue & Enrolled count */}
                       <div className="text-[11px] text-slate-500 space-y-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
                         <div className="flex items-center gap-1 font-medium truncate">
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                           <span className="truncate">{sess.venue}</span>
                         </div>
                         <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60 font-mono">
-                          <span>{sess.batch_code}</span>
-                          <span>{sess.enrolled_count} Candidates</span>
+                          <span>{sess.batch_title?.substring(0, 24)}...</span>
+                          <span className="font-bold text-slate-700">{sess.enrolled_count} Candidates</span>
                         </div>
                       </div>
 
-                      {/* Bottom button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedSession(sess);
-                        }}
-                        className="w-full py-1.5 rounded-lg bg-indigo-50 group-hover:bg-indigo-600 group-hover:text-white text-indigo-700 text-xs font-bold transition text-center"
-                      >
-                        Inspect Lesson Plan
-                      </button>
+                      {/* Bottom action trigger */}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Click to Take Attendance</span>
+                        </span>
+                      </div>
                     </div>
                   );
                 })
@@ -917,52 +809,57 @@ export default function BatchCalendar({ user, onSectionChange }) {
         </div>
       ) : (
         /* ═════════════════════════════════════════════════════════════════════
-           2. FULL DAILY TIMETABLE AGENDAS
+           2. FULL CHRONOLOGICAL COHORT TIMETABLE (STARTING TO ENDING DATES)
            ═════════════════════════════════════════════════════════════════════ */
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Chronological Timetable</span>
               <h3 className="text-base font-bold text-slate-900 font-kaiseiTokumin">
-                All Scheduled Cohort Lessons & Practical Drills
+                All Batch Dates from Starting to Ending
               </h3>
             </div>
             <span className="text-xs font-semibold text-slate-500">
-              Showing {filteredSessions.length} training events
+              Showing {filteredSessions.length} total training days
             </span>
           </div>
 
           <div className="space-y-3">
             {filteredSessions.map((sess) => {
-              const style = getTypeBadge(sess.type);
-              const isSelected = selectedSession?.id === sess.id;
+              const isToday = sess.date === todayStr;
 
               return (
                 <div
                   key={sess.id}
-                  onClick={() => setSelectedSession(sess)}
+                  onClick={() => handleDateClickAndDivert(sess.date, sess.batch_id)}
                   className={`p-4 rounded-xl border border-slate-200/90 bg-white hover:border-indigo-300 hover:shadow-xs transition cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
-                    isSelected ? 'bg-indigo-50/50 border-indigo-300' : ''
+                    isToday ? 'bg-[#FFF0F5]/30 border-[#F72570]/40 ring-1 ring-[#F72570]/30' : ''
                   }`}
+                  title={`Click to open attendance for ${sess.date}`}
                 >
                   {/* Date & Time Slot */}
                   <div className="flex items-center gap-3 lg:w-1/4">
-                    <div className="p-2.5 rounded-xl bg-slate-100 text-center shrink-0 min-w-[55px]">
-                      <span className="text-[10px] uppercase font-black text-slate-500 block">
-                        {new Date(sess.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' })}
+                    <div className={`p-2.5 rounded-xl text-center shrink-0 min-w-[55px] ${isToday ? 'bg-[#F72570] text-white' : 'bg-slate-100 text-slate-900'}`}>
+                      <span className={`text-[10px] uppercase font-black block ${isToday ? 'text-white/80' : 'text-slate-500'}`}>
+                        {parseLocalDate(sess.date).toLocaleDateString('en-US', { month: 'short' })}
                       </span>
-                      <span className="text-lg font-black text-slate-900 font-kaiseiTokumin block leading-none mt-0.5">
+                      <span className="text-lg font-black font-kaiseiTokumin block leading-none mt-0.5">
                         {sess.date.split('-')[2]}
                       </span>
                     </div>
 
                     <div>
-                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
                         <Clock className="w-3.5 h-3.5 text-indigo-600" />
                         <span>{sess.time_display}</span>
+                        {isToday && (
+                          <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-[#F72570] text-white">
+                            Today
+                          </span>
+                        )}
                       </div>
-                      <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-                        {sess.batch_code}
+                      <span className="text-[10px] text-slate-500 font-mono block mt-0.5 font-bold">
+                        {sess.day_label} • {sess.batch_code}
                       </span>
                     </div>
                   </div>
@@ -970,8 +867,8 @@ export default function BatchCalendar({ user, onSectionChange }) {
                   {/* Topic & Module */}
                   <div className="lg:w-1/3 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${style.bg} ${style.text} ${style.border}`}>
-                        {style.label}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        {sess.day_label}
                       </span>
                       <span className="text-[11px] font-semibold text-slate-500 truncate">
                         {sess.module_title}
@@ -991,162 +888,29 @@ export default function BatchCalendar({ user, onSectionChange }) {
                     <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
                       <GraduationCap className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                       <span>{sess.trainer_name}</span>
-                      <span className="text-slate-300">•</span>
-                      <span>{sess.city}</span>
+                      {sess.city && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <span>{sess.city}</span>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  {/* Action Button */}
+                  {/* Action Button: Divert to Attendance */}
                   <div className="shrink-0 flex items-center gap-2" onClick={e => e.stopPropagation()}>
                     <button
-                      onClick={() => setSelectedSession(sess)}
-                      className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border border-indigo-200/60"
+                      type="button"
+                      onClick={() => handleDateClickAndDivert(sess.date, sess.batch_id)}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
                     >
-                      <span>Lesson Plan</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <CheckSquare className="w-3.5 h-3.5" />
+                      <span>Take Attendance</span>
                     </button>
                   </div>
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* ═════════════════════════════════════════════════════════════════════
-         SIDEBAR DRAWER: FULL SESSION & TIMETABLE LESSON DRILL DOWN
-         ═════════════════════════════════════════════════════════════════════ */}
-      {selectedSession && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop Overlay */}
-          <div
-            onClick={() => setSelectedSession(null)}
-            className="absolute inset-0 bg-slate-900/30 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
-          />
-
-          {/* Slide-over Panel */}
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-lg bg-white shadow-2xl border-l border-slate-200 flex flex-col animate-in slide-in-from-right duration-300">
-              {/* Header */}
-              <div className="p-5 border-b border-slate-100 bg-slate-50/90 flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-md bg-[#FFF0F5] text-[#F72570] text-[11px] font-mono font-black border border-[#F72570]/20">
-                      {selectedSession.batch_code}
-                    </span>
-                    {(() => {
-                      const style = getTypeBadge(selectedSession.type);
-                      return (
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${style.bg} ${style.text} ${style.border}`}>
-                          {style.label}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  <h3 className="text-lg font-bold font-kaiseiTokumin text-slate-900 leading-snug">
-                    {selectedSession.topic}
-                  </h3>
-                </div>
-
-                <button
-                  onClick={() => setSelectedSession(null)}
-                  className="w-8 h-8 rounded-xl bg-slate-200/70 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition cursor-pointer shrink-0"
-                  title="Close"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                {/* Date & Time Slot Box */}
-                <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-indigo-900 flex items-center gap-1.5">
-                      <CalendarIcon className="w-4 h-4 text-indigo-600" />
-                      <span>{selectedSession.date}</span>
-                    </span>
-                    <span className="font-bold text-indigo-900 flex items-center gap-1.5">
-                      <Clock className="w-4 h-4 text-indigo-600" />
-                      <span>{selectedSession.time_display}</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* Module Details */}
-                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-2 text-xs">
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">Curriculum Module</span>
-                  <div className="font-bold text-slate-900 text-sm">{selectedSession.module_title}</div>
-                  <div className="text-slate-500 font-mono text-[10px]">{selectedSession.module_code}</div>
-                  <p className="text-slate-600 leading-relaxed text-[11px] pt-1 border-t border-slate-100">
-                    {selectedSession.description}
-                  </p>
-                </div>
-
-                {/* Lesson Topics Checklist */}
-                <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <CheckSquare className="w-4 h-4 text-emerald-600" />
-                    <span>Key Lesson Plan & Practical Drills</span>
-                  </h4>
-                  <div className="space-y-2 text-xs">
-                    {selectedSession.topics?.map((top, idx) => (
-                      <div key={idx} className="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span className="text-slate-800 font-semibold text-[11px]">{top}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Venue & Trainer */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs text-xs space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Training Venue</span>
-                    <div className="font-bold text-slate-900 truncate">{selectedSession.venue}</div>
-                    <div className="text-[10px] text-slate-500 truncate">{selectedSession.center}</div>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs text-xs space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Lead Trainer</span>
-                    <div className="font-bold text-slate-900 truncate">{selectedSession.trainer_name}</div>
-                    <div className="text-[10px] text-slate-500">{selectedSession.trainer_role}</div>
-                  </div>
-                </div>
-
-                {/* Candidate Capacity Note */}
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-slate-500" />
-                    <span className="font-bold text-slate-800">Candidate Roster</span>
-                  </div>
-                  <span className="font-black text-indigo-700">{selectedSession.enrolled_count} Enrolled Candidates</span>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="p-4 border-t border-slate-200 bg-slate-50/90 flex items-center justify-between gap-3">
-                {onSectionChange && (
-                  <button
-                    onClick={() => {
-                      setSelectedSession(null);
-                      onSectionChange('attendance');
-                    }}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <CheckSquare className="w-3.5 h-3.5" />
-                    <span>Take Attendance</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setSelectedSession(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer ml-auto"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

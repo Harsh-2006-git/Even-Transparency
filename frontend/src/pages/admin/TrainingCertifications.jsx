@@ -32,14 +32,63 @@ export default function TrainingCertifications({ onSectionChange }) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           setBatches(json.data);
+
+          // Fetch individual assessments per batch to ensure candidate scores are 100% up-to-date with DB
+          const assessmentPromises = json.data.map(async (batch) => {
+            try {
+              const aRes = await fetch(`${API_BASE}/batches/${batch.id}/assessments`);
+              const aJson = await aRes.json();
+              return { batchId: batch.id, assessments: aJson.success && Array.isArray(aJson.data) ? aJson.data : [] };
+            } catch {
+              return { batchId: batch.id, assessments: [] };
+            }
+          });
+          const allBatchAssessments = await Promise.all(assessmentPromises);
+          const assessmentMapByBatch = {};
+          allBatchAssessments.forEach(item => {
+            assessmentMapByBatch[item.batchId] = item.assessments;
+          });
+
           const derived = [];
           json.data.forEach(batch => {
             const isCompleted = batch.status === 'COMPLETED';
+            const batchAssessments = assessmentMapByBatch[batch.id] || [];
+
             (batch.enrolled_candidates || []).forEach(cand => {
               if (cand.status === 'GRADUATED' || cand.status === 'COMPLETED' || isCompleted) {
+                const cId = cand.candidate_id || cand.id;
+                const candAssessments = batchAssessments.filter(a => a.candidate_id === cId);
+
+                let candScore = null;
+                if (candAssessments.length > 0) {
+                  // Prefer FINAL_CERTIFICATION exit exam or average across evaluated tracks
+                  const finalExam = candAssessments.find(a => a.assessment_type === 'FINAL_CERTIFICATION');
+                  if (finalExam && (finalExam.score != null || finalExam.score_obtained != null)) {
+                    candScore = parseFloat(finalExam.score != null ? finalExam.score : finalExam.score_obtained);
+                  } else {
+                    const totalScore = candAssessments.reduce((sum, a) => {
+                      const sc = a.score != null ? a.score : (a.score_obtained != null ? a.score_obtained : null);
+                      return sum + (parseFloat(sc) || 0);
+                    }, 0);
+                    candScore = Math.round(totalScore / candAssessments.length);
+                  }
+                } else if (cand.assessment_score !== null && cand.assessment_score !== undefined) {
+                  candScore = Math.round(Number(cand.assessment_score));
+                } else {
+                  candScore = 85;
+                }
+
+                const grade = candScore >= 90
+                  ? 'DISTINCTION'
+                  : candScore >= 75
+                  ? 'FIRST CLASS'
+                  : candScore >= 60
+                  ? 'SECOND CLASS'
+                  : 'PASS';
+
                 derived.push({
-                  id: `cert-${cand.candidate_id || cand.id}`,
-                  cert_number: `ET-CERT-2026-${String(cand.candidate_code || cand.id).replace(/\D/g, '').slice(-3) || '001'}`,
+                  id: `cert-${cId}`,
+                  cert_number: `ET-CERT-2026-${String(cand.candidate_code || cId).replace(/\D/g, '').slice(-3) || '001'}`,
                   candidate_name: cand.full_name || 'Candidate',
                   candidate_code: cand.candidate_code || 'N/A',
                   course_title: batch.module?.title || batch.title || 'Professional Two-Wheeler EV Pilot',
@@ -48,8 +97,8 @@ export default function TrainingCertifications({ onSectionChange }) {
                   issue_date: batch.end_date || new Date().toISOString().split('T')[0],
                   trainer_name: batch.trainer?.full_name || 'Assigned Master Trainer',
                   center_name: batch.trainingCenter?.name || 'EV Excellence Centre',
-                  grade: 'DISTINCTION',
-                  score: '92%',
+                  grade: grade,
+                  score: `${candScore}%`,
                   status: 'VERIFIED_ON_CHAIN'
                 });
               }
@@ -214,7 +263,13 @@ export default function TrainingCertifications({ onSectionChange }) {
                       {cert.issue_date}
                     </td>
                     <td className="px-4 py-4">
-                      <span className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
+                      <span className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold ${
+                        parseInt(cert.score, 10) >= 90
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : parseInt(cert.score, 10) >= 75
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
                         {cert.score} • {cert.grade}
                       </span>
                     </td>

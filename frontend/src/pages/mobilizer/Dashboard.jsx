@@ -156,7 +156,9 @@ export default function MobilizerDashboard({ user, onSectionChange }) {
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             Welcome back, {user?.full_name || user?.name || (user?.userType === 'Mobilizer' ? 'Mobilizer' : 'User')}!
           </h1>
-
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            Here’s What’s Happening Today.
+          </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto text-xs text-slate-500 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">

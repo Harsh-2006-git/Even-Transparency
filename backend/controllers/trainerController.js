@@ -148,8 +148,27 @@ export const createTrainer = async (req, res) => {
     const newTrainerId = uuidv4();
     const empId = employee_id || `TRN-${Math.floor(100 + Math.random() * 900)}`;
 
-    // Find default org and training center
-    const org = await db.Organization.findOne();
+    let org = null;
+    if (req.body.organization_name && db.Organization) {
+      org = await db.Organization.findOne({
+        where: db.Sequelize.where(
+          db.Sequelize.fn('LOWER', db.Sequelize.col('name')),
+          req.body.organization_name.trim().toLowerCase()
+        )
+      });
+      if (!org) {
+        try {
+          org = await db.Organization.create({
+            id: uuidv4(),
+            name: req.body.organization_name.trim(),
+            organization_name: req.body.organization_name.trim()
+          });
+        } catch (e) {}
+      }
+    }
+    if (!org && db.Organization) {
+      org = await db.Organization.findOne();
+    }
     let center = await db.TrainingCenter.findOne();
     if (!center && training_centre_name) {
       center = await db.TrainingCenter.create({
@@ -241,6 +260,31 @@ export const updateTrainer = async (req, res) => {
     if (qualification !== undefined) trainer.qualification = qualification;
     if (certification !== undefined) trainer.certification = certification;
     if (status !== undefined) trainer.status = status;
+
+    if (req.body.organization_name && db.Organization) {
+      let org = await db.Organization.findOne({
+        where: db.Sequelize.where(
+          db.Sequelize.fn('LOWER', db.Sequelize.col('name')),
+          req.body.organization_name.trim().toLowerCase()
+        )
+      });
+      if (!org) {
+        try {
+          org = await db.Organization.create({
+            id: uuidv4(),
+            name: req.body.organization_name.trim(),
+            organization_name: req.body.organization_name.trim()
+          });
+        } catch (e) {}
+      }
+      if (org) {
+        trainer.organization_id = org.id;
+        if (trainer.user_id) {
+          await db.User.update({ organization_id: org.id }, { where: { id: trainer.user_id } });
+        }
+      }
+    }
+
     await trainer.save();
 
     if (trainer.user_id) {

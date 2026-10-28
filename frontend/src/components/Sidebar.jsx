@@ -116,6 +116,7 @@ export default function Sidebar({
           { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
           { id: 'candidates', label: 'Candidate List', icon: Users },
           { id: 'onboard-candidate', label: 'Add Candidate', icon: UserPlus, badge: 'New' },
+          { id: 'targets', label: 'My Targets & Goals', icon: Target, badge: '84%' },
           { id: 'documents', label: 'Candidate Documents', icon: ScrollText },
           { id: 'assessments-placements', label: 'Assessments & Placements', icon: Award }
         ];
@@ -296,7 +297,11 @@ export default function Sidebar({
                       )}
 
                       {item.badge && !isCollapsed && (
-                        <span className="w-4.5 h-4.5 rounded-full text-[10px] font-extrabold flex items-center justify-center bg-[#F72570] text-white shrink-0">
+                        <span className={`px-2 py-0.5 min-w-[20px] h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                          isActive
+                            ? 'bg-white text-[#F72570]'
+                            : 'bg-[#FF408A] text-white shadow-xs'
+                        }`}>
                           {item.badge}
                         </span>
                       )}

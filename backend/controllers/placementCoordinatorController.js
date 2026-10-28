@@ -106,9 +106,27 @@ export const createPlacementCoordinator = async (req, res) => {
     const computedFullName = full_name || `${first_name || ''} ${last_name || ''}`.trim();
     const newUserId = uuidv4();
     const newCoordId = uuidv4();
-    const empId = employee_id || `PLC-${Math.floor(100 + Math.random() * 900)}`;
-
-    const org = await db.Organization.findOne();
+    let org = null;
+    if (req.body.organization_name && db.Organization) {
+      org = await db.Organization.findOne({
+        where: db.Sequelize.where(
+          db.Sequelize.fn('LOWER', db.Sequelize.col('name')),
+          req.body.organization_name.trim().toLowerCase()
+        )
+      });
+      if (!org) {
+        try {
+          org = await db.Organization.create({
+            id: uuidv4(),
+            name: req.body.organization_name.trim(),
+            organization_name: req.body.organization_name.trim()
+          });
+        } catch (e) {}
+      }
+    }
+    if (!org && db.Organization) {
+      org = await db.Organization.findOne();
+    }
 
     const rawPassword = (req.body.password || 'Password@123').trim();
     const password_hash = await bcrypt.hash(rawPassword, 10);
@@ -181,6 +199,31 @@ export const updatePlacementCoordinator = async (req, res) => {
     if (assigned_city) coordinator.assigned_city = assigned_city;
     if (assigned_state) coordinator.assigned_state = assigned_state;
     if (status) coordinator.status = status;
+
+    if (req.body.organization_name && db.Organization) {
+      let org = await db.Organization.findOne({
+        where: db.Sequelize.where(
+          db.Sequelize.fn('LOWER', db.Sequelize.col('name')),
+          req.body.organization_name.trim().toLowerCase()
+        )
+      });
+      if (!org) {
+        try {
+          org = await db.Organization.create({
+            id: uuidv4(),
+            name: req.body.organization_name.trim(),
+            organization_name: req.body.organization_name.trim()
+          });
+        } catch (e) {}
+      }
+      if (org) {
+        coordinator.organization_id = org.id;
+        if (coordinator.user_id) {
+          await db.User.update({ organization_id: org.id }, { where: { id: coordinator.user_id } });
+        }
+      }
+    }
+
     await coordinator.save();
 
     if (coordinator.user_id) {

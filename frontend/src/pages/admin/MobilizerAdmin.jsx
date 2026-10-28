@@ -740,6 +740,28 @@ export default function MobilizerAdmin({ onBackToHome }) {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Organization</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Even Mobility Foundation"
+                      value={formData.organization_name}
+                      onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Joining Date</label>
+                    <input
+                      type="date"
+                      value={formData.joining_date}
+                      onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+
                 {!editingMobilizer && (
                   <div>
                     <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Default Password</label>
@@ -756,9 +778,9 @@ export default function MobilizerAdmin({ onBackToHome }) {
                 )}
               </div>
 
-              {/* Section 2: Territory & Organization */}
+              {/* Section 2: Territory Hub & Partner */}
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2.5">
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">2. Territory Hub & Organization</span>
+                <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">2. Territory Hub & Partner</span>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -768,7 +790,7 @@ export default function MobilizerAdmin({ onBackToHome }) {
                       onChange={(e) => handleCityChange(e.target.value)}
                       className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white font-medium"
                     >
-                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city} ({c.state})</option>)}
+                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city}, {c.state}</option>)}
                     </select>
                   </div>
                   <div>
@@ -782,86 +804,65 @@ export default function MobilizerAdmin({ onBackToHome }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Owning Organization</label>
-                    <select
-                      value={formData.organization_id}
-                      onChange={(e) => handleOrgChange(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
-                    >
-                      {DEFAULT_ORGS.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Partner NGO / Federation</label>
-                    <select
-                      value={formData.partner_id}
-                      onChange={(e) => handlePartnerChange(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
-                    >
-                      {DEFAULT_PARTNERS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Partner NGO / Federation</label>
+                  <select
+                    value={formData.partner_id}
+                    onChange={(e) => handlePartnerChange(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
+                  >
+                    {DEFAULT_PARTNERS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
                 </div>
               </div>
 
               {/* Section 3: Targets & Status */}
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2.5">
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">3. Monthly Target & Status</span>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">
-                      Monthly Intake Target
-                    </label>
-                    <input
-                      type="number"
-                      min="5"
-                      max="300"
-                      value={formData.target_candidates_monthly}
-                      onChange={(e) => setFormData({ ...formData, target_candidates_monthly: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Joining Date</label>
-                    <input
-                      type="date"
-                      value={formData.joining_date}
-                      onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
-                    />
-                  </div>
-                </div>
+                <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">3. Monthly Target {editingMobilizer ? '& Status' : ''}</span>
 
                 <div>
-                  <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Status</label>
-                  <div className="flex items-center gap-4 text-xs font-semibold text-slate-700">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="status"
-                        value="active"
-                        checked={formData.status === 'active'}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                        className="accent-[#F72570]"
-                      />
-                      <span>Active</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="status"
-                        value="inactive"
-                        checked={formData.status === 'inactive'}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                        className="accent-[#F72570]"
-                      />
-                      <span>Inactive</span>
-                    </label>
-                  </div>
+                  <label className="block text-[10.5px] font-bold text-slate-700 mb-1">
+                    Monthly Intake Target
+                  </label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="300"
+                    value={formData.target_candidates_monthly}
+                    onChange={(e) => setFormData({ ...formData, target_candidates_monthly: e.target.value })}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white font-bold"
+                  />
                 </div>
+
+                {editingMobilizer && (
+                  <div>
+                    <label className="block text-[10.5px] font-bold text-slate-700 mb-1">Status</label>
+                    <div className="flex items-center gap-4 text-xs font-semibold text-slate-700">
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="status"
+                          value="active"
+                          checked={formData.status === 'active'}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          className="accent-[#F72570]"
+                        />
+                        <span>Active</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="status"
+                          value="inactive"
+                          checked={formData.status === 'inactive'}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          className="accent-[#F72570]"
+                        />
+                        <span>Inactive</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}

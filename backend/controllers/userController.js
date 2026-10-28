@@ -97,6 +97,7 @@ export const getAllUsers = async (req, res) => {
         gender: perms.gender || 'Female',
         education_level: perms.education_level || '12th Pass',
 
+        organization_name: raw.organization?.name || raw.organization?.organization_name || perms.organization_name || 'Even Mobility Foundation',
         kyc_document_type: perms.kyc_document_type || 'Aadhaar Card + ID Proof',
         kyc_document_url: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=500&auto=format&fit=crop&q=80',
         avatar_url: raw.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(raw.full_name || raw.email)}`,
@@ -242,7 +243,27 @@ export const createUserByAdmin = async (req, res) => {
     else if (effectiveRole === 'Employer' || effectiveRole === 'employer') targetDbRole = 'employer';
     else if (effectiveRole === 'Partner' || effectiveRole === 'partner') targetDbRole = 'partner';
 
-    const org = await db.Organization.findOne();
+    let org = null;
+    if (req.body.organization_name && db.Organization) {
+      org = await db.Organization.findOne({
+        where: db.Sequelize.where(
+          db.Sequelize.fn('LOWER', db.Sequelize.col('name')),
+          req.body.organization_name.trim().toLowerCase()
+        )
+      });
+      if (!org) {
+        try {
+          org = await db.Organization.create({
+            id: uuidv4(),
+            name: req.body.organization_name.trim(),
+            organization_name: req.body.organization_name.trim()
+          });
+        } catch (e) {}
+      }
+    }
+    if (!org && db.Organization) {
+      org = await db.Organization.findOne();
+    }
     const rawPassword = password ? password.trim() : 'Password@123';
     const password_hash = await bcrypt.hash(rawPassword, 10);
     const userId = uuidv4();
@@ -263,6 +284,7 @@ export const createUserByAdmin = async (req, res) => {
       organization_id: org?.id,
       status: require_verification ? 'inactive' : 'active',
       permissions: {
+        organization_name: req.body.organization_name || org?.name || 'Even Mobility Foundation',
         kyc_document_type: kyc_document_type || 'Aadhaar Card + ID Proof',
         kyc_status: require_verification ? 'PENDING_VERIFICATION' : 'VERIFIED',
         partner_name,
@@ -411,6 +433,29 @@ export const updateUser = async (req, res) => {
     if (status) user.status = status;
     if (designation) user.designation = designation;
     if (department) user.department = department;
+
+    if (req.body.organization_name && db.Organization) {
+      let org = await db.Organization.findOne({
+        where: db.Sequelize.where(
+          db.Sequelize.fn('LOWER', db.Sequelize.col('name')),
+          req.body.organization_name.trim().toLowerCase()
+        )
+      });
+      if (!org) {
+        try {
+          org = await db.Organization.create({
+            id: uuidv4(),
+            name: req.body.organization_name.trim(),
+            organization_name: req.body.organization_name.trim()
+          });
+        } catch (e) {}
+      }
+      if (org) user.organization_id = org.id;
+      user.permissions = {
+        ...(user.permissions || {}),
+        organization_name: req.body.organization_name.trim()
+      };
+    }
 
     const pwdToUpdate = password || new_password;
     if (pwdToUpdate && String(pwdToUpdate).trim().length >= 6) {

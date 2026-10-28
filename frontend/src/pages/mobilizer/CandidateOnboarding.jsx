@@ -506,8 +506,8 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
     const assignedMobId = isUUID(candidateToEdit?.assigned_mobilizer_id)
       ? candidateToEdit.assigned_mobilizer_id
       : (isUUID(formData.assigned_mobilizer_id)
-          ? formData.assigned_mobilizer_id
-          : (isUUID(mobilizerUser?.mobilizer_id) ? mobilizerUser.mobilizer_id : resolvedMobUserId));
+        ? formData.assigned_mobilizer_id
+        : (isUUID(mobilizerUser?.mobilizer_id) ? mobilizerUser.mobilizer_id : resolvedMobUserId));
 
     const payload = {
       ...formData,
@@ -559,7 +559,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
       <div className="max-w-4xl mx-auto py-8 px-4 animate-in fade-in zoom-in duration-300">
         <div className="bg-white rounded-2xl border border-emerald-100 shadow-xl overflow-hidden text-center p-8 sm:p-12 relative">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-[#FF408A]" />
-          
+
           <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
             <CheckCircle2 className="w-12 h-12" />
           </div>
@@ -698,7 +698,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
 
           {/* Right Section: Circular Completeness + Vertical Buttons Column */}
           <div className="flex items-center gap-3.5 self-start lg:self-auto shrink-0 bg-slate-50/80 p-2.5 sm:p-3 rounded-2xl border border-slate-200/90">
-            
+
             {/* Circular Progress & Completeness */}
             <div className="flex items-center gap-2.5 pr-3 border-r border-slate-200">
               {/* Circular Gauge */}
@@ -793,11 +793,10 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
                   key={sec.id}
                   type="button"
                   onClick={() => setActiveSection(sec.id)}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition cursor-pointer ${
-                    isActive
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition cursor-pointer ${isActive
                       ? 'bg-gradient-to-r from-[#FF408A] to-[#E02670] text-white font-bold shadow-xs'
                       : 'hover:bg-slate-50 text-slate-700'
-                  }`}
+                    }`}
                 >
                   <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="text-xs font-semibold truncate">
@@ -945,7 +944,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Household Dependents Count
+                    Family Members
                   </label>
                   <input
                     type="number"
@@ -976,18 +975,7 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Candidate Photo URL (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    name="photo_url"
-                    value={formData.photo_url}
-                    onChange={handleChange}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-[#FF408A] focus:border-transparent outline-none transition"
-                  />
-                </div>
+
               </div>
 
               <div className="flex justify-end pt-4 border-t border-slate-100">
@@ -1337,13 +1325,12 @@ export default function CandidateOnboarding({ mobilizerUser, candidateToEdit, on
                 </div>
 
                 {/* Live Real-time NF Assigned Category Card */}
-                <div className={`p-4 rounded-xl border transition-all ${
-                  evaluatedNF.code === 'NF1'
+                <div className={`p-4 rounded-xl border transition-all ${evaluatedNF.code === 'NF1'
                     ? 'bg-emerald-50/70 border-emerald-200'
                     : evaluatedNF.code === 'NF2'
-                    ? 'bg-amber-50/70 border-amber-200'
-                    : 'bg-rose-50/70 border-rose-200'
-                }`}>
+                      ? 'bg-amber-50/70 border-amber-200'
+                      : 'bg-rose-50/70 border-rose-200'
+                  }`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{evaluatedNF.icon}</span>

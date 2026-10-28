@@ -328,6 +328,25 @@ export const createMobilizer = async (req, res) => {
     let validOrgId = isUUID(organization_id) ? organization_id : null;
     let validPartnerId = isUUID(partner_id) ? partner_id : null;
 
+    if (organization_name && db.Organization) {
+      try {
+        let org = await db.Organization.findOne({
+          where: db.Sequelize.where(
+            db.Sequelize.fn('LOWER', db.Sequelize.col('name')),
+            organization_name.trim().toLowerCase()
+          )
+        });
+        if (!org) {
+          org = await db.Organization.create({
+            id: uuidv4(),
+            name: organization_name.trim(),
+            organization_name: organization_name.trim()
+          });
+        }
+        if (org) validOrgId = org.id;
+      } catch (e) {}
+    }
+
     if (!validOrgId && db.Organization) {
       try {
         const org = await db.Organization.findOne();
@@ -471,6 +490,27 @@ export const updateMobilizer = async (req, res) => {
       status: status ?? localMobilizers[index].status,
       updated_at: new Date().toISOString()
     };
+
+    if (organization_name && db.Organization) {
+      try {
+        let org = await db.Organization.findOne({
+          where: db.Sequelize.where(
+            db.Sequelize.fn('LOWER', db.Sequelize.col('name')),
+            organization_name.trim().toLowerCase()
+          )
+        });
+        if (!org) {
+          org = await db.Organization.create({
+            id: uuidv4(),
+            name: organization_name.trim(),
+            organization_name: organization_name.trim()
+          });
+        }
+        if (org) {
+          updatedRecord.organization_id = org.id;
+        }
+      } catch (e) {}
+    }
 
     localMobilizers[index] = updatedRecord;
 

@@ -940,8 +940,30 @@ export default function UserManagement({ onSectionChange }) {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Organization</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Even Mobility Foundation"
+                      value={formData.organization_name || ''}
+                      onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-900 outline-none focus:border-[#FF408A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Joining Date</label>
+                    <input
+                      type="date"
+                      value={formData.joining_date || ''}
+                      onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-900 outline-none focus:border-[#FF408A]"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Password <span className="text-rose-500">* (min 6 chars)</span></label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Password <span className="text-rose-500">*</span></label>
                   <input
                     type="password"
                     placeholder="Set secure password"
@@ -959,7 +981,7 @@ export default function UserManagement({ onSectionChange }) {
               {selectedUserType === 'Mobilizer' && (
                 <div className="p-4 bg-[#FFF8FA] rounded-2xl border border-[#FF408A]/20 space-y-3">
                   <span className="text-xs font-extrabold text-[#FF408A] uppercase tracking-wider block">
-                    2. Mobilizer Specific Model Attributes (Mobilizer.js)
+                    Mobilizer Details
                   </span>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -986,27 +1008,15 @@ export default function UserManagement({ onSectionChange }) {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Affiliated NGO / Partner <span className="text-rose-500">*</span></label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Jan Vikas Samiti (NGO)"
-                        value={formData.partner_name}
-                        onChange={(e) => setFormData({ ...formData, partner_name: e.target.value })}
-                        className="w-full px-3.5 py-2 rounded-xl border border-pink-200 text-xs bg-white text-slate-900 outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Joining Date</label>
-                      <input
-                        type="date"
-                        value={formData.joining_date}
-                        onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
-                        className="w-full px-3.5 py-2 rounded-xl border border-pink-200 text-xs bg-white text-slate-900 outline-none"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Affiliated Partner <span className="text-rose-500">*</span></label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Jan Vikas Samiti"
+                      value={formData.partner_name}
+                      onChange={(e) => setFormData({ ...formData, partner_name: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl border border-pink-200 text-xs bg-white text-slate-900 outline-none"
+                    />
                   </div>
                 </div>
               )}
@@ -1015,7 +1025,7 @@ export default function UserManagement({ onSectionChange }) {
               {selectedUserType === 'Trainer' && (
                 <div className="p-4 bg-purple-50/60 rounded-2xl border border-purple-200 space-y-3">
                   <span className="text-xs font-extrabold text-purple-900 uppercase tracking-wider block">
-                    2. Trainer Specific Model Attributes (Trainer.js)
+                    Trainer Details
                   </span>
 
                   <div>
@@ -1059,7 +1069,7 @@ export default function UserManagement({ onSectionChange }) {
               {selectedUserType === 'Placement Coordinator' && (
                 <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-200 space-y-3">
                   <span className="text-xs font-extrabold text-blue-900 uppercase tracking-wider block">
-                    2. Placement Coordinator Attributes (PlacementCoordinator.js)
+                    Placement Coordinator Details
                   </span>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1103,7 +1113,7 @@ export default function UserManagement({ onSectionChange }) {
               {selectedUserType === 'Candidate' && (
                 <div className="p-4 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-3">
                   <span className="text-xs font-extrabold text-amber-900 uppercase tracking-wider block">
-                    2. Candidate Lifecycle Attributes (Candidate.js)
+                    Candidate Details
                   </span>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1179,7 +1189,7 @@ export default function UserManagement({ onSectionChange }) {
               {selectedUserType === 'Admin' && (
                 <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-3">
                   <span className="text-xs font-extrabold text-emerald-900 uppercase tracking-wider block">
-                    2. Super Administrator Governance Attributes (User.js)
+                    Administrator Governance Details
                   </span>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -733,7 +733,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                   <Users className="w-4 h-4 text-[#F72570]" />
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
-                    Mobiliser Model Profile Data Fields (portal_mobilizers & portal_users)
+                    Mobiliser Profile
                   </h2>
                 </div>
 
@@ -782,19 +782,40 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
 
-                  {/* Mobilizer Model Specific Fields */}
+                  {/* Organization field below Mobile Number & Joining Date next to it */}
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Assigned City (assigned_city)</label>
+                    <label className="font-bold text-slate-700">Organization</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Even Mobility Foundation"
+                      value={formData.organization_name || ''}
+                      onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Joining Date</label>
+                    <input
+                      type="date"
+                      value={formData.joining_date || ''}
+                      onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
+                    />
+                  </div>
+
+                  {/* Mobilizer Specific Fields */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Assigned City</label>
                     <select
                       value={formData.assigned_city}
                       onChange={(e) => handleCityChange(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
                     >
-                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city} ({c.state})</option>)}
+                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city}, {c.state}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Assigned State (assigned_state)</label>
+                    <label className="font-bold text-slate-700">Assigned State</label>
                     <input
                       type="text"
                       readOnly
@@ -803,16 +824,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Joining Date (joining_date)</label>
-                    <input
-                      type="date"
-                      value={formData.joining_date}
-                      onChange={(e) => setFormData({ ...formData, joining_date: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Monthly Candidates Target (target_candidates_monthly)</label>
+                    <label className="font-bold text-slate-700">Monthly Candidates Target</label>
                     <input
                       type="number"
                       min="1"
@@ -822,17 +834,19 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-[#F72570]"
                     />
                   </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Mobilizer Status (status)</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
-                    >
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
-                    </select>
-                  </div>
+                  {editingItem && (
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">Status</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -845,7 +859,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                   <GraduationCap className="w-4 h-4 text-[#F72570]" />
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
-                    Trainer Model Profile Data Fields (portal_trainers & portal_users)
+                    Trainer Profile
                   </h2>
                 </div>
 
@@ -894,9 +908,21 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
 
+                  {/* Organization field */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Organization</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Even Mobility Foundation"
+                      value={formData.organization_name || ''}
+                      onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
+                    />
+                  </div>
+
                   {/* Trainer Model Specific Fields */}
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Specialization (specialization)</label>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Specialization</label>
                     <input
                       type="text"
                       placeholder="e.g. 2-Wheeler EV, Defensive Driving, Soft Skills"
@@ -906,7 +932,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Qualification (qualification)</label>
+                    <label className="font-bold text-slate-700">Qualification</label>
                     <input
                       type="text"
                       placeholder="e.g. Master EV Assessor Diploma"
@@ -916,7 +942,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Certification (certification)</label>
+                    <label className="font-bold text-slate-700">Certification</label>
                     <input
                       type="text"
                       placeholder="e.g. NSDC Level 4 Certification"
@@ -925,17 +951,19 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
                     />
                   </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Trainer Status (status)</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
-                    >
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
-                    </select>
-                  </div>
+                  {editingItem && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="font-bold text-slate-700">Status</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -948,7 +976,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                   <Briefcase className="w-4 h-4 text-[#F72570]" />
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
-                    Placement Coordinator Profile Data Fields (portal_placement_coordinators & portal_users)
+                    Placement Coordinator Profile
                   </h2>
                 </div>
 
@@ -997,19 +1025,31 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
 
+                  {/* Organization field */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Organization</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Even Mobility Foundation"
+                      value={formData.organization_name || ''}
+                      onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
+                    />
+                  </div>
+
                   {/* Placement Coordinator Model Fields */}
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Assigned City (assigned_city)</label>
+                    <label className="font-bold text-slate-700">Assigned City</label>
                     <select
                       value={formData.assigned_city}
                       onChange={(e) => handleCityChange(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
                     >
-                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city} ({c.state})</option>)}
+                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city}, {c.state}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Assigned State (assigned_state)</label>
+                    <label className="font-bold text-slate-700">Assigned State</label>
                     <input
                       type="text"
                       readOnly
@@ -1017,17 +1057,19 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-xs"
                     />
                   </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Coordinator Status (status)</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
-                    >
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
-                    </select>
-                  </div>
+                  {editingItem && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="font-bold text-slate-700">Status</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1040,13 +1082,13 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                   <Handshake className="w-4 h-4 text-[#F72570]" />
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
-                    Partner Model Data Fields (portal_partners)
+                    Partner Profile
                   </h2>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Partner Name (name) <span className="text-rose-500">*</span></label>
+                    <label className="font-bold text-slate-700">Partner Name <span className="text-rose-500">*</span></label>
                     <input
                       type="text"
                       required
@@ -1057,7 +1099,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Partner Code (code)</label>
+                    <label className="font-bold text-slate-700">Partner Code</label>
                     <input
                       type="text"
                       placeholder="PRT-101"
@@ -1067,7 +1109,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Partner Type (type)</label>
+                    <label className="font-bold text-slate-700">Partner Type</label>
                     <select
                       value={formData.partner_type || formData.type}
                       onChange={(e) => setFormData({ ...formData, partner_type: e.target.value, type: e.target.value })}
@@ -1081,8 +1123,20 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                       <option value="OTHER">OTHER</option>
                     </select>
                   </div>
+
+                  {/* Organization field */}
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Contact Person (contact_person)</label>
+                    <label className="font-bold text-slate-700">Organization</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Even Mobility Foundation"
+                      value={formData.organization_name || ''}
+                      onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Contact Person</label>
                     <input
                       type="text"
                       placeholder="e.g. Savita Gowda"
@@ -1092,7 +1146,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Email Address (email)</label>
+                    <label className="font-bold text-slate-700">Email Address</label>
                     <input
                       type="email"
                       placeholder="contact@mahilavikas.org"
@@ -1102,7 +1156,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Phone Number (phone)</label>
+                    <label className="font-bold text-slate-700">Phone Number</label>
                     <input
                       type="tel"
                       placeholder="+91 98760 12345"
@@ -1112,17 +1166,17 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">City (city)</label>
+                    <label className="font-bold text-slate-700">City</label>
                     <select
                       value={formData.assigned_city}
                       onChange={(e) => handleCityChange(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
                     >
-                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city} ({c.state})</option>)}
+                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city}, {c.state}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">State (state)</label>
+                    <label className="font-bold text-slate-700">State</label>
                     <input
                       type="text"
                       readOnly
@@ -1131,7 +1185,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Address (address)</label>
+                    <label className="font-bold text-slate-700">Address</label>
                     <input
                       type="text"
                       placeholder="e.g. 80 Feet Road, Koramangala, Bengaluru"
@@ -1140,17 +1194,19 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
                     />
                   </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Partner Status (status)</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
-                    >
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
-                    </select>
-                  </div>
+                  {editingItem && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="font-bold text-slate-700">Status</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1163,13 +1219,13 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                   <Building2 className="w-4 h-4 text-[#F72570]" />
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
-                    Employer Model Data Fields (portal_employers)
+                    Employer Profile
                   </h2>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Company Name (company_name) <span className="text-rose-500">*</span></label>
+                    <label className="font-bold text-slate-700">Company Name <span className="text-rose-500">*</span></label>
                     <input
                       type="text"
                       required
@@ -1179,8 +1235,21 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:border-[#F72570]"
                     />
                   </div>
+
+                  {/* Organization field */}
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Industry (industry)</label>
+                    <label className="font-bold text-slate-700">Organization</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Even Mobility Foundation"
+                      value={formData.organization_name || ''}
+                      onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Industry</label>
                     <input
                       type="text"
                       placeholder="Hyperlocal Logistics"
@@ -1190,7 +1259,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Industry Type (industry_type)</label>
+                    <label className="font-bold text-slate-700">Industry Type</label>
                     <select
                       value={formData.industry_type}
                       onChange={(e) => setFormData({ ...formData, industry_type: e.target.value, industry: e.target.value })}
@@ -1203,7 +1272,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Contact Person (contact_person)</label>
+                    <label className="font-bold text-slate-700">Contact Person</label>
                     <input
                       type="text"
                       placeholder="e.g. Amit Shah"
@@ -1213,7 +1282,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Contact Email (email)</label>
+                    <label className="font-bold text-slate-700">Contact Email</label>
                     <input
                       type="email"
                       placeholder="hiring@zomato.com"
@@ -1223,7 +1292,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Contact Phone (phone)</label>
+                    <label className="font-bold text-slate-700">Contact Phone</label>
                     <input
                       type="tel"
                       placeholder="+91 80123 45678"
@@ -1233,7 +1302,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Website URL (website)</label>
+                    <label className="font-bold text-slate-700">Website URL</label>
                     <input
                       type="url"
                       placeholder="https://zomato.com"
@@ -1243,17 +1312,17 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">City (city)</label>
+                    <label className="font-bold text-slate-700">City</label>
                     <select
                       value={formData.assigned_city}
                       onChange={(e) => handleCityChange(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
                     >
-                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city} ({c.state})</option>)}
+                      {DEFAULT_CITIES.map(c => <option key={c.city} value={c.city}>{c.city}, {c.state}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">State (state)</label>
+                    <label className="font-bold text-slate-700">State</label>
                     <input
                       type="text"
                       readOnly
@@ -1262,7 +1331,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Office Address (address)</label>
+                    <label className="font-bold text-slate-700">Office Address</label>
                     <input
                       type="text"
                       placeholder="80 Feet Road, Koramangala, Bengaluru"
@@ -1272,7 +1341,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Partnership Tier (partnership_tier)</label>
+                    <label className="font-bold text-slate-700">Partnership Tier</label>
                     <select
                       value={formData.partnership_tier || 'Strategic'}
                       onChange={(e) => setFormData({ ...formData, partnership_tier: e.target.value })}
@@ -1283,18 +1352,20 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                       <option value="Enterprise">Enterprise</option>
                     </select>
                   </div>
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Employer Status (status)</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
-                    >
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
-                      <option value="prospective">prospective</option>
-                    </select>
-                  </div>
+                  {editingItem && (
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-700">Status</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="prospective">Prospective</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1307,13 +1378,13 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                   <UserCog className="w-4 h-4 text-[#F72570]" />
                   <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
-                    User Model Data Fields (portal_users)
+                    User Profile
                   </h2>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Employee ID (employee_id)</label>
+                    <label className="font-bold text-slate-700">Employee ID</label>
                     <input
                       type="text"
                       placeholder="USR-101"
@@ -1323,7 +1394,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">System Role (role) <span className="text-rose-500">*</span></label>
+                    <label className="font-bold text-slate-700">System Role <span className="text-rose-500">*</span></label>
                     <select
                       value={formData.role}
                       onChange={(e) => setFormData({ ...formData, role: e.target.value, userType: e.target.value })}
@@ -1336,8 +1407,21 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                       <option value="Placement Coordinator">Placement Coordinator</option>
                     </select>
                   </div>
+
+                  {/* Organization field */}
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">First Name (first_name) <span className="text-rose-500">*</span></label>
+                    <label className="font-bold text-slate-700">Organization</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Even Mobility Foundation"
+                      value={formData.organization_name || ''}
+                      onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">First Name <span className="text-rose-500">*</span></label>
                     <input
                       type="text"
                       required
@@ -1348,7 +1432,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Last Name (last_name)</label>
+                    <label className="font-bold text-slate-700">Last Name</label>
                     <input
                       type="text"
                       placeholder="e.g. Sharma"
@@ -1358,7 +1442,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Email Address (email) <span className="text-rose-500">*</span></label>
+                    <label className="font-bold text-slate-700">Email Address <span className="text-rose-500">*</span></label>
                     <input
                       type="email"
                       required
@@ -1369,7 +1453,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Mobile Number (mobile_number)</label>
+                    <label className="font-bold text-slate-700">Mobile Number</label>
                     <input
                       type="tel"
                       placeholder="+91 98000 11223"
@@ -1379,7 +1463,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Designation (designation)</label>
+                    <label className="font-bold text-slate-700">Designation</label>
                     <input
                       type="text"
                       placeholder="Operations Lead"
@@ -1389,7 +1473,7 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-slate-700">Department (department)</label>
+                    <label className="font-bold text-slate-700">Department</label>
                     <input
                       type="text"
                       placeholder="Operations"
@@ -1399,27 +1483,29 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                     />
                   </div>
                   <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">Account Password {editingItem ? '(Leave blank to keep unchanged)' : '<span className="text-rose-500">*</span>'}</label>
+                    <label className="font-bold text-slate-700">Account Password {!editingItem && <span className="text-rose-500">*</span>}</label>
                     <input
                       type="password"
-                      placeholder={editingItem ? "•••••••• (Leave blank to keep unchanged)" : "e.g. Password@123 (min 6 characters)"}
+                      placeholder={editingItem ? "••••••••" : "Set secure password"}
                       value={formData.password || ''}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#F72570]"
                     />
                   </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="font-bold text-slate-700">User Status (status)</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
-                    >
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
-                      <option value="suspended">suspended</option>
-                    </select>
-                  </div>
+                  {editingItem && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="font-bold text-slate-700">Status</label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:border-[#F72570]"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1708,10 +1794,16 @@ export default function StakeholderManagement({ categoryKey = 'mobilizers', onSe
                               </div>
                             ) : (
                               <div>
-                                <div className="font-bold text-slate-800 truncate text-xs">
-                                  {item.organization_name || item.training_centre_name || item.partner_name || item.industry || item.role || item.designation}
+                                <div className="font-bold text-slate-800 truncate text-xs flex items-center gap-1.5">
+                                  <Building2 className="w-3.5 h-3.5 text-[#F72570] shrink-0" />
+                                  <span className="truncate">{item.organization_name || item.partner_name || item.company_name || item.training_centre_name || 'Even Mobility Foundation'}</span>
                                 </div>
-                                <div className="text-[10.5px] text-slate-400 truncate">{item.email || item.contact_email}</div>
+                                <div className="text-[10.5px] text-slate-400 truncate mt-0.5">
+                                  {item.role || item.designation || item.specialization || item.industry ? (
+                                    <span className="font-medium text-slate-600">{item.role || item.designation || item.specialization || item.industry} • </span>
+                                  ) : null}
+                                  <span>{item.email || item.contact_email}</span>
+                                </div>
                               </div>
                             )}
                           </td>
